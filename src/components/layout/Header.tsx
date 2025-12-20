@@ -1,6 +1,7 @@
-import { Bell, Search, Plus } from "lucide-react";
+import { Bell, Search, Plus, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSidebar } from "@/hooks/use-sidebar";
 
 interface HeaderProps {
   title: string;
@@ -8,20 +9,36 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
+  const { isMobile, setMobileOpen } = useSidebar();
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-6">
-      <div>
-        <h1 className="text-2xl font-display font-semibold text-foreground">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-4">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Mobile Menu Button */}
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(true)}
+            className="flex-shrink-0 text-foreground hover:bg-secondary"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate">{title}</h1>
+          {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative hidden md:block">
+      <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        {/* Search - hidden on small screens */}
+        <div className="relative hidden lg:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search guests, reservations..."
-            className="w-64 pl-9 bg-secondary border-border"
+            className="w-48 xl:w-64 pl-9 bg-secondary border-border"
           />
         </div>
 

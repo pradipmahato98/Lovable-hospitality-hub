@@ -78,24 +78,24 @@ const statusColors = {
 const Guests = () => {
   return (
     <MainLayout title="Guests" subtitle="Manage guest profiles and preferences">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search guests..." className="w-64 pl-9 bg-secondary" />
+            <Input placeholder="Search guests..." className="w-full sm:w-48 lg:w-64 pl-9 bg-secondary" />
           </div>
           <Button variant="outline" size="sm" className="gap-2">
             <Filter className="h-4 w-4" />
-            Filter
+            <span className="hidden sm:inline">Filter</span>
           </Button>
         </div>
-        <Button variant="gold" size="sm" className="gap-2">
+        <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Add Guest
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {guests.map((guest, index) => (
           <Card
             key={guest.id}

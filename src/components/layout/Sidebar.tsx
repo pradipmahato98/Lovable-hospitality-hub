@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -13,8 +12,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Hotel,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -27,66 +29,65 @@ const navItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
+  const { collapsed, toggleCollapsed, isMobile } = useSidebar();
   const location = useLocation();
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border transition-all duration-300",
-        collapsed ? "w-20" : "w-64"
-      )}
-    >
+    <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow">
+        <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
             <Hotel className="h-5 w-5 text-primary-foreground" />
           </div>
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <span className="font-display text-xl font-semibold text-gradient-gold">
               LuxeStay
             </span>
           )}
         </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 text-sidebar-foreground hover:text-foreground"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            className="h-8 w-8 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent flex-shrink-0"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-1 p-3">
+      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
+              onClick={onNavClick}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
                   ? "bg-sidebar-accent text-primary shadow-glow"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+                collapsed && !isMobile && "justify-center px-2"
               )}
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              {!collapsed && <span>{item.label}</span>}
+              {(!collapsed || isMobile) && <span>{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
       {/* User Section */}
-      {!collapsed && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border">
+      {(!collapsed || isMobile) && (
+        <div className="p-4 border-t border-sidebar-border mt-auto">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0">
               <span className="text-sm font-semibold text-primary-foreground">JD</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -96,6 +97,42 @@ export function Sidebar() {
           </div>
         </div>
       )}
+
+      {/* Collapsed User Avatar */}
+      {collapsed && !isMobile && (
+        <div className="p-3 border-t border-sidebar-border mt-auto flex justify-center">
+          <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center">
+            <span className="text-sm font-semibold text-primary-foreground">JD</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Sidebar() {
+  const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
+
+  // Mobile: Sheet overlay
+  if (isMobile) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-72 p-0 bg-gradient-sidebar border-sidebar-border">
+          <SidebarContent onNavClick={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Fixed sidebar
+  return (
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border transition-all duration-300",
+        collapsed ? "w-20" : "w-64"
+      )}
+    >
+      <SidebarContent />
     </aside>
   );
 }

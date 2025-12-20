@@ -45,7 +45,7 @@ const Reports = () => {
   return (
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
       {/* Quick Report Generation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
         {reportTypes.map((report, index) => (
           <Card
             key={report.title}
@@ -71,7 +71,7 @@ const Reports = () => {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
         {/* Occupancy Trend */}
         <Card variant="elevated" className="animate-fade-in">
           <CardHeader>
@@ -139,16 +139,16 @@ const Reports = () => {
           <CardTitle>Guest Demographics</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-8">
-            <div className="h-[200px] w-[200px]">
+          <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+            <div className="h-[180px] sm:h-[200px] w-[180px] sm:w-[200px] flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={guestDemographics}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={50}
+                    outerRadius={70}
                     paddingAngle={4}
                     dataKey="value"
                   >
@@ -162,7 +162,7 @@ const Reports = () => {
             <div className="flex-1 grid grid-cols-2 gap-4">
               {guestDemographics.map((item) => (
                 <div key={item.name} className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
                   <div>
                     <p className="text-sm font-medium text-foreground">{item.name}</p>
                     <p className="text-lg font-bold" style={{ color: item.color }}>{item.value}%</p>
