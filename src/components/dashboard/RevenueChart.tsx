@@ -18,7 +18,7 @@ const data = [
 
 export function RevenueChart() {
   return (
-    <Card variant="elevated" className="animate-slide-up col-span-2" style={{ animationDelay: "100ms" }}>
+    <Card variant="elevated" className="animate-slide-up xl:col-span-2" style={{ animationDelay: "100ms" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Revenue Overview</CardTitle>
         <div className="flex gap-2">

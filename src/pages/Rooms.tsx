@@ -106,39 +106,39 @@ const amenityIcons = {
 const Rooms = () => {
   return (
     <MainLayout title="Rooms" subtitle="Manage room inventory and availability">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search rooms..." className="w-64 pl-9 bg-secondary" />
+            <Input placeholder="Search rooms..." className="w-full sm:w-48 lg:w-64 pl-9 bg-secondary" />
           </div>
           <Button variant="outline" size="sm" className="gap-2">
             <Filter className="h-4 w-4" />
-            Filter
+            <span className="hidden sm:inline">Filter</span>
           </Button>
         </div>
-        <Button variant="gold" size="sm" className="gap-2">
+        <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Add Room
         </Button>
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {[
           { label: "Available", count: 3, color: "text-success" },
           { label: "Occupied", count: 3, color: "text-primary" },
           { label: "Cleaning", count: 1, color: "text-warning" },
           { label: "Maintenance", count: 1, color: "text-destructive" },
         ].map((stat) => (
-          <Card key={stat.label} variant="glass" className="p-4">
-            <p className="text-sm text-muted-foreground">{stat.label}</p>
-            <p className={cn("text-2xl font-bold font-display", stat.color)}>{stat.count}</p>
+          <Card key={stat.label} variant="glass" className="p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
+            <p className={cn("text-xl sm:text-2xl font-bold font-display", stat.color)}>{stat.count}</p>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {rooms.map((room, index) => (
           <Card
             key={room.id}

@@ -65,10 +65,10 @@ export function RecentBookings() {
           {bookings.map((booking) => (
             <div
               key={booking.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
             >
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-10 w-10 flex-shrink-0">
                   <AvatarFallback className="bg-gradient-gold text-primary-foreground text-sm font-semibold">
                     {booking.guest
                       .split(" ")
@@ -76,12 +76,12 @@ export function RecentBookings() {
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{booking.guest}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{booking.guest}</p>
                   <p className="text-xs text-muted-foreground">{booking.room}</p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="flex items-center justify-between sm:block sm:text-right ml-13 sm:ml-0">
                 <p className="text-xs text-muted-foreground">
                   {booking.checkIn} - {booking.checkOut}
                 </p>

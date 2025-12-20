@@ -100,13 +100,13 @@ const Inventory = () => {
 
   return (
     <MainLayout title="Inventory" subtitle="Track and manage supplies and resources">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search inventory..." className="w-64 pl-9 bg-secondary" />
+            <Input placeholder="Search inventory..." className="w-full sm:w-48 lg:w-64 pl-9 bg-secondary" />
           </div>
-          <div className="flex gap-2">
+          <div className="hidden lg:flex gap-2">
             {categories.map((cat) => (
               <Button
                 key={cat}
@@ -117,8 +117,12 @@ const Inventory = () => {
               </Button>
             ))}
           </div>
+          <Button variant="outline" size="sm" className="gap-2 lg:hidden">
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline">Filter</span>
+          </Button>
         </div>
-        <Button variant="gold" size="sm" className="gap-2">
+        <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Add Item
         </Button>
@@ -126,8 +130,8 @@ const Inventory = () => {
 
       {/* Low Stock Alert */}
       <Card variant="highlight" className="mb-6 animate-fade-in">
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="h-10 w-10 rounded-lg bg-warning/20 flex items-center justify-center">
+        <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="h-10 w-10 rounded-lg bg-warning/20 flex items-center justify-center flex-shrink-0">
             <AlertTriangle className="h-5 w-5 text-warning" />
           </div>
           <div className="flex-1">
@@ -136,14 +140,14 @@ const Inventory = () => {
               3 items are running low on stock and need to be restocked soon.
             </p>
           </div>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">
             View Items
           </Button>
         </CardContent>
       </Card>
 
       {/* Inventory Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {inventoryItems.map((item, index) => {
           const status = getStockStatus(item.stock, item.minStock);
           const stockPercentage = Math.min((item.stock / (item.minStock * 2)) * 100, 100);

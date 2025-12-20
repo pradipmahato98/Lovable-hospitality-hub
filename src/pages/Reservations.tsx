@@ -81,66 +81,68 @@ const statusColors = {
 const Reservations = () => {
   return (
     <MainLayout title="Reservations" subtitle="Manage all bookings and reservations">
-      <Card variant="elevated" className="animate-fade-in">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card variant="elevated" className="animate-fade-in overflow-hidden">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>All Reservations</CardTitle>
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search reservations..." className="w-64 pl-9 bg-secondary" />
+              <Input placeholder="Search reservations..." className="w-full sm:w-48 lg:w-64 pl-9 bg-secondary" />
             </div>
             <Button variant="outline" size="sm" className="gap-2">
               <Filter className="h-4 w-4" />
-              Filter
+              <span className="hidden sm:inline">Filter</span>
             </Button>
             <Button variant="gold" size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
-              New Reservation
+              <span className="hidden sm:inline">New Reservation</span>
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead>Reservation ID</TableHead>
-                <TableHead>Guest</TableHead>
-                <TableHead>Room</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reservations.map((reservation) => (
-                <TableRow key={reservation.id} className="border-border hover:bg-secondary/50">
-                  <TableCell className="font-mono text-sm text-primary">
-                    {reservation.id}
-                  </TableCell>
-                  <TableCell className="font-medium">{reservation.guest}</TableCell>
-                  <TableCell className="text-muted-foreground">{reservation.room}</TableCell>
-                  <TableCell>{reservation.checkIn}</TableCell>
-                  <TableCell>{reservation.checkOut}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={statusColors[reservation.status as keyof typeof statusColors]}
-                    >
-                      {reservation.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-semibold">{reservation.total}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+        <CardContent className="p-0 sm:p-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap">Reservation ID</TableHead>
+                  <TableHead className="whitespace-nowrap">Guest</TableHead>
+                  <TableHead className="whitespace-nowrap hidden md:table-cell">Room</TableHead>
+                  <TableHead className="whitespace-nowrap hidden lg:table-cell">Check In</TableHead>
+                  <TableHead className="whitespace-nowrap hidden lg:table-cell">Check Out</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap hidden sm:table-cell">Total</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reservations.map((reservation) => (
+                  <TableRow key={reservation.id} className="border-border hover:bg-secondary/50">
+                    <TableCell className="font-mono text-sm text-primary whitespace-nowrap">
+                      {reservation.id}
+                    </TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{reservation.guest}</TableCell>
+                    <TableCell className="text-muted-foreground hidden md:table-cell">{reservation.room}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{reservation.checkIn}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{reservation.checkOut}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={statusColors[reservation.status as keyof typeof statusColors]}
+                      >
+                        {reservation.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-semibold hidden sm:table-cell">{reservation.total}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </MainLayout>

@@ -10,9 +10,9 @@ import { Hotel, Bell, Shield, Globe, Palette, Users } from "lucide-react";
 const Settings = () => {
   return (
     <MainLayout title="Settings" subtitle="Manage your property and system preferences">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Navigation */}
-        <div className="space-y-2">
+        <div className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
           {[
             { icon: Hotel, label: "Property Details", active: true },
             { icon: Bell, label: "Notifications" },
@@ -24,16 +24,16 @@ const Settings = () => {
             <Button
               key={item.label}
               variant={item.active ? "secondary" : "ghost"}
-              className="w-full justify-start gap-3"
+              className="justify-start gap-3 whitespace-nowrap flex-shrink-0"
             >
               <item.icon className="h-4 w-4" />
-              {item.label}
+              <span className="hidden sm:inline">{item.label}</span>
             </Button>
           ))}
         </div>
 
         {/* Right Column - Settings Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           {/* Property Details */}
           <Card variant="elevated" className="animate-fade-in">
             <CardHeader>
@@ -41,7 +41,7 @@ const Settings = () => {
               <CardDescription>Update your hotel information and branding</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="propertyName">Property Name</Label>
                   <Input id="propertyName" defaultValue="LuxeStay Grand Hotel" className="bg-secondary" />
@@ -55,7 +55,7 @@ const Settings = () => {
                 <Label htmlFor="address">Address</Label>
                 <Input id="address" defaultValue="123 Luxury Avenue, Downtown" className="bg-secondary" />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input id="city" defaultValue="New York" className="bg-secondary" />

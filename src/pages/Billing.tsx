@@ -73,7 +73,7 @@ const Billing = () => {
   return (
     <MainLayout title="Billing" subtitle="Manage invoices, payments and financial reports">
       {/* Billing Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <MetricCard
           title="Total Revenue (MTD)"
           value="$124,580"
@@ -109,60 +109,62 @@ const Billing = () => {
       </div>
 
       {/* Invoices Table */}
-      <Card variant="elevated" className="animate-fade-in">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card variant="elevated" className="animate-fade-in overflow-hidden">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>Recent Invoices</CardTitle>
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search invoices..." className="w-64 pl-9 bg-secondary" />
+              <Input placeholder="Search invoices..." className="w-full sm:w-48 lg:w-64 pl-9 bg-secondary" />
             </div>
             <Button variant="outline" size="sm" className="gap-2">
               <Filter className="h-4 w-4" />
-              Filter
+              <span className="hidden sm:inline">Filter</span>
             </Button>
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead>Invoice ID</TableHead>
-                <TableHead>Guest</TableHead>
-                <TableHead>Reservation</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment Method</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id} className="border-border hover:bg-secondary/50">
-                  <TableCell className="font-mono text-sm text-primary">
-                    {invoice.id}
-                  </TableCell>
-                  <TableCell className="font-medium">{invoice.guest}</TableCell>
-                  <TableCell className="text-muted-foreground">{invoice.reservation}</TableCell>
-                  <TableCell>{invoice.date}</TableCell>
-                  <TableCell className="font-semibold">{invoice.amount}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={statusColors[invoice.status as keyof typeof statusColors]}
-                    >
-                      {invoice.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{invoice.method}</TableCell>
+        <CardContent className="p-0 sm:p-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap">Invoice ID</TableHead>
+                  <TableHead className="whitespace-nowrap">Guest</TableHead>
+                  <TableHead className="whitespace-nowrap hidden md:table-cell">Reservation</TableHead>
+                  <TableHead className="whitespace-nowrap hidden lg:table-cell">Date</TableHead>
+                  <TableHead className="whitespace-nowrap">Amount</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap hidden xl:table-cell">Payment Method</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((invoice) => (
+                  <TableRow key={invoice.id} className="border-border hover:bg-secondary/50">
+                    <TableCell className="font-mono text-sm text-primary whitespace-nowrap">
+                      {invoice.id}
+                    </TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{invoice.guest}</TableCell>
+                    <TableCell className="text-muted-foreground hidden md:table-cell">{invoice.reservation}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{invoice.date}</TableCell>
+                    <TableCell className="font-semibold whitespace-nowrap">{invoice.amount}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={statusColors[invoice.status as keyof typeof statusColors]}
+                      >
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground hidden xl:table-cell">{invoice.method}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </MainLayout>

@@ -36,12 +36,12 @@ export function RoomStatusGrid() {
         </a>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-5 gap-2 mb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
           {rooms.map((room) => (
             <div
               key={room.number}
               className={cn(
-                "flex items-center justify-center h-12 rounded-lg border-2 font-medium text-sm transition-all hover:scale-105 cursor-pointer",
+                "flex items-center justify-center h-10 sm:h-12 rounded-lg border-2 font-medium text-xs sm:text-sm transition-all hover:scale-105 cursor-pointer",
                 statusStyles[room.status as keyof typeof statusStyles]
               )}
             >
