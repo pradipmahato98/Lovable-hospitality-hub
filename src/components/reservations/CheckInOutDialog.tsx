@@ -1,0 +1,566 @@
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { format, differenceInDays } from "date-fns";
+import { cn } from "@/lib/utils";
+import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
+
+interface Room {
+  id: string;
+  room_number: string;
+  room_type: string;
+  price_per_night: number;
+}
+
+interface CheckInOutDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: "walk-in" | "check-in" | "check-out";
+  reservationId?: string;
+  onSuccess?: () => void;
+}
+
+export function CheckInOutDialog({
+  open,
+  onOpenChange,
+  mode,
+  reservationId,
+  onSuccess,
+}: CheckInOutDialogProps) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+
+  // Walk-in form state
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    idType: "passport" as "passport" | "driver_license" | "national_id" | "other",
+    idNumber: "",
+    roomId: "",
+    checkInDate: new Date(),
+    checkOutDate: new Date(Date.now() + 86400000), // Tomorrow
+    adults: 1,
+    children: 0,
+    specialRequests: "",
+  });
+
+  useEffect(() => {
+    if (open && mode === "walk-in") {
+      fetchAvailableRooms();
+    }
+  }, [open, mode]);
+
+  const fetchAvailableRooms = async () => {
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("id, room_number, room_type, price_per_night")
+      .eq("status", "available")
+      .order("room_number");
+
+    if (!error && data) {
+      setRooms(data);
+    }
+  };
+
+  const calculateTotal = () => {
+    const selectedRoom = rooms.find((r) => r.id === formData.roomId);
+    if (!selectedRoom) return 0;
+    const nights = differenceInDays(formData.checkOutDate, formData.checkInDate);
+    return selectedRoom.price_per_night * Math.max(nights, 1);
+  };
+
+  const handleWalkIn = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.roomId) {
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Create guest
+    const { data: guest, error: guestError } = await supabase
+      .from("guests")
+      .insert({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        id_type: formData.idType,
+        id_number: formData.idNumber || null,
+      })
+      .select()
+      .single();
+
+    if (guestError) {
+      toast({
+        variant: "destructive",
+        title: "Error creating guest",
+        description: guestError.message,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Create reservation with checked-in status
+    const { error: resError } = await supabase
+      .from("reservations")
+      .insert([{
+        guest_id: guest.id,
+        room_id: formData.roomId,
+        check_in_date: format(formData.checkInDate, "yyyy-MM-dd"),
+        check_out_date: format(formData.checkOutDate, "yyyy-MM-dd"),
+        actual_check_in: new Date().toISOString(),
+        status: "checked-in" as const,
+        adults: formData.adults,
+        children: formData.children,
+        total_amount: calculateTotal(),
+        special_requests: formData.specialRequests || null,
+        source: "walk-in" as const,
+      }]);
+
+    if (resError) {
+      toast({
+        variant: "destructive",
+        title: "Error creating reservation",
+        description: resError.message,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Update room status
+    await supabase
+      .from("rooms")
+      .update({ status: "occupied" })
+      .eq("id", formData.roomId);
+
+    // Update guest visit count
+    await supabase
+      .from("guests")
+      .update({ total_visits: 1 })
+      .eq("id", guest.id);
+
+    setIsLoading(false);
+    toast({
+      title: "Walk-in check-in complete",
+      description: `Guest ${formData.firstName} ${formData.lastName} has been checked in.`,
+    });
+    onOpenChange(false);
+    onSuccess?.();
+    resetForm();
+  };
+
+  const handleCheckIn = async () => {
+    if (!reservationId) return;
+    setIsLoading(true);
+
+    const { error } = await supabase
+      .from("reservations")
+      .update({
+        status: "checked-in",
+        actual_check_in: new Date().toISOString(),
+      })
+      .eq("id", reservationId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Check-in failed",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Check-in successful",
+        description: "Guest has been checked in.",
+      });
+      onSuccess?.();
+    }
+
+    setIsLoading(false);
+    onOpenChange(false);
+  };
+
+  const handleCheckOut = async () => {
+    if (!reservationId) return;
+    setIsLoading(true);
+
+    // Get reservation to update room
+    const { data: reservation } = await supabase
+      .from("reservations")
+      .select("room_id, guest_id, total_amount")
+      .eq("id", reservationId)
+      .single();
+
+    const { error } = await supabase
+      .from("reservations")
+      .update({
+        status: "checked-out",
+        actual_check_out: new Date().toISOString(),
+      })
+      .eq("id", reservationId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Check-out failed",
+        description: error.message,
+      });
+    } else {
+      // Update room status to cleaning
+      if (reservation?.room_id) {
+        await supabase
+          .from("rooms")
+          .update({ status: "cleaning" })
+          .eq("id", reservation.room_id);
+      }
+
+      // Update guest total spending
+      if (reservation?.guest_id && reservation?.total_amount) {
+        const { data: guest } = await supabase
+          .from("guests")
+          .select("total_spending")
+          .eq("id", reservation.guest_id)
+          .single();
+
+        await supabase
+          .from("guests")
+          .update({
+            total_spending: (guest?.total_spending || 0) + reservation.total_amount,
+          })
+          .eq("id", reservation.guest_id);
+      }
+
+      toast({
+        title: "Check-out successful",
+        description: "Guest has been checked out. Room set to cleaning.",
+      });
+      onSuccess?.();
+    }
+
+    setIsLoading(false);
+    onOpenChange(false);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      idType: "passport",
+      idNumber: "",
+      roomId: "",
+      checkInDate: new Date(),
+      checkOutDate: new Date(Date.now() + 86400000),
+      adults: 1,
+      children: 0,
+      specialRequests: "",
+    });
+  };
+
+  const getTitle = () => {
+    switch (mode) {
+      case "walk-in":
+        return "Walk-in Check-in";
+      case "check-in":
+        return "Guest Check-in";
+      case "check-out":
+        return "Guest Check-out";
+    }
+  };
+
+  const getIcon = () => {
+    switch (mode) {
+      case "walk-in":
+        return <UserPlus className="h-5 w-5" />;
+      case "check-in":
+        return <LogIn className="h-5 w-5" />;
+      case "check-out":
+        return <LogOut className="h-5 w-5" />;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {getIcon()}
+            {getTitle()}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "walk-in"
+              ? "Register a walk-in guest and check them in directly."
+              : mode === "check-in"
+              ? "Confirm check-in for this reservation."
+              : "Process check-out for this guest."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {mode === "walk-in" ? (
+          <div className="space-y-6">
+            {/* Guest Information */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Guest Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    placeholder="John"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="Doe"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="john@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="idType">ID Type</Label>
+                  <Select
+                    value={formData.idType}
+                    onValueChange={(value: "passport" | "driver_license" | "national_id" | "other") =>
+                      setFormData({ ...formData, idType: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="passport">Passport</SelectItem>
+                      <SelectItem value="driver_license">Driver's License</SelectItem>
+                      <SelectItem value="national_id">National ID</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="idNumber">ID Number</Label>
+                  <Input
+                    id="idNumber"
+                    value={formData.idNumber}
+                    onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
+                    placeholder="ABC123456"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Room & Dates */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Room & Stay Details</h4>
+              <div className="space-y-2">
+                <Label htmlFor="room">Select Room *</Label>
+                <Select
+                  value={formData.roomId}
+                  onValueChange={(value) => setFormData({ ...formData, roomId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an available room" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => (
+                      <SelectItem key={room.id} value={room.id}>
+                        Room {room.room_number} - {room.room_type} (${room.price_per_night}/night)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Check-in Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(formData.checkInDate, "PPP")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.checkInDate}
+                        onSelect={(date) => date && setFormData({ ...formData, checkInDate: date })}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label>Check-out Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(formData.checkOutDate, "PPP")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.checkOutDate}
+                        onSelect={(date) => date && setFormData({ ...formData, checkOutDate: date })}
+                        disabled={(date) => date <= formData.checkInDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="adults">Adults</Label>
+                  <Input
+                    id="adults"
+                    type="number"
+                    min={1}
+                    value={formData.adults}
+                    onChange={(e) => setFormData({ ...formData, adults: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="children">Children</Label>
+                  <Input
+                    id="children"
+                    type="number"
+                    min={0}
+                    value={formData.children}
+                    onChange={(e) => setFormData({ ...formData, children: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="specialRequests">Special Requests</Label>
+                <Textarea
+                  id="specialRequests"
+                  value={formData.specialRequests}
+                  onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
+                  placeholder="Any special requests or notes..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Total */}
+            {formData.roomId && (
+              <div className="p-4 bg-secondary rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Total Amount</span>
+                  <span className="text-2xl font-bold text-primary">
+                    ${calculateTotal().toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {differenceInDays(formData.checkOutDate, formData.checkInDate) || 1} night(s)
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button variant="gold" onClick={handleWalkIn} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Check In Guest
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <p className="text-muted-foreground">
+              {mode === "check-in"
+                ? "Click the button below to confirm check-in. The guest's arrival time will be recorded."
+                : "Click the button below to process check-out. The room will be marked for cleaning."}
+            </p>
+            <div className="flex justify-end gap-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant={mode === "check-out" ? "destructive" : "gold"}
+                onClick={mode === "check-in" ? handleCheckIn : handleCheckOut}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : mode === "check-in" ? (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Confirm Check-in
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Confirm Check-out
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
+  CalendarDays,
   Calendar,
   Users,
   BedDouble,
@@ -12,15 +13,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Hotel,
-  X,
+  User,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Calendar, label: "Reservations", path: "/reservations" },
+  { icon: CalendarDays, label: "Reservations", path: "/reservations" },
+  { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: Users, label: "Guests", path: "/guests" },
   { icon: BedDouble, label: "Rooms", path: "/rooms" },
   { icon: Receipt, label: "Billing", path: "/billing" },
@@ -32,6 +36,13 @@ const navItems = [
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { collapsed, toggleCollapsed, isMobile } = useSidebar();
   const location = useLocation();
+  const { profile, signOut } = useAuth();
+
+  const getInitials = () => {
+    const first = profile?.first_name || "";
+    const last = profile?.last_name || "";
+    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -86,24 +97,33 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* User Section */}
       {(!collapsed || isMobile) && (
         <div className="p-4 border-t border-sidebar-border mt-auto">
-          <div className="flex items-center gap-3">
+          <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
             <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-semibold text-primary-foreground">JD</span>
+              <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">General Manager</p>
+              <p className="text-sm font-medium text-foreground truncate">
+                {profile?.first_name || "User"} {profile?.last_name || ""}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">Staff Member</p>
             </div>
-          </div>
+          </Link>
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={signOut}>
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
       )}
 
       {/* Collapsed User Avatar */}
       {collapsed && !isMobile && (
-        <div className="p-3 border-t border-sidebar-border mt-auto flex justify-center">
-          <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center">
-            <span className="text-sm font-semibold text-primary-foreground">JD</span>
-          </div>
+        <div className="p-3 border-t border-sidebar-border mt-auto flex flex-col items-center gap-2">
+          <Link to="/profile" className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80">
+            <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
+          </Link>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={signOut}>
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>
