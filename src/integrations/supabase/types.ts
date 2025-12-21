@@ -14,16 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      guests: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          id_number: string | null
+          id_type: string | null
+          is_vip: boolean | null
+          last_name: string
+          notes: string | null
+          phone: string | null
+          total_spending: number | null
+          total_visits: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          id_number?: string | null
+          id_type?: string | null
+          is_vip?: boolean | null
+          last_name: string
+          notes?: string | null
+          phone?: string | null
+          total_spending?: number | null
+          total_visits?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          id_number?: string | null
+          id_type?: string | null
+          is_vip?: boolean | null
+          last_name?: string
+          notes?: string | null
+          phone?: string | null
+          total_spending?: number | null
+          total_visits?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reservations: {
+        Row: {
+          actual_check_in: string | null
+          actual_check_out: string | null
+          adults: number
+          amount_paid: number | null
+          check_in_date: string
+          check_out_date: string
+          children: number | null
+          created_at: string
+          created_by: string | null
+          guest_id: string
+          id: string
+          payment_status: string | null
+          reservation_code: string
+          room_id: string
+          source: string | null
+          special_requests: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          actual_check_in?: string | null
+          actual_check_out?: string | null
+          adults?: number
+          amount_paid?: number | null
+          check_in_date: string
+          check_out_date: string
+          children?: number | null
+          created_at?: string
+          created_by?: string | null
+          guest_id: string
+          id?: string
+          payment_status?: string | null
+          reservation_code: string
+          room_id: string
+          source?: string | null
+          special_requests?: string | null
+          status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          actual_check_in?: string | null
+          actual_check_out?: string | null
+          adults?: number
+          amount_paid?: number | null
+          check_in_date?: string
+          check_out_date?: string
+          children?: number | null
+          created_at?: string
+          created_by?: string | null
+          guest_id?: string
+          id?: string
+          payment_status?: string | null
+          reservation_code?: string
+          room_id?: string
+          source?: string | null
+          special_requests?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          amenities: string[] | null
+          capacity: number
+          created_at: string
+          description: string | null
+          floor: number
+          id: string
+          price_per_night: number
+          room_number: string
+          room_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          floor: number
+          id?: string
+          price_per_night: number
+          room_number: string
+          room_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amenities?: string[] | null
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          floor?: number
+          id?: string
+          price_per_night?: number
+          room_number?: string
+          room_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "manager" | "staff" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +390,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "manager", "staff", "user"],
+    },
   },
 } as const

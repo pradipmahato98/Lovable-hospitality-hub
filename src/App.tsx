@@ -4,14 +4,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/hooks/use-sidebar";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Index from "./pages/Index";
 import Reservations from "./pages/Reservations";
+import ReservationCalendar from "./pages/ReservationCalendar";
 import Guests from "./pages/Guests";
 import Rooms from "./pages/Rooms";
 import Billing from "./pages/Billing";
 import Inventory from "./pages/Inventory";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,19 +27,24 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SidebarProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/reservations" element={<Reservations />} />
-            <Route path="/guests" element={<Guests />} />
-            <Route path="/rooms" element={<Rooms />} />
-            <Route path="/billing" element={<Billing />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </SidebarProvider>
+        <AuthProvider>
+          <SidebarProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
+              <Route path="/calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
+              <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
+              <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+              <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SidebarProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
