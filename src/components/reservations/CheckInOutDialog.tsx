@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
+import { useCheckInSettings } from "@/hooks/useSettings";
 
 interface Room {
   id: string;
@@ -38,6 +39,7 @@ export function CheckInOutDialog({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const { data: checkInSettings } = useCheckInSettings();
 
   // Walk-in form state
   const [formData, setFormData] = useState({
@@ -81,11 +83,28 @@ export function CheckInOutDialog({
   };
 
   const handleWalkIn = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.roomId) {
+    // Validate required fields based on settings
+    const missingFields: string[] = [];
+    
+    if (!formData.firstName) missingFields.push("First Name");
+    if (!formData.lastName) missingFields.push("Last Name");
+    if (!formData.roomId) missingFields.push("Room");
+    
+    if (checkInSettings?.id_required && !formData.idNumber) {
+      missingFields.push("ID Number");
+    }
+    if (checkInSettings?.phone_required && !formData.phone) {
+      missingFields.push("Phone");
+    }
+    if (checkInSettings?.email_required && !formData.email) {
+      missingFields.push("Email");
+    }
+
+    if (missingFields.length > 0) {
       toast({
         variant: "destructive",
-        title: "Missing information",
-        description: "Please fill in all required fields.",
+        title: "Missing required fields",
+        description: `Please fill in: ${missingFields.join(", ")}`,
       });
       return;
     }
@@ -345,22 +364,28 @@ export function CheckInOutDialog({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">
+                    Email {checkInSettings?.email_required && <span className="text-destructive">*</span>}
+                  </Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="john@example.com"
+                    required={checkInSettings?.email_required}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">
+                    Phone {checkInSettings?.phone_required && <span className="text-destructive">*</span>}
+                  </Label>
                   <Input
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+1 (555) 000-0000"
+                    required={checkInSettings?.phone_required}
                   />
                 </div>
               </div>
@@ -385,12 +410,15 @@ export function CheckInOutDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="idNumber">ID Number</Label>
+                  <Label htmlFor="idNumber">
+                    ID Number {checkInSettings?.id_required && <span className="text-destructive">*</span>}
+                  </Label>
                   <Input
                     id="idNumber"
                     value={formData.idNumber}
                     onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
                     placeholder="ABC123456"
+                    required={checkInSettings?.id_required}
                   />
                 </div>
               </div>
