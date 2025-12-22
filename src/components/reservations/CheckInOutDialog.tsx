@@ -116,6 +116,9 @@ export function CheckInOutDialog({
       return;
     }
 
+    // Generate reservation code
+    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    
     // Create reservation with checked-in status
     const { error: resError } = await supabase
       .from("reservations")
@@ -131,6 +134,7 @@ export function CheckInOutDialog({
         total_amount: calculateTotal(),
         special_requests: formData.specialRequests || null,
         source: "walk-in" as const,
+        reservation_code: reservationCode,
       }]);
 
     if (resError) {
