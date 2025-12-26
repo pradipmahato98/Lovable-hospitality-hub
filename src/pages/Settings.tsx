@@ -26,10 +26,14 @@ import {
   useUpdateBookingSourcesSettings,
   useRatePlansSettings,
   useUpdateRatePlansSettings,
+  usePropertySettings,
+  useUpdatePropertySettings,
+  useNotificationSettings,
+  useUpdateNotificationSettings,
   CheckInFieldSettings,
   PaymentSettings,
-  BookingSourcesSettings,
-  RatePlansSettings,
+  PropertySettings,
+  NotificationSettings,
 } from "@/hooks/useSettings";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
@@ -56,6 +60,14 @@ const Settings = () => {
   // Rate plans
   const { data: ratePlans, isLoading: isLoadingRates } = useRatePlansSettings();
   const updateRates = useUpdateRatePlansSettings();
+
+  // Property settings
+  const { data: propertySettings, isLoading: isLoadingProperty } = usePropertySettings();
+  const updateProperty = useUpdatePropertySettings();
+
+  // Notification settings
+  const { data: notificationSettings, isLoading: isLoadingNotifications } = useNotificationSettings();
+  const updateNotifications = useUpdateNotificationSettings();
 
   // Redirect non-admins
   if (isLoadingRole) {
@@ -120,6 +132,16 @@ const Settings = () => {
       ),
     };
     updateRates.mutate(updated);
+  };
+
+  const handlePropertyChange = (key: keyof PropertySettings, value: string) => {
+    if (!propertySettings) return;
+    updateProperty.mutate({ ...propertySettings, [key]: value });
+  };
+
+  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
+    if (!notificationSettings) return;
+    updateNotifications.mutate({ ...notificationSettings, [key]: value });
   };
 
   const tabs = [
@@ -427,34 +449,97 @@ const Settings = () => {
                 <CardDescription>Update your hotel information and branding</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="propertyName">Property Name</Label>
-                    <Input id="propertyName" defaultValue="LuxeStay Grand Hotel" className="bg-secondary" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="propertyCode">Property Code</Label>
-                    <Input id="propertyCode" defaultValue="LSG-001" className="bg-secondary" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input id="address" defaultValue="123 Luxury Avenue, Downtown" className="bg-secondary" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" defaultValue="New York" className="bg-secondary" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State</Label>
-                    <Input id="state" defaultValue="NY" className="bg-secondary" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zip">ZIP Code</Label>
-                    <Input id="zip" defaultValue="10001" className="bg-secondary" />
-                  </div>
-                </div>
+                {isLoadingProperty ? renderLoadingState() : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="propertyName">Property Name</Label>
+                        <Input 
+                          id="propertyName" 
+                          value={propertySettings?.name ?? ""} 
+                          onChange={(e) => handlePropertyChange("name", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="propertyCode">Property Code</Label>
+                        <Input 
+                          id="propertyCode" 
+                          value={propertySettings?.code ?? ""} 
+                          onChange={(e) => handlePropertyChange("code", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input 
+                        id="address" 
+                        value={propertySettings?.address ?? ""} 
+                        onChange={(e) => handlePropertyChange("address", e.target.value)}
+                        className="bg-secondary" 
+                        disabled={updateProperty.isPending}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input 
+                          id="city" 
+                          value={propertySettings?.city ?? ""} 
+                          onChange={(e) => handlePropertyChange("city", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input 
+                          id="state" 
+                          value={propertySettings?.state ?? ""} 
+                          onChange={(e) => handlePropertyChange("state", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="zip">ZIP Code</Label>
+                        <Input 
+                          id="zip" 
+                          value={propertySettings?.zip ?? ""} 
+                          onChange={(e) => handlePropertyChange("zip", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input 
+                          id="phone" 
+                          value={propertySettings?.phone ?? ""} 
+                          onChange={(e) => handlePropertyChange("phone", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input 
+                          id="email" 
+                          type="email"
+                          value={propertySettings?.email ?? ""} 
+                          onChange={(e) => handlePropertyChange("email", e.target.value)}
+                          className="bg-secondary" 
+                          disabled={updateProperty.isPending}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
@@ -467,21 +552,65 @@ const Settings = () => {
                 <CardDescription>Configure how you receive alerts and updates</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {[
-                  { label: "New Booking Alerts", description: "Get notified when a new reservation is made", defaultChecked: true },
-                  { label: "Check-in Reminders", description: "Receive reminders for upcoming arrivals", defaultChecked: true },
-                  { label: "Low Inventory Alerts", description: "Alert when supplies are running low", defaultChecked: true },
-                  { label: "Payment Notifications", description: "Get notified about payment status changes", defaultChecked: false },
-                  { label: "Daily Summary", description: "Receive a daily digest of property activity", defaultChecked: true },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                {isLoadingNotifications ? renderLoadingState() : (
+                  <>
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">New Booking Alerts</p>
+                        <p className="text-xs text-muted-foreground">Get notified when a new reservation is made</p>
+                      </div>
+                      <Switch 
+                        checked={notificationSettings?.new_booking_alerts ?? true}
+                        onCheckedChange={(checked) => handleNotificationChange("new_booking_alerts", checked)}
+                        disabled={updateNotifications.isPending}
+                      />
                     </div>
-                    <Switch defaultChecked={item.defaultChecked} />
-                  </div>
-                ))}
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Check-in Reminders</p>
+                        <p className="text-xs text-muted-foreground">Receive reminders for upcoming arrivals</p>
+                      </div>
+                      <Switch 
+                        checked={notificationSettings?.checkin_reminders ?? true}
+                        onCheckedChange={(checked) => handleNotificationChange("checkin_reminders", checked)}
+                        disabled={updateNotifications.isPending}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Low Inventory Alerts</p>
+                        <p className="text-xs text-muted-foreground">Alert when supplies are running low</p>
+                      </div>
+                      <Switch 
+                        checked={notificationSettings?.low_inventory_alerts ?? true}
+                        onCheckedChange={(checked) => handleNotificationChange("low_inventory_alerts", checked)}
+                        disabled={updateNotifications.isPending}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Payment Notifications</p>
+                        <p className="text-xs text-muted-foreground">Get notified about payment status changes</p>
+                      </div>
+                      <Switch 
+                        checked={notificationSettings?.payment_notifications ?? false}
+                        onCheckedChange={(checked) => handleNotificationChange("payment_notifications", checked)}
+                        disabled={updateNotifications.isPending}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Daily Summary</p>
+                        <p className="text-xs text-muted-foreground">Receive a daily digest of property activity</p>
+                      </div>
+                      <Switch 
+                        checked={notificationSettings?.daily_summary ?? true}
+                        onCheckedChange={(checked) => handleNotificationChange("daily_summary", checked)}
+                        disabled={updateNotifications.isPending}
+                      />
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
