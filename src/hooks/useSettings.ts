@@ -41,6 +41,25 @@ export interface RatePlansSettings {
   plans: RatePlan[];
 }
 
+export interface PropertySettings {
+  name: string;
+  code: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  email: string;
+}
+
+export interface NotificationSettings {
+  new_booking_alerts: boolean;
+  checkin_reminders: boolean;
+  low_inventory_alerts: boolean;
+  payment_notifications: boolean;
+  daily_summary: boolean;
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -72,6 +91,25 @@ const defaultRatePlans: RatePlansSettings = {
     { id: "last_minute", name: "Last Minute", description: "Book within 48 hours", discount_percentage: 10, enabled: false },
     { id: "weekly", name: "Weekly Stay", description: "7+ night stays", discount_percentage: 20, enabled: true },
   ],
+};
+
+const defaultPropertySettings: PropertySettings = {
+  name: "LuxeStay Grand Hotel",
+  code: "LSG-001",
+  address: "123 Luxury Avenue, Downtown",
+  city: "New York",
+  state: "NY",
+  zip: "10001",
+  phone: "",
+  email: "",
+};
+
+const defaultNotificationSettings: NotificationSettings = {
+  new_booking_alerts: true,
+  checkin_reminders: true,
+  low_inventory_alerts: true,
+  payment_notifications: false,
+  daily_summary: true,
 };
 
 // Generic settings fetch hook
@@ -160,4 +198,20 @@ export function useRatePlansSettings() {
 
 export function useUpdateRatePlansSettings() {
   return useUpdateSettings<RatePlansSettings>("rate_plans");
+}
+
+export function usePropertySettings() {
+  return useSettings<PropertySettings>("property_details", defaultPropertySettings);
+}
+
+export function useUpdatePropertySettings() {
+  return useUpdateSettings<PropertySettings>("property_details");
+}
+
+export function useNotificationSettings() {
+  return useSettings<NotificationSettings>("notification_settings", defaultNotificationSettings);
+}
+
+export function useUpdateNotificationSettings() {
+  return useUpdateSettings<NotificationSettings>("notification_settings");
 }
