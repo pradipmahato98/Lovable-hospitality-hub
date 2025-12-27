@@ -1,0 +1,166 @@
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Code2, 
+  Database, 
+  Server, 
+  Activity, 
+  Terminal,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Clock
+} from "lucide-react";
+import { useIsAdmin } from "@/hooks/useUserRole";
+import { Navigate } from "react-router-dom";
+import { useState } from "react";
+
+const DevPanel = () => {
+  const { isAdmin, isLoading } = useIsAdmin();
+  const [refreshing, setRefreshing] = useState(false);
+
+  if (isLoading) {
+    return (
+      <MainLayout title="Developer Panel" subtitle="Loading...">
+        <div className="flex items-center justify-center py-20">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  const systemStatus = [
+    { name: "Database", status: "healthy", latency: "12ms", icon: Database },
+    { name: "API Server", status: "healthy", latency: "45ms", icon: Server },
+    { name: "Auth Service", status: "healthy", latency: "23ms", icon: Activity },
+    { name: "Edge Functions", status: "healthy", latency: "89ms", icon: Code2 },
+  ];
+
+  const recentLogs = [
+    { time: "2 min ago", level: "info", message: "User authentication successful" },
+    { time: "5 min ago", level: "info", message: "New reservation created: RES-123456" },
+    { time: "12 min ago", level: "warning", message: "High API response time detected" },
+    { time: "1 hour ago", level: "info", message: "Database backup completed" },
+    { time: "2 hours ago", level: "error", message: "Payment gateway timeout - retried successfully" },
+  ];
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1500);
+  };
+
+  return (
+    <MainLayout title="Developer Panel" subtitle="System monitoring and diagnostics (Admin only)">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* System Status */}
+        <Card variant="elevated">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  System Status
+                </CardTitle>
+                <CardDescription>Real-time service health</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {systemStatus.map((service) => (
+              <div key={service.name} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
+                  <service.icon className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">{service.name}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">{service.latency}</span>
+                  <Badge className="bg-success/20 text-success border-success/30">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Healthy
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Terminal className="h-5 w-5" />
+              Quick Actions
+            </CardTitle>
+            <CardDescription>Developer utilities and tools</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="justify-start gap-2">
+              <Database className="h-4 w-4" />
+              Clear Cache
+            </Button>
+            <Button variant="outline" className="justify-start gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Sync Data
+            </Button>
+            <Button variant="outline" className="justify-start gap-2">
+              <Server className="h-4 w-4" />
+              Restart Services
+            </Button>
+            <Button variant="outline" className="justify-start gap-2">
+              <Code2 className="h-4 w-4" />
+              Run Migrations
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Recent Logs */}
+        <Card variant="elevated" className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Terminal className="h-5 w-5" />
+              Recent System Logs
+            </CardTitle>
+            <CardDescription>Last 24 hours of activity</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 font-mono text-sm">
+              {recentLogs.map((log, index) => (
+                <div key={index} className="flex items-start gap-3 p-2 rounded bg-secondary/30">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {log.time}
+                  </span>
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      log.level === 'error' 
+                        ? 'bg-destructive/20 text-destructive border-destructive/30' 
+                        : log.level === 'warning'
+                        ? 'bg-warning/20 text-warning border-warning/30'
+                        : 'bg-muted text-muted-foreground'
+                    }
+                  >
+                    {log.level.toUpperCase()}
+                  </Badge>
+                  <span className="text-foreground">{log.message}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default DevPanel;

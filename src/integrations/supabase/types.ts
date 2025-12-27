@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_sources: {
+        Row: {
+          code: string
+          commission_percentage: number
+          created_at: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          commission_percentage?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          commission_percentage?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       guests: {
         Row: {
           address: string | null
@@ -71,6 +104,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -104,6 +170,48 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rate_plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_percentage: number
+          id: string
+          is_active: boolean
+          is_system: boolean
+          max_nights: number | null
+          min_nights: number | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          max_nights?: number | null
+          min_nights?: number | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          max_nights?: number | null
+          min_nights?: number | null
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -187,6 +295,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_change_audit: {
+        Row: {
+          changed_by_user_id: string
+          created_at: string
+          id: string
+          new_role: string
+          old_role: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_by_user_id: string
+          created_at?: string
+          id?: string
+          new_role: string
+          old_role: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_by_user_id?: string
+          created_at?: string
+          id?: string
+          new_role?: string
+          old_role?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       rooms: {
         Row: {

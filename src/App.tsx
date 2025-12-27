@@ -19,6 +19,11 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
+import DevPanel from "./pages/DevPanel";
+import POS from "./pages/POS";
+import HR from "./pages/HR";
+import ChannelManager from "./pages/ChannelManager";
+import Housekeeping from "./pages/Housekeeping";
 
 const queryClient = new QueryClient();
 
@@ -37,11 +42,16 @@ const App = () => (
               <Route path="/calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
               <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
               <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+              <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+              <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+              <Route path="/channels" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+              <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
+              <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
