@@ -15,6 +15,11 @@ import {
   Hotel,
   LogOut,
   UserCog,
+  Code2,
+  ShoppingCart,
+  UserCheck,
+  Globe,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -28,14 +33,19 @@ const navItems = [
   { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: Users, label: "Guests", path: "/guests" },
   { icon: BedDouble, label: "Rooms", path: "/rooms" },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
   { icon: Receipt, label: "Billing", path: "/billing" },
+  { icon: ShoppingCart, label: "POS", path: "/pos" },
   { icon: Package, label: "Inventory", path: "/inventory" },
+  { icon: Globe, label: "Channels", path: "/channels" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
 
 const adminNavItems = [
   { icon: UserCog, label: "User Management", path: "/users" },
+  { icon: UserCheck, label: "HR", path: "/hr" },
   { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Code2, label: "Dev Panel", path: "/dev" },
 ];
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
