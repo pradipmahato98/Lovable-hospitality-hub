@@ -24,6 +24,7 @@ import POS from "./pages/POS";
 import HR from "./pages/HR";
 import ChannelManager from "./pages/ChannelManager";
 import Housekeeping from "./pages/Housekeeping";
+import Engineering from "./pages/Engineering";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
               <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
               <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
+              <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />

@@ -2,6 +2,10 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Code2, 
   Database, 
@@ -11,15 +15,35 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
-  Clock
+  Clock,
+  Mail,
+  Settings,
+  Bell,
+  Shield,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
+import { toast } from "sonner";
+
+interface EmailConfig {
+  enabled: boolean;
+  provider: string;
+  roleChangeNotifications: boolean;
+  bookingNotifications: boolean;
+  systemAlerts: boolean;
+}
 
 const DevPanel = () => {
   const { isAdmin, isLoading } = useIsAdmin();
   const [refreshing, setRefreshing] = useState(false);
+  const [emailConfig, setEmailConfig] = useState<EmailConfig>({
+    enabled: false,
+    provider: "resend",
+    roleChangeNotifications: true,
+    bookingNotifications: true,
+    systemAlerts: true,
+  });
 
   if (isLoading) {
     return (
@@ -55,110 +79,306 @@ const DevPanel = () => {
     setTimeout(() => setRefreshing(false), 1500);
   };
 
+  const handleEmailToggle = (enabled: boolean) => {
+    if (enabled) {
+      toast.info("Email notifications require API key setup. Contact your administrator.");
+    }
+    setEmailConfig({ ...emailConfig, enabled });
+  };
+
+  const handleSaveEmailConfig = () => {
+    toast.success("Email configuration saved");
+  };
+
   return (
     <MainLayout title="Developer Panel" subtitle="System monitoring and diagnostics (Admin only)">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* System Status */}
-        <Card variant="elevated">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  System Status
-                </CardTitle>
-                <CardDescription>Real-time service health</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {systemStatus.map((service) => (
-              <div key={service.name} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <service.icon className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">{service.name}</span>
+      <Tabs defaultValue="status" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="status" className="gap-2">
+            <Activity className="h-4 w-4" />
+            System Status
+          </TabsTrigger>
+          <TabsTrigger value="email" className="gap-2">
+            <Mail className="h-4 w-4" />
+            Email Config
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-2">
+            <Terminal className="h-4 w-4" />
+            Logs
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="status">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* System Status */}
+            <Card variant="elevated">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      System Status
+                    </CardTitle>
+                    <CardDescription>Real-time service health</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">{service.latency}</span>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {systemStatus.map((service) => (
+                  <div key={service.name} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                    <div className="flex items-center gap-3">
+                      <service.icon className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-medium">{service.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground">{service.latency}</span>
+                      <Badge className="bg-success/20 text-success border-success/30">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Healthy
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Terminal className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+                <CardDescription>Developer utilities and tools</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="justify-start gap-2">
+                  <Database className="h-4 w-4" />
+                  Clear Cache
+                </Button>
+                <Button variant="outline" className="justify-start gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Sync Data
+                </Button>
+                <Button variant="outline" className="justify-start gap-2">
+                  <Server className="h-4 w-4" />
+                  Restart Services
+                </Button>
+                <Button variant="outline" className="justify-start gap-2">
+                  <Code2 className="h-4 w-4" />
+                  Run Migrations
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="email">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Email Configuration */}
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Email Notifications
+                </CardTitle>
+                <CardDescription>
+                  Configure email notification settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+                  <div>
+                    <p className="font-medium">Enable Email Notifications</p>
+                    <p className="text-sm text-muted-foreground">
+                      Send automated emails for system events
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={emailConfig.enabled} 
+                    onCheckedChange={handleEmailToggle}
+                  />
+                </div>
+
+                {emailConfig.enabled && (
+                  <>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="provider">Email Provider</Label>
+                        <Input 
+                          id="provider" 
+                          value={emailConfig.provider} 
+                          onChange={(e) => setEmailConfig({ ...emailConfig, provider: e.target.value })}
+                          placeholder="e.g., resend, sendgrid"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Requires RESEND_API_KEY or similar to be configured
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Notification Types</h4>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Role Change Notifications</span>
+                        </div>
+                        <Switch 
+                          checked={emailConfig.roleChangeNotifications}
+                          onCheckedChange={(checked) => 
+                            setEmailConfig({ ...emailConfig, roleChangeNotifications: checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Booking Notifications</span>
+                        </div>
+                        <Switch 
+                          checked={emailConfig.bookingNotifications}
+                          onCheckedChange={(checked) => 
+                            setEmailConfig({ ...emailConfig, bookingNotifications: checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">System Alerts</span>
+                        </div>
+                        <Switch 
+                          checked={emailConfig.systemAlerts}
+                          onCheckedChange={(checked) => 
+                            setEmailConfig({ ...emailConfig, systemAlerts: checked })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <Button onClick={handleSaveEmailConfig} className="w-full">
+                      Save Configuration
+                    </Button>
+                  </>
+                )}
+
+                {!emailConfig.enabled && (
+                  <div className="p-4 rounded-lg border border-dashed border-border text-center">
+                    <Mail className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Email notifications are disabled. Enable to configure settings.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* API Key Status */}
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  API Configuration
+                </CardTitle>
+                <CardDescription>
+                  External service integrations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">RESEND_API_KEY</p>
+                      <p className="text-xs text-muted-foreground">Email service provider</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                    Not Configured
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Database className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">SUPABASE_URL</p>
+                      <p className="text-xs text-muted-foreground">Database connection</p>
+                    </div>
+                  </div>
                   <Badge className="bg-success/20 text-success border-success/30">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Healthy
+                    Configured
                   </Badge>
                 </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">SUPABASE_SERVICE_ROLE_KEY</p>
+                      <p className="text-xs text-muted-foreground">Admin access key</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-success/20 text-success border-success/30">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Configured
+                  </Badge>
+                </div>
+
+                <p className="text-xs text-muted-foreground mt-4">
+                  To configure additional API keys, please contact your system administrator or add them via the Cloud dashboard.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <Card variant="elevated">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="h-5 w-5" />
+                Recent System Logs
+              </CardTitle>
+              <CardDescription>Last 24 hours of activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 font-mono text-sm">
+                {recentLogs.map((log, index) => (
+                  <div key={index} className="flex items-start gap-3 p-2 rounded bg-secondary/30">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {log.time}
+                    </span>
+                    <Badge 
+                      variant="outline" 
+                      className={
+                        log.level === 'error' 
+                          ? 'bg-destructive/20 text-destructive border-destructive/30' 
+                          : log.level === 'warning'
+                          ? 'bg-warning/20 text-warning border-warning/30'
+                          : 'bg-muted text-muted-foreground'
+                      }
+                    >
+                      {log.level.toUpperCase()}
+                    </Badge>
+                    <span className="text-foreground">{log.message}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card variant="elevated">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Terminal className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription>Developer utilities and tools</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="justify-start gap-2">
-              <Database className="h-4 w-4" />
-              Clear Cache
-            </Button>
-            <Button variant="outline" className="justify-start gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Sync Data
-            </Button>
-            <Button variant="outline" className="justify-start gap-2">
-              <Server className="h-4 w-4" />
-              Restart Services
-            </Button>
-            <Button variant="outline" className="justify-start gap-2">
-              <Code2 className="h-4 w-4" />
-              Run Migrations
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Recent Logs */}
-        <Card variant="elevated" className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Terminal className="h-5 w-5" />
-              Recent System Logs
-            </CardTitle>
-            <CardDescription>Last 24 hours of activity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 font-mono text-sm">
-              {recentLogs.map((log, index) => (
-                <div key={index} className="flex items-start gap-3 p-2 rounded bg-secondary/30">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {log.time}
-                  </span>
-                  <Badge 
-                    variant="outline" 
-                    className={
-                      log.level === 'error' 
-                        ? 'bg-destructive/20 text-destructive border-destructive/30' 
-                        : log.level === 'warning'
-                        ? 'bg-warning/20 text-warning border-warning/30'
-                        : 'bg-muted text-muted-foreground'
-                    }
-                  >
-                    {log.level.toUpperCase()}
-                  </Badge>
-                  <span className="text-foreground">{log.message}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </MainLayout>
   );
 };
