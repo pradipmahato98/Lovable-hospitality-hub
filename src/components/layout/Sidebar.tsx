@@ -20,6 +20,7 @@ import {
   UserCheck,
   Globe,
   Sparkles,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -34,6 +35,7 @@ const navItems = [
   { icon: Users, label: "Guests", path: "/guests" },
   { icon: BedDouble, label: "Rooms", path: "/rooms" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
+  { icon: Wrench, label: "Engineering", path: "/engineering" },
   { icon: Receipt, label: "Billing", path: "/billing" },
   { icon: ShoppingCart, label: "POS", path: "/pos" },
   { icon: Package, label: "Inventory", path: "/inventory" },
