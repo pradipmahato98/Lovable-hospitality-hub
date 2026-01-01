@@ -45,6 +45,7 @@ const navItems = [
 
 const adminNavItems = [
   { icon: UserCog, label: "User Management", path: "/users" },
+  { icon: Users, label: "Staff Management", path: "/staff" },
   { icon: UserCheck, label: "HR", path: "/hr" },
   { icon: Settings, label: "Settings", path: "/settings" },
   { icon: Code2, label: "Dev Panel", path: "/dev" },
