@@ -3,7 +3,22 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   ShoppingCart, 
   Plus, 
@@ -16,9 +31,16 @@ import {
   Utensils,
   Wine,
   IceCream,
-  Receipt
+  Receipt,
+  Percent,
+  Split,
+  Wallet,
+  Building2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CartItem {
   id: string;
@@ -47,6 +69,31 @@ const POS = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [discountType, setDiscountType] = useState<"percent" | "fixed">("percent");
+  const [discountValue, setDiscountValue] = useState("");
+  const [tipPercent, setTipPercent] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [splitPayment, setSplitPayment] = useState(false);
+  const [splitAmounts, setSplitAmounts] = useState<{ method: string; amount: string }[]>([
+    { method: "cash", amount: "" },
+    { method: "card", amount: "" },
+  ]);
+  const [roomChargeRoom, setRoomChargeRoom] = useState("");
+
+  // Fetch rooms for room charge
+  const { data: rooms = [] } = useQuery({
+    queryKey: ["rooms-occupied"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("id, room_number, room_type")
+        .eq("status", "occupied")
+        .order("room_number", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const categories = [...new Set(menuItems.map(item => item.category))];
 
@@ -81,16 +128,53 @@ const POS = () => {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.1;
-  const total = subtotal + tax;
+  
+  // Calculate discount
+  const discountAmount = discountValue
+    ? discountType === "percent"
+      ? subtotal * (parseFloat(discountValue) / 100)
+      : parseFloat(discountValue)
+    : 0;
 
-  const handleCheckout = (method: string) => {
+  const afterDiscount = subtotal - discountAmount;
+  const tipAmount = afterDiscount * (tipPercent / 100);
+  const tax = afterDiscount * 0.1;
+  const total = afterDiscount + tax + tipAmount;
+
+  const handleOpenCheckout = () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
       return;
     }
-    toast.success(`Payment of $${total.toFixed(2)} processed via ${method}`);
+    setCheckoutOpen(true);
+  };
+
+  const handleCheckout = () => {
+    if (splitPayment) {
+      const splitTotal = splitAmounts.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
+      if (Math.abs(splitTotal - total) > 0.01) {
+        toast.error(`Split amounts must equal $${total.toFixed(2)}`);
+        return;
+      }
+      toast.success(`Payment of $${total.toFixed(2)} processed via split payment`);
+    } else if (paymentMethod === "room" && !roomChargeRoom) {
+      toast.error("Please select a room");
+      return;
+    } else if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    } else {
+      const methodLabel = paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
+      toast.success(`Payment of $${total.toFixed(2)} processed via ${methodLabel}`);
+    }
+    
     setCart([]);
+    setCheckoutOpen(false);
+    setDiscountValue("");
+    setTipPercent(0);
+    setPaymentMethod("");
+    setSplitPayment(false);
+    setRoomChargeRoom("");
   };
 
   return (
@@ -199,33 +283,243 @@ const POS = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax (10%)</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>${(subtotal * 0.1).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-semibold border-t border-border pt-2">
                     <span>Total</span>
-                    <span className="text-primary">${total.toFixed(2)}</span>
+                    <span className="text-primary">${(subtotal * 1.1).toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="gap-2" onClick={() => handleCheckout("Cash")}>
-                    <Banknote className="h-4 w-4" />
-                    Cash
-                  </Button>
-                  <Button variant="gold" className="gap-2" onClick={() => handleCheckout("Card")}>
-                    <CreditCard className="h-4 w-4" />
-                    Card
-                  </Button>
-                </div>
-                <Button variant="secondary" className="w-full gap-2" onClick={() => handleCheckout("Room Charge")}>
+                <Button variant="gold" className="w-full gap-2" onClick={handleOpenCheckout}>
                   <Receipt className="h-4 w-4" />
-                  Charge to Room
+                  Checkout
                 </Button>
               </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Checkout Dialog */}
+      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Payment</DialogTitle>
+            <DialogDescription>
+              Review order and select payment method
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Order Summary */}
+            <div className="p-3 rounded-lg bg-secondary/50 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal ({cart.reduce((s, i) => s + i.quantity, 0)} items)</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-success">
+                  <span>Discount</span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span>Tax (10%)</span>
+                <span>${tax.toFixed(2)}</span>
+              </div>
+              {tipAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>Tip ({tipPercent}%)</span>
+                  <span>${tipAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-lg border-t border-border pt-2">
+                <span>Total</span>
+                <span className="text-primary">${total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Discount */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Percent className="h-4 w-4" />
+                Discount
+              </Label>
+              <div className="flex gap-2">
+                <Select value={discountType} onValueChange={(v: "percent" | "fixed") => setDiscountType(v)}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">%</SelectItem>
+                    <SelectItem value="fixed">$</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  placeholder={discountType === "percent" ? "0" : "0.00"}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="space-y-2">
+              <Label>Tip</Label>
+              <div className="flex gap-2">
+                {[0, 10, 15, 20].map((p) => (
+                  <Button
+                    key={p}
+                    variant={tipPercent === p ? "secondary" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setTipPercent(p)}
+                  >
+                    {p === 0 ? "None" : `${p}%`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Split Payment Toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={splitPayment ? "secondary" : "outline"}
+                size="sm"
+                className="gap-2"
+                onClick={() => setSplitPayment(!splitPayment)}
+              >
+                <Split className="h-4 w-4" />
+                Split Payment
+              </Button>
+            </div>
+
+            {/* Payment Method */}
+            {!splitPayment ? (
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={paymentMethod === "cash" ? "secondary" : "outline"}
+                    className="gap-2"
+                    onClick={() => setPaymentMethod("cash")}
+                  >
+                    <Banknote className="h-4 w-4" />
+                    Cash
+                  </Button>
+                  <Button
+                    variant={paymentMethod === "card" ? "secondary" : "outline"}
+                    className="gap-2"
+                    onClick={() => setPaymentMethod("card")}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Card
+                  </Button>
+                  <Button
+                    variant={paymentMethod === "wallet" ? "secondary" : "outline"}
+                    className="gap-2"
+                    onClick={() => setPaymentMethod("wallet")}
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Digital Wallet
+                  </Button>
+                  <Button
+                    variant={paymentMethod === "room" ? "secondary" : "outline"}
+                    className="gap-2"
+                    onClick={() => setPaymentMethod("room")}
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Room Charge
+                  </Button>
+                </div>
+
+                {paymentMethod === "room" && (
+                  <Select value={roomChargeRoom} onValueChange={setRoomChargeRoom}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select occupied room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rooms.length === 0 ? (
+                        <SelectItem value="none" disabled>
+                          No occupied rooms
+                        </SelectItem>
+                      ) : (
+                        rooms.map((room) => (
+                          <SelectItem key={room.id} value={room.room_number}>
+                            Room {room.room_number} ({room.room_type})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Label>Split Amounts</Label>
+                {splitAmounts.map((split, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <Select
+                      value={split.method}
+                      onValueChange={(v) => {
+                        const updated = [...splitAmounts];
+                        updated[index].method = v;
+                        setSplitAmounts(updated);
+                      }}
+                    >
+                      <SelectTrigger className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="wallet">Wallet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={split.amount}
+                      onChange={(e) => {
+                        const updated = [...splitAmounts];
+                        updated[index].amount = e.target.value;
+                        setSplitAmounts(updated);
+                      }}
+                      className="flex-1"
+                    />
+                    {splitAmounts.length > 2 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setSplitAmounts(splitAmounts.filter((_, i) => i !== index))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setSplitAmounts([...splitAmounts, { method: "cash", amount: "" }])}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Split
+                </Button>
+              </div>
+            )}
+
+            <Button variant="gold" className="w-full" onClick={handleCheckout}>
+              Complete Payment - ${total.toFixed(2)}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

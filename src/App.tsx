@@ -25,6 +25,7 @@ import HR from "./pages/HR";
 import ChannelManager from "./pages/ChannelManager";
 import Housekeeping from "./pages/Housekeeping";
 import Engineering from "./pages/Engineering";
+import StaffManagement from "./pages/StaffManagement";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+              <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
               <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
               <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

@@ -1,8 +1,10 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, TrendingUp, Users, BedDouble, DollarSign } from "lucide-react";
+import { Download, FileSpreadsheet, TrendingUp, Users, BedDouble, DollarSign } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
+import { exportToPDF, exportToExcel } from "@/lib/reportExport";
+import { toast } from "sonner";
 
 const occupancyData = [
   { month: "Jan", rate: 72 },
@@ -42,6 +44,94 @@ const reportTypes = [
 ];
 
 const Reports = () => {
+  const handleExportPDF = (reportTitle: string) => {
+    let data;
+    switch (reportTitle) {
+      case "Revenue Report":
+        data = {
+          title: "Revenue Report",
+          headers: ["Source", "Amount ($)"],
+          rows: revenueBySource.map((r) => [r.source, r.amount]),
+        };
+        break;
+      case "Occupancy Report":
+        data = {
+          title: "Occupancy Report",
+          headers: ["Month", "Occupancy Rate (%)"],
+          rows: occupancyData.map((o) => [o.month, o.rate]),
+        };
+        break;
+      case "Guest Analytics":
+        data = {
+          title: "Guest Analytics",
+          headers: ["Segment", "Percentage (%)"],
+          rows: guestDemographics.map((g) => [g.name, g.value]),
+        };
+        break;
+      case "Expense Report":
+        data = {
+          title: "Expense Report",
+          headers: ["Category", "Amount ($)"],
+          rows: [
+            ["Salaries", 45000],
+            ["Utilities", 8500],
+            ["Supplies", 12000],
+            ["Maintenance", 6500],
+            ["Marketing", 4000],
+          ],
+        };
+        break;
+      default:
+        return;
+    }
+    exportToPDF(data);
+    toast.success(`${reportTitle} exported as PDF`);
+  };
+
+  const handleExportExcel = (reportTitle: string) => {
+    let data;
+    switch (reportTitle) {
+      case "Revenue Report":
+        data = {
+          title: "Revenue_Report",
+          headers: ["Source", "Amount ($)"],
+          rows: revenueBySource.map((r) => [r.source, r.amount]),
+        };
+        break;
+      case "Occupancy Report":
+        data = {
+          title: "Occupancy_Report",
+          headers: ["Month", "Occupancy Rate (%)"],
+          rows: occupancyData.map((o) => [o.month, o.rate]),
+        };
+        break;
+      case "Guest Analytics":
+        data = {
+          title: "Guest_Analytics",
+          headers: ["Segment", "Percentage (%)"],
+          rows: guestDemographics.map((g) => [g.name, g.value]),
+        };
+        break;
+      case "Expense Report":
+        data = {
+          title: "Expense_Report",
+          headers: ["Category", "Amount ($)"],
+          rows: [
+            ["Salaries", 45000],
+            ["Utilities", 8500],
+            ["Supplies", 12000],
+            ["Maintenance", 6500],
+            ["Marketing", 4000],
+          ],
+        };
+        break;
+      default:
+        return;
+    }
+    exportToExcel(data);
+    toast.success(`${reportTitle} exported as Excel`);
+  };
+
   return (
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
       {/* Quick Report Generation */}
@@ -58,9 +148,26 @@ const Reports = () => {
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                   <report.icon className="h-5 w-5 text-primary" />
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleExportPDF(report.title)}
+                    title="Export PDF"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleExportExcel(report.title)}
+                    title="Export Excel"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <h3 className="font-semibold text-foreground mb-1">{report.title}</h3>
               <p className="text-xs text-muted-foreground mb-2">{report.description}</p>
