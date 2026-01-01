@@ -16,11 +16,22 @@ export function useUserRole() {
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("user_id", user.id);
 
       if (error) throw error;
-      return data?.role as AppRole | null;
+
+      const roles = (data ?? []).map((r) => r.role as AppRole);
+      if (roles.length === 0) return null;
+
+      // Pick highest role if multiple rows exist
+      const priority: Record<AppRole, number> = {
+        user: 0,
+        staff: 1,
+        manager: 2,
+        admin: 3,
+      };
+
+      return roles.reduce((best, current) => (priority[current] > priority[best] ? current : best));
     },
     enabled: !!user,
   });
