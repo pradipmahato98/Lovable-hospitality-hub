@@ -142,11 +142,28 @@ const UserManagement = () => {
   // Update user role mutation with audit logging
   const updateRole = useMutation({
     mutationFn: async ({ userId, oldRole, newRole }: { userId: string; oldRole: AppRole; newRole: AppRole }) => {
-      // Update the role
-      const { error: updateError } = await supabase
+      // First check if user already has a role entry
+      const { data: existingRole } = await supabase
         .from("user_roles")
-        .update({ role: newRole })
-        .eq("user_id", userId);
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      let updateError;
+      if (existingRole) {
+        // Update existing role
+        const { error } = await supabase
+          .from("user_roles")
+          .update({ role: newRole })
+          .eq("user_id", userId);
+        updateError = error;
+      } else {
+        // Insert new role if none exists
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: newRole });
+        updateError = error;
+      }
 
       if (updateError) throw updateError;
 
