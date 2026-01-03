@@ -30,6 +30,9 @@ import {
   User as UserIcon,
   History,
   Clock,
+  AlertCircle,
+  Filter,
+  Calendar,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
@@ -42,6 +45,20 @@ import { format } from "date-fns";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
+const ROLE_PRIORITY: Record<AppRole, number> = {
+  user: 0,
+  staff: 1,
+  manager: 2,
+  admin: 3,
+};
+
+const getHighestRole = (roles: AppRole[]): AppRole => {
+  if (roles.length === 0) return "user";
+  return roles.reduce((best, current) => 
+    ROLE_PRIORITY[current] > ROLE_PRIORITY[best] ? current : best
+  );
+};
+
 interface UserWithRole {
   id: string;
   user_id: string;
@@ -49,6 +66,8 @@ interface UserWithRole {
   first_name: string | null;
   last_name: string | null;
   role: AppRole;
+  allRoles: AppRole[];
+  hasMultipleRoles: boolean;
   created_at: string;
 }
 
@@ -72,7 +91,10 @@ const roleConfig: Record<AppRole, { label: string; color: string; icon: React.Co
 };
 
 const UserManagement = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+const [searchQuery, setSearchQuery] = useState("");
+  const [auditSearchQuery, setAuditSearchQuery] = useState("");
+  const [auditRoleFilter, setAuditRoleFilter] = useState<string>("all");
+  const [auditDateFilter, setAuditDateFilter] = useState<string>("all");
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -94,14 +116,20 @@ const UserManagement = () => {
       if (rolesError) throw rolesError;
 
       const usersWithRoles: UserWithRole[] = profiles.map(profile => {
-        const userRole = roles.find(r => r.user_id === profile.user_id);
+        const userRoles = roles.filter(r => r.user_id === profile.user_id);
+        const allRoles = userRoles.map(r => r.role as AppRole);
+        const hasMultipleRoles = allRoles.length > 1;
+        const highestRole = getHighestRole(allRoles);
+        
         return {
           id: profile.id,
           user_id: profile.user_id,
           email: profile.email,
           first_name: profile.first_name,
           last_name: profile.last_name,
-          role: (userRole?.role as AppRole) || "user",
+          role: highestRole,
+          allRoles,
+          hasMultipleRoles,
           created_at: profile.created_at,
         };
       });
@@ -219,6 +247,33 @@ const UserManagement = () => {
     );
   });
 
+  // Filter audit logs
+  const filteredAuditLogs = auditLogs?.filter(log => {
+    const searchLower = auditSearchQuery.toLowerCase();
+    const matchesSearch = !auditSearchQuery || 
+      log.user_email?.toLowerCase().includes(searchLower) ||
+      log.changed_by_email?.toLowerCase().includes(searchLower);
+    
+    const matchesRole = auditRoleFilter === "all" || 
+      log.old_role === auditRoleFilter || 
+      log.new_role === auditRoleFilter;
+    
+    const logDate = new Date(log.created_at);
+    const now = new Date();
+    let matchesDate = true;
+    if (auditDateFilter === "today") {
+      matchesDate = logDate.toDateString() === now.toDateString();
+    } else if (auditDateFilter === "week") {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      matchesDate = logDate >= weekAgo;
+    } else if (auditDateFilter === "month") {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      matchesDate = logDate >= monthAgo;
+    }
+    
+    return matchesSearch && matchesRole && matchesDate;
+  });
+
   // Redirect non-admins
   if (isLoadingRole) {
     return (
@@ -327,10 +382,18 @@ const UserManagement = () => {
                                 {userItem.email || "No email"}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className={roleConfig[userItem.role].color}>
-                                  <RoleIcon className="h-3 w-3 mr-1" />
-                                  {roleConfig[userItem.role].label}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className={roleConfig[userItem.role].color}>
+                                    <RoleIcon className="h-3 w-3 mr-1" />
+                                    {roleConfig[userItem.role].label}
+                                  </Badge>
+                                  {userItem.hasMultipleRoles && (
+                                    <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                                      <AlertCircle className="h-3 w-3 mr-1" />
+                                      {userItem.allRoles.length} roles
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <Select
@@ -370,13 +433,53 @@ const UserManagement = () => {
         <TabsContent value="audit">
           <Card variant="elevated">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                Role Change Audit Log
-              </CardTitle>
-              <CardDescription>
-                Track all role changes for security and compliance
-              </CardDescription>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    Role Change Audit Log
+                  </CardTitle>
+                  <CardDescription>
+                    Track all role changes for security and compliance
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by email..."
+                      value={auditSearchQuery}
+                      onChange={(e) => setAuditSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={auditRoleFilter} onValueChange={setAuditRoleFilter}>
+                    <SelectTrigger className="w-full sm:w-36">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={auditDateFilter} onValueChange={setAuditDateFilter}>
+                    <SelectTrigger className="w-full sm:w-36">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Date" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">Last 7 Days</SelectItem>
+                      <SelectItem value="month">Last 30 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingAudit ? (
@@ -395,14 +498,14 @@ const UserManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {auditLogs?.length === 0 ? (
+                      {filteredAuditLogs?.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                             No audit logs found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        auditLogs?.map((log) => (
+                        filteredAuditLogs?.map((log) => (
                           <TableRow key={log.id}>
                             <TableCell className="text-muted-foreground">
                               <div className="flex items-center gap-2">
