@@ -20,11 +20,26 @@ import {
   Settings,
   Bell,
   Shield,
+  Users,
+  Loader2,
+  Trash2,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Database as DbTypes } from "@/integrations/supabase/types";
+
+type AppRole = DbTypes["public"]["Enums"]["app_role"];
+
+const ROLE_PRIORITY: Record<AppRole, number> = {
+  user: 0,
+  staff: 1,
+  manager: 2,
+  admin: 3,
+};
 
 interface EmailConfig {
   enabled: boolean;
@@ -34,15 +49,88 @@ interface EmailConfig {
   systemAlerts: boolean;
 }
 
+interface UserWithMultipleRoles {
+  user_id: string;
+  email: string | null;
+  roles: AppRole[];
+  highestRole: AppRole;
+}
+
 const DevPanel = () => {
   const { isAdmin, isLoading } = useIsAdmin();
   const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [emailConfig, setEmailConfig] = useState<EmailConfig>({
     enabled: false,
     provider: "resend",
     roleChangeNotifications: true,
     bookingNotifications: true,
     systemAlerts: true,
+  });
+
+  // Fetch users with multiple roles
+  const { data: usersWithMultipleRoles, isLoading: isLoadingRoles, refetch: refetchRoles } = useQuery({
+    queryKey: ["users-with-multiple-roles"],
+    queryFn: async () => {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, email");
+
+      if (profilesError) throw profilesError;
+
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) throw rolesError;
+
+      const userRolesMap = new Map<string, AppRole[]>();
+      roles.forEach(r => {
+        const existing = userRolesMap.get(r.user_id) || [];
+        userRolesMap.set(r.user_id, [...existing, r.role as AppRole]);
+      });
+
+      const usersWithMultiple: UserWithMultipleRoles[] = [];
+      userRolesMap.forEach((userRoles, userId) => {
+        if (userRoles.length > 1) {
+          const profile = profiles.find(p => p.user_id === userId);
+          const highestRole = userRoles.reduce((best, current) => 
+            ROLE_PRIORITY[current] > ROLE_PRIORITY[best] ? current : best
+          );
+          usersWithMultiple.push({
+            user_id: userId,
+            email: profile?.email || null,
+            roles: userRoles,
+            highestRole,
+          });
+        }
+      });
+
+      return usersWithMultiple;
+    },
+    enabled: isAdmin,
+  });
+
+  // Cleanup mutation
+  const cleanupRoles = useMutation({
+    mutationFn: async (users: UserWithMultipleRoles[]) => {
+      for (const user of users) {
+        // Keep only the highest role, delete others
+        await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", user.user_id)
+          .neq("role", user.highestRole);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-multiple-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast.success("Role cleanup completed successfully");
+    },
+    onError: (error) => {
+      toast.error("Cleanup failed: " + error.message);
+    },
   });
 
   if (isLoading) {
@@ -97,6 +185,15 @@ const DevPanel = () => {
           <TabsTrigger value="status" className="gap-2">
             <Activity className="h-4 w-4" />
             System Status
+          </TabsTrigger>
+          <TabsTrigger value="cleanup" className="gap-2">
+            <Users className="h-4 w-4" />
+            Role Cleanup
+            {(usersWithMultipleRoles?.length ?? 0) > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 justify-center">
+                {usersWithMultipleRoles?.length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
@@ -175,6 +272,105 @@ const DevPanel = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="cleanup">
+          <Card variant="elevated">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Role Cleanup
+                  </CardTitle>
+                  <CardDescription>
+                    Detect and fix users with multiple role entries
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => refetchRoles()}
+                    disabled={isLoadingRoles}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingRoles ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  {(usersWithMultipleRoles?.length ?? 0) > 0 && (
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => cleanupRoles.mutate(usersWithMultipleRoles!)}
+                      disabled={cleanupRoles.isPending}
+                    >
+                      {cleanupRoles.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
+                      Clean All
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingRoles ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (usersWithMultipleRoles?.length ?? 0) === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-success mb-4" />
+                  <p className="text-lg font-medium">All Clean!</p>
+                  <p className="text-sm text-muted-foreground">
+                    No users have multiple role entries.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm">
+                    <AlertCircle className="h-4 w-4 inline mr-2" />
+                    Found {usersWithMultipleRoles?.length} user(s) with multiple roles. 
+                    Cleanup will keep only the highest role for each user.
+                  </div>
+                  {usersWithMultipleRoles?.map((user) => (
+                    <div 
+                      key={user.user_id} 
+                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                    >
+                      <div>
+                        <p className="font-medium">{user.email || "Unknown Email"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          ID: {user.user_id.slice(0, 8)}...
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {user.roles.map((role, idx) => (
+                            <Badge 
+                              key={idx} 
+                              variant="outline" 
+                              className={role === user.highestRole 
+                                ? "bg-success/20 text-success border-success/30" 
+                                : "bg-destructive/20 text-destructive border-destructive/30 line-through"
+                              }
+                            >
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          → keeps {user.highestRole}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="email">
