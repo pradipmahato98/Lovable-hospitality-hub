@@ -142,56 +142,62 @@ const UserManagement = () => {
   // Update user role mutation with audit logging
   const updateRole = useMutation({
     mutationFn: async ({ userId, oldRole, newRole }: { userId: string; oldRole: AppRole; newRole: AppRole }) => {
-      // First check if user already has a role entry
-      const { data: existingRole } = await supabase
+      // Normalize to exactly ONE role row per user to prevent duplicates.
+      // Some users may already have multiple role rows from earlier versions.
+      const { data: existingRoles, error: rolesFetchError } = await supabase
         .from("user_roles")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .select("id, role")
+        .eq("user_id", userId);
 
-      let updateError;
-      if (existingRole) {
-        // Update existing role
-        const { error } = await supabase
-          .from("user_roles")
-          .update({ role: newRole })
-          .eq("user_id", userId);
-        updateError = error;
-      } else {
-        // Insert new role if none exists
-        const { error } = await supabase
+      if (rolesFetchError) throw rolesFetchError;
+
+      const roles = (existingRoles ?? []).map((r) => r.role as AppRole);
+      const alreadyHasNewRole = roles.includes(newRole);
+
+      // Ensure the desired role exists first (so we never end up with 0 roles due to a failed insert).
+      if (!alreadyHasNewRole) {
+        const { error: insertError } = await supabase
           .from("user_roles")
           .insert({ user_id: userId, role: newRole });
-        updateError = error;
+
+        if (insertError) throw insertError;
       }
 
-      if (updateError) throw updateError;
+      // Remove any other roles for this user.
+      const { error: cleanupError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .neq("role", newRole);
 
-      // Log the audit
-      const { error: auditError } = await supabase
-        .from("role_change_audit")
-        .insert({
-          user_id: userId,
-          changed_by_user_id: user?.id || "",
-          old_role: oldRole,
-          new_role: newRole,
-          reason: `Role changed from ${oldRole} to ${newRole}`,
-        });
+      if (cleanupError) throw cleanupError;
 
-      if (auditError) throw auditError;
+      // Only log audit/notify if the displayed role actually changed.
+      if (oldRole !== newRole) {
+        const { error: auditError } = await supabase
+          .from("role_change_audit")
+          .insert({
+            user_id: userId,
+            changed_by_user_id: user?.id || "",
+            old_role: oldRole,
+            new_role: newRole,
+            reason: `Role changed from ${oldRole} to ${newRole}`,
+          });
 
-      // Create a notification
-      const { error: notifError } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: userId,
-          title: "Role Updated",
-          message: `Your role has been changed from ${roleConfig[oldRole].label} to ${roleConfig[newRole].label}`,
-          type: "role_change",
-          category: "system",
-        });
+        if (auditError) throw auditError;
 
-      if (notifError) console.error("Failed to create notification:", notifError);
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert({
+            user_id: userId,
+            title: "Role Updated",
+            message: `Your role has been changed from ${roleConfig[oldRole].label} to ${roleConfig[newRole].label}`,
+            type: "role_change",
+            category: "system",
+          });
+
+        if (notifError) console.error("Failed to create notification:", notifError);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
