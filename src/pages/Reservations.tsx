@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { useReservations } from "@/hooks/useReservations";
+import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -34,7 +35,12 @@ const Reservations = () => {
   const { isLoading, refetch, filterReservations } = useReservations();
   const filteredReservations = filterReservations(searchQuery);
 
-  return (
+  // Enable realtime updates
+  useRealtimeReservations({
+    onInsert: refetch,
+    onUpdate: refetch,
+    onDelete: refetch,
+  });
     <MainLayout title="Reservations" subtitle="Manage all bookings and reservations">
       <ErrorBoundary>
         <Card variant="elevated" className="animate-fade-in overflow-hidden">
