@@ -3,7 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Download, CreditCard, Receipt, DollarSign, TrendingUp } from "lucide-react";
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  CreditCard, 
+  Receipt, 
+  DollarSign, 
+  TrendingUp,
+  CalendarPlus,
+  Users,
+  FileText,
+  ShoppingCart
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { ModuleQuickActions, QuickAction } from "@/components/shared";
 
 const invoices = [
   {
@@ -70,10 +83,20 @@ const statusColors = {
 };
 
 const Billing = () => {
+  const quickActions: QuickAction[] = [
+    { icon: CalendarPlus, label: "New Booking", to: "/reservations", color: "text-primary" },
+    { icon: ShoppingCart, label: "POS Sale", to: "/pos", color: "text-amber-400" },
+    { icon: Users, label: "Guest Accounts", to: "/guests", color: "text-purple-400" },
+    { icon: FileText, label: "Financial Reports", to: "/reports", color: "text-blue-400" },
+  ];
+
   return (
     <MainLayout title="Billing" subtitle="Manage invoices, payments and financial reports">
-      {/* Billing Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        {/* Main Content */}
+        <div className="xl:col-span-3 space-y-6">
+          {/* Billing Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <MetricCard
           title="Total Revenue (MTD)"
           value="$124,580"
@@ -106,10 +129,10 @@ const Billing = () => {
           icon={CreditCard}
           delay={150}
         />
-      </div>
+          </div>
 
-      {/* Invoices Table */}
-      <Card variant="elevated" className="animate-fade-in overflow-hidden">
+          {/* Invoices Table */}
+          <Card variant="elevated" className="animate-fade-in overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>Recent Invoices</CardTitle>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -167,6 +190,13 @@ const Billing = () => {
           </div>
         </CardContent>
       </Card>
+        </div>
+
+        {/* Quick Actions Sidebar */}
+        <div className="space-y-6">
+          <ModuleQuickActions actions={quickActions} variant="list" />
+        </div>
+      </div>
     </MainLayout>
   );
 };

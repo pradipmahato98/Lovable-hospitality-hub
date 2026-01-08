@@ -39,7 +39,12 @@ import {
   XCircle,
   Filter,
   Search,
+  Bed,
+  Users,
+  FileText,
+  DoorOpen
 } from "lucide-react";
+import { ModuleQuickActions, QuickAction } from "@/components/shared";
 
 interface MaintenanceRequest {
   id: string;
@@ -167,57 +172,67 @@ const Engineering = () => {
     );
   };
 
+  const quickActions: QuickAction[] = [
+    { icon: Bed, label: "View Rooms", to: "/rooms", color: "text-blue-400" },
+    { icon: DoorOpen, label: "Housekeeping", to: "/housekeeping", color: "text-cyan-400" },
+    { icon: Users, label: "Assign Staff", to: "/staff", color: "text-purple-400" },
+    { icon: FileText, label: "Generate Report", to: "/reports", color: "text-primary" },
+  ];
+
   return (
     <MainLayout title="Engineering" subtitle="Maintenance and repair management">
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Requests</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Wrench className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-amber-500">{stats.pending}</p>
-              </div>
-              <Clock className="h-8 w-8 text-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">In Progress</p>
-                <p className="text-2xl font-bold text-blue-500">{stats.inProgress}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold text-success">{stats.completed}</p>
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-success" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        {/* Main Content */}
+        <div className="xl:col-span-3 space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Requests</p>
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                  </div>
+                  <Wrench className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending</p>
+                    <p className="text-2xl font-bold text-amber-500">{stats.pending}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-amber-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">In Progress</p>
+                    <p className="text-2xl font-bold text-blue-500">{stats.inProgress}</p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Completed</p>
+                    <p className="text-2xl font-bold text-success">{stats.completed}</p>
+                  </div>
+                  <CheckCircle2 className="h-8 w-8 text-success" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Main Content */}
+          {/* Main Content */}
       <Card variant="elevated">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -407,6 +422,13 @@ const Engineering = () => {
           </div>
         </CardContent>
       </Card>
+        </div>
+
+        {/* Quick Actions Sidebar */}
+        <div className="space-y-6">
+          <ModuleQuickActions actions={quickActions} variant="list" />
+        </div>
+      </div>
     </MainLayout>
   );
 };
