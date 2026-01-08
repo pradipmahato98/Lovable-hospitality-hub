@@ -41,6 +41,8 @@ const Reservations = () => {
     onUpdate: refetch,
     onDelete: refetch,
   });
+
+  return (
     <MainLayout title="Reservations" subtitle="Manage all bookings and reservations">
       <ErrorBoundary>
         <Card variant="elevated" className="animate-fade-in overflow-hidden">
