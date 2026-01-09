@@ -1,7 +1,13 @@
-import { Bell, Search, Plus, Menu } from "lucide-react";
+import { Bell, Search, Plus, Menu, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { useQuickActions } from "@/contexts/QuickActionsContext";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   title: string;
@@ -10,6 +16,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   const { isMobile, setMobileOpen } = useSidebar();
+  const { setNewBookingOpen, setCommandPaletteOpen } = useQuickActions();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-4">
@@ -33,6 +40,27 @@ export function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        {/* Command Palette Trigger */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden md:flex items-center gap-2 text-muted-foreground"
+              onClick={() => setCommandPaletteOpen(true)}
+            >
+              <Command className="h-3.5 w-3.5" />
+              <span className="text-xs">Quick Actions</span>
+              <kbd className="pointer-events-none ml-1 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Open command palette (⌘K)</p>
+          </TooltipContent>
+        </Tooltip>
+
         {/* Search - hidden on small screens */}
         <div className="relative hidden lg:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -43,10 +71,17 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
 
         {/* Quick Action */}
-        <Button variant="gold" size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">New Booking</span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="gold" size="sm" className="gap-2" onClick={() => setNewBookingOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Booking</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>New Booking (⌘N)</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
@@ -59,3 +94,4 @@ export function Header({ title, subtitle }: HeaderProps) {
     </header>
   );
 }
+
