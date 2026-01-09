@@ -7,6 +7,7 @@ interface QuickActionsState {
   newRoomOpen: boolean;
   newMaintenanceOpen: boolean;
   commandPaletteOpen: boolean;
+  shortcutsHelpOpen: boolean;
 }
 
 interface QuickActionsContextType extends QuickActionsState {
@@ -15,6 +16,7 @@ interface QuickActionsContextType extends QuickActionsState {
   setNewRoomOpen: (open: boolean) => void;
   setNewMaintenanceOpen: (open: boolean) => void;
   setCommandPaletteOpen: (open: boolean) => void;
+  setShortcutsHelpOpen: (open: boolean) => void;
   closeAll: () => void;
 }
 
@@ -27,6 +29,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     newRoomOpen: false,
     newMaintenanceOpen: false,
     commandPaletteOpen: false,
+    shortcutsHelpOpen: false,
   });
 
   const navigate = useNavigate();
@@ -51,6 +54,10 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     setState((prev) => ({ ...prev, commandPaletteOpen: open }));
   }, []);
 
+  const setShortcutsHelpOpen = useCallback((open: boolean) => {
+    setState((prev) => ({ ...prev, shortcutsHelpOpen: open }));
+  }, []);
+
   const closeAll = useCallback(() => {
     setState({
       newBookingOpen: false,
@@ -58,6 +65,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       newRoomOpen: false,
       newMaintenanceOpen: false,
       commandPaletteOpen: false,
+      shortcutsHelpOpen: false,
     });
   }, []);
 
@@ -141,6 +149,13 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         }
       }
 
+      // Show shortcuts help: ?
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setShortcutsHelpOpen(true);
+        return;
+      }
+
       // Escape to close all dialogs
       if (e.key === "Escape") {
         closeAll();
@@ -149,7 +164,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigate, setNewBookingOpen, setNewGuestOpen, setNewRoomOpen, setNewMaintenanceOpen, setCommandPaletteOpen, closeAll]);
+  }, [navigate, setNewBookingOpen, setNewGuestOpen, setNewRoomOpen, setNewMaintenanceOpen, setCommandPaletteOpen, setShortcutsHelpOpen, closeAll]);
 
   return (
     <QuickActionsContext.Provider
@@ -160,6 +175,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         setNewRoomOpen,
         setNewMaintenanceOpen,
         setCommandPaletteOpen,
+        setShortcutsHelpOpen,
         closeAll,
       }}
     >
