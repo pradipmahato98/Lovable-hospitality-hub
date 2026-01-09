@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/hooks/use-sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
+import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Index from "./pages/Index";
 import Reservations from "./pages/Reservations";
@@ -37,28 +39,31 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SidebarProvider>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
-              <Route path="/calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
-              <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
-              <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
-              <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
-              <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
-              <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-              <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-              <Route path="/channels" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-              <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-              <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
-              <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <QuickActionsProvider>
+              <GlobalQuickActions />
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
+                <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
+                <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+                <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
+                <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
+                <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+                <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                <Route path="/channels" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+                <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
+                <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </QuickActionsProvider>
           </SidebarProvider>
         </AuthProvider>
       </BrowserRouter>
