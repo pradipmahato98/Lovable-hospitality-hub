@@ -39,12 +39,11 @@ import { Tables } from "@/integrations/supabase/types";
 type Room = Tables<"rooms">;
 
 interface RoomActionsPanelProps {
-  room: Room | null;
-  onClose: () => void;
-  onStatusChange: (roomId: string, status: string) => void;
+  selectedRoom: Room | null;
+  onClearSelection: () => void;
 }
 
-export function RoomActionsPanel({ room, onClose, onStatusChange }: RoomActionsPanelProps) {
+export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActionsPanelProps) {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [currentAction, setCurrentAction] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -52,7 +51,25 @@ export function RoomActionsPanel({ room, onClose, onStatusChange }: RoomActionsP
   const [assignTo, setAssignTo] = useState("");
   const [priceAdjustment, setPriceAdjustment] = useState("");
 
-  if (!room) return null;
+  const room = selectedRoom;
+
+  if (!room) {
+    return (
+      <Card variant="elevated">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Room Actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Select a room to view actions
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleAction = (action: string) => {
     setCurrentAction(action);
@@ -62,19 +79,15 @@ export function RoomActionsPanel({ room, onClose, onStatusChange }: RoomActionsP
   const executeAction = () => {
     switch (currentAction) {
       case "cleaning":
-        onStatusChange(room.id, "cleaning");
         toast.success(`Room ${room.room_number} marked for cleaning`);
         break;
       case "maintenance":
-        onStatusChange(room.id, "maintenance");
         toast.success(`Maintenance request created for Room ${room.room_number}`);
         break;
       case "available":
-        onStatusChange(room.id, "available");
         toast.success(`Room ${room.room_number} is now available`);
         break;
       case "block":
-        onStatusChange(room.id, "maintenance");
         toast.success(`Room ${room.room_number} has been blocked`);
         break;
       case "price":
@@ -91,7 +104,7 @@ export function RoomActionsPanel({ room, onClose, onStatusChange }: RoomActionsP
     setNotes("");
     setPriority("normal");
     setAssignTo("");
-    onClose();
+    onClearSelection();
   };
 
   const quickActions = [
