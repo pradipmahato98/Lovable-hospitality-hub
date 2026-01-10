@@ -4,6 +4,7 @@ import { NewGuestDialog } from "./NewGuestDialog";
 import { NewRoomDialog } from "./NewRoomDialog";
 import { NewMaintenanceDialog } from "./NewMaintenanceDialog";
 import { CommandPalette } from "./CommandPalette";
+import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 
 export function GlobalQuickActions() {
@@ -17,11 +18,18 @@ export function GlobalQuickActions() {
     setNewRoomOpen,
     newMaintenanceOpen,
     setNewMaintenanceOpen,
+    shortcutsHelpOpen,
+    setShortcutsHelpOpen,
   } = useQuickActions();
 
   return (
     <>
       <CommandPalette />
+      
+      <KeyboardShortcutsModal 
+        open={shortcutsHelpOpen} 
+        onOpenChange={setShortcutsHelpOpen} 
+      />
       
       <NewReservationDialog
         open={newBookingOpen}
