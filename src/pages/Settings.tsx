@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
@@ -9,7 +9,8 @@ import {
   useRatePlansSettings, useUpdateRatePlansSettings,
   usePropertySettings, useUpdatePropertySettings,
   useNotificationSettings, useUpdateNotificationSettings,
-  CheckInFieldSettings, PaymentSettings, PropertySettings, NotificationSettings,
+  useQuickMenuSettings, useUpdateQuickMenuSettings,
+  CheckInFieldSettings, PaymentSettings, PropertySettings, NotificationSettings, QuickMenuSettings,
 } from "@/hooks/useSettings";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
@@ -17,9 +18,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
+  QuickMenuSettingsCard,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security";
+type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
@@ -37,6 +39,8 @@ const Settings = () => {
   const updateProperty = useUpdatePropertySettings();
   const { data: notificationSettings, isLoading: isLoadingNotifications } = useNotificationSettings();
   const updateNotifications = useUpdateNotificationSettings();
+  const { data: quickMenuSettings, isLoading: isLoadingQuickMenu } = useQuickMenuSettings();
+  const updateQuickMenu = useUpdateQuickMenuSettings();
 
   if (isLoadingRole) {
     return (
@@ -57,10 +61,19 @@ const Settings = () => {
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },
     { id: "rates" as const, icon: Tags, label: "Rate Plans" },
+    { id: "quickmenu" as const, icon: Zap, label: "POS Quick Menu" },
     { id: "property" as const, icon: Hotel, label: "Property Details" },
     { id: "notifications" as const, icon: Bell, label: "Notifications" },
     { id: "security" as const, icon: Shield, label: "Security" },
   ];
+
+  const handleQuickMenuToggle = (itemId: string, enabled: boolean) => {
+    const currentItems = quickMenuSettings?.enabled_items || [];
+    const newItems = enabled 
+      ? [...currentItems, itemId]
+      : currentItems.filter(id => id !== itemId);
+    updateQuickMenu.mutate({ enabled_items: newItems });
+  };
 
   return (
     <MainLayout title="Admin Settings" subtitle="Manage system configuration (Admin only)">
@@ -118,6 +131,14 @@ const Settings = () => {
                 isPending={updateRates.isPending}
                 onToggle={(id, enabled) => ratePlans && updateRates.mutate({ plans: ratePlans.plans.map(p => p.id === id ? { ...p, enabled } : p) })}
                 onDiscountChange={(id, discount) => ratePlans && updateRates.mutate({ plans: ratePlans.plans.map(p => p.id === id ? { ...p, discount_percentage: discount } : p) })}
+              />
+            )}
+            {activeTab === "quickmenu" && (
+              <QuickMenuSettingsCard
+                settings={quickMenuSettings}
+                isLoading={isLoadingQuickMenu}
+                isPending={updateQuickMenu.isPending}
+                onToggleItem={handleQuickMenuToggle}
               />
             )}
             {activeTab === "property" && (

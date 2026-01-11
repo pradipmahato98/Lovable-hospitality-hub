@@ -60,6 +60,10 @@ export interface NotificationSettings {
   daily_summary: boolean;
 }
 
+export interface QuickMenuSettings {
+  enabled_items: string[];
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -110,6 +114,10 @@ const defaultNotificationSettings: NotificationSettings = {
   low_inventory_alerts: true,
   payment_notifications: false,
   daily_summary: true,
+};
+
+const defaultQuickMenuSettings: QuickMenuSettings = {
+  enabled_items: ["1", "4", "5", "6", "12", "13"],
 };
 
 // Generic settings fetch hook
@@ -214,4 +222,12 @@ export function useNotificationSettings() {
 
 export function useUpdateNotificationSettings() {
   return useUpdateSettings<NotificationSettings>("notification_settings");
+}
+
+export function useQuickMenuSettings() {
+  return useSettings<QuickMenuSettings>("quick_menu", defaultQuickMenuSettings);
+}
+
+export function useUpdateQuickMenuSettings() {
+  return useUpdateSettings<QuickMenuSettings>("quick_menu");
 }
