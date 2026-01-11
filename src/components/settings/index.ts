@@ -5,3 +5,4 @@ export { PropertySettingsCard } from "./PropertySettingsCard";
 export { SecuritySettingsCard } from "./SecuritySettingsCard";
 export { BookingSourcesCard } from "./BookingSourcesCard";
 export { RatePlansCard } from "./RatePlansCard";
+export { QuickMenuSettingsCard } from "./QuickMenuSettingsCard";

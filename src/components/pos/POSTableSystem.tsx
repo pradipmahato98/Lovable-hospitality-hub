@@ -25,6 +25,7 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuickMenuSettings } from "@/hooks/useSettings";
 
 interface TableInfo {
   id: string;
@@ -47,15 +48,6 @@ interface OrderItem {
   notes?: string;
 }
 
-interface QuickMenuItem {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  icon: typeof Coffee;
-  isQuickMenu: boolean;
-}
-
 const menuItems = [
   { id: "1", name: "Coffee", price: 4.50, category: "Beverages", icon: Coffee },
   { id: "2", name: "Tea", price: 3.50, category: "Beverages", icon: Coffee },
@@ -73,9 +65,6 @@ const menuItems = [
   { id: "14", name: "Cake Slice", price: 9.00, category: "Desserts", icon: IceCream },
   { id: "15", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
 ];
-
-// Quick menu items - frequently ordered
-const quickMenuIds = ["1", "4", "5", "6", "12", "13"];
 
 const defaultTables: TableInfo[] = [
   { id: "t1", number: "1", capacity: 4, status: "available", orders: [] },
@@ -103,6 +92,17 @@ const orderStatusColors = {
 };
 
 const STORAGE_KEY = "pos_tables_data";
+const TRANSACTIONS_KEY = "pos_transactions_data";
+
+interface POSTransaction {
+  id: string;
+  tableNumber: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  items: OrderItem[];
+  createdAt: string;
+}
 
 interface POSTableSystemProps {
   onCheckout: (total: number, items: OrderItem[]) => void;
@@ -126,6 +126,10 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [guestCount, setGuestCount] = useState("2");
+
+  // Fetch quick menu settings from database
+  const { data: quickMenuSettings } = useQuickMenuSettings();
+  const quickMenuIds = quickMenuSettings?.enabled_items || ["1", "4", "5", "6", "12", "13"];
 
   // Persist tables to localStorage
   useEffect(() => {
@@ -259,11 +263,32 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     setActiveTab("billing");
   };
 
+  const saveTransaction = (transaction: POSTransaction) => {
+    const saved = localStorage.getItem(TRANSACTIONS_KEY);
+    const transactions: POSTransaction[] = saved ? JSON.parse(saved) : [];
+    transactions.push(transaction);
+    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+  };
+
   const handleCheckout = () => {
     if (!selectedTable) return;
-    const total = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
-    const tax = total * 0.1;
-    onCheckout(total + tax, selectedTable.orders);
+    const subtotal = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
+    const tax = subtotal * 0.1;
+    const total = subtotal + tax;
+    
+    // Save transaction to localStorage
+    const transaction: POSTransaction = {
+      id: Date.now().toString(),
+      tableNumber: selectedTable.number,
+      subtotal,
+      tax,
+      total,
+      items: selectedTable.orders,
+      createdAt: new Date().toISOString(),
+    };
+    saveTransaction(transaction);
+    
+    onCheckout(total, selectedTable.orders);
     handleCloseTable();
   };
 
@@ -417,27 +442,37 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                     <div className="flex items-center gap-2 mb-4">
                       <Star className="h-5 w-5 text-amber-400" />
                       <h3 className="font-semibold">Frequently Ordered</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {quickMenuItems.length} items
+                      </Badge>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {quickMenuItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Card
-                            key={item.id}
-                            className="cursor-pointer hover:border-primary/50 transition-colors border-amber-500/30"
-                            onClick={() => handleAddItem(item)}
-                          >
-                            <CardContent className="p-3 text-center">
-                              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-2">
-                                <Icon className="h-5 w-5 text-amber-400" />
-                              </div>
-                              <p className="font-medium text-sm truncate">{item.name}</p>
-                              <p className="text-primary font-semibold text-sm">${item.price.toFixed(2)}</p>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
+                    {quickMenuItems.length === 0 ? (
+                      <Card className="p-8 text-center">
+                        <p className="text-muted-foreground">No quick menu items configured.</p>
+                        <p className="text-sm text-muted-foreground mt-1">Configure in Settings → POS Quick Menu</p>
+                      </Card>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {quickMenuItems.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <Card
+                              key={item.id}
+                              className="cursor-pointer hover:border-primary/50 transition-colors border-amber-500/30"
+                              onClick={() => handleAddItem(item)}
+                            >
+                              <CardContent className="p-3 text-center">
+                                <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-2">
+                                  <Icon className="h-5 w-5 text-amber-400" />
+                                </div>
+                                <p className="font-medium text-sm truncate">{item.name}</p>
+                                <p className="text-primary font-semibold text-sm">${item.price.toFixed(2)}</p>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   /* Full Menu with search and categories */
