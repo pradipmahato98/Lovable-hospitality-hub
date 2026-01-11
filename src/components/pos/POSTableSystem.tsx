@@ -1,16 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   LayoutGrid,
   ClipboardList,
@@ -28,9 +21,10 @@ import {
   ShoppingCart,
   Check,
   X,
+  Zap,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
 
 interface TableInfo {
   id: string;
@@ -39,7 +33,7 @@ interface TableInfo {
   status: "available" | "occupied" | "reserved" | "billing";
   guests?: number;
   server?: string;
-  startTime?: Date;
+  startTime?: string;
   orders: OrderItem[];
 }
 
@@ -53,36 +47,43 @@ interface OrderItem {
   notes?: string;
 }
 
+interface QuickMenuItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  icon: typeof Coffee;
+  isQuickMenu: boolean;
+}
+
 const menuItems = [
   { id: "1", name: "Coffee", price: 4.50, category: "Beverages", icon: Coffee },
   { id: "2", name: "Tea", price: 3.50, category: "Beverages", icon: Coffee },
   { id: "3", name: "Fresh Juice", price: 6.00, category: "Beverages", icon: Coffee },
-  { id: "4", name: "Breakfast Combo", price: 15.00, category: "Food", icon: Utensils },
-  { id: "5", name: "Lunch Special", price: 22.00, category: "Food", icon: Utensils },
-  { id: "6", name: "Dinner Platter", price: 35.00, category: "Food", icon: Utensils },
-  { id: "7", name: "Wine Glass", price: 12.00, category: "Bar", icon: Wine },
-  { id: "8", name: "Cocktail", price: 14.00, category: "Bar", icon: Wine },
-  { id: "9", name: "Beer", price: 8.00, category: "Bar", icon: Wine },
-  { id: "10", name: "Ice Cream", price: 7.00, category: "Desserts", icon: IceCream },
-  { id: "11", name: "Cake Slice", price: 9.00, category: "Desserts", icon: IceCream },
-  { id: "12", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
+  { id: "4", name: "Water", price: 2.00, category: "Beverages", icon: Coffee },
+  { id: "5", name: "Breakfast Combo", price: 15.00, category: "Food", icon: Utensils },
+  { id: "6", name: "Lunch Special", price: 22.00, category: "Food", icon: Utensils },
+  { id: "7", name: "Dinner Platter", price: 35.00, category: "Food", icon: Utensils },
+  { id: "8", name: "Club Sandwich", price: 12.00, category: "Food", icon: Utensils },
+  { id: "9", name: "Caesar Salad", price: 10.00, category: "Food", icon: Utensils },
+  { id: "10", name: "Wine Glass", price: 12.00, category: "Bar", icon: Wine },
+  { id: "11", name: "Cocktail", price: 14.00, category: "Bar", icon: Wine },
+  { id: "12", name: "Beer", price: 8.00, category: "Bar", icon: Wine },
+  { id: "13", name: "Ice Cream", price: 7.00, category: "Desserts", icon: IceCream },
+  { id: "14", name: "Cake Slice", price: 9.00, category: "Desserts", icon: IceCream },
+  { id: "15", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
 ];
 
-const initialTables: TableInfo[] = [
+// Quick menu items - frequently ordered
+const quickMenuIds = ["1", "4", "5", "6", "12", "13"];
+
+const defaultTables: TableInfo[] = [
   { id: "t1", number: "1", capacity: 4, status: "available", orders: [] },
-  { id: "t2", number: "2", capacity: 2, status: "occupied", guests: 2, server: "John", startTime: new Date(Date.now() - 45 * 60000), orders: [
-    { id: "o1", name: "Coffee", price: 4.50, quantity: 2, category: "Beverages", status: "served" },
-    { id: "o2", name: "Breakfast Combo", price: 15.00, quantity: 2, category: "Food", status: "preparing" },
-  ]},
-  { id: "t3", number: "3", capacity: 6, status: "reserved", orders: [] },
-  { id: "t4", number: "4", capacity: 4, status: "billing", guests: 4, server: "Sarah", startTime: new Date(Date.now() - 90 * 60000), orders: [
-    { id: "o3", name: "Lunch Special", price: 22.00, quantity: 4, category: "Food", status: "served" },
-    { id: "o4", name: "Wine Glass", price: 12.00, quantity: 2, category: "Bar", status: "served" },
-  ]},
+  { id: "t2", number: "2", capacity: 2, status: "available", orders: [] },
+  { id: "t3", number: "3", capacity: 6, status: "available", orders: [] },
+  { id: "t4", number: "4", capacity: 4, status: "available", orders: [] },
   { id: "t5", number: "5", capacity: 8, status: "available", orders: [] },
-  { id: "t6", number: "6", capacity: 2, status: "occupied", guests: 2, server: "Mike", startTime: new Date(Date.now() - 20 * 60000), orders: [
-    { id: "o5", name: "Cocktail", price: 14.00, quantity: 2, category: "Bar", status: "ready" },
-  ]},
+  { id: "t6", number: "6", capacity: 2, status: "available", orders: [] },
   { id: "t7", number: "7", capacity: 4, status: "available", orders: [] },
   { id: "t8", number: "8", capacity: 4, status: "available", orders: [] },
 ];
@@ -101,20 +102,48 @@ const orderStatusColors = {
   served: "bg-primary/20 text-primary",
 };
 
+const STORAGE_KEY = "pos_tables_data";
+
 interface POSTableSystemProps {
   onCheckout: (total: number, items: OrderItem[]) => void;
 }
 
 export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
-  const [tables, setTables] = useState<TableInfo[]>(initialTables);
+  const [tables, setTables] = useState<TableInfo[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return defaultTables;
+      }
+    }
+    return defaultTables;
+  });
   const [selectedTable, setSelectedTable] = useState<TableInfo | null>(null);
   const [activeTab, setActiveTab] = useState("tables");
+  const [menuTab, setMenuTab] = useState<"quick" | "full">("quick");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [itemNotes, setItemNotes] = useState("");
   const [guestCount, setGuestCount] = useState("2");
 
+  // Persist tables to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tables));
+  }, [tables]);
+
+  // Sync selectedTable with tables state
+  useEffect(() => {
+    if (selectedTable) {
+      const updated = tables.find(t => t.id === selectedTable.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedTable)) {
+        setSelectedTable(updated);
+      }
+    }
+  }, [tables, selectedTable]);
+
   const categories = [...new Set(menuItems.map((item) => item.category))];
+  const quickMenuItems = menuItems.filter(item => quickMenuIds.includes(item.id));
 
   const filteredItems = menuItems.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -133,16 +162,17 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleOpenTable = () => {
     if (!selectedTable || !guestCount) return;
+    const updatedTable = {
+      ...selectedTable,
+      status: "occupied" as const,
+      guests: parseInt(guestCount),
+      startTime: new Date().toISOString(),
+      server: "Current User"
+    };
     setTables((prev) =>
-      prev.map((t) =>
-        t.id === selectedTable.id
-          ? { ...t, status: "occupied" as const, guests: parseInt(guestCount), startTime: new Date(), server: "Current User" }
-          : t
-      )
+      prev.map((t) => t.id === selectedTable.id ? updatedTable : t)
     );
-    setSelectedTable((prev) =>
-      prev ? { ...prev, status: "occupied", guests: parseInt(guestCount), startTime: new Date(), server: "Current User" } : null
-    );
+    setSelectedTable(updatedTable);
     toast.success(`Table ${selectedTable.number} opened with ${guestCount} guests`);
     setActiveTab("order");
   };
@@ -160,7 +190,6 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       quantity: 1,
       category: item.category,
       status: "pending",
-      notes: itemNotes || undefined,
     };
 
     setTables((prev) =>
@@ -181,22 +210,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       })
     );
 
-    setSelectedTable((prev) => {
-      if (!prev) return null;
-      const existing = prev.orders.find((o) => o.name === item.name && o.status === "pending");
-      if (existing) {
-        return {
-          ...prev,
-          orders: prev.orders.map((o) =>
-            o.id === existing.id ? { ...o, quantity: o.quantity + 1 } : o
-          ),
-        };
-      }
-      return { ...prev, orders: [...prev.orders, newOrder] };
-    });
-
     toast.success(`${item.name} added to Table ${selectedTable.number}`);
-    setItemNotes("");
   };
 
   const handleUpdateQuantity = (orderId: string, delta: number) => {
@@ -208,16 +222,6 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           .filter((o) => o.quantity > 0),
       }))
     );
-    setSelectedTable((prev) =>
-      prev
-        ? {
-            ...prev,
-            orders: prev.orders
-              .map((o) => (o.id === orderId ? { ...o, quantity: Math.max(0, o.quantity + delta) } : o))
-              .filter((o) => o.quantity > 0),
-          }
-        : null
-    );
   };
 
   const handleRemoveItem = (orderId: string) => {
@@ -226,9 +230,6 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
         ...t,
         orders: t.orders.filter((o) => o.id !== orderId),
       }))
-    );
-    setSelectedTable((prev) =>
-      prev ? { ...prev, orders: prev.orders.filter((o) => o.id !== orderId) } : null
     );
     toast.success("Item removed");
   };
@@ -247,14 +248,6 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
         orders: t.orders.map((o) => (o.status === "pending" ? { ...o, status: "preparing" as const } : o)),
       }))
     );
-    setSelectedTable((prev) =>
-      prev
-        ? {
-            ...prev,
-            orders: prev.orders.map((o) => (o.status === "pending" ? { ...o, status: "preparing" as const } : o)),
-          }
-        : null
-    );
     toast.success(`${pendingOrders.length} item(s) sent to kitchen`);
   };
 
@@ -263,20 +256,28 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     setTables((prev) =>
       prev.map((t) => (t.id === selectedTable.id ? { ...t, status: "billing" as const } : t))
     );
-    setSelectedTable((prev) => (prev ? { ...prev, status: "billing" } : null));
     setActiveTab("billing");
   };
 
   const handleCheckout = () => {
     if (!selectedTable) return;
     const total = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
-    onCheckout(total, selectedTable.orders);
+    const tax = total * 0.1;
+    onCheckout(total + tax, selectedTable.orders);
+    handleCloseTable();
   };
 
   const handleCloseTable = () => {
     if (!selectedTable) return;
     setTables((prev) =>
-      prev.map((t) => (t.id === selectedTable.id ? { ...t, status: "available" as const, orders: [], guests: undefined, server: undefined, startTime: undefined } : t))
+      prev.map((t) => (t.id === selectedTable.id ? { 
+        ...t, 
+        status: "available" as const, 
+        orders: [], 
+        guests: undefined, 
+        server: undefined, 
+        startTime: undefined 
+      } : t))
     );
     setSelectedTable(null);
     toast.success(`Table ${selectedTable.number} closed`);
@@ -287,9 +288,9 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     return table.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
   };
 
-  const getElapsedTime = (startTime: Date | undefined) => {
+  const getElapsedTime = (startTime: string | undefined) => {
     if (!startTime) return "";
-    const diff = Date.now() - startTime.getTime();
+    const diff = Date.now() - new Date(startTime).getTime();
     const hours = Math.floor(diff / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
@@ -356,7 +357,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           {/* Open Table Dialog */}
           {selectedTable?.status === "available" && (
             <Card variant="elevated" className="mt-4 p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <h3 className="font-semibold">Open Table {selectedTable.number}</h3>
                   <p className="text-sm text-muted-foreground">Capacity: {selectedTable.capacity} guests</p>
@@ -388,57 +389,112 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
               {/* Menu */}
               <div className="lg:col-span-2 space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search menu..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    <Button
-                      variant={activeCategory === null ? "secondary" : "outline"}
-                      size="sm"
-                      onClick={() => setActiveCategory(null)}
-                    >
-                      All
-                    </Button>
-                    {categories.map((cat) => (
-                      <Button
-                        key={cat}
-                        variant={activeCategory === cat ? "secondary" : "outline"}
-                        size="sm"
-                        onClick={() => setActiveCategory(cat)}
-                      >
-                        {cat}
-                      </Button>
-                    ))}
-                  </div>
+                {/* Quick Menu / Full Menu Toggle */}
+                <div className="flex items-center gap-2 mb-4">
+                  <Button
+                    variant={menuTab === "quick" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setMenuTab("quick")}
+                    className="gap-2"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Quick Menu
+                  </Button>
+                  <Button
+                    variant={menuTab === "full" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setMenuTab("full")}
+                    className="gap-2"
+                  >
+                    <Utensils className="h-4 w-4" />
+                    Full Menu
+                  </Button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {filteredItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Card
-                        key={item.id}
-                        className="cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => handleAddItem(item)}
-                      >
-                        <CardContent className="p-3 text-center">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                            <Icon className="h-5 w-5 text-primary" />
-                          </div>
-                          <p className="font-medium text-sm truncate">{item.name}</p>
-                          <p className="text-primary font-semibold text-sm">${item.price.toFixed(2)}</p>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                {menuTab === "quick" ? (
+                  /* Quick Menu - Frequently ordered items */
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="h-5 w-5 text-amber-400" />
+                      <h3 className="font-semibold">Frequently Ordered</h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {quickMenuItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Card
+                            key={item.id}
+                            className="cursor-pointer hover:border-primary/50 transition-colors border-amber-500/30"
+                            onClick={() => handleAddItem(item)}
+                          >
+                            <CardContent className="p-3 text-center">
+                              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-2">
+                                <Icon className="h-5 w-5 text-amber-400" />
+                              </div>
+                              <p className="font-medium text-sm truncate">{item.name}</p>
+                              <p className="text-primary font-semibold text-sm">${item.price.toFixed(2)}</p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* Full Menu with search and categories */
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search menu..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        <Button
+                          variant={activeCategory === null ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => setActiveCategory(null)}
+                        >
+                          All
+                        </Button>
+                        {categories.map((cat) => (
+                          <Button
+                            key={cat}
+                            variant={activeCategory === cat ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setActiveCategory(cat)}
+                          >
+                            {cat}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {filteredItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Card
+                            key={item.id}
+                            className="cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => handleAddItem(item)}
+                          >
+                            <CardContent className="p-3 text-center">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                                <Icon className="h-5 w-5 text-primary" />
+                              </div>
+                              <p className="font-medium text-sm truncate">{item.name}</p>
+                              <p className="text-primary font-semibold text-sm">${item.price.toFixed(2)}</p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Current Order */}
