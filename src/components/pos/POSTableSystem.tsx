@@ -611,7 +611,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                         disabled={selectedTable.orders.filter((o) => o.status === "pending").length === 0}
                       >
                         <Check className="h-4 w-4" />
-                        Send to Kitchen
+                        Place Order
                       </Button>
                       <Button variant="gold" className="gap-2" onClick={handleProceedToBilling}>
                         <Receipt className="h-4 w-4" />
