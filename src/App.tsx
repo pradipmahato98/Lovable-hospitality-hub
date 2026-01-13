@@ -24,6 +24,8 @@ import UserManagement from "./pages/UserManagement";
 import DevPanel from "./pages/DevPanel";
 import POS from "./pages/POS";
 import POSHistory from "./pages/POSHistory";
+import POSReports from "./pages/POSReports";
+import KitchenDisplay from "./pages/KitchenDisplay";
 import HR from "./pages/HR";
 import ChannelManager from "./pages/ChannelManager";
 import Housekeeping from "./pages/Housekeeping";
@@ -54,6 +56,8 @@ const App = () => (
                 <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
                 <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
                 <Route path="/pos/history" element={<ProtectedRoute><POSHistory /></ProtectedRoute>} />
+                <Route path="/pos/reports" element={<ProtectedRoute><POSReports /></ProtectedRoute>} />
+                <Route path="/pos/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/channels" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />

@@ -23,9 +23,17 @@ import {
   X,
   Zap,
   Star,
+  GitMerge,
+  Split,
+  ArrowRightLeft,
+  Pause,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
+import { TableActionsPanel } from "./TableActionsPanel";
+import { SplitBillDialog } from "./SplitBillDialog";
+import { POSTable } from "@/hooks/usePOS";
 
 interface TableInfo {
   id: string;
