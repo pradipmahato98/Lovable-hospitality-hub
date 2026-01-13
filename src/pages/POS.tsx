@@ -40,6 +40,9 @@ import {
   X,
   Grid3X3,
   ClipboardList,
+  ChefHat,
+  BarChart3,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -201,10 +204,20 @@ const POS = () => {
               Billing
             </TabsTrigger>
           </TabsList>
-          <Button variant="outline" onClick={() => window.location.href = "/pos/history"} className="gap-2">
-            <Receipt className="h-4 w-4" />
-            View History
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/kitchen"} className="gap-2">
+              <ChefHat className="h-4 w-4" />
+              Kitchen
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/reports"} className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Reports
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/history"} className="gap-2">
+              <History className="h-4 w-4" />
+              History
+            </Button>
+          </div>
         </div>
 
         {/* Tables Tab - Table Selection System */}
