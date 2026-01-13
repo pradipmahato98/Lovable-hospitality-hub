@@ -186,20 +186,26 @@ const POS = () => {
     <MainLayout title="Point of Sale" subtitle="Restaurant and bar transactions">
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
-          <TabsTrigger value="tables" className="gap-2">
-            <Grid3X3 className="h-4 w-4" />
-            Tables
-          </TabsTrigger>
-          <TabsTrigger value="order" className="gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Order
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+            <TabsTrigger value="tables" className="gap-2">
+              <Grid3X3 className="h-4 w-4" />
+              Tables
+            </TabsTrigger>
+            <TabsTrigger value="order" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Order
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="gap-2">
+              <Receipt className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+          </TabsList>
+          <Button variant="outline" onClick={() => window.location.href = "/pos/history"} className="gap-2">
             <Receipt className="h-4 w-4" />
-            Billing
-          </TabsTrigger>
-        </TabsList>
+            View History
+          </Button>
+        </div>
 
         {/* Tables Tab - Table Selection System */}
         <TabsContent value="tables">
