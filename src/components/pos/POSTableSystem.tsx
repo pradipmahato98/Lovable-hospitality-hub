@@ -39,7 +39,7 @@ interface TableInfo {
   id: string;
   number: string;
   capacity: number;
-  status: "available" | "occupied" | "reserved" | "billing";
+  status: "available" | "occupied" | "reserved" | "billing" | "held";
   guests?: number;
   server?: string;
   startTime?: string;
@@ -85,11 +85,12 @@ const defaultTables: TableInfo[] = [
   { id: "t8", number: "8", capacity: 4, status: "available", orders: [] },
 ];
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   available: "bg-success/20 text-success border-success/30",
   occupied: "bg-primary/20 text-primary border-primary/30",
   reserved: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   billing: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  held: "bg-muted text-muted-foreground border-muted",
 };
 
 const orderStatusColors = {
