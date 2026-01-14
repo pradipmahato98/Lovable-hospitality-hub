@@ -33,13 +33,13 @@ import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
 import { TableActionsPanel } from "./TableActionsPanel";
 import { SplitBillDialog } from "./SplitBillDialog";
-import { saveTransaction as savePOSTransaction, POSOrderItem } from "@/hooks/usePOS";
+import { POSTable } from "@/hooks/usePOS";
 
 interface TableInfo {
   id: string;
   number: string;
   capacity: number;
-  status: "available" | "occupied" | "reserved" | "billing" | "held";
+  status: "available" | "occupied" | "reserved" | "billing";
   guests?: number;
   server?: string;
   startTime?: string;
@@ -85,12 +85,11 @@ const defaultTables: TableInfo[] = [
   { id: "t8", number: "8", capacity: 4, status: "available", orders: [] },
 ];
 
-const statusColors: Record<string, string> = {
+const statusColors = {
   available: "bg-success/20 text-success border-success/30",
   occupied: "bg-primary/20 text-primary border-primary/30",
   reserved: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   billing: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  held: "bg-muted text-muted-foreground border-muted",
 };
 
 const orderStatusColors = {
@@ -101,6 +100,17 @@ const orderStatusColors = {
 };
 
 const STORAGE_KEY = "pos_tables_data";
+const TRANSACTIONS_KEY = "pos_transactions_data";
+
+interface POSTransaction {
+  id: string;
+  tableNumber: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  items: OrderItem[];
+  createdAt: string;
+}
 
 interface POSTableSystemProps {
   onCheckout: (total: number, items: OrderItem[]) => void;
@@ -261,46 +271,30 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     setActiveTab("billing");
   };
 
+  const saveTransaction = (transaction: POSTransaction) => {
+    const saved = localStorage.getItem(TRANSACTIONS_KEY);
+    const transactions: POSTransaction[] = saved ? JSON.parse(saved) : [];
+    transactions.push(transaction);
+    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+  };
+
   const handleCheckout = () => {
     if (!selectedTable) return;
     const subtotal = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
     const tax = subtotal * 0.1;
     const total = subtotal + tax;
     
-    // Convert orders to POSOrderItem format for the transaction
-    const transactionItems: POSOrderItem[] = selectedTable.orders.map(o => ({
-      id: o.id,
-      item_name: o.name,
-      item_price: o.price,
-      quantity: o.quantity,
-      category: o.category,
-      status: o.status,
-      notes: o.notes || null,
-    }));
-    
-    // Save transaction to localStorage using the hook's saveTransaction
-    savePOSTransaction({
-      table_number: selectedTable.number,
-      customer_name: null,
-      customer_address: null,
-      company_id: null,
-      company_name: null,
-      vat_number: null,
-      pan_number: null,
+    // Save transaction to localStorage
+    const transaction: POSTransaction = {
+      id: Date.now().toString(),
+      tableNumber: selectedTable.number,
       subtotal,
-      discount_amount: null,
-      tax_amount: tax,
-      tip_amount: null,
+      tax,
       total,
-      payment_method: "cash",
-      rrn_number: null,
-      transaction_ref: null,
-      card_last_four: null,
-      card_type: null,
-      room_number: null,
-      items_count: transactionItems.length,
-      items: transactionItems,
-    });
+      items: selectedTable.orders,
+      createdAt: new Date().toISOString(),
+    };
+    saveTransaction(transaction);
     
     onCheckout(total, selectedTable.orders);
     handleCloseTable();

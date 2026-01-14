@@ -184,7 +184,7 @@ export default function POSReports() {
     });
 
     return Object.entries(byHour).map(([hour, data]) => ({
-      hour: `${String(hour).padStart(2, "0")}:00`,
+      hour: `${hour.padStart(2, "0")}:00`,
       ...data,
     }));
   }, [transactions]);
