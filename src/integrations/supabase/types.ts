@@ -137,6 +137,286 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_companies: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          pan_number: string | null
+          phone: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          pan_number?: string | null
+          phone?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          pan_number?: string | null
+          phone?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
+      pos_order_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          item_name: string
+          item_price: number
+          notes: string | null
+          order_id: string | null
+          quantity: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          item_price: number
+          notes?: string | null
+          order_id?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_price?: number
+          notes?: string | null
+          order_id?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pos_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_orders: {
+        Row: {
+          created_at: string
+          discount_amount: number | null
+          guests: number | null
+          id: string
+          server_name: string | null
+          start_time: string | null
+          status: string
+          subtotal: number | null
+          table_id: string | null
+          table_number: string
+          tax_amount: number | null
+          tip_amount: number | null
+          total: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount_amount?: number | null
+          guests?: number | null
+          id?: string
+          server_name?: string | null
+          start_time?: string | null
+          status?: string
+          subtotal?: number | null
+          table_id?: string | null
+          table_number: string
+          tax_amount?: number | null
+          tip_amount?: number | null
+          total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount_amount?: number | null
+          guests?: number | null
+          id?: string
+          server_name?: string | null
+          start_time?: string | null
+          status?: string
+          subtotal?: number | null
+          table_id?: string | null
+          table_number?: string
+          tax_amount?: number | null
+          tip_amount?: number | null
+          total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "pos_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_tables: {
+        Row: {
+          capacity: number
+          created_at: string
+          current_order: Json | null
+          guests: number | null
+          id: string
+          merged_with: string[] | null
+          server_name: string | null
+          start_time: string | null
+          status: string
+          table_number: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          current_order?: Json | null
+          guests?: number | null
+          id?: string
+          merged_with?: string[] | null
+          server_name?: string | null
+          start_time?: string | null
+          status?: string
+          table_number: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          current_order?: Json | null
+          guests?: number | null
+          id?: string
+          merged_with?: string[] | null
+          server_name?: string | null
+          start_time?: string | null
+          status?: string
+          table_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_transactions: {
+        Row: {
+          card_last_four: string | null
+          card_type: string | null
+          company_id: string | null
+          company_name: string | null
+          created_at: string
+          customer_address: string | null
+          customer_name: string | null
+          discount_amount: number | null
+          id: string
+          items: Json
+          items_count: number
+          order_id: string | null
+          pan_number: string | null
+          payment_method: string
+          room_number: string | null
+          rrn_number: string | null
+          subtotal: number
+          table_number: string
+          tax_amount: number
+          tip_amount: number | null
+          total: number
+          transaction_number: string
+          transaction_ref: string | null
+          vat_number: string | null
+        }
+        Insert: {
+          card_last_four?: string | null
+          card_type?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          discount_amount?: number | null
+          id?: string
+          items?: Json
+          items_count: number
+          order_id?: string | null
+          pan_number?: string | null
+          payment_method: string
+          room_number?: string | null
+          rrn_number?: string | null
+          subtotal: number
+          table_number: string
+          tax_amount: number
+          tip_amount?: number | null
+          total: number
+          transaction_number: string
+          transaction_ref?: string | null
+          vat_number?: string | null
+        }
+        Update: {
+          card_last_four?: string | null
+          card_type?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          discount_amount?: number | null
+          id?: string
+          items?: Json
+          items_count?: number
+          order_id?: string | null
+          pan_number?: string | null
+          payment_method?: string
+          room_number?: string | null
+          rrn_number?: string | null
+          subtotal?: number
+          table_number?: string
+          tax_amount?: number
+          tip_amount?: number | null
+          total?: number
+          transaction_number?: string
+          transaction_ref?: string | null
+          vat_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pos_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pos_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
