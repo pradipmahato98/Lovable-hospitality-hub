@@ -23,37 +23,25 @@ import {
   X,
   Zap,
   Star,
-  GitMerge,
-  Split,
-  ArrowRightLeft,
-  Pause,
-  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
-import { TableActionsPanel } from "./TableActionsPanel";
-import { SplitBillDialog } from "./SplitBillDialog";
-import { POSTable } from "@/hooks/usePOS";
+import { 
+  usePOSTables, 
+  useUpdatePOSTable, 
+  useCreatePOSTransaction,
+  OrderItem,
+} from "@/hooks/usePOS";
 
 interface TableInfo {
   id: string;
   number: string;
   capacity: number;
-  status: "available" | "occupied" | "reserved" | "billing";
+  status: "available" | "occupied" | "reserved" | "billing" | "held";
   guests?: number;
   server?: string;
   startTime?: string;
   orders: OrderItem[];
-}
-
-interface OrderItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  category: string;
-  status: "pending" | "preparing" | "ready" | "served";
-  notes?: string;
 }
 
 const menuItems = [
@@ -74,22 +62,12 @@ const menuItems = [
   { id: "15", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
 ];
 
-const defaultTables: TableInfo[] = [
-  { id: "t1", number: "1", capacity: 4, status: "available", orders: [] },
-  { id: "t2", number: "2", capacity: 2, status: "available", orders: [] },
-  { id: "t3", number: "3", capacity: 6, status: "available", orders: [] },
-  { id: "t4", number: "4", capacity: 4, status: "available", orders: [] },
-  { id: "t5", number: "5", capacity: 8, status: "available", orders: [] },
-  { id: "t6", number: "6", capacity: 2, status: "available", orders: [] },
-  { id: "t7", number: "7", capacity: 4, status: "available", orders: [] },
-  { id: "t8", number: "8", capacity: 4, status: "available", orders: [] },
-];
-
 const statusColors = {
   available: "bg-success/20 text-success border-success/30",
   occupied: "bg-primary/20 text-primary border-primary/30",
   reserved: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   billing: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  held: "bg-muted text-muted-foreground border-muted",
 };
 
 const orderStatusColors = {
@@ -97,37 +75,31 @@ const orderStatusColors = {
   preparing: "bg-amber-500/20 text-amber-400",
   ready: "bg-success/20 text-success",
   served: "bg-primary/20 text-primary",
+  cancelled: "bg-destructive/20 text-destructive",
 };
-
-const STORAGE_KEY = "pos_tables_data";
-const TRANSACTIONS_KEY = "pos_transactions_data";
-
-interface POSTransaction {
-  id: string;
-  tableNumber: string;
-  subtotal: number;
-  tax: number;
-  total: number;
-  items: OrderItem[];
-  createdAt: string;
-}
 
 interface POSTableSystemProps {
   onCheckout: (total: number, items: OrderItem[]) => void;
 }
 
 export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
-  const [tables, setTables] = useState<TableInfo[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return defaultTables;
-      }
-    }
-    return defaultTables;
-  });
+  // Use Supabase-backed hooks for real multi-device sync
+  const { data: posTables, isLoading, refetch } = usePOSTables();
+  const updateTable = useUpdatePOSTable();
+  const createTransaction = useCreatePOSTransaction();
+
+  // Transform POSTable to TableInfo format
+  const tables: TableInfo[] = posTables.map((t) => ({
+    id: t.id,
+    number: t.table_number,
+    capacity: t.capacity,
+    status: t.status,
+    guests: t.guests || undefined,
+    server: t.server_name || undefined,
+    startTime: t.start_time || undefined,
+    orders: (t.current_order || []) as OrderItem[],
+  }));
+
   const [selectedTable, setSelectedTable] = useState<TableInfo | null>(null);
   const [activeTab, setActiveTab] = useState("tables");
   const [menuTab, setMenuTab] = useState<"quick" | "full">("quick");
@@ -139,12 +111,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   const { data: quickMenuSettings } = useQuickMenuSettings();
   const quickMenuIds = quickMenuSettings?.enabled_items || ["1", "4", "5", "6", "12", "13"];
 
-  // Persist tables to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tables));
-  }, [tables]);
-
-  // Sync selectedTable with tables state
+  // Sync selectedTable with tables state when data changes
   useEffect(() => {
     if (selectedTable) {
       const updated = tables.find(t => t.id === selectedTable.id);
@@ -172,24 +139,38 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     }
   };
 
-  const handleOpenTable = () => {
+  const handleOpenTable = async () => {
     if (!selectedTable || !guestCount) return;
-    const updatedTable = {
-      ...selectedTable,
-      status: "occupied" as const,
-      guests: parseInt(guestCount),
-      startTime: new Date().toISOString(),
-      server: "Current User"
-    };
-    setTables((prev) =>
-      prev.map((t) => t.id === selectedTable.id ? updatedTable : t)
-    );
-    setSelectedTable(updatedTable);
-    toast.success(`Table ${selectedTable.number} opened with ${guestCount} guests`);
-    setActiveTab("order");
+    
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          status: "occupied",
+          guests: parseInt(guestCount),
+          start_time: new Date().toISOString(),
+          server_name: "Current User",
+          current_order: [],
+        },
+      });
+      
+      const updatedTable = {
+        ...selectedTable,
+        status: "occupied" as const,
+        guests: parseInt(guestCount),
+        startTime: new Date().toISOString(),
+        server: "Current User",
+      };
+      setSelectedTable(updatedTable);
+      toast.success(`Table ${selectedTable.number} opened with ${guestCount} guests`);
+      setActiveTab("order");
+    } catch (error) {
+      console.error("Error opening table:", error);
+      toast.error("Failed to open table");
+    }
   };
 
-  const handleAddItem = (item: typeof menuItems[0]) => {
+  const handleAddItem = async (item: typeof menuItems[0]) => {
     if (!selectedTable || selectedTable.status === "available") {
       toast.error("Please open a table first");
       return;
@@ -204,49 +185,89 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       status: "pending",
     };
 
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id === selectedTable.id) {
-          const existing = t.orders.find((o) => o.name === item.name && o.status === "pending");
-          if (existing) {
-            return {
-              ...t,
-              orders: t.orders.map((o) =>
-                o.id === existing.id ? { ...o, quantity: o.quantity + 1 } : o
-              ),
-            };
-          }
-          return { ...t, orders: [...t.orders, newOrder] };
-        }
-        return t;
-      })
-    );
+    const currentOrders = selectedTable.orders || [];
+    const existing = currentOrders.find((o) => o.name === item.name && o.status === "pending");
+    
+    let updatedOrders: OrderItem[];
+    if (existing) {
+      updatedOrders = currentOrders.map((o) =>
+        o.id === existing.id ? { ...o, quantity: o.quantity + 1 } : o
+      );
+    } else {
+      updatedOrders = [...currentOrders, newOrder];
+    }
 
-    toast.success(`${item.name} added to Table ${selectedTable.number}`);
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          current_order: updatedOrders,
+        },
+      });
+      
+      setSelectedTable({
+        ...selectedTable,
+        orders: updatedOrders,
+      });
+      
+      toast.success(`${item.name} added to Table ${selectedTable.number}`);
+    } catch (error) {
+      console.error("Error adding item:", error);
+      toast.error("Failed to add item");
+    }
   };
 
-  const handleUpdateQuantity = (orderId: string, delta: number) => {
-    setTables((prev) =>
-      prev.map((t) => ({
-        ...t,
-        orders: t.orders
-          .map((o) => (o.id === orderId ? { ...o, quantity: Math.max(0, o.quantity + delta) } : o))
-          .filter((o) => o.quantity > 0),
-      }))
-    );
+  const handleUpdateQuantity = async (orderId: string, delta: number) => {
+    if (!selectedTable) return;
+    
+    const updatedOrders = selectedTable.orders
+      .map((o) => (o.id === orderId ? { ...o, quantity: Math.max(0, o.quantity + delta) } : o))
+      .filter((o) => o.quantity > 0);
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          current_order: updatedOrders,
+        },
+      });
+      
+      setSelectedTable({
+        ...selectedTable,
+        orders: updatedOrders,
+      });
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      toast.error("Failed to update quantity");
+    }
   };
 
-  const handleRemoveItem = (orderId: string) => {
-    setTables((prev) =>
-      prev.map((t) => ({
-        ...t,
-        orders: t.orders.filter((o) => o.id !== orderId),
-      }))
-    );
-    toast.success("Item removed");
+  const handleRemoveItem = async (orderId: string) => {
+    if (!selectedTable) return;
+    
+    const updatedOrders = selectedTable.orders.filter((o) => o.id !== orderId);
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          current_order: updatedOrders,
+        },
+      });
+      
+      setSelectedTable({
+        ...selectedTable,
+        orders: updatedOrders,
+      });
+      
+      toast.success("Item removed");
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item");
+    }
   };
 
-  const handleSendToKitchen = () => {
+  const handleSendToKitchen = async () => {
     if (!selectedTable) return;
     const pendingOrders = selectedTable.orders.filter((o) => o.status === "pending");
     if (pendingOrders.length === 0) {
@@ -254,67 +275,125 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       return;
     }
 
-    setTables((prev) =>
-      prev.map((t) => ({
-        ...t,
-        orders: t.orders.map((o) => (o.status === "pending" ? { ...o, status: "preparing" as const } : o)),
-      }))
+    const updatedOrders = selectedTable.orders.map((o) => 
+      o.status === "pending" ? { ...o, status: "preparing" as const } : o
     );
-    toast.success(`${pendingOrders.length} item(s) sent to kitchen`);
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          current_order: updatedOrders,
+        },
+      });
+      
+      setSelectedTable({
+        ...selectedTable,
+        orders: updatedOrders,
+      });
+      
+      toast.success(`${pendingOrders.length} item(s) sent to kitchen`);
+    } catch (error) {
+      console.error("Error sending to kitchen:", error);
+      toast.error("Failed to send to kitchen");
+    }
   };
 
-  const handleProceedToBilling = () => {
+  const handleProceedToBilling = async () => {
     if (!selectedTable) return;
-    setTables((prev) =>
-      prev.map((t) => (t.id === selectedTable.id ? { ...t, status: "billing" as const } : t))
-    );
-    setActiveTab("billing");
+    
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          status: "billing",
+        },
+      });
+      
+      setSelectedTable({
+        ...selectedTable,
+        status: "billing",
+      });
+      
+      setActiveTab("billing");
+    } catch (error) {
+      console.error("Error proceeding to billing:", error);
+      toast.error("Failed to proceed to billing");
+    }
   };
 
-  const saveTransaction = (transaction: POSTransaction) => {
-    const saved = localStorage.getItem(TRANSACTIONS_KEY);
-    const transactions: POSTransaction[] = saved ? JSON.parse(saved) : [];
-    transactions.push(transaction);
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
-  };
-
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!selectedTable) return;
+    
     const subtotal = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
     const tax = subtotal * 0.1;
     const total = subtotal + tax;
     
-    // Save transaction to localStorage
-    const transaction: POSTransaction = {
-      id: Date.now().toString(),
-      tableNumber: selectedTable.number,
-      subtotal,
-      tax,
-      total,
-      items: selectedTable.orders,
-      createdAt: new Date().toISOString(),
-    };
-    saveTransaction(transaction);
-    
-    onCheckout(total, selectedTable.orders);
-    handleCloseTable();
+    try {
+      // Save transaction to database
+      await createTransaction.mutateAsync({
+        table_number: selectedTable.number,
+        customer_name: null,
+        customer_address: null,
+        company_id: null,
+        company_name: null,
+        vat_number: null,
+        pan_number: null,
+        subtotal,
+        discount_amount: 0,
+        tax_amount: tax,
+        tip_amount: 0,
+        total,
+        payment_method: "cash",
+        rrn_number: null,
+        transaction_ref: null,
+        card_last_four: null,
+        card_type: null,
+        room_number: null,
+        items_count: selectedTable.orders.length,
+        items: selectedTable.orders.map((o) => ({
+          id: o.id,
+          order_id: undefined,
+          item_name: o.name,
+          item_price: o.price,
+          quantity: o.quantity,
+          category: o.category,
+          status: o.status,
+          notes: o.notes || null,
+        })),
+      });
+      
+      onCheckout(total, selectedTable.orders);
+      await handleCloseTable();
+    } catch (error) {
+      console.error("Error during checkout:", error);
+      toast.error("Failed to complete checkout");
+    }
   };
 
-  const handleCloseTable = () => {
+  const handleCloseTable = async () => {
     if (!selectedTable) return;
-    setTables((prev) =>
-      prev.map((t) => (t.id === selectedTable.id ? { 
-        ...t, 
-        status: "available" as const, 
-        orders: [], 
-        guests: undefined, 
-        server: undefined, 
-        startTime: undefined 
-      } : t))
-    );
-    setSelectedTable(null);
-    toast.success(`Table ${selectedTable.number} closed`);
-    setActiveTab("tables");
+    
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          status: "available",
+          guests: null,
+          server_name: null,
+          start_time: null,
+          merged_with: null,
+          current_order: [],
+        },
+      });
+      
+      toast.success(`Table ${selectedTable.number} closed`);
+      setSelectedTable(null);
+      setActiveTab("tables");
+    } catch (error) {
+      console.error("Error closing table:", error);
+      toast.error("Failed to close table");
+    }
   };
 
   const getTableTotal = (table: TableInfo) => {
@@ -328,6 +407,14 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     const minutes = Math.floor((diff % 3600000) / 60000);
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-muted-foreground">Loading tables...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full">
@@ -389,7 +476,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
           {/* Open Table Dialog */}
           {selectedTable?.status === "available" && (
-            <Card variant="elevated" className="mt-4 p-4">
+            <Card className="mt-4 p-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <h3 className="font-semibold">Open Table {selectedTable.number}</h3>
@@ -407,8 +494,8 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                       max={selectedTable.capacity}
                     />
                   </div>
-                  <Button variant="gold" onClick={handleOpenTable}>
-                    Open Table
+                  <Button variant="default" onClick={handleOpenTable} disabled={updateTable.isPending}>
+                    {updateTable.isPending ? "Opening..." : "Open Table"}
                   </Button>
                 </div>
               </div>
@@ -541,7 +628,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
               </div>
 
               {/* Current Order */}
-              <Card variant="elevated" className="h-fit">
+              <Card className="h-fit">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold flex items-center gap-2">
@@ -616,12 +703,12 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                         variant="outline"
                         className="gap-2"
                         onClick={handleSendToKitchen}
-                        disabled={selectedTable.orders.filter((o) => o.status === "pending").length === 0}
+                        disabled={selectedTable.orders.filter((o) => o.status === "pending").length === 0 || updateTable.isPending}
                       >
                         <Check className="h-4 w-4" />
                         Place Order
                       </Button>
-                      <Button variant="gold" className="gap-2" onClick={handleProceedToBilling}>
+                      <Button variant="default" className="gap-2" onClick={handleProceedToBilling} disabled={updateTable.isPending}>
                         <Receipt className="h-4 w-4" />
                         Proceed to Bill
                       </Button>
@@ -636,7 +723,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
         {/* Billing Tab */}
         <TabsContent value="billing" className="flex-1 mt-0">
           {selectedTable && selectedTable.status === "billing" && (
-            <Card variant="elevated" className="max-w-md mx-auto">
+            <Card className="max-w-md mx-auto">
               <CardContent className="p-6">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold">Table {selectedTable.number}</h2>
@@ -670,13 +757,13 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mt-6">
-                  <Button variant="outline" onClick={handleCloseTable}>
+                  <Button variant="outline" onClick={handleCloseTable} disabled={updateTable.isPending}>
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
-                  <Button variant="gold" onClick={handleCheckout}>
+                  <Button variant="default" onClick={handleCheckout} disabled={createTransaction.isPending || updateTable.isPending}>
                     <Receipt className="h-4 w-4 mr-2" />
-                    Checkout
+                    {createTransaction.isPending ? "Processing..." : "Checkout"}
                   </Button>
                 </div>
               </CardContent>

@@ -10,8 +10,12 @@ import {
   AlertCircle,
   Bell,
   RefreshCw,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { usePOSTables, useUpdatePOSTable, OrderItem } from "@/hooks/usePOS";
 
 interface KitchenOrder {
   id: string;
@@ -21,118 +25,116 @@ interface KitchenOrder {
     name: string;
     quantity: number;
     notes?: string;
-    status: "pending" | "preparing" | "ready";
+    status: "pending" | "preparing" | "ready" | "served" | "cancelled";
   }[];
   createdAt: string;
   priority: "normal" | "rush";
 }
 
-const STORAGE_KEY = "pos_tables_data";
-const KITCHEN_ORDERS_KEY = "kitchen_orders_data";
-
 export default function KitchenDisplay() {
-  const [orders, setOrders] = useState<KitchenOrder[]>([]);
+  const { data: posTables, isLoading, refetch } = usePOSTables();
+  const updateTable = useUpdatePOSTable();
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isRealtime, setIsRealtime] = useState(true);
 
-  // Load orders from localStorage
-  const loadOrders = () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const tables = JSON.parse(saved);
-        const kitchenOrders: KitchenOrder[] = tables
-          .filter((t: any) => t.status !== "available" && t.orders && t.orders.length > 0)
-          .map((t: any) => ({
-            id: t.id,
-            tableNumber: t.number || t.table_number,
-            items: t.orders
-              .filter((o: any) => o.status !== "served" && o.status !== "cancelled")
-              .map((o: any) => ({
-                id: o.id,
-                name: o.name || o.item_name,
-                quantity: o.quantity,
-                notes: o.notes,
-                status: o.status,
-              })),
-            createdAt: t.startTime || t.start_time || new Date().toISOString(),
-            priority: "normal" as const,
-          }))
-          .filter((o: KitchenOrder) => o.items.length > 0);
-        setOrders(kitchenOrders);
-        setLastUpdate(new Date());
-      } catch {
-        setOrders([]);
-      }
-    }
-  };
+  // Transform POS tables to kitchen orders format
+  const orders: KitchenOrder[] = posTables
+    .filter((t) => t.status !== "available" && t.current_order && Array.isArray(t.current_order) && t.current_order.length > 0)
+    .map((t) => ({
+      id: t.id,
+      tableNumber: t.table_number,
+      items: (t.current_order as OrderItem[])
+        .filter((o) => o.status !== "served" && o.status !== "cancelled")
+        .map((o) => ({
+          id: o.id,
+          name: o.name,
+          quantity: o.quantity,
+          notes: o.notes,
+          status: o.status,
+        })),
+      createdAt: t.start_time || new Date().toISOString(),
+      priority: "normal" as const,
+    }))
+    .filter((o) => o.items.length > 0);
 
+  // Set up real-time subscription for instant updates
   useEffect(() => {
-    loadOrders();
-    
-    // Poll for updates every 5 seconds
-    const interval = setInterval(loadOrders, 5000);
-    
-    // Listen for storage changes
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        loadOrders();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
+    const channel = supabase
+      .channel("kitchen-display-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pos_tables",
+        },
+        (payload) => {
+          console.log("Real-time update received:", payload);
+          setLastUpdate(new Date());
+          refetch();
+        }
+      )
+      .subscribe((status) => {
+        setIsRealtime(status === "SUBSCRIBED");
+        if (status === "SUBSCRIBED") {
+          console.log("Kitchen Display connected to real-time updates");
+        }
+      });
 
-  const updateItemStatus = (orderId: string, itemId: string, newStatus: "preparing" | "ready") => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const tables = JSON.parse(saved);
-        const updatedTables = tables.map((t: any) => {
-          if (t.id === orderId) {
-            return {
-              ...t,
-              orders: t.orders.map((o: any) => 
-                o.id === itemId ? { ...o, status: newStatus } : o
-              ),
-            };
-          }
-          return t;
-        });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTables));
-        window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
-        loadOrders();
-        toast.success(`Item marked as ${newStatus}`);
-      } catch {
-        toast.error("Failed to update item status");
-      }
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  // Update last update time when data changes
+  useEffect(() => {
+    if (!isLoading) {
+      setLastUpdate(new Date());
+    }
+  }, [posTables, isLoading]);
+
+  const updateItemStatus = async (tableId: string, itemId: string, newStatus: "preparing" | "ready") => {
+    const table = posTables.find((t) => t.id === tableId);
+    if (!table || !table.current_order) return;
+
+    const updatedOrders = (table.current_order as OrderItem[]).map((o) =>
+      o.id === itemId ? { ...o, status: newStatus } : o
+    );
+
+    try {
+      await updateTable.mutateAsync({
+        id: tableId,
+        updates: {
+          current_order: updatedOrders,
+        },
+      });
+      toast.success(`Item marked as ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating item status:", error);
+      toast.error("Failed to update item status");
     }
   };
 
-  const markAllReady = (orderId: string) => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const tables = JSON.parse(saved);
-        const updatedTables = tables.map((t: any) => {
-          if (t.id === orderId) {
-            return {
-              ...t,
-              orders: t.orders.map((o: any) => ({ ...o, status: "ready" })),
-            };
-          }
-          return t;
-        });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTables));
-        window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
-        loadOrders();
-        toast.success("All items marked as ready");
-      } catch {
-        toast.error("Failed to update order status");
-      }
+  const markAllReady = async (tableId: string) => {
+    const table = posTables.find((t) => t.id === tableId);
+    if (!table || !table.current_order) return;
+
+    const updatedOrders = (table.current_order as OrderItem[]).map((o) => ({
+      ...o,
+      status: "ready" as const,
+    }));
+
+    try {
+      await updateTable.mutateAsync({
+        id: tableId,
+        updates: {
+          current_order: updatedOrders,
+        },
+      });
+      toast.success("All items marked as ready");
+    } catch (error) {
+      console.error("Error marking all ready:", error);
+      toast.error("Failed to update order status");
     }
   };
 
@@ -157,11 +159,25 @@ export default function KitchenDisplay() {
     pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     preparing: "bg-primary/20 text-primary border-primary/30",
     ready: "bg-success/20 text-success border-success/30",
+    served: "bg-muted text-muted-foreground border-muted",
+    cancelled: "bg-destructive/20 text-destructive border-destructive/30",
   };
 
-  const pendingOrders = orders.filter(o => o.items.some(i => i.status === "pending"));
-  const preparingOrders = orders.filter(o => o.items.some(i => i.status === "preparing") && !o.items.some(i => i.status === "pending"));
-  const readyOrders = orders.filter(o => o.items.every(i => i.status === "ready"));
+  const pendingOrders = orders.filter((o) => o.items.some((i) => i.status === "pending"));
+  const preparingOrders = orders.filter(
+    (o) => o.items.some((i) => i.status === "preparing") && !o.items.some((i) => i.status === "pending")
+  );
+  const readyOrders = orders.filter((o) => o.items.every((i) => i.status === "ready"));
+
+  if (isLoading) {
+    return (
+      <MainLayout title="Kitchen Display" subtitle="Real-time order management">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading orders...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="Kitchen Display" subtitle="Real-time order management">
@@ -188,9 +204,21 @@ export default function KitchenDisplay() {
               <span className="text-sm text-muted-foreground">Ready</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Last updated: {lastUpdate.toLocaleTimeString()}</span>
-            <Button variant="outline" size="sm" onClick={loadOrders}>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {isRealtime ? (
+                <Wifi className="h-4 w-4 text-success" />
+              ) : (
+                <WifiOff className="h-4 w-4 text-destructive" />
+              )}
+              <span className="text-sm text-muted-foreground">
+                {isRealtime ? "Real-time" : "Offline"}
+              </span>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              Updated: {lastUpdate.toLocaleTimeString()}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
@@ -203,17 +231,20 @@ export default function KitchenDisplay() {
               <ChefHat className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-xl font-semibold mb-2">No Active Orders</h3>
               <p className="text-muted-foreground">Orders will appear here when placed from the POS</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {isRealtime ? "Real-time updates are active" : "Connect to receive live updates"}
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {orders.map((order) => (
-              <Card 
-                key={order.id} 
+              <Card
+                key={order.id}
                 className={`${
-                  order.items.some(i => i.status === "pending") 
-                    ? "border-amber-500/50" 
-                    : order.items.every(i => i.status === "ready")
+                  order.items.some((i) => i.status === "pending")
+                    ? "border-amber-500/50"
+                    : order.items.every((i) => i.status === "ready")
                     ? "border-success/50"
                     : "border-primary/50"
                 }`}
@@ -229,8 +260,8 @@ export default function KitchenDisplay() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {order.items.map((item) => (
-                    <div 
-                      key={item.id} 
+                    <div
+                      key={item.id}
                       className="flex items-start justify-between p-2 rounded-lg bg-secondary/30"
                     >
                       <div className="flex-1">
@@ -255,6 +286,7 @@ export default function KitchenDisplay() {
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => updateItemStatus(order.id, item.id, "preparing")}
+                            disabled={updateTable.isPending}
                           >
                             <ChefHat className="h-4 w-4" />
                           </Button>
@@ -265,6 +297,7 @@ export default function KitchenDisplay() {
                             size="icon"
                             className="h-8 w-8 text-success"
                             onClick={() => updateItemStatus(order.id, item.id, "ready")}
+                            disabled={updateTable.isPending}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -276,11 +309,12 @@ export default function KitchenDisplay() {
                     </div>
                   ))}
 
-                  {!order.items.every(i => i.status === "ready") && (
+                  {!order.items.every((i) => i.status === "ready") && (
                     <Button
-                      variant="gold"
+                      variant="default"
                       className="w-full mt-2"
                       onClick={() => markAllReady(order.id)}
+                      disabled={updateTable.isPending}
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Mark All Ready
