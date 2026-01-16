@@ -1,7 +1,7 @@
-// POS hooks - Using localStorage until database migration is applied
-// These hooks provide a consistent API that can be switched to database later
-
-import { useState, useEffect, useCallback } from "react";
+// POS hooks - Using Supabase for permanent multi-device sync
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 // ============= Types =============
 export interface POSTable {
@@ -13,6 +13,17 @@ export interface POSTable {
   server_name: string | null;
   start_time: string | null;
   merged_with: string[] | null;
+  current_order?: OrderItem[];
+}
+
+export interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  category: string;
+  status: "pending" | "preparing" | "ready" | "served" | "cancelled";
+  notes?: string;
 }
 
 export interface POSOrderItem {
@@ -62,12 +73,7 @@ export interface POSTransaction {
   created_at: string;
 }
 
-// LocalStorage keys
-const TABLES_KEY = "pos_tables_data";
-const COMPANIES_KEY = "pos_companies_data";
-const TRANSACTIONS_KEY = "pos_transactions_data";
-
-// Default tables
+// Default tables for fallback
 const defaultTables: POSTable[] = [
   { id: "t1", table_number: "1", capacity: 4, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
   { id: "t2", table_number: "2", capacity: 2, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
@@ -81,116 +87,159 @@ const defaultTables: POSTable[] = [
 
 // ============= POS Tables Hooks =============
 export function usePOSTables() {
-  const [data, setData] = useState<POSTable[]>(() => {
-    const saved = localStorage.getItem(TABLES_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["pos-tables"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pos_tables")
+        .select("*")
+        .order("table_number", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching POS tables:", error);
+        // Fallback to default tables if not authenticated or table doesn't exist
         return defaultTables;
       }
-    }
-    return defaultTables;
+
+      if (!data || data.length === 0) {
+        return defaultTables;
+      }
+
+      // Transform database format to app format
+      return data.map((table) => ({
+        id: table.id,
+        table_number: table.table_number,
+        capacity: table.capacity,
+        status: table.status as POSTable["status"],
+        guests: table.guests,
+        server_name: table.server_name,
+        start_time: table.start_time,
+        merged_with: table.merged_with,
+        current_order: table.current_order ? JSON.parse(JSON.stringify(table.current_order)) : [],
+      })) as POSTable[];
+    },
   });
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Sync with localStorage changes (for multi-tab support)
+  // Real-time subscription for multi-device sync
   useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === TABLES_KEY && e.newValue) {
-        try {
-          setData(JSON.parse(e.newValue));
-        } catch {
-          // ignore parse errors
+    const channel = supabase
+      .channel("pos-tables-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pos_tables",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["pos-tables"] });
         }
-      }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  }, [queryClient]);
 
-  const refetch = useCallback(() => {
-    const saved = localStorage.getItem(TABLES_KEY);
-    if (saved) {
-      try {
-        setData(JSON.parse(saved));
-      } catch {
-        setData(defaultTables);
-      }
-    }
-  }, []);
-
-  return { data, isLoading, refetch };
+  return { 
+    data: query.data || defaultTables, 
+    isLoading: query.isLoading, 
+    refetch: query.refetch 
+  };
 }
 
 export function useUpdatePOSTable() {
-  const [isPending, setIsPending] = useState(false);
+  const queryClient = useQueryClient();
 
-  const mutateAsync = async ({ id, updates }: { id: string; updates: Partial<POSTable> }) => {
-    setIsPending(true);
-    try {
-      const saved = localStorage.getItem(TABLES_KEY);
-      const tables: POSTable[] = saved ? JSON.parse(saved) : defaultTables;
-      const updatedTables = tables.map(t => 
-        t.id === id ? { ...t, ...updates } : t
-      );
-      localStorage.setItem(TABLES_KEY, JSON.stringify(updatedTables));
-      // Dispatch storage event for other tabs
-      window.dispatchEvent(new StorageEvent("storage", { key: TABLES_KEY, newValue: JSON.stringify(updatedTables) }));
-      return updatedTables.find(t => t.id === id);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<POSTable> }) => {
+      // Transform app format to database format
+      const dbUpdates: Record<string, unknown> = {};
+      
+      if (updates.table_number !== undefined) dbUpdates.table_number = updates.table_number;
+      if (updates.capacity !== undefined) dbUpdates.capacity = updates.capacity;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.guests !== undefined) dbUpdates.guests = updates.guests;
+      if (updates.server_name !== undefined) dbUpdates.server_name = updates.server_name;
+      if (updates.start_time !== undefined) dbUpdates.start_time = updates.start_time;
+      if (updates.merged_with !== undefined) dbUpdates.merged_with = updates.merged_with;
+      if (updates.current_order !== undefined) dbUpdates.current_order = updates.current_order;
 
-  return { mutateAsync, isPending };
+      const { data, error } = await supabase
+        .from("pos_tables")
+        .update(dbUpdates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating POS table:", error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos-tables"] });
+    },
+  });
 }
 
 // ============= POS Companies Hooks =============
 export function usePOSCompanies(searchTerm?: string) {
-  const [isLoading] = useState(false);
+  const query = useQuery({
+    queryKey: ["pos-companies", searchTerm],
+    queryFn: async () => {
+      let q = supabase
+        .from("pos_companies")
+        .select("*")
+        .order("name", { ascending: true });
 
-  const getCompanies = (): POSCompany[] => {
-    const saved = localStorage.getItem(COMPANIES_KEY);
-    return saved ? JSON.parse(saved) : [];
-  };
+      if (searchTerm) {
+        q = q.or(
+          `name.ilike.%${searchTerm}%,vat_number.ilike.%${searchTerm}%,pan_number.ilike.%${searchTerm}%`
+        );
+      }
 
-  let companies = getCompanies();
+      const { data, error } = await q;
 
-  if (searchTerm) {
-    const term = searchTerm.toLowerCase();
-    companies = companies.filter(
-      (c) =>
-        c.name.toLowerCase().includes(term) ||
-        c.vat_number?.toLowerCase().includes(term) ||
-        c.pan_number?.toLowerCase().includes(term)
-    );
-  }
+      if (error) {
+        console.error("Error fetching POS companies:", error);
+        return [];
+      }
 
-  return { data: companies, isLoading };
+      return data as POSCompany[];
+    },
+  });
+
+  return { data: query.data || [], isLoading: query.isLoading };
 }
 
 export function useCreatePOSCompany() {
-  const [isPending, setIsPending] = useState(false);
+  const queryClient = useQueryClient();
 
-  const mutateAsync = async (company: Omit<POSCompany, "id">) => {
-    setIsPending(true);
-    try {
-      const saved = localStorage.getItem(COMPANIES_KEY);
-      const companies: POSCompany[] = saved ? JSON.parse(saved) : [];
-      const newCompany: POSCompany = {
-        ...company,
-        id: Date.now().toString(),
-      };
-      companies.push(newCompany);
-      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
-      return newCompany;
-    } finally {
-      setIsPending(false);
-    }
-  };
+  return useMutation({
+    mutationFn: async (company: Omit<POSCompany, "id">) => {
+      const { data, error } = await supabase
+        .from("pos_companies")
+        .insert(company)
+        .select()
+        .single();
 
-  return { mutateAsync, isPending };
+      if (error) {
+        console.error("Error creating POS company:", error);
+        throw error;
+      }
+
+      return data as POSCompany;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos-companies"] });
+    },
+  });
 }
 
 // ============= POS Transactions Hooks =============
@@ -199,96 +248,273 @@ export function usePOSTransactions(filters?: {
   endDate?: string;
   paymentMethod?: string;
 }) {
-  const [isLoading] = useState(false);
+  const query = useQuery({
+    queryKey: ["pos-transactions", filters],
+    queryFn: async () => {
+      let q = supabase
+        .from("pos_transactions")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  const getTransactions = (): POSTransaction[] => {
-    const saved = localStorage.getItem(TRANSACTIONS_KEY);
-    return saved ? JSON.parse(saved) : [];
+      if (filters?.startDate) {
+        q = q.gte("created_at", filters.startDate);
+      }
+      if (filters?.endDate) {
+        q = q.lte("created_at", filters.endDate + "T23:59:59");
+      }
+      if (filters?.paymentMethod) {
+        q = q.eq("payment_method", filters.paymentMethod);
+      }
+
+      const { data, error } = await q;
+
+      if (error) {
+        console.error("Error fetching POS transactions:", error);
+        return [];
+      }
+
+      return data.map((t) => ({
+        ...t,
+        items: t.items ? JSON.parse(JSON.stringify(t.items)) : [],
+      })) as POSTransaction[];
+    },
+  });
+
+  return { 
+    data: query.data || [], 
+    isLoading: query.isLoading, 
+    refetch: query.refetch 
   };
-
-  let transactions = getTransactions();
-
-  if (filters?.startDate) {
-    transactions = transactions.filter((t) => t.created_at >= filters.startDate!);
-  }
-  if (filters?.endDate) {
-    transactions = transactions.filter(
-      (t) => t.created_at <= filters.endDate! + "T23:59:59"
-    );
-  }
-  if (filters?.paymentMethod) {
-    transactions = transactions.filter(
-      (t) => t.payment_method === filters.paymentMethod
-    );
-  }
-
-  const refetch = () => {
-    // Trigger re-render by calling this
-  };
-
-  return { data: transactions, isLoading, refetch };
 }
 
 export function useCreatePOSTransaction() {
-  const [isPending, setIsPending] = useState(false);
+  const queryClient = useQueryClient();
 
-  const mutateAsync = async (
-    transaction: Omit<POSTransaction, "id" | "transaction_number" | "created_at">
-  ) => {
-    setIsPending(true);
-    try {
-      const saved = localStorage.getItem(TRANSACTIONS_KEY);
-      const transactions: POSTransaction[] = saved ? JSON.parse(saved) : [];
+  return useMutation({
+    mutationFn: async (
+      transaction: Omit<POSTransaction, "id" | "transaction_number" | "created_at">
+    ) => {
+      const transactionNumber = `TXN-${new Date()
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, "0")}`;
 
-      const newTransaction: POSTransaction = {
-        ...transaction,
-        id: Date.now().toString(),
-        transaction_number: `TXN-${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
-          .toString()
-          .padStart(4, "0")}`,
-        created_at: new Date().toISOString(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const insertData: any = {
+        transaction_number: transactionNumber,
+        table_number: transaction.table_number,
+        customer_name: transaction.customer_name,
+        customer_address: transaction.customer_address,
+        company_id: transaction.company_id,
+        company_name: transaction.company_name,
+        vat_number: transaction.vat_number,
+        pan_number: transaction.pan_number,
+        subtotal: transaction.subtotal,
+        discount_amount: transaction.discount_amount,
+        tax_amount: transaction.tax_amount,
+        tip_amount: transaction.tip_amount,
+        total: transaction.total,
+        payment_method: transaction.payment_method,
+        rrn_number: transaction.rrn_number,
+        transaction_ref: transaction.transaction_ref,
+        card_last_four: transaction.card_last_four,
+        card_type: transaction.card_type,
+        room_number: transaction.room_number,
+        items_count: transaction.items_count,
+        items: JSON.parse(JSON.stringify(transaction.items)),
       };
 
-      transactions.unshift(newTransaction);
-      localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
-      return newTransaction;
-    } finally {
-      setIsPending(false);
-    }
-  };
+      const { data, error } = await supabase
+        .from("pos_transactions")
+        .insert(insertData)
+        .select()
+        .single();
 
-  return { mutateAsync, isPending };
+      if (error) {
+        console.error("Error creating POS transaction:", error);
+        throw error;
+      }
+
+      return {
+        ...data,
+        items: data.items ? JSON.parse(JSON.stringify(data.items)) : [],
+      } as POSTransaction;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos-transactions"] });
+    },
+  });
 }
 
 // Helper function to save transaction (for compatibility with existing code)
-export function saveTransaction(
+export async function saveTransaction(
   transaction: Omit<POSTransaction, "id" | "transaction_number" | "created_at">
 ) {
-  const saved = localStorage.getItem(TRANSACTIONS_KEY);
-  const transactions: POSTransaction[] = saved ? JSON.parse(saved) : [];
+  const transactionNumber = `TXN-${new Date()
+    .toISOString()
+    .slice(0, 10)
+    .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0")}`;
 
-  const newTransaction: POSTransaction = {
-    ...transaction,
-    id: Date.now().toString(),
-    transaction_number: `TXN-${new Date()
-      .toISOString()
-      .slice(0, 10)
-      .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0")}`,
-    created_at: new Date().toISOString(),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const insertData: any = {
+    transaction_number: transactionNumber,
+    table_number: transaction.table_number,
+    customer_name: transaction.customer_name,
+    customer_address: transaction.customer_address,
+    company_id: transaction.company_id,
+    company_name: transaction.company_name,
+    vat_number: transaction.vat_number,
+    pan_number: transaction.pan_number,
+    subtotal: transaction.subtotal,
+    discount_amount: transaction.discount_amount,
+    tax_amount: transaction.tax_amount,
+    tip_amount: transaction.tip_amount,
+    total: transaction.total,
+    payment_method: transaction.payment_method,
+    rrn_number: transaction.rrn_number,
+    transaction_ref: transaction.transaction_ref,
+    card_last_four: transaction.card_last_four,
+    card_type: transaction.card_type,
+    room_number: transaction.room_number,
+    items_count: transaction.items_count,
+    items: JSON.parse(JSON.stringify(transaction.items)),
   };
 
-  transactions.unshift(newTransaction);
-  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
-  return newTransaction;
+  const { data, error } = await supabase
+    .from("pos_transactions")
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error saving POS transaction:", error);
+    throw error;
+  }
+
+  return {
+    ...data,
+    items: data.items ? JSON.parse(JSON.stringify(data.items)) : [],
+  } as POSTransaction;
 }
 
-// Save/update tables to localStorage
-export function savePOSTables(tables: POSTable[]) {
-  localStorage.setItem(TABLES_KEY, JSON.stringify(tables));
-  window.dispatchEvent(new StorageEvent("storage", { key: TABLES_KEY, newValue: JSON.stringify(tables) }));
+// Save/update tables to database
+export async function savePOSTables(tables: POSTable[]) {
+  // Update all tables in a batch
+  for (const table of tables) {
+    const currentOrder = table.current_order 
+      ? (table.current_order as unknown as Record<string, unknown>[])
+      : [];
+      
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase
+      .from("pos_tables")
+      .update({
+        status: table.status,
+        guests: table.guests,
+        server_name: table.server_name,
+        start_time: table.start_time,
+        merged_with: table.merged_with,
+        current_order: currentOrder as any,
+      })
+      .eq("table_number", table.table_number);
+
+    if (error) {
+      console.error("Error updating POS table:", table.table_number, error);
+    }
+  }
+}
+
+// ============= POS Orders Hooks =============
+export function usePOSOrders(tableId?: string) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["pos-orders", tableId],
+    queryFn: async () => {
+      let q = supabase
+        .from("pos_orders")
+        .select(`
+          *,
+          pos_order_items (*)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (tableId) {
+        q = q.eq("table_id", tableId);
+      }
+
+      const { data, error } = await q;
+
+      if (error) {
+        console.error("Error fetching POS orders:", error);
+        return [];
+      }
+
+      return data;
+    },
+  });
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel("pos-orders-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pos_orders",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["pos-orders"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pos_order_items",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["pos-orders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return { data: query.data || [], isLoading: query.isLoading, refetch: query.refetch };
+}
+
+export function useUpdateOrderItemStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ itemId, status }: { itemId: string; status: string }) => {
+      const { data, error } = await supabase
+        .from("pos_order_items")
+        .update({ status })
+        .eq("id", itemId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating order item status:", error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos-orders"] });
+    },
+  });
 }
