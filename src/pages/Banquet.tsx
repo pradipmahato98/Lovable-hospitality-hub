@@ -1,0 +1,617 @@
+import { useState } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  CalendarDays,
+  Users,
+  UtensilsCrossed,
+  DollarSign,
+  Plus,
+  Search,
+  Clock,
+  MapPin,
+  FileText,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState as useRealtimeState } from "react";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+
+interface BanquetEvent {
+  id: string;
+  event_name: string;
+  event_type: string;
+  client_name: string;
+  client_phone: string | null;
+  client_email: string | null;
+  event_date: string;
+  start_time: string;
+  end_time: string;
+  venue: string;
+  guest_count: number;
+  status: "inquiry" | "confirmed" | "in_progress" | "completed" | "cancelled";
+  menu_package: string | null;
+  special_requests: string | null;
+  total_amount: number;
+  deposit_amount: number | null;
+  notes: string | null;
+  created_at: string;
+}
+
+const eventTypeColors: Record<string, string> = {
+  wedding: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+  corporate: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  birthday: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  conference: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  social: "bg-green-500/20 text-green-400 border-green-500/30",
+  other: "bg-muted text-muted-foreground border-muted",
+};
+
+const statusColors: Record<string, string> = {
+  inquiry: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  confirmed: "bg-success/20 text-success border-success/30",
+  in_progress: "bg-primary/20 text-primary border-primary/30",
+  completed: "bg-muted text-muted-foreground border-muted",
+  cancelled: "bg-destructive/20 text-destructive border-destructive/30",
+};
+
+export default function Banquet() {
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("events");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useRealtimeState<"connecting" | "connected" | "error">(
+    "connecting"
+  );
+
+  const [newEvent, setNewEvent] = useState({
+    event_name: "",
+    event_type: "corporate",
+    client_name: "",
+    client_phone: "",
+    client_email: "",
+    event_date: new Date().toISOString().slice(0, 10),
+    start_time: "10:00",
+    end_time: "14:00",
+    venue: "",
+    guest_count: 50,
+    menu_package: "",
+    special_requests: "",
+    total_amount: 0,
+    deposit_amount: 0,
+  });
+
+  // Fetch events
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["banquet-events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("banquet_events")
+        .select("*")
+        .order("event_date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching banquet events:", error);
+        return [];
+      }
+
+      return data as BanquetEvent[];
+    },
+  });
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel("banquet-events-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "banquet_events" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtimeStatus("connected");
+        else if (status === "CHANNEL_ERROR") setRealtimeStatus("error");
+        else setRealtimeStatus("connecting");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  // Create event mutation
+  const createEvent = useMutation({
+    mutationFn: async (event: Omit<BanquetEvent, "id" | "created_at" | "status">) => {
+      const { data, error } = await supabase
+        .from("banquet_events")
+        .insert({ ...event, status: "inquiry" })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+      toast.success("Event created successfully");
+      setEventDialogOpen(false);
+      resetNewEvent();
+    },
+    onError: () => {
+      toast.error("Failed to create event");
+    },
+  });
+
+  // Update status mutation
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: BanquetEvent["status"] }) => {
+      const { error } = await supabase
+        .from("banquet_events")
+        .update({ status })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+      toast.success("Status updated");
+    },
+    onError: () => {
+      toast.error("Failed to update status");
+    },
+  });
+
+  const resetNewEvent = () => {
+    setNewEvent({
+      event_name: "",
+      event_type: "corporate",
+      client_name: "",
+      client_phone: "",
+      client_email: "",
+      event_date: new Date().toISOString().slice(0, 10),
+      start_time: "10:00",
+      end_time: "14:00",
+      venue: "",
+      guest_count: 50,
+      menu_package: "",
+      special_requests: "",
+      total_amount: 0,
+      deposit_amount: 0,
+    });
+  };
+
+  const handleCreateEvent = () => {
+    if (!newEvent.event_name || !newEvent.client_name || !newEvent.venue) {
+      toast.error("Please fill in event name, client name, and venue");
+      return;
+    }
+
+    createEvent.mutate({
+      event_name: newEvent.event_name,
+      event_type: newEvent.event_type,
+      client_name: newEvent.client_name,
+      client_phone: newEvent.client_phone || null,
+      client_email: newEvent.client_email || null,
+      event_date: newEvent.event_date,
+      start_time: newEvent.start_time,
+      end_time: newEvent.end_time,
+      venue: newEvent.venue,
+      guest_count: newEvent.guest_count,
+      menu_package: newEvent.menu_package || null,
+      special_requests: newEvent.special_requests || null,
+      total_amount: newEvent.total_amount,
+      deposit_amount: newEvent.deposit_amount || null,
+      notes: null,
+    });
+  };
+
+  // Filter events
+  const filteredEvents = events.filter(
+    (e) =>
+      e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.client_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Metrics
+  const upcomingEvents = events.filter(
+    (e) => e.status !== "completed" && e.status !== "cancelled" && new Date(e.event_date) >= new Date()
+  );
+  const totalRevenue = events
+    .filter((e) => e.status === "completed")
+    .reduce((sum, e) => sum + e.total_amount, 0);
+  const pendingDeposits = events
+    .filter((e) => e.status === "confirmed")
+    .reduce((sum, e) => sum + (e.deposit_amount || 0), 0);
+
+  return (
+    <MainLayout title="Banquet & Events" subtitle="Manage events, bookings, and catering">
+      <div className="space-y-6">
+        {/* Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
+            title="Upcoming Events"
+            value={upcomingEvents.length.toString()}
+            change={`${events.filter((e) => e.status === "inquiry").length} inquiries`}
+            changeType="neutral"
+            icon={CalendarDays}
+            delay={0}
+          />
+          <MetricCard
+            title="Total Guests Expected"
+            value={upcomingEvents.reduce((s, e) => s + e.guest_count, 0).toString()}
+            change="Across all events"
+            changeType="neutral"
+            icon={Users}
+            delay={50}
+          />
+          <MetricCard
+            title="Revenue (Completed)"
+            value={`$${totalRevenue.toLocaleString()}`}
+            change="From completed events"
+            changeType="positive"
+            icon={DollarSign}
+            delay={100}
+          />
+          <MetricCard
+            title="Pending Deposits"
+            value={`$${pendingDeposits.toLocaleString()}`}
+            change="Confirmed events"
+            changeType="neutral"
+            icon={FileText}
+            delay={150}
+          />
+        </div>
+
+        {/* Connection Status */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {realtimeStatus === "connected" ? (
+            <Wifi className="h-4 w-4 text-success" />
+          ) : (
+            <WifiOff className="h-4 w-4 text-destructive" />
+          )}
+          <span>{realtimeStatus === "connected" ? "Real-time sync active" : "Connecting..."}</span>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="events" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Events
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Calendar View
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="events" className="space-y-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                New Event
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-8 text-center text-muted-foreground">Loading events...</div>
+                ) : filteredEvents.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No events found</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Venue</TableHead>
+                        <TableHead>Guests</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEvents.map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{event.event_name}</p>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${eventTypeColors[event.event_type] || eventTypeColors.other}`}
+                              >
+                                {event.event_type}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{event.client_name}</p>
+                              {event.client_phone && (
+                                <p className="text-xs text-muted-foreground">{event.client_phone}</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                              <span>{event.event_date}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {event.start_time} - {event.end_time}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-muted-foreground" />
+                              {event.venue}
+                            </div>
+                          </TableCell>
+                          <TableCell>{event.guest_count}</TableCell>
+                          <TableCell className="font-mono">
+                            ${event.total_amount.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={statusColors[event.status]}>
+                              {event.status.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={event.status}
+                              onValueChange={(v: BanquetEvent["status"]) =>
+                                updateStatus.mutate({ id: event.id, status: v })
+                              }
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="inquiry">Inquiry</SelectItem>
+                                <SelectItem value="confirmed">Confirmed</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <Card className="p-8 text-center">
+              <CalendarDays className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-xl font-semibold mb-2">Calendar View</h3>
+              <p className="text-muted-foreground">
+                Visual calendar for event scheduling coming soon
+              </p>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* New Event Dialog */}
+      <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+            <DialogDescription>Enter the details for the banquet event</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Event Name *</Label>
+                <Input
+                  placeholder="Annual Corporate Dinner"
+                  value={newEvent.event_name}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, event_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Event Type</Label>
+                <Select
+                  value={newEvent.event_type}
+                  onValueChange={(v) => setNewEvent((p) => ({ ...p, event_type: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="wedding">Wedding</SelectItem>
+                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="birthday">Birthday</SelectItem>
+                    <SelectItem value="conference">Conference</SelectItem>
+                    <SelectItem value="social">Social</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Client Name *</Label>
+                <Input
+                  placeholder="John Smith"
+                  value={newEvent.client_name}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, client_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  placeholder="+1 234 567 8900"
+                  value={newEvent.client_phone}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, client_phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="john@example.com"
+                  value={newEvent.client_email}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, client_email: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Event Date *</Label>
+                <Input
+                  type="date"
+                  value={newEvent.event_date}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, event_date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Start Time</Label>
+                <Input
+                  type="time"
+                  value={newEvent.start_time}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, start_time: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Time</Label>
+                <Input
+                  type="time"
+                  value={newEvent.end_time}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, end_time: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Guests</Label>
+                <Input
+                  type="number"
+                  value={newEvent.guest_count}
+                  onChange={(e) =>
+                    setNewEvent((p) => ({ ...p, guest_count: parseInt(e.target.value) || 0 }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Venue *</Label>
+                <Input
+                  placeholder="Grand Ballroom"
+                  value={newEvent.venue}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, venue: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Menu Package</Label>
+                <Input
+                  placeholder="Premium Buffet"
+                  value={newEvent.menu_package}
+                  onChange={(e) => setNewEvent((p) => ({ ...p, menu_package: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Total Amount ($)</Label>
+                <Input
+                  type="number"
+                  value={newEvent.total_amount}
+                  onChange={(e) =>
+                    setNewEvent((p) => ({ ...p, total_amount: parseFloat(e.target.value) || 0 }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Deposit Amount ($)</Label>
+                <Input
+                  type="number"
+                  value={newEvent.deposit_amount}
+                  onChange={(e) =>
+                    setNewEvent((p) => ({ ...p, deposit_amount: parseFloat(e.target.value) || 0 }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Special Requests</Label>
+              <Textarea
+                placeholder="Any special requirements..."
+                value={newEvent.special_requests}
+                onChange={(e) => setNewEvent((p) => ({ ...p, special_requests: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEventDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateEvent} disabled={createEvent.isPending}>
+                {createEvent.isPending ? "Creating..." : "Create Event"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+}
