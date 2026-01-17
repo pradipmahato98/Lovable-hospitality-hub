@@ -26,10 +26,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
-import { 
-  usePOSTables, 
-  useUpdatePOSTable, 
+import {
+  usePOSTables,
+  useUpdatePOSTable,
   useCreatePOSTransaction,
+  ensureActivePOSOrderForTable,
+  getActivePOSOrderIdForTable,
+  upsertPOSOrderItemsForOrder,
+  updatePOSOrderStatusAndTotals,
+  updatePOSOrderItemsStatusForOrder,
   OrderItem,
 } from "@/hooks/usePOS";
 
@@ -83,8 +88,13 @@ interface POSTableSystemProps {
 }
 
 export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
-  // Use Supabase-backed hooks for real multi-device sync
-  const { data: posTables, isLoading, refetch } = usePOSTables();
+  // Use backend-backed hooks for real multi-device sync
+  const {
+    data: posTables,
+    isLoading,
+    refetch,
+    realtimeStatus,
+  } = usePOSTables();
   const updateTable = useUpdatePOSTable();
   const createTransaction = useCreatePOSTransaction();
 
@@ -141,24 +151,35 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleOpenTable = async () => {
     if (!selectedTable || !guestCount) return;
-    
+
+    const now = new Date().toISOString();
+
     try {
       await updateTable.mutateAsync({
         id: selectedTable.id,
         updates: {
           status: "occupied",
           guests: parseInt(guestCount),
-          start_time: new Date().toISOString(),
+          start_time: now,
           server_name: "Current User",
           current_order: [],
         },
       });
-      
+
+      // Ensure there is an active order record for this table
+      await ensureActivePOSOrderForTable({
+        tableId: selectedTable.id,
+        tableNumber: selectedTable.number,
+        guests: parseInt(guestCount),
+        serverName: "Current User",
+        startTime: now,
+      });
+
       const updatedTable = {
         ...selectedTable,
         status: "occupied" as const,
         guests: parseInt(guestCount),
-        startTime: new Date().toISOString(),
+        startTime: now,
         server: "Current User",
       };
       setSelectedTable(updatedTable);
@@ -177,7 +198,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     }
 
     const newOrder: OrderItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: item.name,
       price: item.price,
       quantity: 1,
@@ -269,29 +290,26 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleSendToKitchen = async () => {
     if (!selectedTable) return;
+
     const pendingOrders = selectedTable.orders.filter((o) => o.status === "pending");
     if (pendingOrders.length === 0) {
       toast.error("No pending items to send");
       return;
     }
 
-    const updatedOrders = selectedTable.orders.map((o) => 
-      o.status === "pending" ? { ...o, status: "preparing" as const } : o
-    );
-
     try {
-      await updateTable.mutateAsync({
-        id: selectedTable.id,
-        updates: {
-          current_order: updatedOrders,
-        },
+      const orderId = await ensureActivePOSOrderForTable({
+        tableId: selectedTable.id,
+        tableNumber: selectedTable.number,
+        guests: selectedTable.guests ?? null,
+        serverName: selectedTable.server ?? null,
+        startTime: selectedTable.startTime ?? null,
       });
-      
-      setSelectedTable({
-        ...selectedTable,
-        orders: updatedOrders,
-      });
-      
+
+      // Persist pending items into the backend order_items table.
+      // (Kitchen Display reads from order_items to sync across devices.)
+      await upsertPOSOrderItemsForOrder(orderId, pendingOrders, "pending");
+
       toast.success(`${pendingOrders.length} item(s) sent to kitchen`);
     } catch (error) {
       console.error("Error sending to kitchen:", error);
@@ -301,7 +319,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleProceedToBilling = async () => {
     if (!selectedTable) return;
-    
+
     try {
       await updateTable.mutateAsync({
         id: selectedTable.id,
@@ -309,12 +327,21 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           status: "billing",
         },
       });
-      
+
+      const orderId = await ensureActivePOSOrderForTable({
+        tableId: selectedTable.id,
+        tableNumber: selectedTable.number,
+        guests: selectedTable.guests ?? null,
+        serverName: selectedTable.server ?? null,
+        startTime: selectedTable.startTime ?? null,
+      });
+      await updatePOSOrderStatusAndTotals({ orderId, status: "billing" });
+
       setSelectedTable({
         ...selectedTable,
         status: "billing",
       });
-      
+
       setActiveTab("billing");
     } catch (error) {
       console.error("Error proceeding to billing:", error);
@@ -324,11 +351,11 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleCheckout = async () => {
     if (!selectedTable) return;
-    
+
     const subtotal = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
     const tax = subtotal * 0.1;
     const total = subtotal + tax;
-    
+
     try {
       // Save transaction to database
       await createTransaction.mutateAsync({
@@ -362,7 +389,22 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           notes: o.notes || null,
         })),
       });
-      
+
+      // Mark the active backend order as paid + keep totals in sync
+      const orderId = await getActivePOSOrderIdForTable(selectedTable.id);
+      if (orderId) {
+        await updatePOSOrderStatusAndTotals({
+          orderId,
+          status: "paid",
+          subtotal,
+          discount_amount: 0,
+          tax_amount: tax,
+          tip_amount: 0,
+          total,
+        });
+        await updatePOSOrderItemsStatusForOrder(orderId, "served");
+      }
+
       onCheckout(total, selectedTable.orders);
       await handleCloseTable();
     } catch (error) {
@@ -373,8 +415,14 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleCloseTable = async () => {
     if (!selectedTable) return;
-    
+
     try {
+      // Cancel any active backend order (if it exists) when closing without checkout.
+      const orderId = await getActivePOSOrderIdForTable(selectedTable.id);
+      if (orderId) {
+        await updatePOSOrderStatusAndTotals({ orderId, status: "cancelled" });
+      }
+
       await updateTable.mutateAsync({
         id: selectedTable.id,
         updates: {
@@ -386,7 +434,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           current_order: [],
         },
       });
-      
+
       toast.success(`Table ${selectedTable.number} closed`);
       setSelectedTable(null);
       setActiveTab("tables");

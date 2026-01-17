@@ -1,7 +1,7 @@
 // POS hooks - Using Supabase for permanent multi-device sync
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // ============= Types =============
 export interface POSTable {
@@ -88,6 +88,9 @@ const defaultTables: POSTable[] = [
 // ============= POS Tables Hooks =============
 export function usePOSTables() {
   const queryClient = useQueryClient();
+  const [realtimeStatus, setRealtimeStatus] = useState<
+    "connecting" | "connected" | "error"
+  >("connecting");
 
   const query = useQuery({
     queryKey: ["pos-tables"],
@@ -117,7 +120,9 @@ export function usePOSTables() {
         server_name: table.server_name,
         start_time: table.start_time,
         merged_with: table.merged_with,
-        current_order: table.current_order ? JSON.parse(JSON.stringify(table.current_order)) : [],
+        current_order: table.current_order
+          ? JSON.parse(JSON.stringify(table.current_order))
+          : [],
       })) as POSTable[];
     },
   });
@@ -137,17 +142,22 @@ export function usePOSTables() {
           queryClient.invalidateQueries({ queryKey: ["pos-tables"] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtimeStatus("connected");
+        else if (status === "CHANNEL_ERROR") setRealtimeStatus("error");
+        else setRealtimeStatus("connecting");
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
-  return { 
-    data: query.data || defaultTables, 
-    isLoading: query.isLoading, 
-    refetch: query.refetch 
+  return {
+    data: query.data || defaultTables,
+    isLoading: query.isLoading,
+    refetch: query.refetch,
+    realtimeStatus,
   };
 }
 
@@ -425,6 +435,141 @@ export async function savePOSTables(tables: POSTable[]) {
     if (error) {
       console.error("Error updating POS table:", table.table_number, error);
     }
+  }
+}
+
+// ============= POS Orders + Items Helpers =============
+export async function getActivePOSOrderIdForTable(
+  tableId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("pos_orders")
+    .select("id, status")
+    .eq("table_id", tableId)
+    .in("status", ["open", "billing"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching active POS order:", error);
+    return null;
+  }
+
+  return data?.id ?? null;
+}
+
+export async function ensureActivePOSOrderForTable(params: {
+  tableId: string;
+  tableNumber: string;
+  guests?: number | null;
+  serverName?: string | null;
+  startTime?: string | null;
+}): Promise<string> {
+  const existingId = await getActivePOSOrderIdForTable(params.tableId);
+  if (existingId) return existingId;
+
+  const { data, error } = await supabase
+    .from("pos_orders")
+    .insert({
+      table_id: params.tableId,
+      table_number: params.tableNumber,
+      status: "open",
+      guests: params.guests ?? null,
+      server_name: params.serverName ?? null,
+      start_time: params.startTime ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error creating POS order:", error);
+    throw error;
+  }
+
+  return data.id as string;
+}
+
+export async function upsertPOSOrderItemsForOrder(
+  orderId: string,
+  items: OrderItem[],
+  overrideStatus?: OrderItem["status"]
+) {
+  const rows = items.map((i) => ({
+    id: i.id,
+    order_id: orderId,
+    item_name: i.name,
+    item_price: i.price,
+    quantity: i.quantity,
+    category: i.category ?? null,
+    status: (overrideStatus ?? i.status) as string,
+    notes: i.notes ?? null,
+  }));
+
+  const { error } = await supabase
+    .from("pos_order_items")
+    .upsert(rows, { onConflict: "id" });
+
+  if (error) {
+    console.error("Error upserting POS order items:", error);
+    throw error;
+  }
+}
+
+export async function updatePOSOrderStatusAndTotals(params: {
+  orderId: string;
+  status: "open" | "billing" | "paid" | "cancelled" | "merged";
+  subtotal?: number | null;
+  discount_amount?: number | null;
+  tax_amount?: number | null;
+  tip_amount?: number | null;
+  total?: number | null;
+}) {
+  const { error } = await supabase
+    .from("pos_orders")
+    .update({
+      status: params.status,
+      subtotal: params.subtotal ?? null,
+      discount_amount: params.discount_amount ?? null,
+      tax_amount: params.tax_amount ?? null,
+      tip_amount: params.tip_amount ?? null,
+      total: params.total ?? null,
+    })
+    .eq("id", params.orderId);
+
+  if (error) {
+    console.error("Error updating POS order:", error);
+    throw error;
+  }
+}
+
+export async function updatePOSOrderItemsStatusForOrder(
+  orderId: string,
+  status: OrderItem["status"]
+) {
+  const { error } = await supabase
+    .from("pos_order_items")
+    .update({ status })
+    .eq("order_id", orderId);
+
+  if (error) {
+    console.error("Error updating POS order items status:", error);
+    throw error;
+  }
+}
+
+export async function movePOSOrderItemsToOrder(
+  itemIds: string[],
+  targetOrderId: string
+) {
+  const { error } = await supabase
+    .from("pos_order_items")
+    .update({ order_id: targetOrderId })
+    .in("id", itemIds);
+
+  if (error) {
+    console.error("Error moving POS order items:", error);
+    throw error;
   }
 }
 
