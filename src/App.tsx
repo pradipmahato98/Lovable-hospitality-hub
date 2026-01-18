@@ -31,7 +31,8 @@ import ChannelManager from "./pages/ChannelManager";
 import Housekeeping from "./pages/Housekeeping";
 import Engineering from "./pages/Engineering";
 import StaffManagement from "./pages/StaffManagement";
-
+import Finance from "./pages/Finance";
+import Banquet from "./pages/Banquet";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -65,6 +66,8 @@ const App = () => (
                 <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
                 <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
                 <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
+                <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
+                <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
                 <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />

@@ -21,6 +21,8 @@ import {
   Globe,
   Sparkles,
   Wrench,
+  DollarSign,
+  PartyPopper,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -40,6 +42,8 @@ const navItems = [
   { icon: ShoppingCart, label: "POS", path: "/pos" },
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: Globe, label: "Channels", path: "/channels" },
+  { icon: DollarSign, label: "Finance", path: "/finance" },
+  { icon: PartyPopper, label: "Banquet", path: "/banquet" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
 

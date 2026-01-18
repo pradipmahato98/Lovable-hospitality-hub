@@ -23,6 +23,13 @@ import {
   X,
   Zap,
   Star,
+  GitMerge,
+  Split,
+  ArrowRightLeft,
+  Pause,
+  Play,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
@@ -35,8 +42,25 @@ import {
   upsertPOSOrderItemsForOrder,
   updatePOSOrderStatusAndTotals,
   updatePOSOrderItemsStatusForOrder,
+  movePOSOrderItemsToOrder,
   OrderItem,
+  POSTable,
 } from "@/hooks/usePOS";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface TableInfo {
   id: string;
@@ -444,6 +468,161 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     }
   };
 
+  // ============= Table Actions: Transfer, Merge, Split, Hold =============
+  const handleTransferTable = async (targetTableId: string) => {
+    if (!selectedTable) return;
+
+    const targetTable = tables.find((t) => t.id === targetTableId);
+    if (!targetTable) return;
+
+    try {
+      // Move orders to target table
+      await updateTable.mutateAsync({
+        id: targetTableId,
+        updates: {
+          status: "occupied",
+          guests: selectedTable.guests,
+          server_name: selectedTable.server,
+          start_time: selectedTable.startTime || new Date().toISOString(),
+          current_order: selectedTable.orders,
+        },
+      });
+
+      // Clear source table
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          status: "available",
+          guests: null,
+          server_name: null,
+          start_time: null,
+          current_order: [],
+        },
+      });
+
+      toast.success(`Order transferred to Table ${targetTable.number}`);
+      setSelectedTable(null);
+    } catch (error) {
+      console.error("Error transferring table:", error);
+      toast.error("Failed to transfer order");
+    }
+  };
+
+  const handleMergeTables = async (targetTableId: string) => {
+    if (!selectedTable) return;
+
+    const targetTable = tables.find((t) => t.id === targetTableId);
+    if (!targetTable) return;
+
+    try {
+      // Merge orders into selected table and mark target as merged
+      const mergedWith = [...(selectedTable.orders.length > 0 ? [targetTable.number] : [])];
+
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          merged_with: mergedWith.length > 0 ? mergedWith : null,
+          capacity: selectedTable.capacity + targetTable.capacity,
+        },
+      });
+
+      // Mark target table as reserved (merged)
+      await updateTable.mutateAsync({
+        id: targetTableId,
+        updates: {
+          status: "reserved",
+          merged_with: [selectedTable.number],
+        },
+      });
+
+      toast.success(`Table ${targetTable.number} merged with Table ${selectedTable.number}`);
+    } catch (error) {
+      console.error("Error merging tables:", error);
+      toast.error("Failed to merge tables");
+    }
+  };
+
+  const handleSplitTable = async () => {
+    if (!selectedTable || !selectedTable.orders.length) return;
+
+    // Split the order in half (simple split for demo)
+    const midPoint = Math.ceil(selectedTable.orders.length / 2);
+    const firstHalf = selectedTable.orders.slice(0, midPoint);
+    const secondHalf = selectedTable.orders.slice(midPoint);
+
+    // Find an available table for the second half
+    const availableTable = tables.find(
+      (t) => t.id !== selectedTable.id && t.status === "available"
+    );
+
+    if (!availableTable) {
+      toast.error("No available table to split to");
+      return;
+    }
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: { current_order: firstHalf },
+      });
+
+      await updateTable.mutateAsync({
+        id: availableTable.id,
+        updates: {
+          status: "occupied",
+          guests: 1,
+          server_name: selectedTable.server,
+          start_time: new Date().toISOString(),
+          current_order: secondHalf,
+        },
+      });
+
+      setSelectedTable({
+        ...selectedTable,
+        orders: firstHalf,
+      });
+
+      toast.success(`Order split to Table ${availableTable.number}`);
+    } catch (error) {
+      console.error("Error splitting table:", error);
+      toast.error("Failed to split order");
+    }
+  };
+
+  const handleHoldTable = async () => {
+    if (!selectedTable) return;
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: { status: "held" },
+      });
+
+      setSelectedTable({ ...selectedTable, status: "held" });
+      toast.success(`Table ${selectedTable.number} put on hold`);
+    } catch (error) {
+      console.error("Error holding table:", error);
+      toast.error("Failed to hold table");
+    }
+  };
+
+  const handleResumeTable = async () => {
+    if (!selectedTable) return;
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: { status: "occupied" },
+      });
+
+      setSelectedTable({ ...selectedTable, status: "occupied" });
+      toast.success(`Table ${selectedTable.number} resumed`);
+    } catch (error) {
+      console.error("Error resuming table:", error);
+      toast.error("Failed to resume table");
+    }
+  };
+
   const getTableTotal = (table: TableInfo) => {
     return table.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
   };
@@ -455,6 +634,16 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
     const minutes = Math.floor((diff % 3600000) / 60000);
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
+
+  // Available tables for transfer/merge
+  const availableTables = tables.filter(
+    (t) => t.id !== selectedTable?.id && t.status === "available"
+  );
+
+  // Dialog states for transfer/merge
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [targetTableId, setTargetTableId] = useState("");
 
   if (isLoading) {
     return (
@@ -554,6 +743,40 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
         {/* Order Tab */}
         <TabsContent value="order" className="flex-1 mt-0">
           {selectedTable && (
+            <div className="space-y-4">
+              {/* Table Actions Bar */}
+              {selectedTable.status !== "available" && (
+                <div className="flex flex-wrap gap-2 p-3 bg-secondary/30 rounded-lg">
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setTransferDialogOpen(true)} disabled={availableTables.length === 0}>
+                    <ArrowRightLeft className="h-4 w-4" />
+                    Transfer
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setMergeDialogOpen(true)} disabled={availableTables.length === 0}>
+                    <GitMerge className="h-4 w-4" />
+                    Merge
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleSplitTable} disabled={selectedTable.orders.length < 2 || availableTables.length === 0}>
+                    <Split className="h-4 w-4" />
+                    Split
+                  </Button>
+                  {selectedTable.status === "held" ? (
+                    <Button variant="outline" size="sm" className="gap-2 text-success" onClick={handleResumeTable}>
+                      <Play className="h-4 w-4" />
+                      Resume
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" className="gap-2 text-amber-400" onClick={handleHoldTable}>
+                      <Pause className="h-4 w-4" />
+                      Hold
+                    </Button>
+                  )}
+                  <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+                    {realtimeStatus === "connected" ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-destructive" />}
+                    {realtimeStatus === "connected" ? "Synced" : "Offline"}
+                  </div>
+                </div>
+              )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
               {/* Menu */}
               <div className="lg:col-span-2 space-y-4">
@@ -765,6 +988,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                 </CardContent>
               </Card>
             </div>
+            </div>
           )}
         </TabsContent>
 
@@ -819,6 +1043,100 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Transfer Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5" />
+              Transfer Order
+            </DialogTitle>
+            <DialogDescription>
+              Transfer order from Table {selectedTable?.number} to another table
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select destination table</Label>
+              <Select value={targetTableId} onValueChange={setTargetTableId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select available table" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTables.map((table) => (
+                    <SelectItem key={table.id} value={table.id}>
+                      Table {table.number} (Capacity: {table.capacity})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  handleTransferTable(targetTableId);
+                  setTransferDialogOpen(false);
+                  setTargetTableId("");
+                }}
+                disabled={!targetTableId}
+              >
+                Transfer Order
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Dialog */}
+      <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitMerge className="h-5 w-5" />
+              Merge Tables
+            </DialogTitle>
+            <DialogDescription>
+              Merge Table {selectedTable?.number} with another table
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select table to merge with</Label>
+              <Select value={targetTableId} onValueChange={setTargetTableId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select available table" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTables.map((table) => (
+                    <SelectItem key={table.id} value={table.id}>
+                      Table {table.number} (Capacity: {table.capacity})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setMergeDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  handleMergeTables(targetTableId);
+                  setMergeDialogOpen(false);
+                  setTargetTableId("");
+                }}
+                disabled={!targetTableId}
+              >
+                Merge Tables
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

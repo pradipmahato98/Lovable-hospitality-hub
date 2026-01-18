@@ -32,16 +32,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarDays,
   Users,
-  UtensilsCrossed,
   DollarSign,
   Plus,
   Search,
   Clock,
   MapPin,
   FileText,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -72,6 +68,9 @@ interface BanquetEvent {
   created_at: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 const eventTypeColors: Record<string, string> = {
   wedding: "bg-pink-500/20 text-pink-400 border-pink-500/30",
   corporate: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -94,9 +93,9 @@ export default function Banquet() {
   const [activeTab, setActiveTab] = useState("events");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
-  const [realtimeStatus, setRealtimeStatus] = useRealtimeState<"connecting" | "connected" | "error">(
-    "connecting"
-  );
+  const [realtimeStatus, setRealtimeStatus] = useRealtimeState<
+    "connecting" | "connected" | "error"
+  >("connecting");
 
   const [newEvent, setNewEvent] = useState({
     event_name: "",
@@ -119,7 +118,7 @@ export default function Banquet() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["banquet-events"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("banquet_events")
         .select("*")
         .order("event_date", { ascending: true });
@@ -157,8 +156,10 @@ export default function Banquet() {
 
   // Create event mutation
   const createEvent = useMutation({
-    mutationFn: async (event: Omit<BanquetEvent, "id" | "created_at" | "status">) => {
-      const { data, error } = await supabase
+    mutationFn: async (
+      event: Omit<BanquetEvent, "id" | "created_at" | "status">
+    ) => {
+      const { data, error } = await db
         .from("banquet_events")
         .insert({ ...event, status: "inquiry" })
         .select()
@@ -180,8 +181,14 @@ export default function Banquet() {
 
   // Update status mutation
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: BanquetEvent["status"] }) => {
-      const { error } = await supabase
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: BanquetEvent["status"];
+    }) => {
+      const { error } = await db
         .from("banquet_events")
         .update({ status })
         .eq("id", id);
@@ -250,7 +257,10 @@ export default function Banquet() {
 
   // Metrics
   const upcomingEvents = events.filter(
-    (e) => e.status !== "completed" && e.status !== "cancelled" && new Date(e.event_date) >= new Date()
+    (e) =>
+      e.status !== "completed" &&
+      e.status !== "cancelled" &&
+      new Date(e.event_date) >= new Date()
   );
   const totalRevenue = events
     .filter((e) => e.status === "completed")
@@ -305,7 +315,9 @@ export default function Banquet() {
           ) : (
             <WifiOff className="h-4 w-4 text-destructive" />
           )}
-          <span>{realtimeStatus === "connected" ? "Real-time sync active" : "Connecting..."}</span>
+          <span>
+            {realtimeStatus === "connected" ? "Real-time sync active" : "Connecting..."}
+          </span>
         </div>
 
         {/* Tabs */}
@@ -366,7 +378,9 @@ export default function Banquet() {
                               <p className="font-medium">{event.event_name}</p>
                               <Badge
                                 variant="outline"
-                                className={`text-xs ${eventTypeColors[event.event_type] || eventTypeColors.other}`}
+                                className={`text-xs ${
+                                  eventTypeColors[event.event_type] || eventTypeColors.other
+                                }`}
                               >
                                 {event.event_type}
                               </Badge>
@@ -376,7 +390,9 @@ export default function Banquet() {
                             <div>
                               <p className="font-medium">{event.client_name}</p>
                               {event.client_phone && (
-                                <p className="text-xs text-muted-foreground">{event.client_phone}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {event.client_phone}
+                                </p>
                               )}
                             </div>
                           </TableCell>
@@ -586,7 +602,10 @@ export default function Banquet() {
                   type="number"
                   value={newEvent.deposit_amount}
                   onChange={(e) =>
-                    setNewEvent((p) => ({ ...p, deposit_amount: parseFloat(e.target.value) || 0 }))
+                    setNewEvent((p) => ({
+                      ...p,
+                      deposit_amount: parseFloat(e.target.value) || 0,
+                    }))
                   }
                 />
               </div>

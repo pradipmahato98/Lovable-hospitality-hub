@@ -52,6 +52,10 @@ export interface LedgerEntry {
   entry_number: string;
 }
 
+// Helper to get supabase client with type bypass for new tables
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 // ============= Accounts =============
 export function useAccounts() {
   const queryClient = useQueryClient();
@@ -62,7 +66,7 @@ export function useAccounts() {
   const query = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("accounts")
         .select("*")
         .order("code", { ascending: true });
@@ -110,7 +114,7 @@ export function useCreateAccount() {
 
   return useMutation({
     mutationFn: async (account: Omit<Account, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("accounts")
         .insert(account)
         .select()
@@ -140,7 +144,7 @@ export function useUpdateAccount() {
       id: string;
       updates: Partial<Omit<Account, "id" | "created_at" | "updated_at">>;
     }) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("accounts")
         .update(updates)
         .eq("id", id)
@@ -161,13 +165,17 @@ export function useUpdateAccount() {
 }
 
 // ============= Journal Entries =============
-export function useJournalEntries(filters?: { startDate?: string; endDate?: string; isPosted?: boolean }) {
+export function useJournalEntries(filters?: {
+  startDate?: string;
+  endDate?: string;
+  isPosted?: boolean;
+}) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["journal-entries", filters],
     queryFn: async () => {
-      let q = supabase
+      let q = db
         .from("journal_entries")
         .select(`
           *,
@@ -195,7 +203,7 @@ export function useJournalEntries(filters?: { startDate?: string; endDate?: stri
         return [];
       }
 
-      return data.map((entry) => ({
+      return (data || []).map((entry: any) => ({
         ...entry,
         lines: entry.journal_lines || [],
       })) as JournalEntry[];
@@ -251,7 +259,7 @@ export function useCreateJournalEntry() {
         .padStart(4, "0")}`;
 
       // Insert journal entry
-      const { data: journalEntry, error: entryError } = await supabase
+      const { data: journalEntry, error: entryError } = await db
         .from("journal_entries")
         .insert({
           entry_number: entryNumber,
@@ -277,7 +285,7 @@ export function useCreateJournalEntry() {
         description: line.description ?? null,
       }));
 
-      const { error: linesError } = await supabase.from("journal_lines").insert(lines);
+      const { error: linesError } = await db.from("journal_lines").insert(lines);
 
       if (linesError) {
         console.error("Error creating journal lines:", linesError);
@@ -298,7 +306,7 @@ export function usePostJournalEntry() {
 
   return useMutation({
     mutationFn: async (entryId: string) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("journal_entries")
         .update({ is_posted: true })
         .eq("id", entryId)
@@ -320,11 +328,15 @@ export function usePostJournalEntry() {
 }
 
 // ============= Ledger =============
-export function useLedger(accountId?: string, filters?: { startDate?: string; endDate?: string }) {
+export function useLedger(
+  accountId?: string,
+  filters?: { startDate?: string; endDate?: string }
+) {
   const query = useQuery({
     queryKey: ["ledger", accountId, filters],
     queryFn: async () => {
-      let q = supabase
+      // Fetch all posted journal lines with their entries and accounts
+      let q = db
         .from("journal_lines")
         .select(`
           id,
@@ -346,8 +358,7 @@ export function useLedger(accountId?: string, filters?: { startDate?: string; en
             type
           )
         `)
-        .eq("journal_entry.is_posted", true)
-        .order("journal_entry(date)", { ascending: true });
+        .eq("journal_entry.is_posted", true);
 
       if (accountId) {
         q = q.eq("account_id", accountId);
@@ -360,7 +371,7 @@ export function useLedger(accountId?: string, filters?: { startDate?: string; en
         q = q.lte("journal_entry.date", filters.endDate);
       }
 
-      const { data, error } = await q;
+      const { data, error } = await q.order("created_at", { ascending: true });
 
       if (error) {
         console.error("Error fetching ledger:", error);
@@ -420,7 +431,7 @@ export function useTrialBalance(asOfDate?: string) {
   const query = useQuery({
     queryKey: ["trial-balance", asOfDate],
     queryFn: async () => {
-      let q = supabase
+      let q = db
         .from("journal_lines")
         .select(`
           account_id,
