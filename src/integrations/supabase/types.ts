@@ -14,6 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banquet_events: {
+        Row: {
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string | null
+          deposit_amount: number | null
+          end_time: string
+          event_date: string
+          event_name: string
+          event_type: string
+          guest_count: number | null
+          id: string
+          menu_package: string | null
+          notes: string | null
+          special_requests: string | null
+          start_time: string
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+          venue: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string | null
+          deposit_amount?: number | null
+          end_time: string
+          event_date: string
+          event_name: string
+          event_type: string
+          guest_count?: number | null
+          id?: string
+          menu_package?: string | null
+          notes?: string | null
+          special_requests?: string | null
+          start_time: string
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+          venue: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string | null
+          deposit_amount?: number | null
+          end_time?: string
+          event_date?: string
+          event_name?: string
+          event_type?: string
+          guest_count?: number | null
+          id?: string
+          menu_package?: string | null
+          notes?: string | null
+          special_requests?: string | null
+          start_time?: string
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+          venue?: string
+        }
+        Relationships: []
+      }
       booking_sources: {
         Row: {
           code: string
@@ -103,6 +213,87 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          date: string
+          description: string
+          entry_number: string
+          id: string
+          is_posted: boolean | null
+          reference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          date: string
+          description: string
+          entry_number: string
+          id?: string
+          is_posted?: boolean | null
+          reference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string
+          entry_number?: string
+          id?: string
+          is_posted?: boolean | null
+          reference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      journal_lines: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          credit: number | null
+          debit: number | null
+          description: string | null
+          id: string
+          journal_entry_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          credit?: number | null
+          debit?: number | null
+          description?: string | null
+          id?: string
+          journal_entry_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          credit?: number | null
+          debit?: number | null
+          description?: string | null
+          id?: string
+          journal_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
