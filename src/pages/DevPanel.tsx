@@ -23,6 +23,7 @@ import {
   Users,
   Loader2,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
@@ -31,6 +32,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Database as DbTypes } from "@/integrations/supabase/types";
+import { DataSeeder } from "@/components/dev/DataSeeder";
 
 type AppRole = DbTypes["public"]["Enums"]["app_role"];
 
@@ -186,6 +188,10 @@ const DevPanel = () => {
             <Activity className="h-4 w-4" />
             System Status
           </TabsTrigger>
+          <TabsTrigger value="seeder" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Data Seeder
+          </TabsTrigger>
           <TabsTrigger value="cleanup" className="gap-2">
             <Users className="h-4 w-4" />
             Role Cleanup
@@ -272,6 +278,10 @@ const DevPanel = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="seeder">
+          <DataSeeder />
         </TabsContent>
 
         <TabsContent value="cleanup">
