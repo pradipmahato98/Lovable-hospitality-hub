@@ -46,6 +46,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState as useRealtimeState } from "react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { BanquetCalendar } from "@/components/banquet/BanquetCalendar";
 
 interface BanquetEvent {
   id: string;
@@ -452,13 +453,28 @@ export default function Banquet() {
           </TabsContent>
 
           <TabsContent value="calendar">
-            <Card className="p-8 text-center">
-              <CalendarDays className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">Calendar View</h3>
-              <p className="text-muted-foreground">
-                Visual calendar for event scheduling coming soon
-              </p>
-            </Card>
+            <BanquetCalendar 
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                start_time: e.start_time,
+                end_time: e.end_time,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+                total_amount: e.total_amount,
+              }))}
+              onEventClick={(event) => {
+                toast.info(`Selected: ${event.event_name}`);
+              }}
+              onDateClick={(date) => {
+                setNewEvent(prev => ({ ...prev, event_date: date }));
+                setEventDialogOpen(true);
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>
