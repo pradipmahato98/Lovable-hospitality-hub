@@ -57,6 +57,7 @@ import {
   Account,
 } from "@/hooks/useFinance";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { FinancialStatements } from "@/components/finance/FinancialStatements";
 
 const accountTypeColors: Record<string, string> = {
   asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -281,6 +282,10 @@ export default function Finance() {
               <TabsTrigger value="trial-balance" className="gap-2">
                 <Scale className="h-4 w-4" />
                 Trial Balance
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="gap-2">
+                <DollarSign className="h-4 w-4" />
+                Reports
               </TabsTrigger>
             </TabsList>
           </div>
@@ -599,6 +604,11 @@ export default function Finance() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Financial Reports */}
+          <TabsContent value="reports" className="space-y-4">
+            <FinancialStatements />
           </TabsContent>
         </Tabs>
       </div>
