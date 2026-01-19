@@ -46,7 +46,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState as useRealtimeState } from "react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { BanquetCalendar } from "@/components/banquet/BanquetCalendar";
+import { DraggableBanquetCalendar } from "@/components/banquet/DraggableBanquetCalendar";
 
 interface BanquetEvent {
   id: string;
@@ -204,6 +204,28 @@ export default function Banquet() {
       toast.error("Failed to update status");
     },
   });
+
+  // Reschedule event mutation (for drag-and-drop)
+  const rescheduleEvent = useMutation({
+    mutationFn: async ({ id, newDate }: { id: string; newDate: string }) => {
+      const { error } = await db
+        .from("banquet_events")
+        .update({ event_date: newDate })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+    },
+    onError: () => {
+      toast.error("Failed to reschedule event");
+    },
+  });
+
+  const handleEventDrop = async (eventId: string, newDate: string) => {
+    await rescheduleEvent.mutateAsync({ id: eventId, newDate });
+  };
 
   const resetNewEvent = () => {
     setNewEvent({
@@ -453,7 +475,7 @@ export default function Banquet() {
           </TabsContent>
 
           <TabsContent value="calendar">
-            <BanquetCalendar 
+            <DraggableBanquetCalendar 
               events={events.map(e => ({
                 id: e.id,
                 event_name: e.event_name,
@@ -474,6 +496,7 @@ export default function Banquet() {
                 setNewEvent(prev => ({ ...prev, event_date: date }));
                 setEventDialogOpen(true);
               }}
+              onEventDrop={handleEventDrop}
             />
           </TabsContent>
         </Tabs>
