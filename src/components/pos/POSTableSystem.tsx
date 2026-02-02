@@ -31,6 +31,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
 import {
@@ -135,11 +136,25 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   }));
 
   const [selectedTable, setSelectedTable] = useState<TableInfo | null>(null);
+  const [selectedTableIds, setSelectedTableIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("tables");
   const [menuTab, setMenuTab] = useState<"quick" | "full">("quick");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [guestCount, setGuestCount] = useState("2");
+
+  // Toggle table selection for checkbox system
+  const toggleTableSelection = (tableId: string) => {
+    setSelectedTableIds((prev) =>
+      prev.includes(tableId)
+        ? prev.filter((id) => id !== tableId)
+        : [...prev, tableId]
+    );
+  };
+
+  const clearTableSelection = () => {
+    setSelectedTableIds([]);
+  };
 
   // Fetch quick menu settings from database
   const { data: quickMenuSettings } = useQuickMenuSettings();
@@ -673,42 +688,210 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
         {/* Tables Tab */}
         <TabsContent value="tables" className="flex-1 mt-0">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {tables.map((table) => (
-              <Card
-                key={table.id}
-                className={`cursor-pointer transition-all hover:shadow-lg ${
-                  selectedTable?.id === table.id ? "ring-2 ring-primary" : ""
-                }`}
-                onClick={() => handleSelectTable(table)}
+          {/* Table Action Bar - enabled based on checkbox selection */}
+          <div className="flex flex-wrap gap-2 p-3 bg-secondary/30 rounded-lg mb-4 items-center">
+            {/* Selection count */}
+            {selectedTableIds.length > 0 && (
+              <Badge variant="outline" className="gap-1 mr-2">
+                {selectedTableIds.length} selected
+                <button
+                  onClick={clearTableSelection}
+                  className="ml-1 hover:bg-secondary rounded p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+
+            {/* Transfer - enabled when tables selected and available tables exist */}
+            <Button
+              variant="outline"
+              size="sm"
+              className={`gap-2 transition-all ${
+                selectedTableIds.length > 0 && availableTables.length > 0
+                  ? "border-primary/50 text-primary hover:bg-primary/10"
+                  : "opacity-50"
+              }`}
+              onClick={() => {
+                if (selectedTableIds.length === 1) {
+                  const table = tables.find(t => t.id === selectedTableIds[0]);
+                  if (table) {
+                    setSelectedTable(table);
+                    setTransferDialogOpen(true);
+                  }
+                }
+              }}
+              disabled={selectedTableIds.length !== 1 || availableTables.length === 0}
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+              Transfer
+            </Button>
+
+            {/* Merge - enabled when multiple tables selected */}
+            <Button
+              variant="outline"
+              size="sm"
+              className={`gap-2 transition-all ${
+                selectedTableIds.length >= 2
+                  ? "border-primary/50 text-primary hover:bg-primary/10"
+                  : "opacity-50"
+              }`}
+              onClick={() => {
+                if (selectedTableIds.length >= 2) {
+                  const firstTable = tables.find(t => t.id === selectedTableIds[0]);
+                  if (firstTable) {
+                    setSelectedTable(firstTable);
+                    // Merge all selected tables
+                    selectedTableIds.slice(1).forEach((id) => {
+                      handleMergeTables(id);
+                    });
+                  }
+                }
+              }}
+              disabled={selectedTableIds.length < 2}
+            >
+              <GitMerge className="h-4 w-4" />
+              Merge
+            </Button>
+
+            {/* Split - enabled when single table selected with items */}
+            <Button
+              variant="outline"
+              size="sm"
+              className={`gap-2 transition-all ${
+                selectedTableIds.length === 1 &&
+                tables.find(t => t.id === selectedTableIds[0])?.orders?.length >= 2
+                  ? "border-primary/50 text-primary hover:bg-primary/10"
+                  : "opacity-50"
+              }`}
+              onClick={() => {
+                if (selectedTableIds.length === 1) {
+                  const table = tables.find(t => t.id === selectedTableIds[0]);
+                  if (table) {
+                    setSelectedTable(table);
+                    handleSplitTable();
+                  }
+                }
+              }}
+              disabled={
+                selectedTableIds.length !== 1 ||
+                (tables.find(t => t.id === selectedTableIds[0])?.orders?.length ?? 0) < 2
+              }
+            >
+              <Split className="h-4 w-4" />
+              Split
+            </Button>
+
+            {/* Hold/Resume - enabled when single table selected */}
+            {selectedTableIds.length === 1 &&
+            tables.find(t => t.id === selectedTableIds[0])?.status === "held" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 transition-all border-success/50 text-success hover:bg-success/10"
+                onClick={() => {
+                  const table = tables.find(t => t.id === selectedTableIds[0]);
+                  if (table) {
+                    setSelectedTable(table);
+                    handleResumeTable();
+                  }
+                }}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-2xl font-bold">T{table.number}</span>
-                    <Badge variant="outline" className={statusColors[table.status]}>
-                      {table.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{table.guests || 0}/{table.capacity}</span>
-                  </div>
-                  {table.startTime && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{getElapsedTime(table.startTime)}</span>
+                <Play className="h-4 w-4" />
+                Resume
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className={`gap-2 transition-all ${
+                  selectedTableIds.length === 1
+                    ? "border-amber-400/50 text-amber-400 hover:bg-amber-400/10"
+                    : "opacity-50"
+                }`}
+                onClick={() => {
+                  if (selectedTableIds.length === 1) {
+                    const table = tables.find(t => t.id === selectedTableIds[0]);
+                    if (table) {
+                      setSelectedTable(table);
+                      handleHoldTable();
+                    }
+                  }
+                }}
+                disabled={selectedTableIds.length !== 1}
+              >
+                <Pause className="h-4 w-4" />
+                Hold
+              </Button>
+            )}
+
+            {/* Realtime status */}
+            <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+              {realtimeStatus === "connected" ? (
+                <Wifi className="h-4 w-4 text-success" />
+              ) : (
+                <WifiOff className="h-4 w-4 text-destructive" />
+              )}
+              {realtimeStatus === "connected" ? "Synced" : "Offline"}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {tables.map((table) => {
+              const isChecked = selectedTableIds.includes(table.id);
+              const isOccupied = table.status !== "available";
+
+              return (
+                <Card
+                  key={table.id}
+                  className={`cursor-pointer transition-all hover:shadow-lg relative ${
+                    selectedTable?.id === table.id ? "ring-2 ring-primary" : ""
+                  } ${isChecked ? "ring-2 ring-primary bg-primary/5" : ""}`}
+                  onClick={() => handleSelectTable(table)}
+                >
+                  {/* Checkbox for selection - only show for occupied tables */}
+                  {isOccupied && (
+                    <div
+                      className="absolute top-2 left-2 z-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => toggleTableSelection(table.id)}
+                        className="h-5 w-5 border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        aria-label={`Select table ${table.number}`}
+                      />
                     </div>
                   )}
-                  {table.orders.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-border">
-                      <span className="text-sm font-medium text-primary">
-                        ${getTableTotal(table).toFixed(2)}
-                      </span>
+
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-2xl font-bold ${isOccupied ? "ml-6" : ""}`}>T{table.number}</span>
+                      <Badge variant="outline" className={statusColors[table.status]}>
+                        {table.status}
+                      </Badge>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{table.guests || 0}/{table.capacity}</span>
+                    </div>
+                    {table.startTime && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{getElapsedTime(table.startTime)}</span>
+                      </div>
+                    )}
+                    {table.orders.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <span className="text-sm font-medium text-primary">
+                          ${getTableTotal(table).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* Open Table Dialog */}
