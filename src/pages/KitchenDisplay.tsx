@@ -194,34 +194,35 @@ export default function KitchenDisplay() {
   return (
     <MainLayout title="Kitchen Display" subtitle="Real-time order management">
       <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-lg px-3 py-1"
-              >
-                {pendingOrders.length}
-              </Badge>
-              <span className="text-sm text-muted-foreground">Pending</span>
+        {/* Enhanced Header with Stats */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-secondary/30 rounded-lg">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-amber-500/20">
+                <Clock className="h-6 w-6 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-400">{pendingOrders.length}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="bg-primary/20 text-primary border-primary/30 text-lg px-3 py-1"
-              >
-                {preparingOrders.length}
-              </Badge>
-              <span className="text-sm text-muted-foreground">Preparing</span>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-primary/20">
+                <ChefHat className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-primary">{preparingOrders.length}</p>
+                <p className="text-sm text-muted-foreground">Preparing</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="bg-success/20 text-success border-success/30 text-lg px-3 py-1"
-              >
-                {readyOrders.length}
-              </Badge>
-              <span className="text-sm text-muted-foreground">Ready</span>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-success/20">
+                <Check className="h-6 w-6 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-success">{readyOrders.length}</p>
+                <p className="text-sm text-muted-foreground">Ready</p>
+              </div>
             </div>
           </div>
 
@@ -244,20 +245,25 @@ export default function KitchenDisplay() {
               }}
             >
               {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              Sound
+              Sound {soundEnabled ? "On" : "Off"}
             </Button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary">
               {isRealtime ? (
                 <Wifi className="h-4 w-4 text-success" />
               ) : (
                 <WifiOff className="h-4 w-4 text-destructive" />
               )}
-              <span className="text-sm text-muted-foreground">{isRealtime ? "Real-time" : "Offline"}</span>
+              <span className="text-sm">{isRealtime ? "Live" : "Offline"}</span>
             </div>
-            <span className="text-sm text-muted-foreground">Updated: {lastUpdate.toLocaleTimeString()}</span>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
+            
+            <span className="text-sm text-muted-foreground">
+              {lastUpdate.toLocaleTimeString()}
+            </span>
+            
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
               <RefreshCw className="h-4 w-4" />
+              Refresh
             </Button>
           </div>
         </div>
