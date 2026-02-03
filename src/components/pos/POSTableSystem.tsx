@@ -62,6 +62,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { SplitBillPanel } from "./SplitBillPanel";
 
 interface TableInfo {
   id: string;
@@ -660,6 +661,55 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [targetTableId, setTargetTableId] = useState("");
 
+  // Billing state - these hooks MUST be before any conditional return
+  const [billingMode, setBillingMode] = useState<"normal" | "split">("normal");
+  const [discountType, setDiscountType] = useState<"percent" | "fixed">("percent");
+  const [discountValue, setDiscountValue] = useState("");
+  const [tipPercent, setTipPercent] = useState(0);
+  const [guestName, setGuestName] = useState("");
+  const [guestAddress, setGuestAddress] = useState("");
+
+  // Billing calculations
+  const getSubtotal = () => selectedTable ? getTableTotal(selectedTable) : 0;
+  const getDiscount = () => {
+    if (!discountValue) return 0;
+    return discountType === "percent"
+      ? getSubtotal() * (parseFloat(discountValue) / 100)
+      : parseFloat(discountValue);
+  };
+  const getTaxAmount = () => (getSubtotal() - getDiscount()) * 0.1;
+  const getTipAmount = () => (getSubtotal() - getDiscount()) * (tipPercent / 100);
+  const getBillingTotal = () => getSubtotal() - getDiscount() + getTaxAmount() + getTipAmount();
+
+  // Reset billing state when closing
+  const resetBillingState = () => {
+    setBillingMode("normal");
+    setDiscountValue("");
+    setTipPercent(0);
+    setGuestName("");
+    setGuestAddress("");
+  };
+
+  // Cancel billing - return to occupied status without clearing table
+  const handleCancelBilling = async () => {
+    if (!selectedTable) return;
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: { status: "occupied" },
+      });
+
+      setSelectedTable({ ...selectedTable, status: "occupied" });
+      setActiveTab("order");
+      resetBillingState();
+      toast.success("Billing cancelled - table returned to order");
+    } catch (error) {
+      console.error("Error cancelling billing:", error);
+      toast.error("Failed to cancel billing");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -671,20 +721,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   return (
     <div className="h-full">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="tables" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Tables
-          </TabsTrigger>
-          <TabsTrigger value="order" className="gap-2" disabled={!selectedTable || selectedTable.status === "available"}>
-            <ClipboardList className="h-4 w-4" />
-            Order
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2" disabled={!selectedTable || selectedTable.status !== "billing"}>
-            <Receipt className="h-4 w-4" />
-            Billing
-          </TabsTrigger>
-        </TabsList>
+        {/* Action bar only - no duplicate tab triggers (parent POS page has the main tabs) */}
 
         {/* Tables Tab */}
         <TabsContent value="tables" className="flex-1 mt-0">
@@ -1178,51 +1215,169 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
         {/* Billing Tab */}
         <TabsContent value="billing" className="flex-1 mt-0">
           {selectedTable && selectedTable.status === "billing" && (
-            <Card className="max-w-md mx-auto">
-              <CardContent className="p-6">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold">Table {selectedTable.number}</h2>
-                  <p className="text-muted-foreground">Bill Summary</p>
-                </div>
+            billingMode === "split" ? (
+              <SplitBillPanel
+                items={selectedTable.orders}
+                subtotal={getSubtotal()}
+                tax={getTaxAmount()}
+                total={getBillingTotal()}
+                onComplete={async (payments) => {
+                  toast.success(`Split payment completed: ${payments.length} payments processed`);
+                  await handleCheckout();
+                }}
+                onCancel={() => setBillingMode("normal")}
+              />
+            ) : (
+              <Card className="max-w-2xl mx-auto">
+                <CardContent className="p-6 space-y-6">
+                  {/* Header */}
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold">Table {selectedTable.number}</h2>
+                    <p className="text-muted-foreground">Bill Summary</p>
+                    {selectedTable.guests && (
+                      <Badge variant="outline" className="mt-2">
+                        <Users className="h-3 w-3 mr-1" />
+                        {selectedTable.guests} guests
+                      </Badge>
+                    )}
+                  </div>
 
-                <div className="space-y-3 mb-6">
-                  {selectedTable.orders.map((order) => (
-                    <div key={order.id} className="flex justify-between text-sm">
-                      <span>
-                        {order.name} × {order.quantity}
-                      </span>
-                      <span>${(order.price * order.quantity).toFixed(2)}</span>
+                  {/* Guest Details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-secondary/30 rounded-lg">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Guest Name</Label>
+                      <Input
+                        placeholder="Customer name (optional)"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                      />
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Address</Label>
+                      <Input
+                        placeholder="Address (optional)"
+                        value={guestAddress}
+                        onChange={(e) => setGuestAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
 
-                <div className="border-t border-border pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>${getTableTotal(selectedTable).toFixed(2)}</span>
+                  {/* Order Items */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Order Items</h4>
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {selectedTable.orders.map((order) => (
+                        <div key={order.id} className="flex justify-between text-sm p-2 bg-secondary/50 rounded">
+                          <span>
+                            {order.name} × {order.quantity}
+                          </span>
+                          <span className="font-mono">${(order.price * order.quantity).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax (10%)</span>
-                    <span>${(getTableTotal(selectedTable) * 0.1).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xl font-bold border-t border-border pt-2">
-                    <span>Total</span>
-                    <span className="text-primary">${(getTableTotal(selectedTable) * 1.1).toFixed(2)}</span>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                  <Button variant="outline" onClick={handleCloseTable} disabled={updateTable.isPending}>
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel
-                  </Button>
-                  <Button variant="default" onClick={handleCheckout} disabled={createTransaction.isPending || updateTable.isPending}>
-                    <Receipt className="h-4 w-4 mr-2" />
-                    {createTransaction.isPending ? "Processing..." : "Checkout"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  {/* Discount */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Discount</Label>
+                    <div className="flex gap-2">
+                      <Select value={discountType} onValueChange={(v: "percent" | "fixed") => setDiscountType(v)}>
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percent">%</SelectItem>
+                          <SelectItem value="fixed">$</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        placeholder={discountType === "percent" ? "0" : "0.00"}
+                        value={discountValue}
+                        onChange={(e) => setDiscountValue(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tip */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Tip</Label>
+                    <div className="flex gap-2">
+                      {[0, 10, 15, 20].map((pct) => (
+                        <Button
+                          key={pct}
+                          type="button"
+                          variant={tipPercent === pct ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => setTipPercent(pct)}
+                        >
+                          {pct}%
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Totals */}
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>${getSubtotal().toFixed(2)}</span>
+                    </div>
+                    {getDiscount() > 0 && (
+                      <div className="flex justify-between text-sm text-success">
+                        <span>Discount</span>
+                        <span>-${getDiscount().toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Tax (10%)</span>
+                      <span>${getTaxAmount().toFixed(2)}</span>
+                    </div>
+                    {getTipAmount() > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Tip ({tipPercent}%)</span>
+                        <span>${getTipAmount().toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xl font-bold border-t border-border pt-2">
+                      <span>Total</span>
+                      <span className="text-primary">${getBillingTotal().toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCancelBilling} 
+                        disabled={updateTable.isPending}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="default" 
+                        onClick={handleCheckout} 
+                        disabled={createTransaction.isPending || updateTable.isPending}
+                      >
+                        <Receipt className="h-4 w-4 mr-2" />
+                        {createTransaction.isPending ? "Processing..." : "Checkout"}
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2"
+                      onClick={() => setBillingMode("split")}
+                    >
+                      <Split className="h-4 w-4" />
+                      Split Bill
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
           )}
         </TabsContent>
       </Tabs>
