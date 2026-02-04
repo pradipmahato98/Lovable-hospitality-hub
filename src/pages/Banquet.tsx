@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,13 +40,20 @@ import {
   FileText,
   Wifi,
   WifiOff,
+  UtensilsCrossed,
+  Layout,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState as useRealtimeState } from "react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { DraggableBanquetCalendar } from "@/components/banquet/DraggableBanquetCalendar";
+import { 
+  DraggableBanquetCalendar,
+  EventReportsPanel,
+  CateringManagementPanel,
+  VenueSetupPanel,
+} from "@/components/banquet";
 
 interface BanquetEvent {
   id: string;
@@ -94,7 +101,7 @@ export default function Banquet() {
   const [activeTab, setActiveTab] = useState("events");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
-  const [realtimeStatus, setRealtimeStatus] = useRealtimeState<
+  const [realtimeStatus, setRealtimeStatus] = useState<
     "connecting" | "connected" | "error"
   >("connecting");
 
@@ -345,14 +352,26 @@ export default function Banquet() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="events" className="gap-2">
               <CalendarDays className="h-4 w-4" />
               Events
             </TabsTrigger>
             <TabsTrigger value="calendar" className="gap-2">
               <Clock className="h-4 w-4" />
-              Calendar View
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="catering" className="gap-2">
+              <UtensilsCrossed className="h-4 w-4" />
+              Catering
+            </TabsTrigger>
+            <TabsTrigger value="venue" className="gap-2">
+              <Layout className="h-4 w-4" />
+              Venue Setup
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Reports
             </TabsTrigger>
           </TabsList>
 
@@ -497,6 +516,54 @@ export default function Banquet() {
                 setEventDialogOpen(true);
               }}
               onEventDrop={handleEventDrop}
+            />
+          </TabsContent>
+
+          <TabsContent value="catering">
+            <CateringManagementPanel 
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+                menu_package: e.menu_package,
+                special_requests: e.special_requests,
+              }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="venue">
+            <VenueSetupPanel 
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+              }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <EventReportsPanel 
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+                total_amount: e.total_amount,
+              }))}
             />
           </TabsContent>
         </Tabs>
