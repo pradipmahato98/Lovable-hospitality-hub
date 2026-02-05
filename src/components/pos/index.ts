@@ -6,3 +6,4 @@ export * from "./TableActionsPanel";
 export * from "./SplitBillDialog";
 export * from "./TableSelectionCheckbox";
 export * from "./TableActionBar";
+ export * from "./StaffClockPanel";

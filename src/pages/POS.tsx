@@ -44,10 +44,12 @@ import {
   BarChart3,
   History,
 } from "lucide-react";
+ import { Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { POSTableSystem } from "@/components/pos/POSTableSystem";
+ import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
 
 interface CartItem {
   id: string;
@@ -190,7 +192,7 @@ const POS = () => {
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="tables" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
               Tables
@@ -203,6 +205,10 @@ const POS = () => {
               <Receipt className="h-4 w-4" />
               Billing
             </TabsTrigger>
+             <TabsTrigger value="clock" className="gap-2">
+               <Clock className="h-4 w-4" />
+               Clock In/Out
+             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/kitchen"} className="gap-2">
@@ -226,6 +232,11 @@ const POS = () => {
             toast.success(`Checkout completed: $${total.toFixed(2)} for ${items.length} items`);
           }} />
         </TabsContent>
+ 
+         {/* Clock In/Out Tab */}
+         <TabsContent value="clock">
+           <StaffClockPanel />
+         </TabsContent>
 
         {/* Order Tab - Menu Items & Cart */}
         <TabsContent value="order">
