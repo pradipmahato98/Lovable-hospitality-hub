@@ -101,6 +101,7 @@ export default function Banquet() {
   const [activeTab, setActiveTab] = useState("events");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
+   const [editingEvent, setEditingEvent] = useState<BanquetEvent | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<
     "connecting" | "connected" | "error"
   >("connecting");
@@ -186,6 +187,34 @@ export default function Banquet() {
       toast.error("Failed to create event");
     },
   });
+ 
+   // Update event mutation
+   const updateEvent = useMutation({
+     mutationFn: async ({
+       id,
+       updates,
+     }: {
+       id: string;
+       updates: Partial<BanquetEvent>;
+     }) => {
+       const { error } = await db
+         .from("banquet_events")
+         .update(updates)
+         .eq("id", id);
+ 
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+       toast.success("Event updated successfully");
+       setEventDialogOpen(false);
+       setEditingEvent(null);
+       resetNewEvent();
+     },
+     onError: () => {
+       toast.error("Failed to update event");
+     },
+   });
 
   // Update status mutation
   const updateStatus = useMutation({
@@ -251,7 +280,60 @@ export default function Banquet() {
       total_amount: 0,
       deposit_amount: 0,
     });
+     setEditingEvent(null);
   };
+ 
+   const handleEditEvent = (event: BanquetEvent) => {
+     setEditingEvent(event);
+     setNewEvent({
+       event_name: event.event_name,
+       event_type: event.event_type,
+       client_name: event.client_name,
+       client_phone: event.client_phone || "",
+       client_email: event.client_email || "",
+       event_date: event.event_date,
+       start_time: event.start_time,
+       end_time: event.end_time,
+       venue: event.venue,
+       guest_count: event.guest_count,
+       menu_package: event.menu_package || "",
+       special_requests: event.special_requests || "",
+       total_amount: event.total_amount,
+       deposit_amount: event.deposit_amount || 0,
+     });
+     setEventDialogOpen(true);
+   };
+ 
+   const handleSaveEvent = () => {
+     if (!newEvent.event_name || !newEvent.client_name || !newEvent.venue) {
+       toast.error("Please fill in event name, client name, and venue");
+       return;
+     }
+ 
+     if (editingEvent) {
+       updateEvent.mutate({
+         id: editingEvent.id,
+         updates: {
+           event_name: newEvent.event_name,
+           event_type: newEvent.event_type,
+           client_name: newEvent.client_name,
+           client_phone: newEvent.client_phone || null,
+           client_email: newEvent.client_email || null,
+           event_date: newEvent.event_date,
+           start_time: newEvent.start_time,
+           end_time: newEvent.end_time,
+           venue: newEvent.venue,
+           guest_count: newEvent.guest_count,
+           menu_package: newEvent.menu_package || null,
+           special_requests: newEvent.special_requests || null,
+           total_amount: newEvent.total_amount,
+           deposit_amount: newEvent.deposit_amount || null,
+         },
+       });
+     } else {
+       handleCreateEvent();
+     }
+   };
 
   const handleCreateEvent = () => {
     if (!newEvent.event_name || !newEvent.client_name || !newEvent.venue) {
@@ -484,6 +566,15 @@ export default function Banquet() {
                               </SelectContent>
                             </Select>
                           </TableCell>
+                           <TableCell>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleEditEvent(event)}
+                             >
+                               Edit
+                             </Button>
+                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -573,8 +664,10 @@ export default function Banquet() {
       <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Event</DialogTitle>
-            <DialogDescription>Enter the details for the banquet event</DialogDescription>
+             <DialogTitle>{editingEvent ? "Edit Event" : "Create New Event"}</DialogTitle>
+             <DialogDescription>
+               {editingEvent ? "Update the event details" : "Enter the details for the banquet event"}
+             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -727,11 +820,16 @@ export default function Banquet() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEventDialogOpen(false)}>
+               <Button variant="outline" onClick={() => {
+                 setEventDialogOpen(false);
+                 resetNewEvent();
+               }}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateEvent} disabled={createEvent.isPending}>
-                {createEvent.isPending ? "Creating..." : "Create Event"}
+               <Button onClick={handleSaveEvent} disabled={createEvent.isPending || updateEvent.isPending}>
+                 {createEvent.isPending || updateEvent.isPending
+                   ? (editingEvent ? "Updating..." : "Creating...")
+                   : (editingEvent ? "Update Event" : "Create Event")}
               </Button>
             </div>
           </div>
