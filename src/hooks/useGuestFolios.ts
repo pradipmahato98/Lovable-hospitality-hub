@@ -45,6 +45,7 @@ export const useGuestFolios = () => {
           guests (first_name, last_name, email),
           reservations (reservation_code)
         `)
+        .not("status", "in", '("closed","void")')
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -166,6 +167,146 @@ export const useGuestFolios = () => {
     },
   });
 
+  const voidFolio = useMutation({
+    mutationFn: async (folioId: string) => {
+      const { data, error } = await supabase
+        .from("guest_folios")
+        .update({ status: "void", updated_at: new Date().toISOString() })
+        .eq("id", folioId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast({
+        title: "Folio Voided",
+        description: "The folio has been voided.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateFolioItem = useMutation({
+    mutationFn: async (item: Partial<FolioItem> & { id: string, folio_id: string }) => {
+      const { data, error } = await supabase
+        .from("folio_items")
+        .update(item)
+        .eq("id", item.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast({
+        title: "Success",
+        description: "Folio item updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteFolioItem = useMutation({
+    mutationFn: async ({ id, folio_id }: { id: string, folio_id: string }) => {
+      const { error } = await supabase
+        .from("folio_items")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast({
+        title: "Success",
+        description: "Folio item deleted successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const transferFolioItem = useMutation({
+    mutationFn: async ({ itemId, targetFolioId, sourceFolioId }: { itemId: string, targetFolioId: string, sourceFolioId: string }) => {
+      const { data, error } = await supabase
+        .from("folio_items")
+        .update({ folio_id: targetFolioId })
+        .eq("id", itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.sourceFolioId] });
+      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.targetFolioId] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast({
+        title: "Success",
+        description: "Folio item transferred successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createFolio = useMutation({
+    mutationFn: async (folio: Partial<GuestFolio>) => {
+      const { data, error } = await supabase
+        .from("guest_folios")
+        .insert([folio])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast({
+        title: "Success",
+        description: "New folio created successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     folios,
     isLoading,
@@ -173,5 +314,10 @@ export const useGuestFolios = () => {
     useFolioItems,
     addFolioItem,
     closeFolio,
+    voidFolio,
+    updateFolioItem,
+    deleteFolioItem,
+    transferFolioItem,
+    createFolio,
   };
 };
