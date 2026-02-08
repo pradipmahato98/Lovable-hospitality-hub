@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus } from "lucide-react";
+import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
@@ -26,6 +27,7 @@ const statusColors: Record<string, string> = {
 };
 
 const Reservations = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("list");
@@ -163,6 +165,9 @@ const Reservations = () => {
                                         <LogOut className="h-4 w-4 mr-2" />Check Out
                                       </DropdownMenuItem>
                                     )}
+                                    <DropdownMenuItem onClick={() => navigate(`/front-desk?reservationId=${reservation.id}`)}>
+                                      <Receipt className="h-4 w-4 mr-2" />View Folio
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
