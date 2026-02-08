@@ -4,46 +4,81 @@ import { RecentBookings } from "@/components/dashboard/RecentBookings";
 import { RoomStatusGrid } from "@/components/dashboard/RoomStatusGrid";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { BedDouble, Users, TrendingUp, CalendarCheck } from "lucide-react";
+import { BedDouble, Users, TrendingUp, CalendarCheck, ShieldAlert, Loader2 } from "lucide-react";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useIsAdmin } from "@/hooks/useUserRole";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
+  const { data: stats, isLoading } = useDashboardStats();
+  const { isAdmin } = useIsAdmin();
+
+  if (isLoading) {
+    return (
+      <MainLayout title="Dashboard" subtitle="Syncing property data...">
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
-    <MainLayout title="Dashboard" subtitle="Welcome back, John. Here's your property overview.">
+    <MainLayout title="Dashboard" subtitle="Property real-time overview and analytics.">
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <MetricCard
           title="Occupancy Rate"
-          value="87%"
-          change="+4.5% from last week"
+          value={stats?.occupancyRate || "0%"}
+          change="+2.1% from yesterday"
           changeType="positive"
           icon={BedDouble}
           delay={0}
         />
         <MetricCard
           title="Total Guests"
-          value="156"
-          change="+12 new arrivals today"
-          changeType="positive"
+          value={stats?.totalGuests || 0}
+          change="Registered profiles"
+          changeType="neutral"
           icon={Users}
           delay={50}
         />
         <MetricCard
-          title="Today's Revenue"
-          value="$24,580"
-          change="+18.2% vs yesterday"
+          title="Today's Bookings"
+          value={stats?.todayRevenue || "$0"}
+          change="New revenue streams"
           changeType="positive"
           icon={TrendingUp}
           delay={100}
         />
         <MetricCard
           title="Pending Bookings"
-          value="23"
-          change="5 require attention"
+          value={stats?.pendingBookings || 0}
+          change="Require confirmation"
           changeType="neutral"
           icon={CalendarCheck}
           delay={150}
         />
       </div>
+
+      {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
+        <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              SECURITY ADVISORY
+            </CardTitle>
+            <Badge variant="destructive">Action Required</Badge>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">
+              Detected <strong>{stats.securityAlerts}</strong> security-related events in the last 24 hours.
+              Please review the audit logs in the Admin Console.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts & Tables */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
