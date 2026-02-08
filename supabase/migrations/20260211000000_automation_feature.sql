@@ -45,11 +45,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.routing_rules;
 -- Triggers for updated_at
 CREATE TRIGGER set_updated_at_automation_rules
     BEFORE UPDATE ON public.automation_rules
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER set_updated_at_routing_rules
     BEFORE UPDATE ON public.routing_rules
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Seed some sample automation rules
 INSERT INTO public.automation_rules (name, description, event_type, action_type, action_config) VALUES
