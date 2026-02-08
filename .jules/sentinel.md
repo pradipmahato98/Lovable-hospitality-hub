@@ -7,3 +7,8 @@
 **Vulnerability:** The authentication system allowed passwords as short as 6 characters, which is insufficient for enterprise-grade security and vulnerable to brute-force attacks.
 **Learning:** Default validation schemas in frontend frameworks often use low minimums for "developer convenience," which can easily leak into production.
 **Prevention:** Enforce a minimum of 10 characters for all new user accounts (Sign Up) to prevent account weakness without breaking existing sessions (Sign In), and provide a visual strength indicator.
+
+## 2026-02-10 - Security Monitoring Visibility
+**Enhancement:** Added a "Security Breach" tab to the admin console to provide visibility into security-related audit logs and system health.
+**Learning:** Security monitoring should be integrated into administrative tools to enable proactive threat detection. Using existing audit logs for security insights reduces "security theater" and provides real value.
+**Prevention:** Always provide administrators with clear indicators of system integrity and recent suspicious activities.
