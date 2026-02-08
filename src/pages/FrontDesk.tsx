@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download } from "lucide-react";
+import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
+import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -157,6 +158,10 @@ const FrontDesk = () => {
               <Receipt className="h-4 w-4" />
               Billing
             </TabsTrigger>
+            <TabsTrigger value="folios" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Guest Folios
+            </TabsTrigger>
           </TabsList>
 
           {/* Rooms Tab */}
@@ -304,6 +309,11 @@ const FrontDesk = () => {
                 />
               </div>
             </div>
+          </TabsContent>
+
+          {/* Guest Folios Tab */}
+          <TabsContent value="folios">
+            <GuestFolioManager />
           </TabsContent>
 
           {/* Billing Tab */}
