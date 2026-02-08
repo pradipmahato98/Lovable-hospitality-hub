@@ -13,6 +13,7 @@ export interface FolioItem {
   reason?: string;
   modified_by?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface GuestFolio {
@@ -151,8 +152,11 @@ export const useGuestFolios = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (newItem, variables) => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
+      if (newItem && newItem.folio_id !== variables.folio_id) {
+        queryClient.invalidateQueries({ queryKey: ["folio_items", newItem.folio_id] });
+      }
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
       toast({
         title: "Success",
@@ -228,10 +232,7 @@ export const useGuestFolios = () => {
     mutationFn: async (item: Partial<FolioItem> & { id: string, folio_id: string, reason?: string, modified_by?: string }) => {
       const { data, error } = await supabase
         .from("folio_items")
-        .update({
-          ...item,
-          updated_at: new Date().toISOString()
-        })
+        .update(item)
         .eq("id", item.id)
         .select()
         .single();

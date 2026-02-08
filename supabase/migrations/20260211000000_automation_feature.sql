@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS public.routing_rules (
     CONSTRAINT routing_rules_target_folio_id_fkey FOREIGN KEY (target_folio_id) REFERENCES public.guest_folios(id) ON DELETE CASCADE
 );
 
+-- Enhance folio_items table with auditing columns
+ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS modified_by TEXT;
+ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT now();
+
 -- Enable RLS
 ALTER TABLE public.automation_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.routing_rules ENABLE ROW LEVEL SECURITY;
@@ -49,6 +54,10 @@ CREATE TRIGGER set_updated_at_automation_rules
 
 CREATE TRIGGER set_updated_at_routing_rules
     BEFORE UPDATE ON public.routing_rules
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER set_updated_at_folio_items
+    BEFORE UPDATE ON public.folio_items
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Seed some sample automation rules

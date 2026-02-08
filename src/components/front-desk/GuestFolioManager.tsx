@@ -292,7 +292,7 @@ export const GuestFolioManager = () => {
     if (!selectedFolio || !newRoutingRule.target_folio_id) return;
 
     await addRoutingRule.mutateAsync({
-      folio_id: selectedFolio.id,
+      source_folio_id: selectedFolio.id,
       category: newRoutingRule.category,
       target_folio_id: newRoutingRule.target_folio_id,
       is_active: true
@@ -1046,7 +1046,7 @@ export const GuestFolioManager = () => {
                         variant="ghost"
                         size="sm"
                         className="text-destructive h-8 w-8 p-0"
-                        onClick={() => deleteRoutingRule.mutate({ id: rule.id, folioId: selectedFolio.id })}
+                        onClick={() => deleteRoutingRule.mutate({ id: rule.id, source_folio_id: selectedFolio.id })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
