@@ -10,8 +10,6 @@ export interface FolioItem {
   description: string;
   amount: number;
   reference_id?: string;
-  reason?: string;
-  modified_by?: string;
   created_at: string;
 }
 
@@ -32,14 +30,6 @@ export interface GuestFolio {
   reservations?: { reservation_code: string };
 }
 
-export interface RoutingRule {
-  id: string;
-  folio_id: string;
-  category: 'room' | 'tax' | 'f&b' | 'incidentals' | 'all';
-  target_folio_id: string;
-  is_active: boolean;
-}
-
 export const useGuestFolios = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -55,7 +45,6 @@ export const useGuestFolios = () => {
           guests (first_name, last_name, email),
           reservations (reservation_code)
         `)
-        .not("status", "in", '("closed","void")')
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -123,26 +112,9 @@ export const useGuestFolios = () => {
 
   const addFolioItem = useMutation({
     mutationFn: async (item: Omit<FolioItem, "id" | "created_at">) => {
-      // Check for routing rules
-      const { data: rules } = await supabase
-        .from("routing_rules")
-        .select("*")
-        .eq("folio_id", item.folio_id)
-        .eq("is_active", true);
-
-      let targetFolioId = item.folio_id;
-      if (rules && rules.length > 0) {
-        const rule = rules.find(r =>
-          r.category === 'all' ||
-          (r.category === 'room' && item.source === 'room_rate') ||
-          (r.category === 'f&b' && (item.source === 'restaurant' || item.source === 'minibar'))
-        );
-        if (rule) targetFolioId = rule.target_folio_id;
-      }
-
       const { data, error } = await supabase
         .from("folio_items")
-        .insert([{ ...item, folio_id: targetFolioId }])
+        .insert([item])
         .select()
         .single();
 
@@ -194,237 +166,6 @@ export const useGuestFolios = () => {
     },
   });
 
-  const voidFolio = useMutation({
-    mutationFn: async (folioId: string) => {
-      const { data, error } = await supabase
-        .from("guest_folios")
-        .update({ status: "void", updated_at: new Date().toISOString() })
-        .eq("id", folioId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Folio Voided",
-        description: "The folio has been voided.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateFolioItem = useMutation({
-    mutationFn: async (item: Partial<FolioItem> & { id: string, folio_id: string, reason?: string, modified_by?: string }) => {
-      const { data, error } = await supabase
-        .from("folio_items")
-        .update({
-          ...item,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", item.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
-      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item updated successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteFolioItem = useMutation({
-    mutationFn: async ({ id, folio_id }: { id: string, folio_id: string }) => {
-      const { error } = await supabase
-        .from("folio_items")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
-      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item deleted successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const transferFolioItem = useMutation({
-    mutationFn: async ({ itemId, targetFolioId, sourceFolioId }: { itemId: string, targetFolioId: string, sourceFolioId: string }) => {
-      const { data, error } = await supabase
-        .from("folio_items")
-        .update({ folio_id: targetFolioId })
-        .eq("id", itemId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.sourceFolioId] });
-      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.targetFolioId] });
-      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item transferred successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const processRefund = useMutation({
-    mutationFn: async ({ folio_id, amount, reason, method }: { folio_id: string, amount: number, reason: string, method: string }) => {
-      const { data, error } = await supabase
-        .from("folio_items")
-        .insert([{
-          folio_id,
-          item_type: 'payment',
-          source: 'refund',
-          description: `Refund (${method.toUpperCase()}) - ${reason}`,
-          amount: Math.abs(amount), // Positive amount for refund credit/reversal or how does it work?
-          // Usually a payment is negative (decreases balance). A refund of a payment should be positive (increases balance).
-          // Or if it's a refund of a charge, it's a negative charge (adjustment).
-          // Let's stick to: Payment is negative. Refund of payment is positive.
-          reason
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
-      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Refund Processed",
-        description: "The refund has been recorded successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const useRoutingRules = (folioId: string) => {
-    return useQuery({
-      queryKey: ["routing_rules", folioId],
-      queryFn: async () => {
-        if (!folioId) return [];
-        const { data, error } = await supabase
-          .from("routing_rules")
-          .select("*")
-          .eq("folio_id", folioId);
-
-        if (error) {
-          console.warn("Routing rules table might not exist, returning empty");
-          return [];
-        }
-        return data as RoutingRule[];
-      },
-      enabled: !!folioId,
-    });
-  };
-
-  const addRoutingRule = useMutation({
-    mutationFn: async (rule: Omit<RoutingRule, "id">) => {
-      const { data, error } = await supabase
-        .from("routing_rules")
-        .insert([rule])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["routing_rules", variables.folio_id] });
-      toast({ title: "Success", description: "Routing rule added." });
-    },
-  });
-
-  const deleteRoutingRule = useMutation({
-    mutationFn: async ({ id, folioId }: { id: string, folioId: string }) => {
-      const { error } = await supabase
-        .from("routing_rules")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["routing_rules", variables.folioId] });
-      toast({ title: "Success", description: "Routing rule removed." });
-    },
-  });
-
-  const createFolio = useMutation({
-    mutationFn: async (folio: Partial<GuestFolio>) => {
-      const { data, error } = await supabase
-        .from("guest_folios")
-        .insert([folio])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "New folio created successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   return {
     folios,
     isLoading,
@@ -432,14 +173,5 @@ export const useGuestFolios = () => {
     useFolioItems,
     addFolioItem,
     closeFolio,
-    voidFolio,
-    updateFolioItem,
-    deleteFolioItem,
-    transferFolioItem,
-    createFolio,
-    processRefund,
-    useRoutingRules,
-    addRoutingRule,
-    deleteRoutingRule,
   };
 };

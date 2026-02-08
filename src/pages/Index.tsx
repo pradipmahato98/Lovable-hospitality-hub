@@ -18,7 +18,6 @@ const Index = () => {
           changeType="positive"
           icon={BedDouble}
           delay={0}
-          link="/front-desk"
         />
         <MetricCard
           title="Total Guests"
@@ -27,7 +26,6 @@ const Index = () => {
           changeType="positive"
           icon={Users}
           delay={50}
-          link="/guests"
         />
         <MetricCard
           title="Today's Revenue"
@@ -36,7 +34,6 @@ const Index = () => {
           changeType="positive"
           icon={TrendingUp}
           delay={100}
-          link="/front-desk"
         />
         <MetricCard
           title="Pending Bookings"
@@ -45,7 +42,6 @@ const Index = () => {
           changeType="neutral"
           icon={CalendarCheck}
           delay={150}
-          link="/reservations"
         />
       </div>
 

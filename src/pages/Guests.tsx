@@ -32,10 +32,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2 } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
-import { useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -69,7 +68,6 @@ const getGuestStatus = (guest: Guest): "vip" | "regular" | "new" => {
 };
 
 const Guests = () => {
-  const navigate = useNavigate();
   const { data: guests = [], isLoading } = useGuests();
   const { data: feedback = [], createFeedback, respondToFeedback, updateStatus } = useGuestFeedback();
   const { data: loyaltyMembers = [], enrollMember, addPoints } = useLoyaltyMembers();
@@ -118,16 +116,6 @@ const Guests = () => {
         const status = getGuestStatus(guest);
         return <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>;
       },
-    },
-    {
-      key: "id",
-      header: "Folio",
-      render: (guest) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-          <Receipt className="h-4 w-4 mr-1" />
-          View
-        </Button>
-      ),
     },
   ];
 
@@ -247,12 +235,8 @@ const Guests = () => {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                          <Button variant="outline" size="sm" className="flex-1 min-w-[100px]" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-                            <Receipt className="h-4 w-4 mr-1" />
-                            Folio
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1 min-w-[100px]" onClick={() => { setSelectedGuest(guest); setFeedbackDialogOpen(true); }}>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => { setSelectedGuest(guest); setFeedbackDialogOpen(true); }}>
                             <MessageSquare className="h-4 w-4 mr-1" />
                             Feedback
                           </Button>
