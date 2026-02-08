@@ -12,7 +12,8 @@ import { z } from "zod";
 import { Progress } from "@/components/ui/progress";
 
 const emailSchema = z.string().email("Please enter a valid email address");
-const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const passwordSchema = z.string().min(1, "Password is required");
+const signupPasswordSchema = z.string().min(10, "Password must be at least 10 characters");
 const phoneSchema = z.string().min(10, "Please enter a valid phone number");
 
 export default function Auth() {
@@ -51,7 +52,8 @@ export default function Auth() {
     }
     
     if (checkPassword) {
-      const passwordResult = passwordSchema.safeParse(password);
+      const schema = isSignUp ? signupPasswordSchema : passwordSchema;
+      const passwordResult = schema.safeParse(password);
       if (!passwordResult.success) {
         newErrors.password = passwordResult.error.errors[0].message;
       }
@@ -68,8 +70,8 @@ export default function Auth() {
   const getPasswordStrength = (pass: string) => {
     let score = 0;
     if (!pass) return 0;
-    if (pass.length > 6) score += 20;
-    if (pass.length > 10) score += 20;
+    if (pass.length >= 10) score += 20;
+    if (pass.length > 12) score += 20;
     if (/[A-Z]/.test(pass)) score += 20;
     if (/[0-9]/.test(pass)) score += 20;
     if (/[^A-Za-z0-9]/.test(pass)) score += 20;
