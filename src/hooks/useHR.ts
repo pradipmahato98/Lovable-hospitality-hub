@@ -179,11 +179,20 @@ export function useLeaveRequests(filters?: { status?: string; staffId?: string }
       if (error) throw error;
 
       // Update pending days in balance
-      await db.from("leave_balances")
-        .update({ pending_days: db.raw(`pending_days + ${request.days_requested}`) })
+      const { data: balance } = await db.from("leave_balances")
+        .select("pending_days")
         .eq("staff_id", request.staff_id)
         .eq("leave_type", request.leave_type)
-        .eq("year", new Date().getFullYear());
+        .eq("year", new Date().getFullYear())
+        .maybeSingle();
+
+      if (balance) {
+        await db.from("leave_balances")
+          .update({ pending_days: (balance.pending_days || 0) + request.days_requested })
+          .eq("staff_id", request.staff_id)
+          .eq("leave_type", request.leave_type)
+          .eq("year", new Date().getFullYear());
+      }
 
       return data;
     },
