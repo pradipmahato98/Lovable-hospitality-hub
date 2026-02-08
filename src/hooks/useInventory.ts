@@ -121,6 +121,17 @@ export function useSuppliers() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("suppliers-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "suppliers" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createSupplier = useMutation({
     mutationFn: async (supplier: Omit<Supplier, "id" | "created_at">) => {
       const { data, error } = await db.from("suppliers").insert(supplier).select().single();
@@ -248,6 +259,17 @@ export function usePurchaseOrders(status?: string) {
       return data as PurchaseOrder[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("purchase-orders-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createPurchaseOrder = useMutation({
     mutationFn: async ({ items, ...order }: Omit<PurchaseOrder, "id" | "created_at" | "order_number" | "supplier"> & { items: { item_id: string; quantity: number; unit_price: number }[] }) => {

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 // ============= Types =============
 export interface OTAChannel {
@@ -47,6 +48,19 @@ export function useOTAChannels() {
       return data as OTAChannel[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("ota-channels-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ota_channels" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["ota-channels"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const updateChannel = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<OTAChannel> & { id: string }) => {

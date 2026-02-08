@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
- import { lovable } from "@/integrations/lovable/index";
 
 interface Profile {
   id: string;
@@ -24,6 +23,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  uploadAvatar: (file: File) => Promise<{ publicUrl: string | null; error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,16 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-     const result = await lovable.auth.signInWithOAuth("google", {
-       redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
-     
-     if (result.redirected) {
-       // User is being redirected to Google, return no error
-       return { error: null };
-     }
-     
-     return { error: result.error || null };
+    return { error };
   };
 
   const resetPassword = async (email: string) => {
@@ -144,6 +141,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const uploadAvatar = async (file: File) => {
+    if (!user) return { publicUrl: null, error: new Error("No user logged in") };
+
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${user.id}/${Math.random()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      return { publicUrl: null, error: uploadError };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+
+    return { publicUrl, error: updateError };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -157,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         signOut,
         updateProfile,
+        uploadAvatar,
       }}
     >
       {children}

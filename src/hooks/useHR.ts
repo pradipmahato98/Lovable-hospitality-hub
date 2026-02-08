@@ -101,6 +101,17 @@ export function useStaffSchedules(filters?: { date?: string; staffId?: string; d
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("staff-schedules-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_schedules" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["staff-schedules"] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createSchedule = useMutation({
     mutationFn: async (schedule: Omit<StaffSchedule, "id" | "created_at" | "staff">) => {
       const { data, error } = await db.from("staff_schedules").insert(schedule).select().single();
@@ -352,6 +363,17 @@ export function useTimeClock(date?: string) {
       return data as TimeClockEntry[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("time-clock-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_time_clock" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["time-clock"] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient, targetDate]);
 
   const clockIn = useMutation({
     mutationFn: async (staffId: string) => {
