@@ -1,5 +1,6 @@
 -- ============================================
--- GUEST FOLIOS SUBSYSTEM
+-- GUEST FOLIOS SUBSYSTEM v4
+-- Force schema cache refresh
 -- ============================================
 
 -- 1. Create Tables
@@ -164,3 +165,6 @@ BEGIN
 EXCEPTION
     WHEN others THEN NULL;
 END $$;
+
+-- Force PostgREST to reload schema cache
+NOTIFY pgrst, 'reload schema';
