@@ -20,6 +20,7 @@ import {
   Settings,
   Bell,
   Shield,
+  ShieldAlert,
   Users,
   Loader2,
   Trash2,
@@ -37,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database as DbTypes } from "@/integrations/supabase/types";
 import { DataSeeder } from "@/components/dev/DataSeeder";
 import { MCPConfigPanel } from "@/components/dev/MCPConfig";
+import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 
 type AppRole = DbTypes["public"]["Enums"]["app_role"];
 
@@ -250,6 +252,10 @@ const DevPanel = () => {
           <TabsTrigger value="mcp" className="gap-2">
             <Shield className="h-4 w-4" />
             MCP Config
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-2 text-destructive">
+            <ShieldAlert className="h-4 w-4" />
+            Security Breach
           </TabsTrigger>
         </TabsList>
 
@@ -596,6 +602,10 @@ const DevPanel = () => {
 
         <TabsContent value="mcp">
           <MCPConfigPanel />
+        </TabsContent>
+
+        <TabsContent value="security">
+          <SecurityBreachPanel />
         </TabsContent>
 
         <TabsContent value="logs">
