@@ -180,15 +180,16 @@ const ChannelManager = () => {
                     </div>
                   </>
                 )}
-              {!channel.is_active && (
-                <Button variant="outline" className="w-full" onClick={() => handleToggle(channel.id, true)} disabled={toggleChannel.isPending}>
-                  <Link2 className="h-4 w-4 mr-2" />
-                  Connect Channel
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )))}
+                {!channel.is_active && (
+                  <Button variant="outline" className="w-full" onClick={() => handleToggle(channel.id, true)} disabled={toggleChannel.isPending}>
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Connect Channel
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </MainLayout>
   );
