@@ -18,11 +18,13 @@ import {
   FileText,
   AlertTriangle,
   Globe,
+  ShieldAlert,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
+import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 
 const AdminConsole = () => {
   const { isAdmin, isLoading } = useIsAdmin();
@@ -58,6 +60,10 @@ const AdminConsole = () => {
           <TabsTrigger value="integrations" className="gap-2">
             <Globe className="h-4 w-4" />
             Integrations
+          </TabsTrigger>
+          <TabsTrigger value="security_breach" className="gap-2 text-destructive">
+            <ShieldAlert className="h-4 w-4" />
+            Security Breach
           </TabsTrigger>
         </TabsList>
 
@@ -290,6 +296,10 @@ const AdminConsole = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="security_breach">
+          <SecurityBreachPanel />
         </TabsContent>
       </Tabs>
     </MainLayout>
