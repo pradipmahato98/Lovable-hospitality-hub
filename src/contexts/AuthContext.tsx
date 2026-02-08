@@ -23,6 +23,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  uploadAvatar: (file: File) => Promise<{ publicUrl: string | null; error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -140,6 +141,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const uploadAvatar = async (file: File) => {
+    if (!user) return { publicUrl: null, error: new Error("No user logged in") };
+
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${user.id}/${Math.random()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      return { publicUrl: null, error: uploadError };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+
+    return { publicUrl, error: updateError };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -153,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         signOut,
         updateProfile,
+        uploadAvatar,
       }}
     >
       {children}
