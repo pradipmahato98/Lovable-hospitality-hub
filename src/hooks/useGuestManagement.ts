@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 // ============= Types =============
 export interface GuestPreference {
@@ -303,12 +304,20 @@ export function useGuestStats() {
   const { data: feedback } = useGuestFeedback();
   const { data: members } = useLoyaltyMembers();
 
-  return {
-    totalFeedback: feedback?.length || 0,
-    pendingFeedback: feedback?.filter((f) => f.status === "pending").length || 0,
-    avgRating: feedback?.filter((f) => f.rating).reduce((sum, f) => sum + (f.rating || 0), 0) / (feedback?.filter((f) => f.rating).length || 1) || 0,
-    loyaltyMembers: members?.length || 0,
-    platinumMembers: members?.filter((m) => m.tier === "platinum").length || 0,
-    goldMembers: members?.filter((m) => m.tier === "gold").length || 0,
-  };
+  return useMemo(() => {
+    const feedbackList = feedback || [];
+    const memberList = members || [];
+    const ratedFeedback = feedbackList.filter((f) => f.rating);
+
+    return {
+      totalFeedback: feedbackList.length,
+      pendingFeedback: feedbackList.filter((f) => f.status === "pending").length,
+      avgRating: ratedFeedback.length > 0
+        ? ratedFeedback.reduce((sum, f) => sum + (f.rating || 0), 0) / ratedFeedback.length
+        : 0,
+      loyaltyMembers: memberList.length,
+      platinumMembers: memberList.filter((m) => m.tier === "platinum").length,
+      goldMembers: memberList.filter((m) => m.tier === "gold").length,
+    };
+  }, [feedback, members]);
 }

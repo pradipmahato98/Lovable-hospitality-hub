@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,9 @@ const Guests = () => {
   const { data: feedback = [], createFeedback, respondToFeedback, updateStatus } = useGuestFeedback();
   const { data: loyaltyMembers = [], enrollMember, addPoints } = useLoyaltyMembers();
   const stats = useGuestStats();
+
+  // Performance optimization: Use a Set for O(1) membership lookups instead of O(M) .some() calls in the list
+  const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
@@ -204,7 +207,7 @@ const Guests = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {guests.map((guest, index) => {
                   const status = getGuestStatus(guest);
-                  const isMember = loyaltyMembers.some((m) => m.guest_id === guest.id);
+                  const isMember = loyaltyMemberIds.has(guest.id);
                   return (
                     <Card key={guest.id} variant="elevated" className="animate-slide-up hover:shadow-glow transition-all cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
                       <CardContent className="p-6">
