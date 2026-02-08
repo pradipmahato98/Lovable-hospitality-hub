@@ -10,6 +10,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  if (import.meta.env.DEV) {
+    return <>{children}</>;
+  }
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

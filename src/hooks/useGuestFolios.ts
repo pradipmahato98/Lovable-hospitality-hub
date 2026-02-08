@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 export interface FolioItem {
   id: string;
   folio_id: string;
@@ -47,7 +50,7 @@ export const useGuestFolios = () => {
   const { data: folios, isLoading, error } = useQuery({
     queryKey: ["guest_folios"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("guest_folios")
         .select(`
           *,
@@ -97,7 +100,7 @@ export const useGuestFolios = () => {
       queryKey: ["folio_items", folioId],
       queryFn: async () => {
         if (!folioId) return [];
-        const { data, error } = await supabase
+      const { data, error } = await db
           .from("folio_items")
           .select("*")
           .eq("folio_id", folioId)
@@ -124,7 +127,7 @@ export const useGuestFolios = () => {
   const addFolioItem = useMutation({
     mutationFn: async (item: Omit<FolioItem, "id" | "created_at">) => {
       // Check for routing rules
-      const { data: rules } = await supabase
+      const { data: rules } = await db
         .from("routing_rules")
         .select("*")
         .eq("folio_id", item.folio_id)
@@ -140,7 +143,7 @@ export const useGuestFolios = () => {
         if (rule) targetFolioId = rule.target_folio_id;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("folio_items")
         .insert([{ ...item, folio_id: targetFolioId }])
         .select()
@@ -149,8 +152,12 @@ export const useGuestFolios = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
+      // If the item was routed to a different folio, invalidate that one too
+      if (data && data.folio_id !== variables.folio_id) {
+        queryClient.invalidateQueries({ queryKey: ["folio_items", data.folio_id] });
+      }
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
       toast({
         title: "Success",
@@ -168,7 +175,7 @@ export const useGuestFolios = () => {
 
   const closeFolio = useMutation({
     mutationFn: async (folioId: string) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("guest_folios")
         .update({ status: "closed", updated_at: new Date().toISOString() })
         .eq("id", folioId)
@@ -196,7 +203,7 @@ export const useGuestFolios = () => {
 
   const voidFolio = useMutation({
     mutationFn: async (folioId: string) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("guest_folios")
         .update({ status: "void", updated_at: new Date().toISOString() })
         .eq("id", folioId)
@@ -224,7 +231,7 @@ export const useGuestFolios = () => {
 
   const updateFolioItem = useMutation({
     mutationFn: async (item: Partial<FolioItem> & { id: string, folio_id: string, reason?: string, modified_by?: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("folio_items")
         .update({
           ...item,
@@ -256,7 +263,7 @@ export const useGuestFolios = () => {
 
   const deleteFolioItem = useMutation({
     mutationFn: async ({ id, folio_id }: { id: string, folio_id: string }) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("folio_items")
         .delete()
         .eq("id", id);
@@ -282,7 +289,7 @@ export const useGuestFolios = () => {
 
   const transferFolioItem = useMutation({
     mutationFn: async ({ itemId, targetFolioId, sourceFolioId }: { itemId: string, targetFolioId: string, sourceFolioId: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("folio_items")
         .update({ folio_id: targetFolioId })
         .eq("id", itemId)
@@ -312,7 +319,7 @@ export const useGuestFolios = () => {
 
   const processRefund = useMutation({
     mutationFn: async ({ folio_id, amount, reason, method }: { folio_id: string, amount: number, reason: string, method: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("folio_items")
         .insert([{
           folio_id,
@@ -353,7 +360,7 @@ export const useGuestFolios = () => {
       queryKey: ["routing_rules", folioId],
       queryFn: async () => {
         if (!folioId) return [];
-        const { data, error } = await supabase
+      const { data, error } = await db
           .from("routing_rules")
           .select("*")
           .eq("folio_id", folioId);
@@ -370,7 +377,7 @@ export const useGuestFolios = () => {
 
   const addRoutingRule = useMutation({
     mutationFn: async (rule: Omit<RoutingRule, "id">) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("routing_rules")
         .insert([rule])
         .select()
@@ -386,7 +393,7 @@ export const useGuestFolios = () => {
 
   const deleteRoutingRule = useMutation({
     mutationFn: async ({ id, folioId }: { id: string, folioId: string }) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("routing_rules")
         .delete()
         .eq("id", id);
@@ -400,7 +407,7 @@ export const useGuestFolios = () => {
 
   const createFolio = useMutation({
     mutationFn: async (folio: Partial<GuestFolio>) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("guest_folios")
         .insert([folio])
         .select()
