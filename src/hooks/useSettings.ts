@@ -64,6 +64,17 @@ export interface QuickMenuSettings {
   enabled_items: string[];
 }
 
+export interface APIKey {
+  name: string;
+  key: string;
+  description?: string;
+  is_secret: boolean;
+}
+
+export interface APIKeysSettings {
+  keys: APIKey[];
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -118,6 +129,10 @@ const defaultNotificationSettings: NotificationSettings = {
 
 const defaultQuickMenuSettings: QuickMenuSettings = {
   enabled_items: ["1", "4", "5", "6", "12", "13"],
+};
+
+const defaultAPIKeys: APIKeysSettings = {
+  keys: [],
 };
 
 // Generic settings fetch hook
@@ -230,4 +245,12 @@ export function useQuickMenuSettings() {
 
 export function useUpdateQuickMenuSettings() {
   return useUpdateSettings<QuickMenuSettings>("quick_menu");
+}
+
+export function useAPIKeysSettings() {
+  return useSettings<APIKeysSettings>("api_keys", defaultAPIKeys);
+}
+
+export function useUpdateAPIKeysSettings() {
+  return useUpdateSettings<APIKeysSettings>("api_keys");
 }
