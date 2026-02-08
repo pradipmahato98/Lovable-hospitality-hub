@@ -1,6 +1,7 @@
 import { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface MetricCardProps {
   title: string;
@@ -9,6 +10,7 @@ interface MetricCardProps {
   changeType?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
   delay?: number;
+  link?: string;
 }
 
 export function MetricCard({
@@ -18,11 +20,15 @@ export function MetricCard({
   changeType = "neutral",
   icon: Icon,
   delay = 0,
+  link,
 }: MetricCardProps) {
-  return (
+  const content = (
     <Card
       variant="elevated"
-      className="animate-slide-up hover:scale-[1.02] transition-transform"
+      className={cn(
+        "animate-slide-up hover:scale-[1.02] transition-transform",
+        link && "cursor-pointer hover:shadow-glow border-primary/20"
+      )}
       style={{ animationDelay: `${delay}ms` }}
     >
       <CardContent className="p-6">
@@ -50,4 +56,10 @@ export function MetricCard({
       </CardContent>
     </Card>
   );
+
+  if (link) {
+    return <Link to={link}>{content}</Link>;
+  }
+
+  return content;
 }

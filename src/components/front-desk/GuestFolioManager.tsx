@@ -29,7 +29,10 @@ import {
   Edit,
   ArrowRightLeft,
   FileText,
-  Ban
+  Ban,
+  Undo2,
+  Shuffle,
+  Activity
 } from "lucide-react";
 import {
   Dialog,
@@ -64,11 +67,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
 export const GuestFolioManager = () => {
+  const [searchParams] = useSearchParams();
+  const { profile } = useAuth();
   const {
     folios,
     isLoading,
@@ -79,6 +93,10 @@ export const GuestFolioManager = () => {
     deleteFolioItem,
     transferFolioItem,
     createFolio,
+    processRefund,
+    useRoutingRules,
+    addRoutingRule,
+    deleteRoutingRule,
     useFolioItems
   } = useGuestFolios();
   const [selectedFolio, setSelectedFolio] = useState<GuestFolio | null>(null);
@@ -96,6 +114,7 @@ export const GuestFolioManager = () => {
   // Edit Item State
   const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FolioItem | null>(null);
+  const [adjustmentReason, setAdjustmentReason] = useState("");
 
   // Transfer Item State
   const [isTransferItemOpen, setIsTransferItemOpen] = useState(false);
@@ -120,7 +139,42 @@ export const GuestFolioManager = () => {
     reference: ''
   });
 
+  // Refund State
+  const [isRefundOpen, setIsRefundOpen] = useState(false);
+  const [refundDetails, setRefundDetails] = useState({
+    method: 'cash',
+    amount: 0,
+    reason: ''
+  });
+
+  // Routing State
+  const [isRoutingOpen, setIsRoutingOpen] = useState(false);
+  const [newRoutingRule, setNewRoutingRule] = useState({
+    category: 'all' as const,
+    target_folio_id: ''
+  });
+
   const { data: items = [] } = useFolioItems(selectedFolio?.id || "");
+  const { data: routingRules = [] } = useRoutingRules(selectedFolio?.id || "");
+
+  useEffect(() => {
+    if (folios && folios.length > 0 && !selectedFolio) {
+      const folioId = searchParams.get('folioId');
+      const guestId = searchParams.get('guestId');
+      const reservationId = searchParams.get('reservationId');
+
+      if (folioId) {
+        const found = folios.find(f => f.id === folioId);
+        if (found) setSelectedFolio(found);
+      } else if (guestId) {
+        const found = folios.find(f => f.guest_id === guestId);
+        if (found) setSelectedFolio(found);
+      } else if (reservationId) {
+        const found = folios.find(f => f.reservation_id === reservationId);
+        if (found) setSelectedFolio(found);
+      }
+    }
+  }, [folios, searchParams, selectedFolio]);
 
   const handleAddItem = async () => {
     if (!selectedFolio) return;
@@ -141,15 +195,18 @@ export const GuestFolioManager = () => {
   };
 
   const handleUpdateItem = async () => {
-    if (!selectedFolio || !editingItem) return;
+    if (!selectedFolio || !editingItem || !adjustmentReason) return;
 
     await updateFolioItem.mutateAsync({
       ...editingItem,
-      folio_id: selectedFolio.id
+      folio_id: selectedFolio.id,
+      reason: adjustmentReason,
+      modified_by: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown'
     });
 
     setIsEditItemOpen(false);
     setEditingItem(null);
+    setAdjustmentReason("");
   };
 
   const handleTransferItem = async () => {
@@ -202,6 +259,24 @@ export const GuestFolioManager = () => {
     });
   };
 
+  const handleProcessRefund = async () => {
+    if (!selectedFolio || !refundDetails.reason) return;
+
+    await processRefund.mutateAsync({
+      folio_id: selectedFolio.id,
+      amount: refundDetails.amount,
+      reason: refundDetails.reason,
+      method: refundDetails.method
+    });
+
+    setIsRefundOpen(false);
+    setRefundDetails({
+      method: 'cash',
+      amount: 0,
+      reason: ''
+    });
+  };
+
   const handleCreateSubFolio = async () => {
     if (!selectedFolio) return;
 
@@ -211,6 +286,19 @@ export const GuestFolioManager = () => {
       guest_id: selectedFolio.guest_id,
       status: 'open'
     });
+  };
+
+  const handleAddRoutingRule = async () => {
+    if (!selectedFolio || !newRoutingRule.target_folio_id) return;
+
+    await addRoutingRule.mutateAsync({
+      folio_id: selectedFolio.id,
+      category: newRoutingRule.category,
+      target_folio_id: newRoutingRule.target_folio_id,
+      is_active: true
+    });
+
+    setNewRoutingRule({ category: 'all', target_folio_id: '' });
   };
 
   const handlePrint = () => {
@@ -238,9 +326,9 @@ export const GuestFolioManager = () => {
     const searchLower = searchQuery.toLowerCase();
     return (
       folio.folio_number.toLowerCase().includes(searchLower) ||
-      folio.guests?.first_name.toLowerCase().includes(searchLower) ||
-      folio.guests?.last_name.toLowerCase().includes(searchLower) ||
-      folio.rooms?.room_number.toLowerCase().includes(searchLower)
+      (folio.guests?.first_name?.toLowerCase().includes(searchLower) ?? false) ||
+      (folio.guests?.last_name?.toLowerCase().includes(searchLower) ?? false) ||
+      (folio.rooms?.room_number?.toLowerCase().includes(searchLower) ?? false)
     );
   });
 
@@ -286,10 +374,16 @@ export const GuestFolioManager = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{folio.guests?.first_name} {folio.guests?.last_name}</span>
+                    <Link to="/guests" className="ml-auto text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                     <Home className="h-4 w-4" />
                     <span>Room {folio.rooms?.room_number} ({folio.rooms?.room_type})</span>
+                    <Link to="/front-desk" className="ml-auto text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
                   </div>
                   <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
                     <span>Balance:</span>
@@ -349,8 +443,19 @@ export const GuestFolioManager = () => {
                 </div>
 
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-lg">Transaction History</h3>
-                  <div className="flex gap-2">
+                  <Tabs defaultValue="transactions" className="w-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <TabsList>
+                        <TabsTrigger value="transactions" className="gap-2">
+                          <Receipt className="h-4 w-4" />
+                          Transactions
+                        </TabsTrigger>
+                        <TabsTrigger value="activity" className="gap-2">
+                          <Activity className="h-4 w-4" />
+                          Activity Log
+                        </TabsTrigger>
+                      </TabsList>
+                      <div className="flex gap-2">
                     <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
                       <DialogTrigger asChild>
                         <Button size="sm" className="gap-2">
@@ -435,22 +540,23 @@ export const GuestFolioManager = () => {
                       <Ban className="h-4 w-4" />
                       Void Folio
                     </Button>
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => closeFolio.mutate(selectedFolio.id)}
-                      disabled={selectedFolio.status !== 'open'}
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Settle & Close
-                    </Button>
-                  </div>
-                </div>
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => closeFolio.mutate(selectedFolio.id)}
+                          disabled={selectedFolio.status !== 'open'}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Settle & Close
+                        </Button>
+                      </div>
+                    </div>
 
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
+                    <TabsContent value="transactions" className="m-0">
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
                       <TableRow className="bg-secondary/30">
                         <TableHead>Date</TableHead>
                         <TableHead>Description</TableHead>
@@ -521,8 +627,50 @@ export const GuestFolioManager = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </TableBody>
-                  </Table>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="activity" className="m-0">
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-secondary/30">
+                              <TableHead>Time</TableHead>
+                              <TableHead>Action</TableHead>
+                              <TableHead>Reason / Details</TableHead>
+                              <TableHead>User</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {items.filter(i => i.reason).map((item) => (
+                              <TableRow key={`audit-${item.id}`}>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {format(new Date(item.created_at), "MMM dd, HH:mm:ss")}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-[10px]">ADJUSTMENT</Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  <span className="font-medium">{item.description}</span>
+                                  <p className="text-xs text-muted-foreground mt-1">Reason: {item.reason}</p>
+                                </TableCell>
+                                <TableCell className="text-xs font-medium">{item.modified_by || 'System'}</TableCell>
+                              </TableRow>
+                            ))}
+                            {items.filter(i => i.reason).length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground italic">
+                                  No modification activity recorded for this folio.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </CardContent>
             </Card>
@@ -574,6 +722,34 @@ export const GuestFolioManager = () => {
                 </div>
                 <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-gold group-hover:translate-x-1 transition-all" />
               </Card>
+              <Card
+                variant="glass"
+                className="p-4 flex items-center gap-4 group cursor-pointer hover:bg-destructive/5 transition-colors"
+                onClick={() => setIsRefundOpen(true)}
+              >
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
+                  <Undo2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-semibold">Process Refund</h4>
+                  <p className="text-sm text-muted-foreground">Issue a refund for overpayment or cancelled services.</p>
+                </div>
+                <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-destructive group-hover:translate-x-1 transition-all" />
+              </Card>
+              <Card
+                variant="glass"
+                className="p-4 flex items-center gap-4 group cursor-pointer hover:bg-primary/5 transition-colors"
+                onClick={() => setIsRoutingOpen(true)}
+              >
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                  <Shuffle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-semibold">Routing Instructions</h4>
+                  <p className="text-sm text-muted-foreground">Set automated rules for charge distribution.</p>
+                </div>
+                <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </Card>
             </div>
           </div>
         ) : (
@@ -609,11 +785,24 @@ export const GuestFolioManager = () => {
                   onChange={(e) => setEditingItem({...editingItem, amount: parseFloat(e.target.value) || 0})}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Reason for Adjustment *</Label>
+                <Input
+                  placeholder="e.g. Billing error, discount applied"
+                  value={adjustmentReason}
+                  onChange={(e) => setAdjustmentReason(e.target.value)}
+                  className={cn(!adjustmentReason && "border-destructive")}
+                />
+                {!adjustmentReason && <p className="text-[10px] text-destructive">A reason is required for auditing.</p>}
+              </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditItemOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateItem} disabled={updateFolioItem.isPending}>
+            <Button
+              onClick={handleUpdateItem}
+              disabled={updateFolioItem.isPending || !adjustmentReason}
+            >
               {updateFolioItem.isPending ? "Updating..." : "Save Changes"}
             </Button>
           </DialogFooter>
@@ -778,6 +967,147 @@ export const GuestFolioManager = () => {
               <Printer className="h-4 w-4 mr-2" />
               Print Invoice
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Process Refund Dialog */}
+      <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Process Refund</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Refund Method</Label>
+              <Select
+                value={refundDetails.method}
+                onValueChange={(v) => setRefundDetails({...refundDetails, method: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="credit_card">Original Credit Card</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Account</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Refund Amount</Label>
+              <Input
+                type="number"
+                value={refundDetails.amount}
+                onChange={(e) => setRefundDetails({...refundDetails, amount: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Reason for Refund *</Label>
+              <Input
+                placeholder="e.g. Guest overpaid, cancellation"
+                value={refundDetails.reason}
+                onChange={(e) => setRefundDetails({...refundDetails, reason: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRefundOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleProcessRefund}
+              disabled={processRefund.isPending || !refundDetails.reason || refundDetails.amount <= 0}
+              variant="destructive"
+            >
+              {processRefund.isPending ? "Processing..." : "Confirm Refund"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Routing Instructions Dialog */}
+      <Dialog open={isRoutingOpen} onOpenChange={setIsRoutingOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Folio Routing Instructions</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Active Rules</h4>
+              <div className="space-y-2">
+                {routingRules.map((rule) => {
+                  const targetFolio = folios?.find(f => f.id === rule.target_folio_id);
+                  return (
+                    <div key={rule.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border">
+                      <div>
+                        <p className="font-medium capitalize">{rule.category} Charges</p>
+                        <p className="text-xs text-muted-foreground">Route to: {targetFolio?.folio_number || 'Unknown Folio'}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive h-8 w-8 p-0"
+                        onClick={() => deleteRoutingRule.mutate({ id: rule.id, folioId: selectedFolio.id })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+                {routingRules.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic text-center py-4 border border-dashed rounded-lg">
+                    No active routing rules.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="text-sm font-medium">Add New Rule</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={newRoutingRule.category}
+                    onValueChange={(v: any) => setNewRoutingRule({...newRoutingRule, category: v})}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Items</SelectItem>
+                      <SelectItem value="room">Room & Tax</SelectItem>
+                      <SelectItem value="f&b">Food & Beverage</SelectItem>
+                      <SelectItem value="incidentals">Incidentals</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Target Folio</Label>
+                  <Select
+                    value={newRoutingRule.target_folio_id}
+                    onValueChange={(v) => setNewRoutingRule({...newRoutingRule, target_folio_id: v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select folio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {folios?.filter(f => f.id !== selectedFolio?.id).map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.folio_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                className="w-full gap-2"
+                onClick={handleAddRoutingRule}
+                disabled={!newRoutingRule.target_folio_id || addRoutingRule.isPending}
+              >
+                <Plus className="h-4 w-4" />
+                Add Routing Rule
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRoutingOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
