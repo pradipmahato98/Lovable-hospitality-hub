@@ -26,21 +26,61 @@ CREATE TABLE IF NOT EXISTS public.folio_items (
   description TEXT NOT NULL,
   amount NUMERIC NOT NULL,
   reference_id TEXT, -- e.g. pos_transaction_id or payment_ref
+  reason TEXT, -- Reason for adjustment or void
+  modified_by TEXT, -- User who last modified
   created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Ensure columns exist if table was created previously
+ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS modified_by TEXT;
+ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT now();
+
+-- Routing Rules (Automated charge distribution)
+CREATE TABLE IF NOT EXISTS public.routing_rules (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  folio_id UUID NOT NULL REFERENCES public.guest_folios(id) ON DELETE CASCADE,
+  category TEXT NOT NULL, -- 'room', 'tax', 'f&b', 'incidentals', 'all'
+  target_folio_id UUID NOT NULL REFERENCES public.guest_folios(id) ON DELETE CASCADE,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 -- Enable RLS
 ALTER TABLE public.guest_folios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.folio_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.routing_rules ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
-CREATE POLICY "Staff can manage guest_folios" ON public.guest_folios FOR ALL USING (is_staff(auth.uid()));
-CREATE POLICY "Staff can manage folio_items" ON public.folio_items FOR ALL USING (is_staff(auth.uid()));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'guest_folios' AND policyname = 'Staff can manage guest_folios') THEN
+    CREATE POLICY "Staff can manage guest_folios" ON public.guest_folios FOR ALL USING (is_staff(auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'folio_items' AND policyname = 'Staff can manage folio_items') THEN
+    CREATE POLICY "Staff can manage folio_items" ON public.folio_items FOR ALL USING (is_staff(auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'routing_rules' AND policyname = 'Staff can manage routing_rules') THEN
+    CREATE POLICY "Staff can manage routing_rules" ON public.routing_rules FOR ALL USING (is_staff(auth.uid()));
+  END IF;
+END $$;
 
--- Add to Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.guest_folios;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.folio_items;
+-- Add to Realtime (Safe way)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'guest_folios') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.guest_folios;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'folio_items') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.folio_items;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'routing_rules') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.routing_rules;
+  END IF;
+END $$;
 
 -- Function to update folio totals
 CREATE OR REPLACE FUNCTION public.update_folio_totals()
@@ -67,6 +107,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger for folio items
+DROP TRIGGER IF EXISTS tr_update_folio_totals ON public.folio_items;
 CREATE TRIGGER tr_update_folio_totals
 AFTER INSERT OR UPDATE OR DELETE ON public.folio_items
 FOR EACH ROW EXECUTE FUNCTION public.update_folio_totals();
@@ -75,15 +116,17 @@ FOR EACH ROW EXECUTE FUNCTION public.update_folio_totals();
 CREATE OR REPLACE FUNCTION public.generate_folio_number()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.folio_number := 'FOL-' || LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
+  IF NEW.folio_number IS NULL THEN
+    NEW.folio_number := 'FOL-' || LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tr_set_folio_number ON public.guest_folios;
 CREATE TRIGGER tr_set_folio_number
 BEFORE INSERT ON public.guest_folios
 FOR EACH ROW
-WHEN (NEW.folio_number IS NULL)
 EXECUTE FUNCTION public.generate_folio_number();
 
 -- Automatically create folio when reservation status changes to 'checked-in'
@@ -98,6 +141,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tr_auto_create_folio ON public.reservations;
 CREATE TRIGGER tr_auto_create_folio
 AFTER UPDATE ON public.reservations
 FOR EACH ROW EXECUTE FUNCTION public.auto_create_folio();
@@ -127,6 +171,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tr_sync_pos_to_folio ON public.pos_transactions;
 CREATE TRIGGER tr_sync_pos_to_folio
 AFTER INSERT ON public.pos_transactions
 FOR EACH ROW EXECUTE FUNCTION public.sync_pos_to_folio();
