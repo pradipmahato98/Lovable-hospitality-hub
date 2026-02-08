@@ -143,7 +143,8 @@ const Guests = () => {
   const handleAddFeedback = async () => {
     if (!selectedGuest) return;
     try {
-      await createFeedback.mutateAsync({ ...newFeedback, guest_id: selectedGuest.id, status: "pending" } as any);
+      // @ts-expect-error - feedback type in hook might not perfectly match form state
+      await createFeedback.mutateAsync({ ...newFeedback, guest_id: selectedGuest.id, status: "pending" });
       toast.success("Feedback recorded");
       setFeedbackDialogOpen(false);
       setNewFeedback({ feedback_type: "review", department: "", rating: 5, title: "", message: "" });

@@ -201,7 +201,7 @@ export const GuestFolioManager = () => {
       ...editingItem,
       folio_id: selectedFolio.id,
       reason: adjustmentReason,
-      modified_by: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown'
+      modified_by: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Staff' : 'Unknown'
     });
 
     setIsEditItemOpen(false);
@@ -324,10 +324,10 @@ export const GuestFolioManager = () => {
 
   const filteredFolios = folios?.filter(folio => {
     const searchLower = searchQuery.toLowerCase();
+    const guestName = `${folio.guests?.first_name || ''} ${folio.guests?.last_name || ''}`.toLowerCase();
     return (
       folio.folio_number.toLowerCase().includes(searchLower) ||
-      (folio.guests?.first_name?.toLowerCase().includes(searchLower) ?? false) ||
-      (folio.guests?.last_name?.toLowerCase().includes(searchLower) ?? false) ||
+      guestName.includes(searchLower) ||
       (folio.rooms?.room_number?.toLowerCase().includes(searchLower) ?? false)
     );
   });
@@ -472,7 +472,7 @@ export const GuestFolioManager = () => {
                             <Label>Item Type</Label>
                             <Select
                               value={newItem.item_type}
-                              onValueChange={(v: any) => setNewItem({...newItem, item_type: v})}
+                              onValueChange={(v: 'charge' | 'payment' | 'adjustment') => setNewItem({...newItem, item_type: v})}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select type" />
@@ -1068,7 +1068,7 @@ export const GuestFolioManager = () => {
                   <Label>Category</Label>
                   <Select
                     value={newRoutingRule.category}
-                    onValueChange={(v: any) => setNewRoutingRule({...newRoutingRule, category: v})}
+                    onValueChange={(v: 'room' | 'tax' | 'f&b' | 'incidentals' | 'all') => setNewRoutingRule({...newRoutingRule, category: v})}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
