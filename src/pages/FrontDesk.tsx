@@ -57,7 +57,7 @@ const invoiceStatusColors = {
   overdue: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
-const Rooms = () => {
+const FrontDesk = () => {
   const { data: rooms = [], isLoading } = useRooms();
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -145,7 +145,7 @@ const Rooms = () => {
   ];
 
   return (
-    <MainLayout title="Rooms" subtitle="Manage room inventory and billing">
+    <MainLayout title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
@@ -412,4 +412,4 @@ const Rooms = () => {
   );
 };
 
-export default Rooms;
+export default FrontDesk;

@@ -23,6 +23,8 @@ import {
   Wrench,
   DollarSign,
   PartyPopper,
+  ShieldCheck,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -33,16 +35,14 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-  { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: Users, label: "Guests", path: "/guests" },
-  { icon: BedDouble, label: "Rooms", path: "/rooms" },
+  { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
   { icon: Wrench, label: "Engineering", path: "/engineering" },
-  { icon: Receipt, label: "Billing", path: "/billing" },
   { icon: ShoppingCart, label: "POS", path: "/pos" },
   { icon: Package, label: "Inventory", path: "/inventory" },
-  { icon: Globe, label: "Channels", path: "/channels" },
-  { icon: DollarSign, label: "Finance", path: "/finance" },
+  { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance" },
   { icon: PartyPopper, label: "Banquet", path: "/banquet" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
@@ -52,6 +52,7 @@ const adminNavItems = [
   { icon: Users, label: "Staff Management", path: "/staff" },
   { icon: UserCheck, label: "HR", path: "/hr" },
   { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: ShieldCheck, label: "Admin Console", path: "/admin-console" },
   { icon: Code2, label: "Dev Panel", path: "/dev" },
 ];
 
