@@ -104,8 +104,13 @@ export const GuestFolioManager = () => {
 
   // Add Item State
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
-  const [newItem, setNewItem] = useState({
-    item_type: 'charge' as const,
+  const [newItem, setNewItem] = useState<{
+    item_type: 'charge' | 'payment' | 'adjustment';
+    source: string;
+    description: string;
+    amount: number;
+  }>({
+    item_type: 'charge',
     source: 'manual',
     description: '',
     amount: 0
@@ -149,8 +154,11 @@ export const GuestFolioManager = () => {
 
   // Routing State
   const [isRoutingOpen, setIsRoutingOpen] = useState(false);
-  const [newRoutingRule, setNewRoutingRule] = useState({
-    category: 'all' as const,
+  const [newRoutingRule, setNewRoutingRule] = useState<{
+    category: 'room' | 'tax' | 'f&b' | 'incidentals' | 'all';
+    target_folio_id: string;
+  }>({
+    category: 'all',
     target_folio_id: ''
   });
 
