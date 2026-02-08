@@ -25,6 +25,7 @@ import {
   PartyPopper,
   ShieldCheck,
   Terminal,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -51,6 +52,7 @@ const adminNavItems = [
   { icon: UserCog, label: "User Management", path: "/users" },
   { icon: Users, label: "Staff Management", path: "/staff" },
   { icon: UserCheck, label: "HR", path: "/hr" },
+  { icon: Zap, label: "Automation", path: "/automation" },
   { icon: Settings, label: "Settings", path: "/settings" },
   { icon: ShieldCheck, label: "Admin Console", path: "/admin-console" },
   { icon: Code2, label: "Dev Panel", path: "/dev" },

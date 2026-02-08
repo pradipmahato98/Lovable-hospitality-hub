@@ -34,9 +34,9 @@ export interface GuestFolio {
 
 export interface RoutingRule {
   id: string;
-  folio_id: string;
-  category: 'room' | 'tax' | 'f&b' | 'incidentals' | 'all';
+  source_folio_id: string;
   target_folio_id: string;
+  category: 'room' | 'tax' | 'f&b' | 'incidentals' | 'all';
   is_active: boolean;
 }
 
@@ -127,7 +127,7 @@ export const useGuestFolios = () => {
       const { data: rules } = await supabase
         .from("routing_rules")
         .select("*")
-        .eq("folio_id", item.folio_id)
+        .eq("source_folio_id", item.folio_id)
         .eq("is_active", true);
 
       let targetFolioId = item.folio_id;
@@ -135,7 +135,9 @@ export const useGuestFolios = () => {
         const rule = rules.find(r =>
           r.category === 'all' ||
           (r.category === 'room' && item.source === 'room_rate') ||
-          (r.category === 'f&b' && (item.source === 'restaurant' || item.source === 'minibar'))
+          (r.category === 'tax' && item.source === 'tax') ||
+          (r.category === 'f&b' && ['restaurant', 'minibar', 'bar', 'room_service'].includes(item.source)) ||
+          (r.category === 'incidentals' && ['laundry', 'spa', 'phone', 'parking', 'other', 'manual'].includes(item.source))
         );
         if (rule) targetFolioId = rule.target_folio_id;
       }
@@ -356,7 +358,7 @@ export const useGuestFolios = () => {
         const { data, error } = await supabase
           .from("routing_rules")
           .select("*")
-          .eq("folio_id", folioId);
+          .eq("source_folio_id", folioId);
 
         if (error) {
           console.warn("Routing rules table might not exist, returning empty");
@@ -379,13 +381,13 @@ export const useGuestFolios = () => {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["routing_rules", variables.folio_id] });
+      queryClient.invalidateQueries({ queryKey: ["routing_rules", variables.source_folio_id] });
       toast({ title: "Success", description: "Routing rule added." });
     },
   });
 
   const deleteRoutingRule = useMutation({
-    mutationFn: async ({ id, folioId }: { id: string, folioId: string }) => {
+    mutationFn: async ({ id, source_folio_id }: { id: string, source_folio_id: string }) => {
       const { error } = await supabase
         .from("routing_rules")
         .delete()
@@ -393,7 +395,7 @@ export const useGuestFolios = () => {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["routing_rules", variables.folioId] });
+      queryClient.invalidateQueries({ queryKey: ["routing_rules", variables.source_folio_id] });
       toast({ title: "Success", description: "Routing rule removed." });
     },
   });
