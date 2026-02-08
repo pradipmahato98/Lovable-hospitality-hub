@@ -16,6 +16,7 @@ import {
 import {
   Shield,
   Database,
+  Key,
   Cloud,
   CheckCircle2,
   AlertCircle,
@@ -272,6 +273,43 @@ export const MCPConfigPanel = () => {
               >
                 {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
                 Auto-Configure Resources
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Auth Configuration Guide */}
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-primary" />
+              Auth Configuration
+            </CardTitle>
+            <CardDescription>Fixing "missing OAuth secret" errors</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs">
+              <AlertCircle className="h-4 w-4 inline mr-2" />
+              Standard Google OAuth requires manual configuration in your Supabase Dashboard.
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="font-medium">Setup Steps:</p>
+              <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Go to <a href={`https://supabase.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer" className="text-primary hover:underline">Auth Providers</a></li>
+                <li>Find and expand the <span className="font-semibold text-foreground">Google</span> provider.</li>
+                <li>Ensure it is <span className="font-semibold text-foreground">Enabled</span>.</li>
+                <li>Enter your <span className="font-semibold text-foreground">Client ID</span> and <span className="font-semibold text-foreground">Client Secret</span>.</li>
+                <li>Add your app URL to <span className="font-semibold text-foreground">Authorized Redirect URIs</span> in Google Console.</li>
+              </ol>
+            </div>
+
+            <div className="pt-2">
+              <Button variant="gold" className="w-full gap-2" asChild>
+                <a href={`https://supabase.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Configure Google Provider
+                </a>
               </Button>
             </div>
           </CardContent>

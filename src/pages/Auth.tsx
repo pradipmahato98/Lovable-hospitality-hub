@@ -108,10 +108,13 @@ export default function Auth() {
     setIsLoading(false);
 
     if (error) {
+      const isMissingSecret = error.message.includes("missing OAuth secret");
       toast({
         variant: "destructive",
-        title: "Google sign in failed",
-        description: error.message,
+        title: isMissingSecret ? "Configuration Required" : "Google sign in failed",
+        description: isMissingSecret
+          ? "The Google Client Secret is missing in the Supabase dashboard. Please configure it in Auth > Providers > Google."
+          : error.message,
       });
     }
   };
