@@ -159,32 +159,58 @@ const POS = () => {
     setCheckoutOpen(true);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (splitPayment) {
       const splitTotal = splitAmounts.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
       if (Math.abs(splitTotal - total) > 0.01) {
         toast.error(`Split amounts must equal $${total.toFixed(2)}`);
         return;
       }
-      toast.success(`Payment of $${total.toFixed(2)} processed via split payment`);
     } else if (paymentMethod === "room" && !roomChargeRoom) {
       toast.error("Please select a room");
       return;
     } else if (!paymentMethod) {
       toast.error("Please select a payment method");
       return;
-    } else {
+    }
+
+    try {
+      // Insert transaction into database
+      const { data, error } = await supabase
+        .from("pos_transactions")
+        .insert({
+          transaction_number: `POS-${Date.now()}`,
+          table_number: "Counter", // Placeholder for walk-in
+          customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
+          subtotal: subtotal,
+          discount_amount: discountAmount,
+          tax_amount: tax,
+          tip_amount: tipAmount,
+          total: total,
+          payment_method: splitPayment ? "split" : paymentMethod,
+          items_count: cart.reduce((sum, i) => sum + i.quantity, 0),
+          items: cart,
+          room_number: paymentMethod === "room" ? roomChargeRoom : null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
       const methodLabel = paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
       toast.success(`Payment of $${total.toFixed(2)} processed via ${methodLabel}`);
+
+      setCart([]);
+      setCheckoutOpen(false);
+      setDiscountValue("");
+      setTipPercent(0);
+      setPaymentMethod("");
+      setSplitPayment(false);
+      setRoomChargeRoom("");
+      setActiveTab("tables");
+    } catch (error: any) {
+      toast.error(`Failed to process payment: ${error.message}`);
     }
-    
-    setCart([]);
-    setCheckoutOpen(false);
-    setDiscountValue("");
-    setTipPercent(0);
-    setPaymentMethod("");
-    setSplitPayment(false);
-    setRoomChargeRoom("");
   };
 
   return (

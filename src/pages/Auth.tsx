@@ -7,32 +7,47 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Hotel, Mail, Lock, User, Loader2, ArrowLeft } from "lucide-react";
+import { Hotel, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, Phone, KeySquare } from "lucide-react";
 import { z } from "zod";
+import { Progress } from "@/components/ui/progress";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const phoneSchema = z.string().min(10, "Please enter a valid phone number");
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOtpInput, setShowOtpInput] = useState(false);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; phone?: string; confirmPassword?: string }>({});
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
   
-  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithPhone, verifyOTP, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const validateForm = (checkPassword = true) => {
-    const newErrors: { email?: string; password?: string } = {};
+  const validateForm = (checkPassword = true, isSignUp = false) => {
+    const newErrors: { email?: string; password?: string; phone?: string; confirmPassword?: string } = {};
     
-    const emailResult = emailSchema.safeParse(email);
-    if (!emailResult.success) {
-      newErrors.email = emailResult.error.errors[0].message;
+    if (authMethod === "email") {
+      const emailResult = emailSchema.safeParse(email);
+      if (!emailResult.success) {
+        newErrors.email = emailResult.error.errors[0].message;
+      }
+    } else {
+      const phoneResult = phoneSchema.safeParse(phone);
+      if (!phoneResult.success) {
+        newErrors.phone = phoneResult.error.errors[0].message;
+      }
     }
     
     if (checkPassword) {
@@ -40,10 +55,31 @@ export default function Auth() {
       if (!passwordResult.success) {
         newErrors.password = passwordResult.error.errors[0].message;
       }
+
+      if (isSignUp && password !== confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
+      }
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const getPasswordStrength = (pass: string) => {
+    let score = 0;
+    if (!pass) return 0;
+    if (pass.length > 6) score += 20;
+    if (pass.length > 10) score += 20;
+    if (/[A-Z]/.test(pass)) score += 20;
+    if (/[0-9]/.test(pass)) score += 20;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 20;
+    return score;
+  };
+
+  const getStrengthColor = (score: number) => {
+    if (score <= 40) return "bg-destructive";
+    if (score <= 80) return "bg-warning";
+    return "bg-success";
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -73,7 +109,7 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm(true, true)) return;
     
     setIsLoading(true);
     const { error } = await signUp(email, password, firstName, lastName);
@@ -116,6 +152,50 @@ export default function Auth() {
           ? "The Google Client Secret is missing in the Supabase dashboard. Please configure it in Auth > Providers > Google."
           : error.message,
       });
+    }
+  };
+
+  const handlePhoneSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm(false)) return;
+
+    setIsLoading(true);
+    const { error } = await signInWithPhone(phone);
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "OTP Request failed",
+        description: error.message,
+      });
+    } else {
+      setShowOtpInput(true);
+      toast({
+        title: "OTP Sent",
+        description: "Please check your phone for the verification code.",
+      });
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const { error } = await verifyOTP(phone, otp);
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Verification failed",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Welcome!",
+        description: "You have successfully signed in.",
+      });
+      navigate("/");
     }
   };
 
@@ -294,60 +374,147 @@ export default function Auth() {
               </div>
 
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="signin-password">Password</Label>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
-                        onClick={() => setShowForgotPassword(true)}
-                      >
-                        Forgot password?
-                      </Button>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                  </div>
-                  <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      "Sign In"
-                    )}
+                <div className="flex justify-center gap-4 mb-4">
+                  <Button
+                    variant={authMethod === "email" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setAuthMethod("email")}
+                    className="flex-1"
+                  >
+                    Email
                   </Button>
-                </form>
+                  <Button
+                    variant={authMethod === "phone" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setAuthMethod("phone")}
+                    className="flex-1"
+                  >
+                    Phone
+                  </Button>
+                </div>
+
+                {authMethod === "email" ? (
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="signin-email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                      {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signin-password">Password</Label>
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
+                          onClick={() => setShowForgotPassword(true)}
+                        >
+                          Forgot password?
+                        </Button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="signin-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-10 pr-10"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                    </div>
+                    <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={showOtpInput ? handleVerifyOtp : handlePhoneSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-phone">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="signin-phone"
+                          type="tel"
+                          placeholder="+1234567890"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="pl-10"
+                          required
+                          disabled={showOtpInput}
+                        />
+                      </div>
+                      {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
+                    </div>
+
+                    {showOtpInput && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                        <Label htmlFor="otp">Verification Code</Label>
+                        <div className="relative">
+                          <KeySquare className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="otp"
+                            placeholder="123456"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {showOtpInput ? "Verifying..." : "Sending OTP..."}
+                        </>
+                      ) : (
+                        showOtpInput ? "Verify & Sign In" : "Send Login Code"
+                      )}
+                    </Button>
+
+                    {showOtpInput && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setShowOtpInput(false)}
+                      >
+                        Change Phone Number
+                      </Button>
+                    )}
+                  </form>
+                )}
               </TabsContent>
 
               <TabsContent value="signup">
@@ -392,22 +559,63 @@ export default function Auth() {
                     </div>
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="signup-password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10 pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+
+                    {password && (
+                      <div className="space-y-1.5 mt-2">
+                        <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold">
+                          <span>Strength</span>
+                          <span className={getPasswordStrength(password) > 60 ? "text-success" : "text-muted-foreground"}>
+                            {getPasswordStrength(password) <= 40 ? "Weak" : getPasswordStrength(password) <= 80 ? "Medium" : "Strong"}
+                          </span>
+                        </div>
+                        <Progress
+                          value={getPasswordStrength(password)}
+                          className={`h-1 ${getStrengthColor(getPasswordStrength(password))}`}
+                        />
+                      </div>
+                    )}
+                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="confirm-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         className="pl-10"
                         required
                       />
                     </div>
-                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                    {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                   </div>
+
                   <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
