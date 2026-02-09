@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfWeek, eachDayOfInterval, isSameDay, isWithinInterval, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, eachDayOfInterval, isSameDay, isWithinInterval, parseISO, startOfDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CheckInOutDialog } from "./CheckInOutDialog";
@@ -49,6 +49,27 @@ export function ReservationCalendar() {
   const [dialogMode, setDialogMode] = useState<"walk-in" | "check-in" | "check-out">("check-in");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [draggedReservation, setDraggedReservation] = useState<string | null>(null);
+
+  // Performance optimization: Pre-group and pre-parse reservations to avoid O(N) lookups in every cell
+  const processedReservations = useMemo(() => {
+    const map: Record<string, (Reservation & { _checkIn: Date; _checkOutEnd: Date; _checkOut: Date })[]> = {};
+    reservations.forEach((res) => {
+      const roomNum = res.room?.room_number;
+      if (!roomNum) return;
+      if (!map[roomNum]) map[roomNum] = [];
+
+      const checkIn = startOfDay(parseISO(res.check_in_date));
+      const checkOut = startOfDay(parseISO(res.check_out_date));
+
+      map[roomNum].push({
+        ...res,
+        _checkIn: checkIn,
+        _checkOut: checkOut,
+        _checkOutEnd: addDays(checkOut, -1), // Reservations end the day before checkout
+      });
+    });
+    return map;
+  }, [reservations]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({
@@ -96,22 +117,29 @@ export function ReservationCalendar() {
     setIsLoading(false);
   };
 
+  /**
+   * Performance-optimized lookup for reservations in a specific cell.
+   * Reduced from O(N) to O(N/R) by pre-grouping by room.
+   */
   const getReservationsForRoomAndDate = (roomNumber: string, date: Date) => {
-    return reservations.filter((res) => {
-      if (res.room?.room_number !== roomNumber) return false;
-      const checkIn = parseISO(res.check_in_date);
-      const checkOut = parseISO(res.check_out_date);
-      return isWithinInterval(date, { start: checkIn, end: addDays(checkOut, -1) }) ||
-             isSameDay(date, checkIn);
-    });
+    const roomRes = processedReservations[roomNumber];
+    if (!roomRes) return [];
+
+    const normalizedDate = startOfDay(date);
+    return roomRes.filter((res) =>
+      isWithinInterval(normalizedDate, { start: res._checkIn, end: res._checkOutEnd }) ||
+      isSameDay(normalizedDate, res._checkIn)
+    );
   };
 
-  const isCheckInDate = (reservation: Reservation, date: Date) => {
-    return isSameDay(parseISO(reservation.check_in_date), date);
+  const isCheckInDate = (reservation: Reservation | (Reservation & { _checkIn: Date }), date: Date) => {
+    const checkIn = "_checkIn" in reservation ? reservation._checkIn : parseISO(reservation.check_in_date);
+    return isSameDay(checkIn, date);
   };
 
-  const isCheckOutDate = (reservation: Reservation, date: Date) => {
-    return isSameDay(parseISO(reservation.check_out_date), date);
+  const isCheckOutDate = (reservation: Reservation | (Reservation & { _checkOut: Date }), date: Date) => {
+    const checkOut = "_checkOut" in reservation ? reservation._checkOut : parseISO(reservation.check_out_date);
+    return isSameDay(checkOut, date);
   };
 
   const handleDragStart = (e: React.DragEvent, reservationId: string) => {
