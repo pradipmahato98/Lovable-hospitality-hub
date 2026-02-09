@@ -29,7 +29,8 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend
+  Legend,
+  CartesianGrid
 } from "recharts";
 import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 import { toast } from "sonner";

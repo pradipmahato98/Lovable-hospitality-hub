@@ -2756,6 +2756,111 @@ export type Database = {
         }
         Relationships: []
       }
+      front_desk_queue: {
+        Row: {
+          id: string
+          guest_name: string
+          guest_id: string | null
+          reservation_id: string | null
+          requested_room_type: string | null
+          status: string
+          priority: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          guest_name: string
+          guest_id?: string | null
+          reservation_id?: string | null
+          requested_room_type?: string | null
+          status?: string
+          priority?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          guest_name?: string
+          guest_id?: string | null
+          reservation_id?: string | null
+          requested_room_type?: string | null
+          status?: string
+          priority?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "front_desk_queue_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "front_desk_queue_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      guest_messages: {
+        Row: {
+          id: string
+          guest_id: string
+          room_id: string | null
+          sender_name: string
+          message_text: string
+          status: string
+          message_type: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          guest_id: string
+          room_id?: string | null
+          sender_name: string
+          message_text: string
+          status?: string
+          message_type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          guest_id?: string
+          room_id?: string | null
+          sender_name?: string
+          message_text?: string
+          status?: string
+          message_type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_messages_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
