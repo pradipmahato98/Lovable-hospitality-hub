@@ -254,3 +254,11 @@ export function useAPIKeysSettings() {
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
 }
+
+export function useBusinessDate() {
+  return useSettings<string>("business_date", new Date().toISOString().split("T")[0]);
+}
+
+export function useUpdateBusinessDate() {
+  return useUpdateSettings<string>("business_date");
+}
