@@ -361,17 +361,17 @@ export function useLedger(
         `);
 
       // Filter by posted status via the inner join
-      q = q.eq("journal_entries.is_posted", true);
+      q = q.eq("journal_entry.is_posted", true);
 
       if (accountId) {
         q = q.eq("account_id", accountId);
       }
 
       if (filters?.startDate) {
-        q = q.gte("journal_entries.date", filters.startDate);
+        q = q.gte("journal_entry.date", filters.startDate);
       }
       if (filters?.endDate) {
-        q = q.lte("journal_entries.date", filters.endDate);
+        q = q.lte("journal_entry.date", filters.endDate);
       }
 
       // Order by created_at as a fallback, but we'll sort in memory by date
