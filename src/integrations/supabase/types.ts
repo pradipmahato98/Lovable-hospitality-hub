@@ -2690,6 +2690,72 @@ export type Database = {
           }
         ]
       }
+      night_audit_logs: {
+        Row: {
+          id: string
+          business_date: string
+          performed_by: string | null
+          status: string
+          total_charges_posted: number | null
+          total_room_revenue: number | null
+          occupancy_rate: number | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_date: string
+          performed_by?: string | null
+          status?: string
+          total_charges_posted?: number | null
+          total_room_revenue?: number | null
+          occupancy_rate?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_date?: string
+          performed_by?: string | null
+          status?: string
+          total_charges_posted?: number | null
+          total_room_revenue?: number | null
+          occupancy_rate?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      day_close_logs: {
+        Row: {
+          id: string
+          business_date: string
+          performed_by: string | null
+          total_revenue: number | null
+          dept_summaries: Json | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_date: string
+          performed_by?: string | null
+          total_revenue?: number | null
+          dept_summaries?: Json | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_date?: string
+          performed_by?: string | null
+          total_revenue?: number | null
+          dept_summaries?: Json | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2703,6 +2769,10 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      post_daily_room_charges: {
+        Args: { v_business_date: string }
+        Returns: { posted_count: number; total_revenue: number }[]
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "staff" | "user"

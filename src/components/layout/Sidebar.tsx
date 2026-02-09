@@ -25,6 +25,8 @@ import {
   PartyPopper,
   ShieldCheck,
   Terminal,
+  Moon,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -45,6 +47,11 @@ const navItems = [
   { icon: DollarSign, label: "Finance/Account", path: "/finance" },
   { icon: PartyPopper, label: "Banquet", path: "/banquet" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
+];
+
+const operationsNavItems = [
+  { icon: Moon, label: "Night Audit", path: "/night-audit" },
+  { icon: Lock, label: "Day Close", path: "/day-close" },
 ];
 
 const adminNavItems = [
@@ -118,6 +125,35 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
         {navItems.map(renderNavItem)}
+
+        {/* Operations Section */}
+        {(!collapsed || isMobile) && (
+          <div className="mt-4 mb-2 px-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Operations
+            </p>
+          </div>
+        )}
+        {operationsNavItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={onNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-sidebar-accent text-primary shadow-glow"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+                collapsed && !isMobile && "justify-center px-2"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+              {(!collapsed || isMobile) && <span>{item.label}</span>}
+            </Link>
+          );
+        })}
         
         {/* Admin Section */}
         {isAdmin && (
