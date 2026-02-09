@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText } from "lucide-react";
+import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
+import { QueueManager } from "@/components/front-desk/QueueManager";
+import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -162,6 +164,14 @@ const FrontDesk = () => {
               <FileText className="h-4 w-4" />
               Guest Folios
             </TabsTrigger>
+            <TabsTrigger value="queue" className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Queue
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Messages
+            </TabsTrigger>
           </TabsList>
 
           {/* Rooms Tab */}
@@ -314,6 +324,16 @@ const FrontDesk = () => {
           {/* Guest Folios Tab */}
           <TabsContent value="folios">
             <GuestFolioManager />
+          </TabsContent>
+
+          {/* Queue Tab */}
+          <TabsContent value="queue">
+            <QueueManager />
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages">
+            <FrontDeskMessages />
           </TabsContent>
 
           {/* Billing Tab */}

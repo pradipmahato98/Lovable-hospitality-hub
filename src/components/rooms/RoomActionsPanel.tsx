@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
+import { useHousekeepingTasks } from "@/hooks/useHousekeeping";
 
 type Room = Tables<"rooms">;
 
@@ -44,6 +45,7 @@ interface RoomActionsPanelProps {
 }
 
 export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActionsPanelProps) {
+  const { createTask } = useHousekeepingTasks();
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [currentAction, setCurrentAction] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -76,29 +78,61 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
     setActionDialogOpen(true);
   };
 
-  const executeAction = () => {
-    switch (currentAction) {
-      case "cleaning":
-        toast.success(`Room ${room.room_number} marked for cleaning`);
-        break;
-      case "maintenance":
-        toast.success(`Maintenance request created for Room ${room.room_number}`);
-        break;
-      case "available":
-        toast.success(`Room ${room.room_number} is now available`);
-        break;
-      case "block":
-        toast.success(`Room ${room.room_number} has been blocked`);
-        break;
-      case "price":
-        toast.success(`Price updated for Room ${room.room_number}`);
-        break;
-      case "message":
-        toast.success(`Message sent regarding Room ${room.room_number}`);
-        break;
-      case "transfer":
-        toast.success(`Guest transfer initiated from Room ${room.room_number}`);
-        break;
+  const executeAction = async () => {
+    try {
+      switch (currentAction) {
+        case "cleaning":
+          await createTask.mutateAsync({
+            room_id: room.id,
+            task_type: "housekeeping",
+            priority: priority,
+            status: "pending",
+            scheduled_date: new Date().toISOString().split("T")[0],
+            scheduled_time: null,
+            assigned_to: null,
+            started_at: null,
+            completed_at: null,
+            notes: notes,
+            inspection_notes: null,
+            inspection_score: null,
+          });
+          toast.success(`Room ${room.room_number} marked for cleaning`);
+          break;
+        case "maintenance":
+          await createTask.mutateAsync({
+            room_id: room.id,
+            task_type: "maintenance",
+            priority: priority,
+            status: "pending",
+            scheduled_date: new Date().toISOString().split("T")[0],
+            scheduled_time: null,
+            assigned_to: null,
+            started_at: null,
+            completed_at: null,
+            notes: notes,
+            inspection_notes: null,
+            inspection_score: null,
+          });
+          toast.success(`Maintenance request created for Room ${room.room_number}`);
+          break;
+        case "available":
+          toast.success(`Room ${room.room_number} is now available`);
+          break;
+        case "block":
+          toast.success(`Room ${room.room_number} has been blocked`);
+          break;
+        case "price":
+          toast.success(`Price updated for Room ${room.room_number}`);
+          break;
+        case "message":
+          toast.success(`Message sent regarding Room ${room.room_number}`);
+          break;
+        case "transfer":
+          toast.success(`Guest transfer initiated from Room ${room.room_number}`);
+          break;
+      }
+    } catch (error) {
+      toast.error("Action failed");
     }
     setActionDialogOpen(false);
     setNotes("");

@@ -1,15 +1,16 @@
 -- ============================================
--- GUEST FOLIOS SCHEMA
+-- GUEST FOLIOS SUBSYSTEM v4
+-- Force schema cache refresh
 -- ============================================
 
--- Guest Folios (Main record for a guest's stay billing)
+-- 1. Create Tables
 CREATE TABLE IF NOT EXISTS public.guest_folios (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   reservation_id UUID REFERENCES public.reservations(id) ON DELETE SET NULL,
   room_id UUID REFERENCES public.rooms(id) ON DELETE SET NULL,
   guest_id UUID REFERENCES public.guests(id) ON DELETE SET NULL,
   folio_number TEXT NOT NULL UNIQUE,
-  status TEXT NOT NULL DEFAULT 'open', -- 'open', 'closed', 'void'
+  status TEXT NOT NULL DEFAULT 'open',
   total_charges NUMERIC NOT NULL DEFAULT 0,
   total_payments NUMERIC NOT NULL DEFAULT 0,
   balance NUMERIC NOT NULL DEFAULT 0,
@@ -17,72 +18,60 @@ CREATE TABLE IF NOT EXISTS public.guest_folios (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Folio Items (Individual transactions)
 CREATE TABLE IF NOT EXISTS public.folio_items (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   folio_id UUID NOT NULL REFERENCES public.guest_folios(id) ON DELETE CASCADE,
-  item_type TEXT NOT NULL, -- 'charge', 'payment', 'adjustment'
-  source TEXT NOT NULL, -- 'room_rate', 'pos', 'manual', 'laundry', 'minibar', 'other'
+  item_type TEXT NOT NULL,
+  source TEXT NOT NULL,
   description TEXT NOT NULL,
   amount NUMERIC NOT NULL,
-  reference_id TEXT, -- e.g. pos_transaction_id or payment_ref
-  reason TEXT, -- Reason for adjustment or void
-  modified_by TEXT, -- User who last modified
-  created_by UUID REFERENCES auth.users(id),
+  reference_id TEXT,
+  reason TEXT,
+  modified_by TEXT,
+  created_by UUID,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Ensure columns exist if table was created previously
-ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS reason TEXT;
-ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS modified_by TEXT;
-ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT now();
-
--- Routing Rules (Automated charge distribution)
 CREATE TABLE IF NOT EXISTS public.routing_rules (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   folio_id UUID NOT NULL REFERENCES public.guest_folios(id) ON DELETE CASCADE,
-  category TEXT NOT NULL, -- 'room', 'tax', 'f&b', 'incidentals', 'all'
+  category TEXT NOT NULL,
   target_folio_id UUID NOT NULL REFERENCES public.guest_folios(id) ON DELETE CASCADE,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Enable RLS
+-- 2. Ensure columns for existing tables (in case of partial migration)
+DO $$
+BEGIN
+    ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS reason TEXT;
+    EXCEPTION WHEN others THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    ALTER TABLE public.folio_items ADD COLUMN IF NOT EXISTS modified_by TEXT;
+    EXCEPTION WHEN others THEN NULL;
+END $$;
+
+-- 3. Enable RLS
 ALTER TABLE public.guest_folios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.folio_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.routing_rules ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'guest_folios' AND policyname = 'Staff can manage guest_folios') THEN
-    CREATE POLICY "Staff can manage guest_folios" ON public.guest_folios FOR ALL USING (is_staff(auth.uid()));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'folio_items' AND policyname = 'Staff can manage folio_items') THEN
-    CREATE POLICY "Staff can manage folio_items" ON public.folio_items FOR ALL USING (is_staff(auth.uid()));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'routing_rules' AND policyname = 'Staff can manage routing_rules') THEN
-    CREATE POLICY "Staff can manage routing_rules" ON public.routing_rules FOR ALL USING (is_staff(auth.uid()));
-  END IF;
-END $$;
+-- 4. RLS Policies
+DROP POLICY IF EXISTS "Staff can manage guest_folios" ON public.guest_folios;
+CREATE POLICY "Staff can manage guest_folios" ON public.guest_folios FOR ALL USING (public.is_staff(auth.uid()));
 
--- Add to Realtime (Safe way)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'guest_folios') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.guest_folios;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'folio_items') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.folio_items;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'routing_rules') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.routing_rules;
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Staff can manage folio_items" ON public.folio_items;
+CREATE POLICY "Staff can manage folio_items" ON public.folio_items FOR ALL USING (public.is_staff(auth.uid()));
 
--- Function to update folio totals
+DROP POLICY IF EXISTS "Staff can manage routing_rules" ON public.routing_rules;
+CREATE POLICY "Staff can manage routing_rules" ON public.routing_rules FOR ALL USING (public.is_staff(auth.uid()));
+
+-- 5. Functions & Triggers
 CREATE OR REPLACE FUNCTION public.update_folio_totals()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -106,13 +95,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger for folio items
 DROP TRIGGER IF EXISTS tr_update_folio_totals ON public.folio_items;
 CREATE TRIGGER tr_update_folio_totals
 AFTER INSERT OR UPDATE OR DELETE ON public.folio_items
 FOR EACH ROW EXECUTE FUNCTION public.update_folio_totals();
 
--- Function to generate folio number
 CREATE OR REPLACE FUNCTION public.generate_folio_number()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -126,10 +113,8 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS tr_set_folio_number ON public.guest_folios;
 CREATE TRIGGER tr_set_folio_number
 BEFORE INSERT ON public.guest_folios
-FOR EACH ROW
-EXECUTE FUNCTION public.generate_folio_number();
+FOR EACH ROW EXECUTE FUNCTION public.generate_folio_number();
 
--- Automatically create folio when reservation status changes to 'checked-in'
 CREATE OR REPLACE FUNCTION public.auto_create_folio()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -146,7 +131,6 @@ CREATE TRIGGER tr_auto_create_folio
 AFTER UPDATE ON public.reservations
 FOR EACH ROW EXECUTE FUNCTION public.auto_create_folio();
 
--- Sync POS transactions to folio if room_number is provided
 CREATE OR REPLACE FUNCTION public.sync_pos_to_folio()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -154,14 +138,8 @@ DECLARE
   v_folio_id UUID;
 BEGIN
   IF NEW.room_number IS NOT NULL AND NEW.room_number != '' THEN
-    -- Find active folio for this room
     SELECT r.id INTO v_room_id FROM public.rooms r WHERE r.room_number = NEW.room_number LIMIT 1;
-
-    SELECT f.id INTO v_folio_id
-    FROM public.guest_folios f
-    WHERE f.room_id = v_room_id AND f.status = 'open'
-    ORDER BY f.created_at DESC LIMIT 1;
-
+    SELECT f.id INTO v_folio_id FROM public.guest_folios f WHERE f.room_id = v_room_id AND f.status = 'open' ORDER BY f.created_at DESC LIMIT 1;
     IF v_folio_id IS NOT NULL THEN
       INSERT INTO public.folio_items (folio_id, item_type, source, description, amount, reference_id)
       VALUES (v_folio_id, 'charge', 'pos', 'POS Transaction: ' || NEW.transaction_number, NEW.total, NEW.id::TEXT);
@@ -176,9 +154,17 @@ CREATE TRIGGER tr_sync_pos_to_folio
 AFTER INSERT ON public.pos_transactions
 FOR EACH ROW EXECUTE FUNCTION public.sync_pos_to_folio();
 
--- Seed some sample folios for existing checked-in reservations
-INSERT INTO public.guest_folios (reservation_id, room_id, guest_id)
-SELECT id, room_id, guest_id
-FROM public.reservations
-WHERE status = 'checked-in'
-ON CONFLICT DO NOTHING;
+-- 6. Publication (Realtime) - Use DO block for safety
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.guest_folios;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.folio_items;
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.routing_rules;
+    END IF;
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
+
+-- Force PostgREST to reload schema cache
+NOTIFY pgrst, 'reload schema';

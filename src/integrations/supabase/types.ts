@@ -2528,6 +2528,339 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_folios: {
+        Row: {
+          id: string
+          reservation_id: string | null
+          room_id: string | null
+          guest_id: string | null
+          folio_number: string
+          status: string
+          total_charges: number
+          total_payments: number
+          balance: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          reservation_id?: string | null
+          room_id?: string | null
+          guest_id?: string | null
+          folio_number?: string
+          status?: string
+          total_charges?: number
+          total_payments?: number
+          balance?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          reservation_id?: string | null
+          room_id?: string | null
+          guest_id?: string | null
+          folio_number?: string
+          status?: string
+          total_charges?: number
+          total_payments?: number
+          balance?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_folios_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_folios_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_folios_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      folio_items: {
+        Row: {
+          id: string
+          folio_id: string
+          item_type: string
+          source: string
+          description: string
+          amount: number
+          reference_id: string | null
+          reason: string | null
+          modified_by: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          folio_id: string
+          item_type: string
+          source: string
+          description: string
+          amount: number
+          reference_id?: string | null
+          reason?: string | null
+          modified_by?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          folio_id?: string
+          item_type?: string
+          source?: string
+          description?: string
+          amount?: number
+          reference_id?: string | null
+          reason?: string | null
+          modified_by?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folio_items_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "guest_folios"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      routing_rules: {
+        Row: {
+          id: string
+          folio_id: string
+          category: string
+          target_folio_id: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          folio_id: string
+          category: string
+          target_folio_id: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          folio_id?: string
+          category?: string
+          target_folio_id?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routing_rules_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "guest_folios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routing_rules_target_folio_id_fkey"
+            columns: ["target_folio_id"]
+            isOneToOne: false
+            referencedRelation: "guest_folios"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      night_audit_logs: {
+        Row: {
+          id: string
+          business_date: string
+          performed_by: string | null
+          status: string
+          total_charges_posted: number | null
+          total_room_revenue: number | null
+          occupancy_rate: number | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_date: string
+          performed_by?: string | null
+          status?: string
+          total_charges_posted?: number | null
+          total_room_revenue?: number | null
+          occupancy_rate?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_date?: string
+          performed_by?: string | null
+          status?: string
+          total_charges_posted?: number | null
+          total_room_revenue?: number | null
+          occupancy_rate?: number | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      day_close_logs: {
+        Row: {
+          id: string
+          business_date: string
+          performed_by: string | null
+          total_revenue: number | null
+          dept_summaries: Json | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_date: string
+          performed_by?: string | null
+          total_revenue?: number | null
+          dept_summaries?: Json | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_date?: string
+          performed_by?: string | null
+          total_revenue?: number | null
+          dept_summaries?: Json | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      front_desk_queue: {
+        Row: {
+          id: string
+          guest_name: string
+          guest_id: string | null
+          reservation_id: string | null
+          requested_room_type: string | null
+          status: string
+          priority: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          guest_name: string
+          guest_id?: string | null
+          reservation_id?: string | null
+          requested_room_type?: string | null
+          status?: string
+          priority?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          guest_name?: string
+          guest_id?: string | null
+          reservation_id?: string | null
+          requested_room_type?: string | null
+          status?: string
+          priority?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "front_desk_queue_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "front_desk_queue_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      guest_messages: {
+        Row: {
+          id: string
+          guest_id: string
+          room_id: string | null
+          sender_name: string
+          message_text: string
+          status: string
+          message_type: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          guest_id: string
+          room_id?: string | null
+          sender_name: string
+          message_text: string
+          status?: string
+          message_type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          guest_id?: string
+          room_id?: string | null
+          sender_name?: string
+          message_text?: string
+          status?: string
+          message_type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_messages_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2541,6 +2874,10 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      post_daily_room_charges: {
+        Args: { v_business_date: string }
+        Returns: { posted_count: number; total_revenue: number }[]
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "staff" | "user"

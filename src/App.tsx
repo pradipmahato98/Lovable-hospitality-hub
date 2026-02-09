@@ -29,6 +29,8 @@ import POSReports from "./pages/POSReports";
 import KitchenDisplay from "./pages/KitchenDisplay";
 import HR from "./pages/HR";
 import ChannelManager from "./pages/ChannelManager";
+import NightAudit from "./pages/NightAudit";
+import DayClose from "./pages/DayClose";
 import Housekeeping from "./pages/Housekeeping";
 import Engineering from "./pages/Engineering";
 import StaffManagement from "./pages/StaffManagement";
@@ -61,6 +63,8 @@ const App = () => (
                 <Route path="/pos/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/channel-manager" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
+                <Route path="/night-audit" element={<ProtectedRoute><NightAudit /></ProtectedRoute>} />
+                <Route path="/day-close" element={<ProtectedRoute><DayClose /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
