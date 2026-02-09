@@ -44,6 +44,12 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
+  Send,
+  History,
+  Layers,
+  Clock,
+  Calendar,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -56,6 +62,7 @@ import {
   useTrialBalance,
   Account,
 } from "@/hooks/useFinance";
+import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
 
@@ -69,6 +76,17 @@ const accountTypeColors: Record<string, string> = {
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState("accounts");
+  const [accountCategory, setAccountCategory] = useState("all");
+  const [postingTab, setPostingTab] = useState("new");
+  const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
+  const [postingDialogOpen, setPostingDialogOpen] = useState(false);
+  const [quickPost, setQuickPost] = useState({
+    account_id: "",
+    contra_account_id: "",
+    amount: 0,
+    type: "debit" as "debit" | "credit",
+    description: "",
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
@@ -101,13 +119,17 @@ export default function Finance() {
   const postJournalEntry = usePostJournalEntry();
   const { data: ledgerData, isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
   const { data: trialBalance, isLoading: trialBalanceLoading } = useTrialBalance();
+  const { data: businessDate } = useBusinessDate();
+  const updateBusinessDate = useUpdateBusinessDate();
 
   // Filtered accounts
-  const filteredAccounts = accounts.filter(
-    (a) =>
+  const filteredAccounts = accounts.filter((a) => {
+    const matchesSearch =
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      a.code.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = accountCategory === "all" || a.type === accountCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   // Calculate totals for metrics
   const totalDebits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
@@ -192,6 +214,65 @@ export default function Finance() {
     }
   };
 
+  const handleQuickPost = async () => {
+    if (!quickPost.account_id || !quickPost.contra_account_id || !quickPost.amount || !quickPost.description) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      const lines = [
+        {
+          account_id: quickPost.account_id,
+          debit: quickPost.type === "debit" ? quickPost.amount : 0,
+          credit: quickPost.type === "credit" ? quickPost.amount : 0,
+        },
+        {
+          account_id: quickPost.contra_account_id,
+          debit: quickPost.type === "credit" ? quickPost.amount : 0,
+          credit: quickPost.type === "debit" ? quickPost.amount : 0,
+        },
+      ];
+
+      const entry = await createJournalEntry.mutateAsync({
+        date: businessDate || new Date().toISOString().split("T")[0],
+        description: quickPost.description,
+        lines: lines,
+      });
+
+      // Auto-post the journal entry
+      await postJournalEntry.mutateAsync(entry.id);
+
+      toast.success("Transaction posted successfully");
+      setPostingDialogOpen(false);
+      setQuickPost({
+        account_id: "",
+        contra_account_id: "",
+        amount: 0,
+        type: "debit",
+        description: "",
+      });
+    } catch (error) {
+      toast.error("Failed to post transaction");
+    }
+  };
+
+  const handleDayClose = async () => {
+    if (!businessDate) return;
+
+    const currentDate = new Date(businessDate);
+    currentDate.setDate(currentDate.getDate() + 1);
+    const nextDate = currentDate.toISOString().split("T")[0];
+
+    try {
+      await updateBusinessDate.mutateAsync(nextDate);
+      toast.success(`Business day closed. New date: ${nextDate}`);
+      setIsDayCloseDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to close business day");
+    }
+  };
+
   const addJournalLine = () => {
     setNewJournalEntry((prev) => ({
       ...prev,
@@ -209,7 +290,10 @@ export default function Finance() {
   };
 
   return (
-    <MainLayout title="Finance" subtitle="Chart of accounts, journal entries, and ledger">
+    <MainLayout
+      title="Finance"
+      subtitle={`Chart of accounts, journal entries, and ledger | Business Date: ${businessDate || "Loading..."}`}
+    >
       <div className="space-y-6">
         {/* Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -283,6 +367,10 @@ export default function Finance() {
                 <Scale className="h-4 w-4" />
                 Trial Balance
               </TabsTrigger>
+              <TabsTrigger value="posting" className="gap-2">
+                <Send className="h-4 w-4" />
+                Transaction Posting
+              </TabsTrigger>
               <TabsTrigger value="reports" className="gap-2">
                 <DollarSign className="h-4 w-4" />
                 Reports
@@ -292,20 +380,47 @@ export default function Finance() {
 
           {/* Chart of Accounts */}
           <TabsContent value="accounts" className="space-y-4">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search accounts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <Tabs value={accountCategory} onValueChange={setAccountCategory} className="w-auto">
+                <TabsList className="bg-secondary/50">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="asset">Assets</TabsTrigger>
+                  <TabsTrigger value="liability">Liabilities</TabsTrigger>
+                  <TabsTrigger value="equity">Equity</TabsTrigger>
+                  <TabsTrigger value="revenue">Revenue</TabsTrigger>
+                  <TabsTrigger value="expense">Expenses</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-center gap-2">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search accounts..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setIsDayCloseDialogOpen(true)}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Day Close
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPostingDialogOpen(true)} className="gap-2">
+                    <Send className="h-4 w-4" />
+                    Quick Post
+                  </Button>
+                  <Button size="sm" onClick={() => setAccountDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
+                </div>
               </div>
-              <Button onClick={() => setAccountDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Account
-              </Button>
             </div>
 
             <Card>
@@ -606,12 +721,327 @@ export default function Finance() {
             </Card>
           </TabsContent>
 
+          {/* Transaction Posting */}
+          <TabsContent value="posting" className="space-y-4">
+            <Tabs value={postingTab} onValueChange={setPostingTab}>
+              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+                <TabsTrigger value="new" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Posting
+                </TabsTrigger>
+                <TabsTrigger value="bulk" className="gap-2">
+                  <Layers className="h-4 w-4" />
+                  Bulk Posting
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="gap-2">
+                  <Clock className="h-4 w-4" />
+                  Pending
+                </TabsTrigger>
+                <TabsTrigger value="history" className="gap-2">
+                  <History className="h-4 w-4" />
+                  History
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="new" className="mt-4 space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Single Transaction Posting</CardTitle>
+                    <CardDescription>Post a manual transaction to the general ledger</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Main Account</Label>
+                          <Select
+                            value={quickPost.account_id}
+                            onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Contra Account (Offset)</Label>
+                          <Select
+                            value={quickPost.contra_account_id}
+                            onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select offset account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Amount ($)</Label>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              value={quickPost.amount || ""}
+                              onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Action</Label>
+                            <Select
+                              value={quickPost.type}
+                              onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="debit">Debit Main</SelectItem>
+                                <SelectItem value="credit">Credit Main</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Input
+                            placeholder="e.g., Manual utility payment"
+                            value={quickPost.description}
+                            onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Date</Label>
+                          <Input type="date" value={businessDate || new Date().toISOString().slice(0, 10)} readOnly />
+                        </div>
+                        <div className="pt-4">
+                          <Button
+                            className="w-full gap-2"
+                            onClick={handleQuickPost}
+                            disabled={createJournalEntry.isPending}
+                          >
+                            <Send className="h-4 w-4" />
+                            {createJournalEntry.isPending ? "Posting..." : "Post Transaction"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="bulk" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bulk Transaction Posting</CardTitle>
+                    <CardDescription>Upload a CSV or Excel file to post multiple transactions</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
+                    <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                    <p className="text-sm text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
+                    <Button variant="outline" className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Select File
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="pending" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pending Postings</CardTitle>
+                    <CardDescription>Transactions waiting for review and approval</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No pending postings found.
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Posting History</CardTitle>
+                    <CardDescription>Recent manual and bulk posting activities</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Items</TableHead>
+                          <TableHead className="text-right">Total Value</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No posting history available.
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
           {/* Financial Reports */}
           <TabsContent value="reports" className="space-y-4">
             <FinancialStatements />
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Quick Posting Dialog */}
+      <Dialog open={postingDialogOpen} onOpenChange={setPostingDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Quick Transaction Posting</DialogTitle>
+            <DialogDescription>Directly post a transaction between two accounts</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select
+                value={quickPost.account_id}
+                onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.code} - {acc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Contra Account</Label>
+              <Select
+                value={quickPost.contra_account_id}
+                onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select offset account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.code} - {acc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amount</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={quickPost.amount || ""}
+                  onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select
+                  value={quickPost.type}
+                  onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="debit">Debit</SelectItem>
+                    <SelectItem value="credit">Credit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                placeholder="What is this for?"
+                value={quickPost.description}
+                onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPostingDialogOpen(false)}>Cancel</Button>
+            <Button
+              className="gap-2"
+              onClick={handleQuickPost}
+              disabled={createJournalEntry.isPending}
+            >
+              <Send className="h-4 w-4" />
+              {createJournalEntry.isPending ? "Posting..." : "Post Now"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Day Close Confirmation Dialog */}
+      <Dialog open={isDayCloseDialogOpen} onOpenChange={setIsDayCloseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Close Business Day?</DialogTitle>
+            <DialogDescription>
+              This will advance the business date from {businessDate} to the next day.
+              Make sure all transactions for today have been posted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setIsDayCloseDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDayClose} disabled={updateBusinessDate.isPending}>
+              {updateBusinessDate.isPending ? "Closing..." : "Confirm Day Close"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* New Account Dialog */}
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>

@@ -344,6 +344,7 @@ export function useLedger(
           debit,
           credit,
           description,
+          created_at,
           journal_entry:journal_entries!inner (
             id,
             entry_number,
@@ -357,20 +358,23 @@ export function useLedger(
             name,
             type
           )
-        `)
-        .eq("journal_entry.is_posted", true);
+        `);
+
+      // Filter by posted status via the inner join
+      q = q.eq("journal_entries.is_posted", true);
 
       if (accountId) {
         q = q.eq("account_id", accountId);
       }
 
       if (filters?.startDate) {
-        q = q.gte("journal_entry.date", filters.startDate);
+        q = q.gte("journal_entries.date", filters.startDate);
       }
       if (filters?.endDate) {
-        q = q.lte("journal_entry.date", filters.endDate);
+        q = q.lte("journal_entries.date", filters.endDate);
       }
 
+      // Order by created_at as a fallback, but we'll sort in memory by date
       const { data, error } = await q.order("created_at", { ascending: true });
 
       if (error) {
@@ -378,11 +382,19 @@ export function useLedger(
         return [];
       }
 
+      // Sort by date then created_at to ensure chronological order for running balance
+      const sortedData = (data || []).sort((a: any, b: any) => {
+        const dateA = new Date(a.journal_entry.date).getTime();
+        const dateB = new Date(b.journal_entry.date).getTime();
+        if (dateA !== dateB) return dateA - dateB;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
       // Calculate running balance per account
       const accountBalances: Record<string, number> = {};
       const ledgerEntries: LedgerEntry[] = [];
 
-      for (const line of data || []) {
+      for (const line of sortedData) {
         const je = line.journal_entry as any;
         const acc = line.account as any;
 
@@ -412,6 +424,12 @@ export function useLedger(
           journal_entry_id: je?.id || "",
           entry_number: je?.entry_number || "",
         });
+      }
+
+      // If viewing all accounts, sort by date descending for the list view
+      // but if viewing a specific account, keep chronological order for running balance
+      if (!accountId) {
+        return ledgerEntries.reverse();
       }
 
       return ledgerEntries;
