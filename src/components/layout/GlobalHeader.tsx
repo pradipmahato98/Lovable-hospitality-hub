@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Search, Menu, Moon, Sun, User, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
@@ -56,7 +56,13 @@ export function Header({ title, subtitle }: HeaderProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Avoid hydration mismatch by only rendering theme-dependent UI after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -171,7 +177,13 @@ export function Header({ title, subtitle }: HeaderProps) {
             onClick={toggleTheme}
             className="text-muted-foreground hover:text-foreground"
           >
-            {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {!mounted ? (
+              <Moon className="h-5 w-5 opacity-0" />
+            ) : resolvedTheme === "dark" ? (
+              <Sun className="h-5 w-5 transition-all" />
+            ) : (
+              <Moon className="h-5 w-5 transition-all" />
+            )}
           </Button>
 
           {/* Notifications */}
