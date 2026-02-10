@@ -75,6 +75,11 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
+export interface UIPreferences {
+  ios_materials: boolean;
+  animations_enabled: boolean;
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -133,6 +138,11 @@ const defaultQuickMenuSettings: QuickMenuSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
+};
+
+const defaultUIPreferences: UIPreferences = {
+  ios_materials: true,
+  animations_enabled: true,
 };
 
 // Generic settings fetch hook
@@ -261,4 +271,12 @@ export function useBusinessDate() {
 
 export function useUpdateBusinessDate() {
   return useUpdateSettings<string>("business_date");
+}
+
+export function useUIPreferences() {
+  return useSettings<UIPreferences>("ui_preferences", defaultUIPreferences);
+}
+
+export function useUpdateUIPreferences() {
+  return useUpdateSettings<UIPreferences>("ui_preferences");
 }

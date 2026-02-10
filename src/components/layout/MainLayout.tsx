@@ -1,8 +1,9 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,9 +13,18 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
+  const { data: uiPrefs } = useUIPreferences();
+
+  useEffect(() => {
+    if (uiPrefs?.ios_materials) {
+      document.body.classList.add("ios-enabled");
+    } else {
+      document.body.classList.remove("ios-enabled");
+    }
+  }, [uiPrefs?.ios_materials]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background transition-all duration-500", uiPrefs?.ios_materials && "ios-materials-active")}>
       <Sidebar />
       <div 
         className={cn(

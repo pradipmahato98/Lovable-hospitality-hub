@@ -163,6 +163,18 @@
     box-shadow: var(--shadow-elevated);
   }
 
+  .ios-material {
+    @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border-white/20 dark:border-white/10;
+  }
+
+  .ios-material-elevated {
+    @apply backdrop-blur-xl bg-white/80 dark:bg-black/80 shadow-elevated border-white/30 dark:border-white/20;
+  }
+
+  .ios-blur {
+    @apply backdrop-blur-lg;
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
   }
@@ -224,4 +236,21 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
+}
+
+/* Global iOS Material Styles */
+.ios-enabled .card,
+.ios-enabled [role="dialog"],
+.ios-enabled .popover-content,
+.ios-enabled aside,
+.ios-enabled header {
+  @apply backdrop-blur-xl bg-background/60 border-border/40 !important;
+}
+
+.ios-enabled .bg-card {
+  @apply bg-background/40 backdrop-blur-md !important;
+}
+
+.ios-enabled .bg-gradient-sidebar {
+  @apply bg-background/60 backdrop-blur-2xl !important;
 }

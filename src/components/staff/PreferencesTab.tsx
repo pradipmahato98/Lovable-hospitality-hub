@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun, Bell, Mail } from "lucide-react";
+import { Moon, Sun, Bell, Mail, Sparkles } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useUIPreferences, useUpdateUIPreferences } from "@/hooks/useSettings";
 
 export const PreferencesTab = () => {
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { data: uiPrefs, isLoading: loadingPrefs } = useUIPreferences();
+  const updateUiPrefs = useUpdateUIPreferences();
 
   useEffect(() => {
     setMounted(true);
@@ -55,6 +58,24 @@ export const PreferencesTab = () => {
             </div>
           </div>
           <Switch />
+        </div>
+
+        <div className="pt-4 border-t">
+          <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Global UI Features</h3>
+          <div className="flex items-center justify-between p-4 border border-primary/20 bg-primary/5 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium">iOS Materials</p>
+                <p className="text-sm text-muted-foreground">Enable glassmorphism and backdrop blur effects across the ERP.</p>
+              </div>
+            </div>
+            <Switch
+              disabled={loadingPrefs}
+              checked={uiPrefs?.ios_materials || false}
+              onCheckedChange={(checked) => updateUiPrefs.mutate({ ...uiPrefs!, ios_materials: checked })}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
