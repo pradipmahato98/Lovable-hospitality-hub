@@ -10,7 +10,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { StaffDirectoryTab } from "@/components/staff/StaffDirectoryTab";
 import { PersonalDetailsTab } from "@/components/staff/PersonalDetailsTab";
@@ -20,7 +20,8 @@ import { SecurityTab } from "@/components/staff/SecurityTab";
 import { LogsReportTab } from "@/components/staff/LogsReportTab";
 
 const StaffManagement = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
 
@@ -30,10 +31,11 @@ const StaffManagement = () => {
   const tabsValue = activeTab === "about" ? activeSubTab : activeTab;
 
   const handleTabChange = (value: string) => {
-    if (["details", "preferences", "alert", "security"].includes(value)) {
-      setSearchParams({ tab: "about", sub: value });
+    if (["details", "preferences", "alert", "alerts", "security"].includes(value)) {
+      const subValue = value === "alert" ? "alerts" : value;
+      navigate(`/staff?tab=about&sub=${subValue}`, { replace: true });
     } else {
-      setSearchParams({ tab: value });
+      navigate(`/staff?tab=${value}`, { replace: true });
     }
   };
 
@@ -70,7 +72,7 @@ const StaffManagement = () => {
           )}
 
           <div className="space-y-2">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-1">User About (Profile Settings)</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-1">User Profile Settings</Label>
             <TabsList className="bg-background/50 h-9">
               <TabsTrigger value="details" className="gap-2 text-xs">
                 <UserCircle className="h-3.5 w-3.5" />
@@ -80,9 +82,9 @@ const StaffManagement = () => {
                 <Settings className="h-3.5 w-3.5" />
                 Preferences
               </TabsTrigger>
-              <TabsTrigger value="alert" className="gap-2 text-xs">
+              <TabsTrigger value="alerts" className="gap-2 text-xs">
                 <Bell className="h-3.5 w-3.5" />
-                Alert
+                Alerts
               </TabsTrigger>
               <TabsTrigger value="security" className="gap-2 text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -105,7 +107,7 @@ const StaffManagement = () => {
           <TabsContent value="preferences" className="mt-0">
             <PreferencesTab />
           </TabsContent>
-          <TabsContent value="alert" className="mt-0">
+          <TabsContent value="alerts" className="mt-0">
             <AlertsTab />
           </TabsContent>
           <TabsContent value="security" className="mt-0">
