@@ -204,14 +204,19 @@ export const PaymentGatewayConfigPanel = () => {
         </CardContent>
       </Card>
 
-      <div className="relative py-4">
+      <div className="relative py-12">
         <div className="absolute inset-0 flex items-center">
-          <Separator className="w-full border-t border-dashed border-border" />
+          <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-background px-4 text-xs font-medium text-muted-foreground uppercase tracking-widest shadow-sm border rounded-full py-1">
-            International Gateway Systems
-          </span>
+          <div className="bg-background px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-3 group hover:border-gold/40 transition-all duration-500">
+            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700">
+              <Globe className="h-5 w-5 text-gold" />
+            </div>
+            <span className="text-xs font-black text-foreground uppercase tracking-[0.3em]">
+              International Gateway Systems
+            </span>
+          </div>
         </div>
       </div>
 

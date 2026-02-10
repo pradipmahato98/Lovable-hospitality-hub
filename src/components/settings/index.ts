@@ -7,3 +7,4 @@ export { BookingSourcesCard } from "./BookingSourcesCard";
 export { RatePlansCard } from "./RatePlansCard";
 export { QuickMenuSettingsCard } from "./QuickMenuSettingsCard";
 export { BroadcastSettings } from "./BroadcastSettings";
+export { PaymentGatewayConfigPanel } from "./PaymentGatewayConfig";
