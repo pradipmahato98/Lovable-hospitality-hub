@@ -77,6 +77,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { cn } from "@/lib/utils";
 import * as XLSX from 'xlsx';
@@ -267,7 +268,7 @@ export const GuestFolioManager = () => {
         }
       );
       if (!result.success) {
-        // toast already shown in processPayment or should be shown here
+        toast.error(result.error || "Payment failed");
         return;
       }
     }
