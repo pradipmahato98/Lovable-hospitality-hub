@@ -240,17 +240,27 @@
 
 /* Global iOS Material Styles */
 .ios-enabled .card,
+.ios-enabled .bg-card,
+.ios-enabled .bg-gradient-card,
 .ios-enabled [role="dialog"],
+.ios-enabled [role="alertdialog"],
+.ios-enabled [role="alert"],
 .ios-enabled .popover-content,
+.ios-enabled .dropdown-menu-content,
+.ios-enabled .select-content,
+.ios-enabled .sheet-content,
+.ios-enabled .toast,
+.ios-enabled [data-sonner-toast],
 .ios-enabled aside,
 .ios-enabled header {
   @apply backdrop-blur-xl bg-background/60 border-border/40 !important;
 }
 
-.ios-enabled .bg-card {
-  @apply bg-background/40 backdrop-blur-md !important;
-}
-
 .ios-enabled .bg-gradient-sidebar {
   @apply bg-background/60 backdrop-blur-2xl !important;
+}
+
+/* Ensure toast text remains readable */
+.ios-enabled .toast, .ios-enabled [data-sonner-toast] {
+  @apply text-foreground shadow-2xl !important;
 }
