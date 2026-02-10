@@ -229,8 +229,6 @@ export async function processPayment(
   redirectUrl?: string;
   error?: string;
 }> {
-  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef, customerInfo });
-  
   // Fetch gateway config from DB
   const { data: settings } = await supabase
     .from("settings")
@@ -344,8 +342,6 @@ export async function verifyPayment(
   status: "pending" | "completed" | "failed" | "refunded";
   error?: string;
 }> {
-  console.log(`Verifying payment ${transactionId} via ${gatewayId}`);
-  
   return {
     success: true,
     status: "completed",
