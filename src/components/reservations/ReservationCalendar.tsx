@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,11 +56,7 @@ export function ReservationCalendar() {
     end: addDays(weekStart, 13), // Show 2 weeks
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [currentDate]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     
     const startDate = format(weekStart, "yyyy-MM-dd");
@@ -94,7 +90,11 @@ export function ReservationCalendar() {
       setRooms(roomsResult.data);
     }
     setIsLoading(false);
-  };
+  }, [weekStart]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const getReservationsForRoomAndDate = (roomNumber: string, date: Date) => {
     return reservations.filter((res) => {

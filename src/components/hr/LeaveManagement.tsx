@@ -35,22 +35,12 @@ import {
   Clock,
   User,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { toast } from "sonner";
-
-interface LeaveRequest {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: "pending" | "approved" | "rejected";
-  createdAt: string;
-  approvedBy?: string;
-}
+import { useLeaveRequests, useApproveLeave, useRejectLeave, useCreateLeaveRequest } from "@/hooks/useHR";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 const leaveTypes = [
   "Annual Leave",
@@ -62,43 +52,6 @@ const leaveTypes = [
   "Bereavement Leave",
 ];
 
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: "1",
-    employeeId: "EMP001",
-    employeeName: "John Smith",
-    leaveType: "Annual Leave",
-    startDate: "2024-01-20",
-    endDate: "2024-01-25",
-    reason: "Family vacation",
-    status: "pending",
-    createdAt: "2024-01-10",
-  },
-  {
-    id: "2",
-    employeeId: "EMP002",
-    employeeName: "Sarah Johnson",
-    leaveType: "Sick Leave",
-    startDate: "2024-01-15",
-    endDate: "2024-01-16",
-    reason: "Medical appointment",
-    status: "approved",
-    createdAt: "2024-01-12",
-    approvedBy: "Admin",
-  },
-  {
-    id: "3",
-    employeeId: "EMP003",
-    employeeName: "Mike Brown",
-    leaveType: "Personal Leave",
-    startDate: "2024-01-22",
-    endDate: "2024-01-22",
-    reason: "Personal matters",
-    status: "rejected",
-    createdAt: "2024-01-11",
-  },
-];
-
 const statusColors = {
   pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   approved: "bg-success/20 text-success border-success/30",
@@ -106,65 +59,75 @@ const statusColors = {
 };
 
 export function LeaveManagement() {
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(mockLeaveRequests);
+  const { data: leaveRequests = [], isLoading } = useLeaveRequests();
+  const { data: staffMembers = [] } = useStaffMembers();
+  const { mutateAsync: createRequest, isPending: creating } = useCreateLeaveRequest();
+  const approveLeave = useApproveLeave();
+  const rejectLeave = useRejectLeave();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    employeeName: "",
-    employeeId: "",
-    leaveType: "",
-    startDate: "",
-    endDate: "",
+    staff_id: "",
+    leave_type: "Annual Leave",
+    start_date: "",
+    end_date: "",
     reason: "",
   });
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.employeeName || !formData.leaveType || !formData.startDate || !formData.endDate) {
+    if (!formData.staff_id || !formData.leave_type || !formData.start_date || !formData.end_date) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const newRequest: LeaveRequest = {
-      id: Date.now().toString(),
-      employeeId: formData.employeeId || `EMP${Date.now().toString().slice(-4)}`,
-      employeeName: formData.employeeName,
-      leaveType: formData.leaveType,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      reason: formData.reason,
-      status: "pending",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
+    const days = differenceInDays(parseISO(formData.end_date), parseISO(formData.start_date)) + 1;
 
-    setLeaveRequests((prev) => [newRequest, ...prev]);
-    toast.success("Leave request submitted successfully");
-    setDialogOpen(false);
-    setFormData({
-      employeeName: "",
-      employeeId: "",
-      leaveType: "",
-      startDate: "",
-      endDate: "",
-      reason: "",
-    });
+    try {
+      await createRequest({
+        staff_id: formData.staff_id,
+        leave_type: formData.leave_type,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        days_requested: days,
+        reason: formData.reason,
+        status: "pending",
+      });
+
+      toast.success("Leave request submitted successfully");
+      setDialogOpen(false);
+      setFormData({
+        staff_id: "",
+        leave_type: "Annual Leave",
+        start_date: "",
+        end_date: "",
+        reason: "",
+      });
+    } catch (error) {
+      toast.error("Failed to submit request");
+    }
   };
 
-  const handleApprove = (id: string) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) =>
-        req.id === id ? { ...req, status: "approved" as const, approvedBy: "Admin" } : req
-      )
-    );
-    toast.success("Leave request approved");
+  const handleApprove = async (id: string) => {
+    try {
+      await approveLeave.mutateAsync({ id, approvedBy: "Admin" });
+      toast.success("Leave request approved");
+    } catch (error) {
+      toast.error("Failed to approve request");
+    }
   };
 
-  const handleReject = (id: string) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: "rejected" as const } : req))
-    );
-    toast.error("Leave request rejected");
+  const handleReject = async (id: string) => {
+    const reason = prompt("Reason for rejection:");
+    if (reason === null) return;
+    try {
+      await rejectLeave.mutateAsync({ id, reason });
+      toast.success("Leave request rejected");
+    } catch (error) {
+      toast.error("Failed to reject request");
+    }
   };
 
   const filteredRequests = leaveRequests.filter((req) => {
@@ -202,33 +165,30 @@ export function LeaveManagement() {
                 <DialogTitle>Submit Leave Request</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="employeeName">Employee Name *</Label>
-                    <Input
-                      id="employeeName"
-                      value={formData.employeeName}
-                      onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
-                      placeholder="Full name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="employeeId">Employee ID</Label>
-                    <Input
-                      id="employeeId"
-                      value={formData.employeeId}
-                      onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                      placeholder="EMP001"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="staff">Select Employee *</Label>
+                  <Select
+                    value={formData.staff_id}
+                    onValueChange={(v) => setFormData({ ...formData, staff_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose staff member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffMembers.map(staff => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.first_name} {staff.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="leaveType">Leave Type *</Label>
                   <Select
-                    value={formData.leaveType}
-                    onValueChange={(v) => setFormData({ ...formData, leaveType: v })}
+                    value={formData.leave_type}
+                    onValueChange={(v) => setFormData({ ...formData, leave_type: v })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select leave type" />
@@ -249,8 +209,8 @@ export function LeaveManagement() {
                     <Input
                       id="startDate"
                       type="date"
-                      value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                       required
                     />
                   </div>
@@ -259,9 +219,9 @@ export function LeaveManagement() {
                     <Input
                       id="endDate"
                       type="date"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      min={formData.startDate}
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      min={formData.start_date}
                       required
                     />
                   </div>
@@ -282,7 +242,8 @@ export function LeaveManagement() {
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="gold">
+                  <Button type="submit" variant="gold" disabled={creating}>
+                    {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Submit Request
                   </Button>
                 </div>
@@ -328,95 +289,100 @@ export function LeaveManagement() {
 
         {/* Table */}
         <div className="rounded-lg border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Leave Type</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRequests.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    No leave requests found
-                  </TableCell>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Leave Type</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredRequests.map((request) => {
-                  const days =
-                    differenceInDays(parseISO(request.endDate), parseISO(request.startDate)) + 1;
-                  return (
-                    <TableRow key={request.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary" />
+              </TableHeader>
+              <TableBody>
+                {filteredRequests.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No leave requests found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredRequests.map((request) => {
+                    const days = request.days_requested;
+                    return (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{request.staff?.first_name} {request.staff?.last_name}</p>
+                              <p className="text-xs text-muted-foreground">{request.staff?.employee_id}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{request.employeeName}</p>
-                            <p className="text-xs text-muted-foreground">{request.employeeId}</p>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span>{request.leave_type}</span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span>{request.leaveType}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-sm">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span>{days} day{days !== 1 ? "s" : ""}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span>{days} day{days !== 1 ? "s" : ""}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {format(parseISO(request.start_date), "MMM d")} -{" "}
+                              {format(parseISO(request.end_date), "MMM d, yyyy")}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(request.startDate), "MMM d")} -{" "}
-                            {format(parseISO(request.endDate), "MMM d, yyyy")}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusColors[request.status]}>
-                          {request.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {request.status === "pending" ? (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-success hover:text-success hover:bg-success/20"
-                              onClick={() => handleApprove(request.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/20"
-                              onClick={() => handleReject(request.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {request.approvedBy && `By ${request.approvedBy}`}
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={statusColors[request.status as keyof typeof statusColors]}>
+                            {request.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {request.status === "pending" ? (
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-success hover:text-success hover:bg-success/20"
+                                onClick={() => handleApprove(request.id)}
+                                disabled={approveLeave.isPending}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/20"
+                                onClick={() => handleReject(request.id)}
+                                disabled={rejectLeave.isPending}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {request.approved_by && `By Admin`}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </CardContent>
     </Card>

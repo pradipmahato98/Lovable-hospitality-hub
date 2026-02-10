@@ -31,6 +31,19 @@ interface HeaderProps {
   subtitle?: string;
 }
 
+interface SearchResult {
+  type: "guest" | "room" | "reservation";
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  room_number?: string;
+  room_type?: string;
+  reservation_code?: string;
+  status?: string;
+}
+
 interface Notification {
   id: string;
   type: string;
@@ -57,7 +70,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
   // Use the notifications hook with realtime
@@ -121,7 +134,7 @@ export function Header({ title, subtitle }: HeaderProps) {
     }
   };
 
-  const handleResultClick = (result: any) => {
+  const handleResultClick = (result: SearchResult) => {
     setSearchOpen(false);
     setSearchQuery("");
     setSearchResults([]);

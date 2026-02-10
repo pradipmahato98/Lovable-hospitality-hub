@@ -275,7 +275,118 @@ export function useLeaveRequests(filters?: { status?: string; staffId?: string }
     },
   });
 
-  return { ...query, createLeaveRequest, approveLeave, rejectLeave };
+  return query;
+}
+
+export function useCreateLeaveRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (request: Omit<LeaveRequest, "id" | "created_at" | "staff" | "approved_by" | "approved_at" | "rejection_reason">) => {
+      const { data, error } = await db.from("leave_requests").insert(request).select().single();
+      if (error) throw error;
+
+      // Update pending days in balance
+      const { data: balance } = await db.from("leave_balances")
+        .select("pending_days")
+        .eq("staff_id", request.staff_id)
+        .eq("leave_type", request.leave_type)
+        .eq("year", new Date().getFullYear())
+        .maybeSingle();
+
+      if (balance) {
+        await db.from("leave_balances")
+          .update({ pending_days: (balance.pending_days || 0) + request.days_requested })
+          .eq("staff_id", request.staff_id)
+          .eq("leave_type", request.leave_type)
+          .eq("year", new Date().getFullYear());
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
+    },
+  });
+}
+
+export function useApproveLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, approvedBy }: { id: string; approvedBy: string }) => {
+      const { data: request } = await db.from("leave_requests").select("*").eq("id", id).single();
+
+      const { data, error } = await db
+        .from("leave_requests")
+        .update({ status: "approved", approved_by: approvedBy, approved_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Update balance: move from pending to used
+      if (request) {
+        const { data: balance } = await db.from("leave_balances")
+          .select("*")
+          .eq("staff_id", request.staff_id)
+          .eq("leave_type", request.leave_type)
+          .eq("year", new Date().getFullYear())
+          .single();
+
+        if (balance) {
+          await db.from("leave_balances").update({
+            pending_days: Math.max(0, balance.pending_days - request.days_requested),
+            used_days: balance.used_days + request.days_requested,
+          }).eq("id", balance.id);
+        }
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
+    },
+  });
+}
+
+export function useRejectLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data: request } = await db.from("leave_requests").select("*").eq("id", id).single();
+
+      const { data, error } = await db
+        .from("leave_requests")
+        .update({ status: "rejected", rejection_reason: reason })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Remove from pending
+      if (request) {
+        const { data: balance } = await db.from("leave_balances")
+          .select("*")
+          .eq("staff_id", request.staff_id)
+          .eq("leave_type", request.leave_type)
+          .eq("year", new Date().getFullYear())
+          .single();
+
+        if (balance) {
+          await db.from("leave_balances").update({
+            pending_days: Math.max(0, balance.pending_days - request.days_requested),
+          }).eq("id", balance.id);
+        }
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
+    },
+  });
 }
 
 // ============= Leave Balances =============
@@ -351,7 +462,48 @@ export function usePayrollRecords(filters?: { status?: string; startDate?: strin
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll-records"] }),
   });
 
-  return { ...query, createPayroll, approvePayroll, markPayrollPaid };
+  return query;
+}
+
+export function useCreatePayroll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (record: Omit<PayrollRecord, "id" | "created_at" | "staff">) => {
+      const { data, error } = await db.from("payroll_records").insert(record).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll-records"] }),
+  });
+}
+
+export function useApprovePayroll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await db.from("payroll_records").update({ status: "approved" }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll-records"] }),
+  });
+}
+
+export function useMarkPayrollPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, paymentMethod }: { id: string; paymentMethod: string }) => {
+      const { data, error } = await db
+        .from("payroll_records")
+        .update({ status: "paid", paid_date: new Date().toISOString().split("T")[0], payment_method: paymentMethod })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll-records"] }),
+  });
 }
 
 // ============= Time Clock =============
@@ -407,7 +559,36 @@ export function useTimeClock(date?: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["time-clock"] }),
   });
 
-  return { ...query, clockIn, clockOut };
+  return query;
+}
+
+export function useClockIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (staffId: string) => {
+      const { data, error } = await db.from("staff_time_clock").insert({ staff_id: staffId, clock_in: new Date().toISOString() }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["time-clock"] }),
+  });
+}
+
+export function useClockOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, breakMinutes }: { id: string; breakMinutes?: number }) => {
+      const { data, error } = await db
+        .from("staff_time_clock")
+        .update({ clock_out: new Date().toISOString(), break_minutes: breakMinutes || 0 })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["time-clock"] }),
+  });
 }
 
 // ============= HR Stats =============

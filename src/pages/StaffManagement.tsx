@@ -39,30 +39,13 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
-
-interface StaffMember {
-  id: string;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  phone: string | null;
-  department: string;
-  position: string;
-  hire_date: string;
-  status: string;
-  salary: number | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  notes: string | null;
-  created_at: string;
-}
+import { useStaffMembers, StaffMember } from "@/hooks/useStaffMembers";
 
 const departments = [
   "Front Desk",
@@ -108,19 +91,7 @@ const StaffManagement = () => {
   });
 
   // Fetch staff members
-  const { data: staffMembers = [], isLoading } = useQuery({
-    queryKey: ["staff-members"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff_members")
-        .select("*")
-        .order("last_name", { ascending: true });
-
-      if (error) throw error;
-      return data as StaffMember[];
-    },
-    enabled: isAdmin || isManager,
-  });
+  const { data: staffMembers = [], isLoading } = useStaffMembers();
 
   // Create staff member
   const createStaff = useMutation({

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { Database } from "@/integrations/supabase/types";
 
 // ============= Types =============
 export interface HousekeepingTask {
@@ -54,8 +55,7 @@ export interface HousekeepingInspection {
   room?: { room_number: string };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 // ============= Housekeeping Tasks =============
 export function useHousekeepingTasks(filters?: { date?: string; status?: string; priority?: string }) {
@@ -66,17 +66,18 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
     queryFn: async () => {
       let q = db
         .from("housekeeping_tasks")
-        .select(`*, room:rooms(room_number, room_type, floor)`)
-        .order("scheduled_date", { ascending: true })
-        .order("priority", { ascending: false });
+        .select(`*, room:rooms(room_number, room_type, floor)`);
 
       if (filters?.date) q = q.eq("scheduled_date", filters.date);
       if (filters?.status) q = q.eq("status", filters.status);
       if (filters?.priority) q = q.eq("priority", filters.priority);
 
-      const { data, error } = await q;
+      const { data, error } = await q
+        .order("scheduled_date", { ascending: true })
+        .order("priority", { ascending: false });
+
       if (error) throw error;
-      return data as HousekeepingTask[];
+      return data as unknown as HousekeepingTask[];
     },
   });
 
@@ -93,7 +94,8 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
 
   const createTask = useMutation({
     mutationFn: async (task: Omit<HousekeepingTask, "id" | "created_at" | "room">) => {
-      const { data, error } = await db.from("housekeeping_tasks").insert(task).select().single();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await db.from("housekeeping_tasks").insert(task as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -102,7 +104,8 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
 
   const updateTask = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<HousekeepingTask> & { id: string }) => {
-      const { data, error } = await db.from("housekeeping_tasks").update(updates).eq("id", id).select().single();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await db.from("housekeeping_tasks").update(updates as any).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -111,7 +114,8 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
 
   const updateTaskStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: Record<string, unknown> = { status };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: any = { status };
       if (status === "in_progress") updates.started_at = new Date().toISOString();
       if (status === "completed") updates.completed_at = new Date().toISOString();
 

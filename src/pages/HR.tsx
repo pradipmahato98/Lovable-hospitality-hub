@@ -31,26 +31,21 @@ import { Navigate } from "react-router-dom";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { PayrollPanel } from "@/components/hr/PayrollPanel";
 import { LeaveManagement } from "@/components/hr/LeaveManagement";
-
-const mockEmployees = [
-  { id: "1", name: "John Smith", department: "Front Desk", position: "Receptionist", status: "Active", hireDate: "2023-01-15" },
-  { id: "2", name: "Sarah Johnson", department: "Housekeeping", position: "Supervisor", status: "Active", hireDate: "2022-06-20" },
-  { id: "3", name: "Mike Brown", department: "F&B", position: "Chef", status: "Active", hireDate: "2021-09-10" },
-  { id: "4", name: "Emily Davis", department: "Front Desk", position: "Manager", status: "Active", hireDate: "2020-03-05" },
-  { id: "5", name: "David Wilson", department: "Maintenance", position: "Technician", status: "On Leave", hireDate: "2023-04-18" },
-  { id: "6", name: "Lisa Anderson", department: "F&B", position: "Server", status: "Active", hireDate: "2024-01-08" },
-];
+import { useStaffMembers } from "@/hooks/useStaffMembers";
+import { useHRStats } from "@/hooks/useHR";
 
 const departments = ["Front Desk", "Housekeeping", "F&B", "Maintenance", "Management"];
 
 const HR = () => {
-  const { isAdmin, isLoading } = useIsAdmin();
+  const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
+  const { data: employees = [], isLoading: loadingEmployees } = useStaffMembers();
+  const hrStats = useHRStats();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("employees");
   const { setNewGuestOpen } = useQuickActions();
 
-  if (isLoading) {
+  if (loadingAdmin || loadingEmployees) {
     return (
       <MainLayout title="HR Management" subtitle="Loading...">
         <div className="flex items-center justify-center py-20">
@@ -64,18 +59,19 @@ const HR = () => {
     return <Navigate to="/" replace />;
   }
 
-  const filteredEmployees = mockEmployees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredEmployees = employees.filter(emp => {
+    const name = `${emp.first_name} ${emp.last_name}`;
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.position.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = !selectedDept || emp.department === selectedDept;
     return matchesSearch && matchesDept;
   });
 
   const stats = [
-    { label: "Total Employees", value: mockEmployees.length, icon: Users, color: "text-primary" },
-    { label: "Departments", value: departments.length, icon: Briefcase, color: "text-blue-400" },
-    { label: "On Leave", value: mockEmployees.filter(e => e.status === "On Leave").length, icon: Calendar, color: "text-amber-400" },
-    { label: "New This Month", value: 2, icon: UserPlus, color: "text-success" },
+    { label: "Total Employees", value: employees.length, icon: Users, color: "text-primary" },
+    { label: "Clocked In", value: hrStats.clockedInToday, icon: Clock, color: "text-blue-400" },
+    { label: "Pending Leave", value: hrStats.pendingLeaveRequests, icon: Calendar, color: "text-amber-400" },
+    { label: "Total Staff Today", value: hrStats.totalStaffToday, icon: UserPlus, color: "text-success" },
   ];
 
   return (
@@ -211,10 +207,10 @@ const HR = () => {
                             <div className="flex items-center gap-3">
                               <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center">
                                 <span className="text-sm font-semibold text-primary">
-                                  {emp.name.split(' ').map(n => n[0]).join('')}
+                                  {emp.first_name[0]}{emp.last_name[0]}
                                 </span>
                               </div>
-                              <span className="font-medium">{emp.name}</span>
+                              <span className="font-medium">{emp.first_name} {emp.last_name}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{emp.department}</TableCell>
@@ -222,7 +218,7 @@ const HR = () => {
                           <TableCell>
                             <Badge 
                               variant="outline"
-                              className={emp.status === "Active" 
+                              className={emp.status === "active"
                                 ? "bg-success/20 text-success border-success/30"
                                 : "bg-amber-500/20 text-amber-400 border-amber-500/30"
                               }
@@ -231,7 +227,7 @@ const HR = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {new Date(emp.hireDate).toLocaleDateString()}
+                            {new Date(emp.hire_date).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
                       ))}

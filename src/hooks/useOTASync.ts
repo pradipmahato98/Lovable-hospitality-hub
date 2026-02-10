@@ -33,11 +33,12 @@ export function useOTASync() {
       });
       queryClient.invalidateQueries({ queryKey: ["ota-sync-logs"] });
     },
-    onError: (error: any) => {
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
       toast({
         variant: "destructive",
         title: "Sync Failed",
-        description: error.message,
+        description: message,
       });
     },
   });

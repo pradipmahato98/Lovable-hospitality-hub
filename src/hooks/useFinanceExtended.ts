@@ -76,8 +76,7 @@ export interface TaxRate {
   created_at: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 // ============= Invoices =============
 export function useInvoices(filters?: { status?: string; startDate?: string; endDate?: string }) {
@@ -97,7 +96,7 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
 
       const { data, error } = await q;
       if (error) throw error;
-      return data as Invoice[];
+      return data as unknown as Invoice[];
     },
   });
 
@@ -113,13 +112,13 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
 
       const { data: inv, error: invError } = await db
         .from("invoices")
-        .insert({ ...invoice, invoice_number: invoiceNumber, subtotal, tax_amount: taxAmount, total, balance_due: balanceDue })
+        .insert({ ...invoice, invoice_number: invoiceNumber, subtotal, tax_amount: taxAmount, total, balance_due: balanceDue } as unknown as Record<string, unknown>)
         .select()
         .single();
       if (invError) throw invError;
 
       const invItems = items.map((i) => ({ ...i, invoice_id: inv.id }));
-      const { error: itemsError } = await db.from("invoice_items").insert(invItems);
+      const { error: itemsError } = await db.from("invoice_items").insert(invItems as unknown as Record<string, unknown>[]);
       if (itemsError) throw itemsError;
 
       return inv;

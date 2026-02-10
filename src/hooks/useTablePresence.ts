@@ -39,8 +39,14 @@ export function useTablePresence(tableId?: string) {
           const state = channel.presenceState();
           const tableUsers: Record<string, TablePresence["users"]> = {};
 
-          Object.values(state).forEach((presences: any) => {
-            presences.forEach((presence: any) => {
+          Object.values(state).forEach((presences: unknown) => {
+            (presences as Array<{
+              id: string;
+              name: string;
+              avatar?: string;
+              viewingSince: string;
+              currentTable?: string;
+            }>).forEach((presence) => {
               if (presence.currentTable) {
                 if (!tableUsers[presence.currentTable]) {
                   tableUsers[presence.currentTable] = [];

@@ -192,7 +192,7 @@ export const GuestFolioManager = () => {
                             <Label>Item Type</Label>
                             <Select
                               value={newItem.item_type}
-                              onValueChange={(v: any) => setNewItem({...newItem, item_type: v})}
+                              onValueChange={(v: "room_charge" | "payment" | "adjustment" | "service") => setNewItem({...newItem, item_type: v})}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select type" />
