@@ -7,7 +7,8 @@ import {
   Bell,
   ShieldCheck,
   FileText,
-  Loader2
+  Loader2,
+  Info
 } from "lucide-react";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import { useSearchParams } from "react-router-dom";
@@ -21,12 +22,27 @@ import { LogsReportTab } from "@/components/staff/LogsReportTab";
 const StaffManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "directory";
+  const activeSubTab = searchParams.get("sub") || "details";
 
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
 
-  const handleTabChange = (value: string) => {
-    setSearchParams({ tab: value });
+  const handleMainTabChange = (value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("tab", value);
+    if (value !== "about") {
+      newParams.delete("sub");
+    } else if (!newParams.has("sub")) {
+      newParams.set("sub", "details");
+    }
+    setSearchParams(newParams);
+  };
+
+  const handleSubTabChange = (value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("tab", "about");
+    newParams.set("sub", value);
+    setSearchParams(newParams);
   };
 
   if (loadingAdmin || loadingManager) {
@@ -39,45 +55,83 @@ const StaffManagement = () => {
     );
   }
 
-  // Define tabs configuration
-  const allTabs = [
-    { id: "directory", label: "Staff Directory", icon: Users, component: StaffDirectoryTab, restricted: true },
-    { id: "details", label: "Details", icon: UserCircle, component: PersonalDetailsTab, restricted: false },
-    { id: "preferences", label: "Preferences", icon: Settings, component: PreferencesTab, restricted: false },
-    { id: "alerts", label: "Alert", icon: Bell, component: AlertsTab, restricted: false },
-    { id: "security", label: "Security", icon: ShieldCheck, component: SecurityTab, restricted: false },
-    { id: "logs", label: "Logs Report", icon: FileText, component: LogsReportTab, restricted: true },
-  ];
+  const canSeeRestricted = isAdmin || isManager;
 
-  // Filter tabs based on user role
-  const visibleTabs = allTabs.filter(tab => !tab.restricted || (isAdmin || isManager));
-
-  // If current active tab is restricted and user is not admin/manager, fallback to first visible tab
-  const finalActiveTab = visibleTabs.find(t => t.id === activeTab) ? activeTab : visibleTabs[0].id;
+  // Determine which main tab should be active
+  let finalMainTab = activeTab;
+  if (!canSeeRestricted && (activeTab === "directory" || activeTab === "logs")) {
+    finalMainTab = "about";
+  }
 
   return (
     <MainLayout title="Staff Management" subtitle="Manage employees and your professional profile">
-      <Tabs value={finalActiveTab} onValueChange={handleTabChange} className="space-y-6">
+      <Tabs value={finalMainTab} onValueChange={handleMainTabChange} className="space-y-6">
         <div className="flex overflow-x-auto pb-2 -mx-1 px-1">
           <TabsList className="h-auto p-1 bg-muted/50 border min-w-max">
-            {visibleTabs.map((tab) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="flex items-center gap-2 py-2 px-4 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-              >
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
+            {canSeeRestricted && (
+              <TabsTrigger value="directory" className="flex items-center gap-2 py-2 px-4">
+                <Users className="h-4 w-4" />
+                Staff Directory
               </TabsTrigger>
-            ))}
+            )}
+            <TabsTrigger value="about" className="flex items-center gap-2 py-2 px-4">
+              <UserCircle className="h-4 w-4" />
+              User About
+            </TabsTrigger>
+            {canSeeRestricted && (
+              <TabsTrigger value="logs" className="flex items-center gap-2 py-2 px-4">
+                <FileText className="h-4 w-4" />
+                Logs Report
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
-        {visibleTabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-            <tab.component />
-          </TabsContent>
-        ))}
+        <TabsContent value="directory" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <StaffDirectoryTab />
+        </TabsContent>
+
+        <TabsContent value="about" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <Tabs value={activeSubTab} onValueChange={handleSubTabChange} className="space-y-6">
+            <div className="bg-muted/30 p-1 rounded-lg border w-fit">
+              <TabsList className="bg-transparent h-auto">
+                <TabsTrigger value="details" className="gap-2 py-1.5 px-3">
+                  <Info className="h-4 w-4" />
+                  Details
+                </TabsTrigger>
+                <TabsTrigger value="preferences" className="gap-2 py-1.5 px-3">
+                  <Settings className="h-4 w-4" />
+                  Preferences
+                </TabsTrigger>
+                <TabsTrigger value="alerts" className="gap-2 py-1.5 px-3">
+                  <Bell className="h-4 w-4" />
+                  Alert
+                </TabsTrigger>
+                <TabsTrigger value="security" className="gap-2 py-1.5 px-3">
+                  <ShieldCheck className="h-4 w-4" />
+                  Security
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="details" className="mt-0">
+              <PersonalDetailsTab />
+            </TabsContent>
+            <TabsContent value="preferences" className="mt-0">
+              <PreferencesTab />
+            </TabsContent>
+            <TabsContent value="alerts" className="mt-0">
+              <AlertsTab />
+            </TabsContent>
+            <TabsContent value="security" className="mt-0">
+              <SecurityTab />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="logs" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <LogsReportTab />
+        </TabsContent>
       </Tabs>
     </MainLayout>
   );
