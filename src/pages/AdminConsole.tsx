@@ -19,16 +19,75 @@ import {
   AlertTriangle,
   Globe,
   ShieldAlert,
+  Loader2,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
+import { supabase } from "@/integrations/supabase/client";
+import { useUpdateSettings, useSettings } from "@/hooks/useSettings";
 
 const AdminConsole = () => {
   const { isAdmin, isLoading } = useIsAdmin();
   const [activeTab, setActiveTab] = useState("overview");
+  const navigate = useNavigate();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const { data: lockdownEnabled } = useSettings<boolean>("system_lockdown", false);
+  const updateSettings = useUpdateSettings<boolean>("system_lockdown");
+
+  const handleExportLogs = async () => {
+    setIsExporting(true);
+    try {
+      const { data, error } = await supabase
+        .from("audit_log")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.info("No logs found to export");
+        return;
+      }
+
+      // Simple CSV conversion
+      const headers = Object.keys(data[0]).join(",");
+      const rows = data.map(log =>
+        Object.values(log).map(val =>
+          typeof val === 'object' ? `"${JSON.stringify(val).replace(/"/g, '""')}"` : `"${String(val).replace(/"/g, '""')}"`
+        ).join(",")
+      );
+      const csv = [headers, ...rows].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      toast.success("Logs exported successfully");
+    } catch (error: any) {
+      toast.error("Failed to export logs: " + error.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSystemLockdown = () => {
+    const newState = !lockdownEnabled;
+    updateSettings.mutate(newState, {
+      onSuccess: () => {
+        toast.success(`System lockdown ${newState ? "enabled" : "disabled"}`);
+      }
+    });
+  };
 
   if (isLoading) return null;
   if (!isAdmin) return <Navigate to="/" replace />;
@@ -36,36 +95,38 @@ const AdminConsole = () => {
   return (
     <MainLayout title="Admin Console" subtitle="System-wide administrative controls and security">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="overview" className="gap-2">
+        <div className="overflow-x-auto pb-1 scrollbar-hide">
+          <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
+            <TabsTrigger value="overview" className="gap-2 whitespace-nowrap">
             <Activity className="h-4 w-4" />
             System Overview
           </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="h-4 w-4" />
-            Account Management
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-            <Lock className="h-4 w-4" />
-            Security Policies
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="gap-2">
-            <Shield className="h-4 w-4" />
-            RBAC
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2">
-            <Terminal className="h-4 w-4" />
-            Audit Trails
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2">
-            <Globe className="h-4 w-4" />
-            Integrations
-          </TabsTrigger>
-          <TabsTrigger value="security_breach" className="gap-2 text-destructive">
-            <ShieldAlert className="h-4 w-4" />
-            Security Breach
-          </TabsTrigger>
-        </TabsList>
+            <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
+              <Users className="h-4 w-4" />
+              Account Management
+            </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2 whitespace-nowrap">
+              <Lock className="h-4 w-4" />
+              Security Policies
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="gap-2 whitespace-nowrap">
+              <Shield className="h-4 w-4" />
+              RBAC
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
+              <Terminal className="h-4 w-4" />
+              Audit Trails
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap">
+              <Globe className="h-4 w-4" />
+              Integrations
+            </TabsTrigger>
+            <TabsTrigger value="security_breach" className="gap-2 text-destructive whitespace-nowrap">
+              <ShieldAlert className="h-4 w-4" />
+              Security Breach
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -114,21 +175,38 @@ const AdminConsole = () => {
                 <CardDescription>Common tasks for system administrators</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="justify-start gap-2">
+                <Button
+                  variant="outline"
+                  className="justify-start gap-2"
+                  onClick={() => navigate("/users")}
+                >
                   <UserPlus className="h-4 w-4" />
                   Provision Account
                 </Button>
-                <Button variant="outline" className="justify-start gap-2">
+                <Button
+                  variant="outline"
+                  className="justify-start gap-2"
+                  onClick={() => setActiveTab("integrations")}
+                >
                   <Key className="h-4 w-4" />
                   Rotate API Keys
                 </Button>
-                <Button variant="outline" className="justify-start gap-2">
-                  <FileText className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  className="justify-start gap-2"
+                  onClick={handleExportLogs}
+                  disabled={isExporting}
+                >
+                  {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                   Export Logs
                 </Button>
-                <Button variant="outline" className="justify-start gap-2 text-destructive hover:text-destructive">
+                <Button
+                  variant={lockdownEnabled ? "destructive" : "outline"}
+                  className={`justify-start gap-2 ${!lockdownEnabled && 'text-destructive hover:text-destructive'}`}
+                  onClick={handleSystemLockdown}
+                >
                   <AlertTriangle className="h-4 w-4" />
-                  System Lockdown
+                  {lockdownEnabled ? "End Lockdown" : "System Lockdown"}
                 </Button>
               </CardContent>
             </Card>
