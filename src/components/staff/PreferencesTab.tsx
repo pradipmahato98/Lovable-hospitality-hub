@@ -71,9 +71,13 @@ export const PreferencesTab = () => {
               </div>
             </div>
             <Switch
-              disabled={loadingPrefs}
+              disabled={loadingPrefs || !uiPrefs}
               checked={uiPrefs?.ios_materials || false}
-              onCheckedChange={(checked) => updateUiPrefs.mutate({ ...uiPrefs!, ios_materials: checked })}
+              onCheckedChange={(checked) => {
+                if (uiPrefs) {
+                  updateUiPrefs.mutate({ ...uiPrefs, ios_materials: checked });
+                }
+              }}
             />
           </div>
         </div>
