@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Moon, Sun, Bell, Mail } from "lucide-react";
 import { useTheme } from "next-themes";
+import { trackActivity } from "@/utils/auditLogger";
 
 export const PreferencesTab = () => {
   const { setTheme, resolvedTheme } = useTheme();
@@ -31,7 +32,11 @@ export const PreferencesTab = () => {
           <Switch
             disabled={!mounted}
             checked={mounted && resolvedTheme === "dark"}
-            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+            onCheckedChange={(checked) => {
+              const newTheme = checked ? "dark" : "light";
+              setTheme(newTheme);
+              trackActivity("Change Theme", "preferences_update", { theme: newTheme });
+            }}
           />
         </div>
 
