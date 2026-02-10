@@ -92,7 +92,7 @@ export const PaymentGatewayConfigPanel = () => {
     } else {
       isConfigured = !!(formData.api_key || formData.merchant_id);
     }
-    
+
     updateGateway.mutate({
       ...selectedGateway,
       ...formData,
@@ -131,21 +131,21 @@ export const PaymentGatewayConfigPanel = () => {
   const GatewayItem = ({ gateway }: { gateway: GatewayConfig }) => (
     <div
       key={gateway.id}
-      className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border hover:bg-secondary/70 transition-colors"
+      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-secondary/50 border border-border hover:bg-secondary/70 transition-colors"
     >
-      <div className="flex items-center gap-4">
-        <div className="p-2 rounded-lg bg-background shadow-sm">
+      <div className="flex items-start sm:items-center gap-4">
+        <div className="p-2 rounded-lg bg-background shadow-sm shrink-0 mt-1 sm:mt-0">
           {gatewayIcons[gateway.id] || <CreditCard className="h-5 w-5" />}
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-medium">{gateway.name}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium whitespace-nowrap">{gateway.name}</p>
             <Badge variant="outline" className="text-[10px] h-4">
               {gateway.code}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{gateway.description}</p>
-          <div className="flex items-center gap-2 mt-2">
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 sm:line-clamp-none">{gateway.description}</p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
             {gateway.is_configured ? (
               <Badge className="bg-success/10 text-success border-success/20 text-[10px] py-0">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -171,11 +171,11 @@ export const PaymentGatewayConfigPanel = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end gap-3 sm:shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
         <Button
           variant="outline"
           size="sm"
-          className="h-8"
+          className="h-8 flex-1 sm:flex-none"
           onClick={() => handleConfigClick(gateway)}
         >
           <Settings className="h-3.5 w-3.5 mr-1.5" />
@@ -191,17 +191,17 @@ export const PaymentGatewayConfigPanel = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="relative py-12">
+    <div className="space-y-6 px-1 sm:px-0">
+      <div className="relative py-12 overflow-hidden">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
         </div>
-        <div className="relative flex flex-col items-center gap-4">
-          <div className="bg-background px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-3 group hover:border-gold/40 transition-all duration-500">
-            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700">
-              <Building2 className="h-5 w-5 text-gold" />
+        <div className="relative flex flex-col items-center gap-4 px-4 text-center">
+          <div className="bg-background px-4 sm:px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-2 sm:gap-3 group hover:border-gold/40 transition-all duration-500 max-w-full">
+            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700 shrink-0">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-gold" />
             </div>
-            <span className="text-xs font-black text-foreground uppercase tracking-[0.3em]">
+            <span className="text-[10px] sm:text-xs font-black text-foreground uppercase tracking-[0.2em] sm:tracking-[0.3em] truncate">
               National Gateway Systems
             </span>
           </div>
@@ -221,16 +221,16 @@ export const PaymentGatewayConfigPanel = () => {
         </CardContent>
       </Card>
 
-      <div className="relative py-12">
+      <div className="relative py-12 overflow-hidden">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
         </div>
-        <div className="relative flex flex-col items-center gap-4">
-          <div className="bg-background px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-3 group hover:border-gold/40 transition-all duration-500">
-            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700">
-              <Globe className="h-5 w-5 text-gold" />
+        <div className="relative flex flex-col items-center gap-4 px-4 text-center">
+          <div className="bg-background px-4 sm:px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-2 sm:gap-3 group hover:border-gold/40 transition-all duration-500 max-w-full">
+            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700 shrink-0">
+              <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-gold" />
             </div>
-            <span className="text-xs font-black text-foreground uppercase tracking-[0.3em]">
+            <span className="text-[10px] sm:text-xs font-black text-foreground uppercase tracking-[0.2em] sm:tracking-[0.3em] truncate">
               International Gateway Systems
             </span>
           </div>
