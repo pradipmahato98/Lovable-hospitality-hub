@@ -89,7 +89,7 @@ const StaffManagement = () => {
                   <TabsList className="bg-muted/50 p-1 h-auto inline-flex">
                     <TabsTrigger value="details" className="gap-2 px-4 py-2">
                       <UserCircle className="h-4 w-4" />
-                      Details
+                      User Details
                     </TabsTrigger>
                     <TabsTrigger value="preferences" className="gap-2 px-4 py-2">
                       <Settings className="h-4 w-4" />

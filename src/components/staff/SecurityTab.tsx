@@ -69,7 +69,23 @@ export const SecurityTab = () => {
   };
 
   const handleSetup2FA = () => {
-    toast.info("2FA setup process initiated");
+    toast.info("Two-factor authentication setup is coming soon. Please contact your system administrator.");
+    trackActivity("Initiate 2FA Setup", "security_update");
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'others' });
+      if (error) throw error;
+
+      await trackActivity("Revoke Other Sessions", "security_update");
+      toast.success("All other active sessions have been revoked");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to revoke sessions");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -195,28 +211,49 @@ export const SecurityTab = () => {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Login Sessions
-          </CardTitle>
-          <CardDescription>Manage your active sessions across different devices.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Shield className="h-5 w-5 text-primary" />
+              Login Sessions
+            </CardTitle>
+            <CardDescription>Manage your active sessions across different devices.</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={handleRevokeOtherSessions}
+            disabled={loading}
+          >
+            Revoke All Others
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between py-2 border-b">
-              <div>
-                <p className="font-medium text-sm">Chrome on Windows</p>
-                <p className="text-xs text-muted-foreground">London, UK • Current Session</p>
+            <div className="flex items-center justify-between py-3 px-1 border-b">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-muted rounded-full">
+                  <Lock className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Current Session</p>
+                  <p className="text-xs text-muted-foreground">You are currently logged in from this device.</p>
+                </div>
               </div>
-              <Badge variant="outline" className="text-success border-success/30 bg-success/10">Active</Badge>
+              <Badge variant="outline" className="text-success border-success/30 bg-success/10">Active Now</Badge>
             </div>
-            <div className="flex items-center justify-between py-2 border-b text-muted-foreground">
-              <div>
-                <p className="font-medium text-sm">Safari on iPhone</p>
-                <p className="text-xs">Paris, France • 2 days ago</p>
+            <div className="flex items-center justify-between py-3 px-1 border-b text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-muted rounded-full opacity-50">
+                  <Smartphone className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Mobile App</p>
+                  <p className="text-xs">iPhone 14 • Paris, France • 2 days ago</p>
+                </div>
               </div>
-              <Button variant="ghost" size="sm">Revoke</Button>
+              <Button variant="ghost" size="sm" onClick={handleRevokeOtherSessions} disabled={loading}>Revoke</Button>
             </div>
           </div>
         </CardContent>
