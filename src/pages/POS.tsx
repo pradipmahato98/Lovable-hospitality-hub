@@ -108,7 +108,7 @@ const POS = () => {
   });
 
   const { data: gatewaysData } = usePaymentGateways();
-  const nationalGateways = gatewaysData?.gateways.filter(g => g.type === 'national' && g.enabled) || [];
+  const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
 
   const categories = [...new Set(menuItems.map(item => item.category))];
 
@@ -545,7 +545,7 @@ const POS = () => {
                           className="gap-2"
                           onClick={() => {
                             setPaymentMethod("wallet");
-                            if (nationalGateways.length === 1) setSelectedGateway(nationalGateways[0].id);
+                            if (availableGateways.length === 1) setSelectedGateway(availableGateways[0].id);
                           }}
                         >
                           <Wallet className="h-4 w-4" />
@@ -561,11 +561,11 @@ const POS = () => {
                         </Button>
                       </div>
 
-                      {paymentMethod === "wallet" && nationalGateways.length > 0 && (
+                      {paymentMethod === "wallet" && availableGateways.length > 0 && (
                         <div className="space-y-2 mt-2">
                           <Label className="text-xs">Select Provider</Label>
                           <div className="grid grid-cols-2 gap-2">
-                            {nationalGateways.map((gateway) => (
+                            {availableGateways.map((gateway) => (
                               <Button
                                 key={gateway.id}
                                 variant={selectedGateway === gateway.id ? "secondary" : "outline"}

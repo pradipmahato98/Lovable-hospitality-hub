@@ -18,7 +18,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
-  QuickMenuSettingsCard, BroadcastSettings,
+  QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel,
 } from "@/components/settings";
 import { Megaphone } from "lucide-react";
 
@@ -110,12 +110,15 @@ const Settings = () => {
               />
             )}
             {activeTab === "payment" && (
-              <PaymentSettingsCard
-                settings={paymentSettings}
-                isLoading={isLoadingPayment}
-                isPending={updatePayment.isPending}
-                onSettingChange={(key, value) => paymentSettings && updatePayment.mutate({ ...paymentSettings, [key]: value })}
-              />
+              <>
+                <PaymentSettingsCard
+                  settings={paymentSettings}
+                  isLoading={isLoadingPayment}
+                  isPending={updatePayment.isPending}
+                  onSettingChange={(key, value) => paymentSettings && updatePayment.mutate({ ...paymentSettings, [key]: value })}
+                />
+                <PaymentGatewayConfigPanel />
+              </>
             )}
             {activeTab === "sources" && (
               <BookingSourcesCard

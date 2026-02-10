@@ -84,7 +84,14 @@ export const PaymentGatewayConfigPanel = () => {
   const handleSaveConfig = () => {
     if (!selectedGateway) return;
 
-    const isConfigured = !!(formData.api_key || formData.merchant_id);
+    let isConfigured = false;
+    if (selectedGateway.id === 'stripe') {
+      isConfigured = !!(formData.api_key && formData.secret_key);
+    } else if (selectedGateway.id === 'razorpay') {
+      isConfigured = !!(formData.merchant_id && formData.secret_key);
+    } else {
+      isConfigured = !!(formData.api_key || formData.merchant_id);
+    }
     
     updateGateway.mutate({
       ...selectedGateway,
@@ -185,17 +192,27 @@ export const PaymentGatewayConfigPanel = () => {
 
   return (
     <div className="space-y-6">
-      <Card variant="elevated" className="border-primary/20">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Building2 className="h-5 w-5 text-primary" />
-            National Payment Gateways
-          </CardTitle>
-          <CardDescription>
-            Nepal-specific digital wallets and interbank payment systems for local transactions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="relative py-12">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
+        </div>
+        <div className="relative flex flex-col items-center gap-4">
+          <div className="bg-background px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-3 group hover:border-gold/40 transition-all duration-500">
+            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700">
+              <Building2 className="h-5 w-5 text-gold" />
+            </div>
+            <span className="text-xs font-black text-foreground uppercase tracking-[0.3em]">
+              National Gateway Systems
+            </span>
+          </div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
+            Local digital wallets and interbank systems
+          </p>
+        </div>
+      </div>
+
+      <Card variant="elevated" className="border-gold/20 shadow-glow">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4">
             {nationalGateways.map((gateway) => (
               <GatewayItem key={gateway.id} gateway={gateway} />
@@ -208,7 +225,7 @@ export const PaymentGatewayConfigPanel = () => {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
         </div>
-        <div className="relative flex justify-center">
+        <div className="relative flex flex-col items-center gap-4">
           <div className="bg-background px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-3 group hover:border-gold/40 transition-all duration-500">
             <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700">
               <Globe className="h-5 w-5 text-gold" />
@@ -217,20 +234,14 @@ export const PaymentGatewayConfigPanel = () => {
               International Gateway Systems
             </span>
           </div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
+            Global credit card and multi-currency processing
+          </p>
         </div>
       </div>
 
       <Card variant="elevated" className="border-gold/20 shadow-glow">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Globe className="h-5 w-5 text-gold" />
-            International Payment Gateways
-          </CardTitle>
-          <CardDescription>
-            Global payment processors for international credit/debit card transactions and multi-currency support.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4">
             {internationalGateways.map((gateway) => (
               <GatewayItem key={gateway.id} gateway={gateway} />

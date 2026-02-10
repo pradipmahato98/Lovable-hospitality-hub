@@ -170,7 +170,7 @@ export function useUpdatePaymentGateway() {
       queryClient.invalidateQueries({ queryKey: ["settings", "payment_gateways"] });
       toast.success("Payment gateway updated successfully");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error("Failed to update gateway: " + error.message);
     },
   });
@@ -206,7 +206,7 @@ export function useTogglePaymentGateway() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "payment_gateways"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error("Failed to toggle gateway: " + error.message);
     },
   });
@@ -252,19 +252,24 @@ export async function processPayment(
       const stripe = await loadStripe(config.api_key);
       if (!stripe) throw new Error("Failed to load Stripe");
 
-      toast.info("Redirecting to Stripe Checkout...");
+      toast.info("Simulating Stripe Checkout redirect...");
 
-      // In a real app, you would call your backend here to create a Checkout Session
-      // and then call stripe.redirectToCheckout({ sessionId: session.id })
+      // NOTE: In a production environment with a backend:
+      // 1. Call your backend to create a Checkout Session (using Secret Key)
+      // 2. Return the sessionId to the frontend
+      // 3. stripe.redirectToCheckout({ sessionId: session.id })
 
-      // For this integration, we simulate the success as we don't have a backend session creator
+      // For this frontend-only integration, we simulate the redirect delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       return {
         success: true,
         transactionId: `STRIPE-${Date.now()}`,
         redirectUrl: `#stripe-success`,
       };
-    } catch (err: any) {
-      return { success: false, error: err.message };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Stripe payment failed";
+      return { success: false, error: message };
     }
   }
 
@@ -283,36 +288,42 @@ export async function processPayment(
         });
       }
 
-      // Razorpay options
-      const options = {
-        key: config.merchant_id,
-        amount: amount * 100, // in paise
-        currency: currency === "USD" ? "INR" : currency, // Razorpay works best with INR or specific currencies
-        name: "LuxeStay ERP",
-        description: `Payment for Order ${orderRef}`,
-        handler: function (response: any) {
-          toast.success("Razorpay payment successful!");
-          console.log(response);
-        },
-        prefill: {
-          name: customerInfo?.name,
-          email: customerInfo?.email,
-          contact: customerInfo?.phone,
-        },
-        theme: {
-          color: "#C5A059", // Gold theme
-        },
-      };
+      return new Promise((resolve) => {
+        // Razorpay options
+        const options: Record<string, unknown> = {
+          key: config.merchant_id,
+          amount: Math.round(amount * 100), // in paise
+          currency: currency === "USD" ? "INR" : currency, // Razorpay works best with INR or specific currencies
+          name: "LuxeStay ERP",
+          description: `Payment for Order ${orderRef}`,
+          handler: function (response: { razorpay_payment_id: string }) {
+            toast.success("Razorpay payment successful!");
+            resolve({
+              success: true,
+              transactionId: response.razorpay_payment_id || `RZP-${Date.now()}`,
+            });
+          },
+          modal: {
+            ondismiss: function() {
+              resolve({ success: false, error: "Payment cancelled by user" });
+            }
+          },
+          prefill: {
+            name: customerInfo?.name,
+            email: customerInfo?.email,
+            contact: customerInfo?.phone,
+          },
+          theme: {
+            color: "#C5A059", // Gold theme
+          },
+        };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-
-      return {
-        success: true,
-        transactionId: `RZP-${Date.now()}`,
-      };
-    } catch (err: any) {
-      return { success: false, error: err.message };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Razorpay payment failed";
+      return { success: false, error: message };
     }
   }
 
