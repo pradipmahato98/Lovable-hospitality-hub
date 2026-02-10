@@ -55,7 +55,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -66,7 +66,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   useRealtimeNotifications();
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   // Search functionality
@@ -171,7 +171,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             onClick={toggleTheme}
             className="text-muted-foreground hover:text-foreground"
           >
-            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
           {/* Notifications */}
