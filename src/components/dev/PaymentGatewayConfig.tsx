@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import {
   ExternalLink,
   Wallet,
   Building2,
-  Smartphone,
+  Globe,
 } from "lucide-react";
 import {
   usePaymentGateways,
@@ -37,21 +37,19 @@ import {
 const gatewayIcons: Record<string, React.ReactNode> = {
   esewa: <Wallet className="h-5 w-5 text-primary" />,
   khalti: <Wallet className="h-5 w-5 text-primary" />,
-  imepay: <Smartphone className="h-5 w-5 text-destructive" />,
   connectips: <Building2 className="h-5 w-5 text-primary" />,
   fonepay: <CreditCard className="h-5 w-5 text-primary" />,
-  prabhupay: <Wallet className="h-5 w-5 text-primary" />,
-  nicasia_bank: <Building2 className="h-5 w-5 text-primary" />,
+  stripe: <Globe className="h-5 w-5 text-primary" />,
+  razorpay: <CreditCard className="h-5 w-5 text-primary" />,
 };
 
 const gatewayDocs: Record<string, string> = {
   esewa: "https://developer.esewa.com.np/",
   khalti: "https://docs.khalti.com/",
-  imepay: "https://imepay.com.np/merchant",
   connectips: "https://connectips.com/",
   fonepay: "https://fonepay.com/merchant",
-  prabhupay: "https://prabhupay.com/",
-  nicasia_bank: "https://nicasiabank.com/",
+  stripe: "https://stripe.com/docs",
+  razorpay: "https://razorpay.com/docs",
 };
 
 export const PaymentGatewayConfigPanel = () => {
@@ -99,7 +97,6 @@ export const PaymentGatewayConfigPanel = () => {
   const handleToggle = (gatewayId: string, enabled: boolean) => {
     const gateway = gatewaysData?.gateways.find(g => g.id === gatewayId);
     if (gateway && !gateway.is_configured && enabled) {
-      // Open config dialog if trying to enable unconfigured gateway
       handleConfigClick(gateway);
       return;
     }
@@ -121,79 +118,125 @@ export const PaymentGatewayConfigPanel = () => {
   }
 
   const gateways = gatewaysData?.gateways || [];
+  const nationalGateways = gateways.filter(g => g.type === 'national');
+  const internationalGateways = gateways.filter(g => g.type === 'international');
+
+  const GatewayItem = ({ gateway }: { gateway: GatewayConfig }) => (
+    <div
+      key={gateway.id}
+      className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border hover:bg-secondary/70 transition-colors"
+    >
+      <div className="flex items-center gap-4">
+        <div className="p-2 rounded-lg bg-background shadow-sm">
+          {gatewayIcons[gateway.id] || <CreditCard className="h-5 w-5" />}
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{gateway.name}</p>
+            <Badge variant="outline" className="text-[10px] h-4">
+              {gateway.code}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">{gateway.description}</p>
+          <div className="flex items-center gap-2 mt-2">
+            {gateway.is_configured ? (
+              <Badge className="bg-success/10 text-success border-success/20 text-[10px] py-0">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Configured
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[10px] py-0">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Not Configured
+              </Badge>
+            )}
+            {gateway.sandbox_mode && gateway.is_configured && (
+              <Badge variant="outline" className="text-[10px] py-0">
+                Sandbox
+              </Badge>
+            )}
+            {gateway.enabled && (
+              <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0">
+                Active
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          onClick={() => handleConfigClick(gateway)}
+        >
+          <Settings className="h-3.5 w-3.5 mr-1.5" />
+          Configure
+        </Button>
+        <Switch
+          checked={gateway.enabled}
+          onCheckedChange={(enabled) => handleToggle(gateway.id, enabled)}
+          disabled={!gateway.is_configured}
+        />
+      </div>
+    </div>
+  );
 
   return (
-    <>
-      <Card variant="elevated">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Nepal Payment Gateways
+    <div className="space-y-6">
+      <Card variant="elevated" className="border-primary/20">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Building2 className="h-5 w-5 text-primary" />
+            National Payment Gateways
           </CardTitle>
           <CardDescription>
-            Configure payment gateway API keys and settings. API integration pending - configure credentials for future activation.
+            Nepal-specific digital wallets and interbank payment systems for local transactions.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {gateways.map((gateway) => (
-            <div
-              key={gateway.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-background">
-                  {gatewayIcons[gateway.id] || <CreditCard className="h-5 w-5" />}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{gateway.name}</p>
-                    <Badge variant="outline" className="text-xs">
-                      {gateway.code}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{gateway.description}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {gateway.is_configured ? (
-                      <Badge className="bg-success/20 text-success border-success/30 text-xs">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Configured
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30 text-xs">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Not Configured
-                      </Badge>
-                    )}
-                    {gateway.sandbox_mode && gateway.is_configured && (
-                      <Badge variant="outline" className="text-xs">
-                        Sandbox
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
+          <div className="grid gap-4">
+            {nationalGateways.map((gateway) => (
+              <GatewayItem key={gateway.id} gateway={gateway} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleConfigClick(gateway)}
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  Configure
-                </Button>
-                <Switch
-                  checked={gateway.enabled}
-                  onCheckedChange={(enabled) => handleToggle(gateway.id, enabled)}
-                  disabled={!gateway.is_configured}
-                />
-              </div>
-            </div>
-          ))}
+      <div className="relative py-4">
+        <div className="absolute inset-0 flex items-center">
+          <Separator className="w-full border-t border-dashed border-border" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-4 text-xs font-medium text-muted-foreground uppercase tracking-widest shadow-sm border rounded-full py-1">
+            International Gateway Systems
+          </span>
+        </div>
+      </div>
 
-          <div className="p-4 rounded-lg border border-dashed border-border text-center">
-            <p className="text-sm text-muted-foreground">
-              💡 Payment gateway APIs are pending integration. Configure your credentials now and they will be activated once the APIs are connected.
+      <Card variant="elevated" className="border-gold/20 shadow-glow">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Globe className="h-5 w-5 text-gold" />
+            International Payment Gateways
+          </CardTitle>
+          <CardDescription>
+            Global payment processors for international credit/debit card transactions and multi-currency support.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4">
+            {internationalGateways.map((gateway) => (
+              <GatewayItem key={gateway.id} gateway={gateway} />
+            ))}
+          </div>
+
+          <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/10 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              💡 International gateways require valid SSL certificates and PCI compliance on your production domain.
+              Ensure your merchant account is approved for cross-border transactions.
             </p>
           </div>
         </CardContent>
@@ -208,13 +251,13 @@ export const PaymentGatewayConfigPanel = () => {
               Configure {selectedGateway?.name}
             </DialogTitle>
             <DialogDescription>
-              Enter your API credentials from the {selectedGateway?.name} merchant portal.
+              Enter your API credentials from the {selectedGateway?.name} developer portal.
               {selectedGateway && gatewayDocs[selectedGateway.id] && (
                 <a
                   href={gatewayDocs[selectedGateway.id]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline ml-1"
+                  className="inline-flex items-center gap-1 text-primary hover:underline ml-1 font-medium"
                 >
                   View documentation <ExternalLink className="h-3 w-3" />
                 </a>
@@ -224,24 +267,32 @@ export const PaymentGatewayConfigPanel = () => {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="merchant_id">Merchant ID / Code</Label>
+              <Label htmlFor="merchant_id">
+                {selectedGateway?.id === 'razorpay' ? 'Key ID' :
+                 selectedGateway?.id === 'stripe' ? 'Account ID (Optional)' :
+                 'Merchant ID / Code'}
+              </Label>
               <Input
                 id="merchant_id"
                 value={formData.merchant_id}
                 onChange={(e) => setFormData({ ...formData, merchant_id: e.target.value })}
-                placeholder="Enter your merchant ID"
+                placeholder={selectedGateway?.id === 'razorpay' ? 'rzp_test_...' : 'Enter your merchant ID'}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="api_key">API Key / Public Key</Label>
+              <Label htmlFor="api_key">
+                {selectedGateway?.id === 'stripe' ? 'Publishable Key' :
+                 selectedGateway?.id === 'razorpay' ? 'Public Key (Optional)' :
+                 'API Key / Public Key'}
+              </Label>
               <div className="relative">
                 <Input
                   id="api_key"
                   type={showSecrets.api_key ? "text" : "password"}
                   value={formData.api_key}
                   onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                  placeholder="Enter your API key"
+                  placeholder={selectedGateway?.id === 'stripe' ? 'pk_test_...' : 'Enter your public key'}
                   className="pr-10"
                 />
                 <Button
@@ -261,14 +312,18 @@ export const PaymentGatewayConfigPanel = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secret_key">Secret Key / Private Key</Label>
+              <Label htmlFor="secret_key">
+                {selectedGateway?.id === 'stripe' ? 'Secret Key' :
+                 selectedGateway?.id === 'razorpay' ? 'Key Secret' :
+                 'Secret Key / Private Key'}
+              </Label>
               <div className="relative">
                 <Input
                   id="secret_key"
                   type={showSecrets.secret_key ? "text" : "password"}
                   value={formData.secret_key}
                   onChange={(e) => setFormData({ ...formData, secret_key: e.target.value })}
-                  placeholder="Enter your secret key"
+                  placeholder={selectedGateway?.id === 'stripe' ? 'sk_test_...' : 'Enter your secret key'}
                   className="pr-10"
                 />
                 <Button
@@ -295,12 +350,12 @@ export const PaymentGatewayConfigPanel = () => {
                 onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
                 placeholder="https://your-domain.com/api/webhook"
               />
-              <p className="text-xs text-muted-foreground">
-                Webhook endpoint for payment notifications
+              <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                Webhook endpoint for real-time payment notifications
               </p>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
               <div>
                 <p className="text-sm font-medium">Sandbox / Test Mode</p>
                 <p className="text-xs text-muted-foreground">
@@ -314,9 +369,9 @@ export const PaymentGatewayConfigPanel = () => {
             </div>
 
             {!formData.sandbox_mode && (
-              <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning text-sm">
-                <AlertCircle className="h-4 w-4 inline mr-2" />
-                Production mode is enabled. Real transactions will be processed.
+              <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning text-xs flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                Production mode enabled. Real transactions will be processed.
               </div>
             )}
           </div>
@@ -332,6 +387,6 @@ export const PaymentGatewayConfigPanel = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };

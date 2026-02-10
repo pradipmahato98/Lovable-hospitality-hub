@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { POSTableSystem } from "@/components/pos/POSTableSystem";
+import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
  import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
 
 interface CartItem {
@@ -84,6 +85,7 @@ const POS = () => {
   const [discountValue, setDiscountValue] = useState("");
   const [tipPercent, setTipPercent] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [selectedGateway, setSelectedGateway] = useState<string>("");
   const [splitPayment, setSplitPayment] = useState(false);
   const [splitAmounts, setSplitAmounts] = useState<{ method: string; amount: string }[]>([
     { method: "cash", amount: "" },
@@ -104,6 +106,9 @@ const POS = () => {
       return data;
     },
   });
+
+  const { data: gatewaysData } = usePaymentGateways();
+  const nationalGateways = gatewaysData?.gateways.filter(g => g.type === 'national' && g.enabled) || [];
 
   const categories = [...new Set(menuItems.map(item => item.category))];
 
@@ -175,6 +180,14 @@ const POS = () => {
     }
 
     try {
+      if (paymentMethod === "wallet" && selectedGateway) {
+        const result = await processPayment(selectedGateway, total, "USD", `POS-${Date.now()}`);
+        if (!result.success) {
+          toast.error(`Payment failed: ${result.error}`);
+          return;
+        }
+      }
+
       // Insert transaction into database
       const { data, error } = await supabase
         .from("pos_transactions")
@@ -187,7 +200,7 @@ const POS = () => {
           tax_amount: tax,
           tip_amount: tipAmount,
           total: total,
-          payment_method: splitPayment ? "split" : paymentMethod,
+          payment_method: splitPayment ? "split" : (selectedGateway || paymentMethod),
           items_count: cart.reduce((sum, i) => sum + i.quantity, 0),
           items: cart,
           room_number: paymentMethod === "room" ? roomChargeRoom : null,
@@ -197,7 +210,8 @@ const POS = () => {
 
       if (error) throw error;
 
-      const methodLabel = paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
+      const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
+                    paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
       toast.success(`Payment of $${total.toFixed(2)} processed via ${methodLabel}`);
 
       setCart([]);
@@ -205,6 +219,7 @@ const POS = () => {
       setDiscountValue("");
       setTipPercent(0);
       setPaymentMethod("");
+      setSelectedGateway("");
       setSplitPayment(false);
       setRoomChargeRoom("");
       setActiveTab("tables");
@@ -528,7 +543,10 @@ const POS = () => {
                         <Button
                           variant={paymentMethod === "wallet" ? "secondary" : "outline"}
                           className="gap-2"
-                          onClick={() => setPaymentMethod("wallet")}
+                          onClick={() => {
+                            setPaymentMethod("wallet");
+                            if (nationalGateways.length === 1) setSelectedGateway(nationalGateways[0].id);
+                          }}
                         >
                           <Wallet className="h-4 w-4" />
                           Digital Wallet
@@ -542,6 +560,25 @@ const POS = () => {
                           Room Charge
                         </Button>
                       </div>
+
+                      {paymentMethod === "wallet" && nationalGateways.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          <Label className="text-xs">Select Provider</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {nationalGateways.map((gateway) => (
+                              <Button
+                                key={gateway.id}
+                                variant={selectedGateway === gateway.id ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedGateway(gateway.id)}
+                                className="h-8 text-xs"
+                              >
+                                {gateway.name}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {paymentMethod === "room" && (
                         <Select value={roomChargeRoom} onValueChange={setRoomChargeRoom}>
