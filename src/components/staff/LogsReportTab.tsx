@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import {
   Select,
   SelectContent,
@@ -26,12 +27,17 @@ import {
 
 export const LogsReportTab = () => {
   const { profile } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const { isManager } = useIsManager();
   const [searchTerm, setSearchTerm] = useState("");
-  const [staffFilter, setStaffFilter] = useState<string>("all");
+  const [staffFilter, setStaffFilter] = useState<string>(
+    isAdmin || isManager ? "all" : profile?.user_id || "all"
+  );
 
   const { data: logs, isLoading, error: logsError } = useQuery({
     queryKey: ["audit_logs", staffFilter],
     queryFn: async () => {
+      // Fetch logs and profiles separately if join fails, but try join first
       let query = supabase
         .from("audit_log")
         .select(`
@@ -40,24 +46,33 @@ export const LogsReportTab = () => {
           entity_type,
           created_at,
           new_values,
-          user_id,
-          profiles:user_id (
-            first_name,
-            last_name
-          )
-        `)
-        .order("created_at", { ascending: false });
+          user_id
+        `);
 
       if (staffFilter !== "all") {
         query = query.eq("user_id", staffFilter);
       }
 
-      const { data, error } = await query.limit(100);
-      if (error) {
-        console.error("Error fetching logs:", error);
-        throw error;
-      }
-      return data;
+      const { data: logsData, error: logsError } = await query
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (logsError) throw logsError;
+
+      // Get unique user IDs from logs
+      const userIds = Array.from(new Set(logsData.map(l => l.user_id).filter(Boolean)));
+
+      // Fetch profiles for these users
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, first_name, last_name")
+        .in("user_id", userIds);
+
+      // Join in memory
+      return logsData.map(log => ({
+        ...log,
+        profiles: profilesData?.find(p => p.user_id === log.user_id)
+      }));
     },
     retry: 1,
   });
@@ -73,10 +88,12 @@ export const LogsReportTab = () => {
     },
   });
 
-  const filteredLogs = logs?.filter(log =>
-    log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (log.profiles?.first_name + " " + log.profiles?.last_name).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLogs = logs?.filter(log => {
+    const actionMatch = log.action.toLowerCase().includes(searchTerm.toLowerCase());
+    const userName = `${log.profiles?.first_name || ""} ${log.profiles?.last_name || ""}`.toLowerCase();
+    const userMatch = userName.includes(searchTerm.toLowerCase());
+    return actionMatch || userMatch;
+  });
 
   return (
     <Card>
@@ -101,19 +118,21 @@ export const LogsReportTab = () => {
               />
             </div>
 
-            <Select value={staffFilter} onValueChange={setStaffFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All Staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staffMembers?.map((staff) => (
-                  <SelectItem key={staff.user_id} value={staff.user_id}>
-                    {staff.first_name} {staff.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {(isAdmin || isManager) && (
+              <Select value={staffFilter} onValueChange={setStaffFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staffMembers?.map((staff) => (
+                    <SelectItem key={staff.user_id} value={staff.user_id}>
+                      {staff.first_name} {staff.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
       </CardHeader>
