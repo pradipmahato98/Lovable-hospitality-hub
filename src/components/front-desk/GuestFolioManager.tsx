@@ -77,6 +77,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { useEffect } from "react";
+import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { cn } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
@@ -138,11 +139,15 @@ export const GuestFolioManager = () => {
 
   // Payment State
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState<string>("");
   const [paymentDetails, setPaymentDetails] = useState({
     method: 'cash',
     amount: 0,
     reference: ''
   });
+
+  const { data: gatewaysData } = usePaymentGateways();
+  const nationalGateways = gatewaysData?.gateways.filter(g => g.type === 'national' && g.enabled) || [];
 
   // Refund State
   const [isRefundOpen, setIsRefundOpen] = useState(false);
@@ -250,16 +255,36 @@ export const GuestFolioManager = () => {
   const handleProcessPayment = async () => {
     if (!selectedFolio) return;
 
+    if (paymentDetails.method === 'upi' && selectedGateway) {
+      const result = await processPayment(
+        selectedGateway,
+        paymentDetails.amount,
+        "USD",
+        `FOLIO-${selectedFolio.folio_number}`,
+        {
+          name: `${selectedFolio.guests?.first_name} ${selectedFolio.guests?.last_name}`,
+          email: selectedFolio.guests?.email || undefined
+        }
+      );
+      if (!result.success) {
+        // toast already shown in processPayment or should be shown here
+        return;
+      }
+    }
+
+    const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name : paymentDetails.method.toUpperCase();
+
     await addFolioItem.mutateAsync({
       folio_id: selectedFolio.id,
       item_type: 'payment',
       source: 'manual',
-      description: `Payment - ${paymentDetails.method.toUpperCase()} ${paymentDetails.reference ? '(' + paymentDetails.reference + ')' : ''}`,
+      description: `Payment - ${methodLabel} ${paymentDetails.reference ? '(' + paymentDetails.reference + ')' : ''}`,
       amount: -Math.abs(paymentDetails.amount),
       reference_id: paymentDetails.reference
     });
 
     setIsPaymentOpen(false);
+    setSelectedGateway("");
     setPaymentDetails({
       method: 'cash',
       amount: 0,
@@ -1131,7 +1156,10 @@ export const GuestFolioManager = () => {
               <Label>Payment Method</Label>
               <Select
                 value={paymentDetails.method}
-                onValueChange={(v) => setPaymentDetails({...paymentDetails, method: v})}
+                onValueChange={(v) => {
+                  setPaymentDetails({...paymentDetails, method: v});
+                  if (v === 'upi' && nationalGateways.length === 1) setSelectedGateway(nationalGateways[0].id);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select method" />
@@ -1144,6 +1172,26 @@ export const GuestFolioManager = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {paymentDetails.method === 'upi' && nationalGateways.length > 0 && (
+              <div className="space-y-2">
+                <Label>Select Provider</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {nationalGateways.map((gateway) => (
+                    <Button
+                      key={gateway.id}
+                      variant={selectedGateway === gateway.id ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedGateway(gateway.id)}
+                      className="h-8 text-xs"
+                    >
+                      {gateway.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Amount</Label>
               <Input
