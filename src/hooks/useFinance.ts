@@ -52,10 +52,6 @@ export interface LedgerEntry {
   entry_number: string;
 }
 
-// Helper to get supabase client with type bypass for new tables
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 // ============= Accounts =============
 export function useAccounts() {
   const queryClient = useQueryClient();
@@ -66,7 +62,8 @@ export function useAccounts() {
   const query = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const { data, error } = await db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("accounts")
         .select("*")
         .order("code", { ascending: true });
@@ -114,7 +111,8 @@ export function useCreateAccount() {
 
   return useMutation({
     mutationFn: async (account: Omit<Account, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("accounts")
         .insert(account)
         .select()
@@ -144,7 +142,8 @@ export function useUpdateAccount() {
       id: string;
       updates: Partial<Omit<Account, "id" | "created_at" | "updated_at">>;
     }) => {
-      const { data, error } = await db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("accounts")
         .update(updates)
         .eq("id", id)
@@ -175,7 +174,8 @@ export function useJournalEntries(filters?: {
   const query = useQuery({
     queryKey: ["journal-entries", filters],
     queryFn: async () => {
-      let q = db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
         .from("journal_entries")
         .select(`
           *,
@@ -203,9 +203,9 @@ export function useJournalEntries(filters?: {
         return [];
       }
 
-      return (data || []).map((entry: any) => ({
+      return (data || []).map((entry: { journal_lines?: unknown[] }) => ({
         ...entry,
-        lines: entry.journal_lines || [],
+        lines: (entry.journal_lines || []) as JournalLine[],
       })) as JournalEntry[];
     },
   });
@@ -259,7 +259,8 @@ export function useCreateJournalEntry() {
         .padStart(4, "0")}`;
 
       // Insert journal entry
-      const { data: journalEntry, error: entryError } = await db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: journalEntry, error: entryError } = await (supabase as any)
         .from("journal_entries")
         .insert({
           entry_number: entryNumber,
@@ -285,7 +286,8 @@ export function useCreateJournalEntry() {
         description: line.description ?? null,
       }));
 
-      const { error: linesError } = await db.from("journal_lines").insert(lines);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: linesError } = await (supabase as any).from("journal_lines").insert(lines);
 
       if (linesError) {
         console.error("Error creating journal lines:", linesError);
@@ -306,7 +308,8 @@ export function usePostJournalEntry() {
 
   return useMutation({
     mutationFn: async (entryId: string) => {
-      const { data, error } = await db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("journal_entries")
         .update({ is_posted: true })
         .eq("id", entryId)
@@ -336,7 +339,8 @@ export function useLedger(
     queryKey: ["ledger", accountId, filters],
     queryFn: async () => {
       // Fetch all posted journal lines with their entries and accounts
-      let q = db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
         .from("journal_lines")
         .select(`
           id,
@@ -383,8 +387,8 @@ export function useLedger(
       const ledgerEntries: LedgerEntry[] = [];
 
       for (const line of data || []) {
-        const je = line.journal_entry as any;
-        const acc = line.account as any;
+        const je = line.journal_entry as { date?: string; entry_number?: string; id?: string };
+        const acc = line.account as { type: string; code?: string; name?: string };
 
         if (!accountBalances[line.account_id]) {
           accountBalances[line.account_id] = 0;
@@ -431,7 +435,8 @@ export function useTrialBalance(asOfDate?: string) {
   const query = useQuery({
     queryKey: ["trial-balance", asOfDate],
     queryFn: async () => {
-      let q = db
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase as any)
         .from("journal_lines")
         .select(`
           account_id,

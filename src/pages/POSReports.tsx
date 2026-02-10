@@ -269,7 +269,7 @@ export default function POSReports() {
             <div className="flex flex-wrap items-end gap-4">
               <div className="space-y-2">
                 <Label>Period</Label>
-                <Select value={period} onValueChange={(v: any) => setPeriod(v)}>
+                <Select value={period} onValueChange={(v: typeof period) => setPeriod(v)}>
                   <SelectTrigger className="w-40">
                     <SelectValue />
                   </SelectTrigger>

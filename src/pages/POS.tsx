@@ -48,6 +48,7 @@ import {
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCreatePOSTransaction } from "@/hooks/usePOS";
 import { POSTableSystem } from "@/components/pos/POSTableSystem";
  import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
 
@@ -90,6 +91,7 @@ const POS = () => {
     { method: "card", amount: "" },
   ]);
   const [roomChargeRoom, setRoomChargeRoom] = useState("");
+  const createTransaction = useCreatePOSTransaction();
 
   // Fetch rooms for room charge
   const { data: rooms = [] } = useQuery({
@@ -175,27 +177,37 @@ const POS = () => {
     }
 
     try {
-      // Insert transaction into database
-      const { data, error } = await supabase
-        .from("pos_transactions")
-        .insert({
-          transaction_number: `POS-${Date.now()}`,
-          table_number: "Counter", // Placeholder for walk-in
-          customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
-          subtotal: subtotal,
-          discount_amount: discountAmount,
-          tax_amount: tax,
-          tip_amount: tipAmount,
-          total: total,
-          payment_method: splitPayment ? "split" : paymentMethod,
-          items_count: cart.reduce((sum, i) => sum + i.quantity, 0),
-          items: cart,
-          room_number: paymentMethod === "room" ? roomChargeRoom : null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      // Use the hook to save transaction to database
+      await createTransaction.mutateAsync({
+        table_number: "Counter", // Placeholder for walk-in
+        customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
+        customer_address: null,
+        company_id: null,
+        company_name: null,
+        vat_number: null,
+        pan_number: null,
+        subtotal: subtotal,
+        discount_amount: discountAmount,
+        tax_amount: tax,
+        tip_amount: tipAmount,
+        total: total,
+        payment_method: splitPayment ? "split" : paymentMethod,
+        rrn_number: null,
+        transaction_ref: null,
+        card_last_four: null,
+        card_type: null,
+        items_count: cart.reduce((sum, i) => sum + i.quantity, 0),
+        items: cart.map(item => ({
+          id: item.id,
+          item_name: item.name,
+          item_price: item.price,
+          quantity: item.quantity,
+          category: item.category,
+          status: "served",
+          notes: null
+        })),
+        room_number: paymentMethod === "room" ? roomChargeRoom : null,
+      });
 
       const methodLabel = paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
       toast.success(`Payment of $${total.toFixed(2)} processed via ${methodLabel}`);
@@ -208,8 +220,9 @@ const POS = () => {
       setSplitPayment(false);
       setRoomChargeRoom("");
       setActiveTab("tables");
-    } catch (error: any) {
-      toast.error(`Failed to process payment: ${error.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error(`Failed to process payment: ${message}`);
     }
   };
 

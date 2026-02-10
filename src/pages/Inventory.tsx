@@ -85,7 +85,14 @@ const Inventory = () => {
 
   const handleCreateItem = async () => {
     try {
-      await createItem.mutateAsync(newItem as any);
+      await createItem.mutateAsync({
+        ...newItem,
+        is_active: true,
+        max_stock: null,
+        selling_price: null,
+        location: null,
+        last_restocked_at: null,
+      });
       toast.success("Item created successfully");
       setAddItemOpen(false);
       setNewItem({ name: "", sku: "", category_id: "", supplier_id: "", unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "" });
@@ -526,7 +533,7 @@ const Inventory = () => {
                     movements.map((m) => (
                       <TableRow key={m.id}>
                         <TableCell>{format(new Date(m.created_at), "MMM d, HH:mm")}</TableCell>
-                        <TableCell>{(m.item as any)?.name || "-"}</TableCell>
+                        <TableCell>{m.item?.name || "-"}</TableCell>
                         <TableCell>
                           <Badge className={
                             m.movement_type === "in" ? "bg-success/20 text-success" :

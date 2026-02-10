@@ -6,24 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
+import { ReservationsTable } from "@/components/reservations/ReservationsTable";
 import { useReservations } from "@/hooks/useReservations";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
-import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-const statusColors: Record<string, string> = {
-  confirmed: "bg-success/20 text-success border-success/30",
-  pending: "bg-warning/20 text-warning border-warning/30",
-  "checked-in": "bg-primary/20 text-primary border-primary/30",
-  "checked-out": "bg-muted text-muted-foreground border-border",
-  cancelled: "bg-destructive/20 text-destructive border-destructive/30",
-};
 
 const Reservations = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,84 +84,12 @@ const Reservations = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-0 sm:p-6">
-                {isLoading ? (
-                  <div className="p-6"><TableSkeleton columns={7} rows={5} /></div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-border hover:bg-transparent">
-                          <TableHead className="whitespace-nowrap">Reservation ID</TableHead>
-                          <TableHead className="whitespace-nowrap">Guest</TableHead>
-                          <TableHead className="whitespace-nowrap hidden md:table-cell">Room</TableHead>
-                          <TableHead className="whitespace-nowrap hidden lg:table-cell">Check In</TableHead>
-                          <TableHead className="whitespace-nowrap hidden lg:table-cell">Check Out</TableHead>
-                          <TableHead className="whitespace-nowrap">Status</TableHead>
-                          <TableHead className="whitespace-nowrap hidden sm:table-cell">Total</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredReservations.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                              No reservations found
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredReservations.map((reservation) => (
-                            <TableRow key={reservation.id} className="border-border hover:bg-secondary/50">
-                              <TableCell className="font-mono text-sm text-primary whitespace-nowrap">
-                                {reservation.reservation_code}
-                              </TableCell>
-                              <TableCell className="font-medium whitespace-nowrap">
-                                {reservation.guest ? `${reservation.guest.first_name} ${reservation.guest.last_name}` : "Unknown"}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground hidden md:table-cell">
-                                {reservation.room ? `${reservation.room.room_number} - ${reservation.room.room_type}` : "N/A"}
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell">
-                                {format(new Date(reservation.check_in_date), "MMM dd, yyyy")}
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell">
-                                {format(new Date(reservation.check_out_date), "MMM dd, yyyy")}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={statusColors[reservation.status] || statusColors.pending}>
-                                  {reservation.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="font-semibold hidden sm:table-cell">
-                                ${reservation.total_amount.toFixed(2)}
-                              </TableCell>
-                              <TableCell>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {(reservation.status === "confirmed" || reservation.status === "pending") && (
-                                      <DropdownMenuItem onClick={() => setCheckInOutDialog({ open: true, mode: "check-in", reservationId: reservation.id })}>
-                                        <LogIn className="h-4 w-4 mr-2" />Check In
-                                      </DropdownMenuItem>
-                                    )}
-                                    {reservation.status === "checked-in" && (
-                                      <DropdownMenuItem onClick={() => setCheckInOutDialog({ open: true, mode: "check-out", reservationId: reservation.id })}>
-                                        <LogOut className="h-4 w-4 mr-2" />Check Out
-                                      </DropdownMenuItem>
-                                    )}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+                <ReservationsTable
+                  reservations={filteredReservations}
+                  isLoading={isLoading}
+                  onCheckIn={(id) => setCheckInOutDialog({ open: true, mode: "check-in", reservationId: id })}
+                  onCheckOut={(id) => setCheckInOutDialog({ open: true, mode: "check-out", reservationId: id })}
+                />
               </CardContent>
             </Card>
           </TabsContent>

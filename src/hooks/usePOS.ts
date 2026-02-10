@@ -311,8 +311,7 @@ export function useCreatePOSTransaction() {
         .toString()
         .padStart(4, "0")}`;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const insertData: any = {
+      const insertData: Record<string, unknown> = {
         transaction_number: transactionNumber,
         table_number: transaction.table_number,
         customer_name: transaction.customer_name,
@@ -369,8 +368,7 @@ export async function saveTransaction(
     .toString()
     .padStart(4, "0")}`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const insertData: any = {
+  const insertData: Record<string, unknown> = {
     transaction_number: transactionNumber,
     table_number: transaction.table_number,
     customer_name: transaction.customer_name,
@@ -419,7 +417,6 @@ export async function savePOSTables(tables: POSTable[]) {
       ? (table.current_order as unknown as Record<string, unknown>[])
       : [];
       
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase
       .from("pos_tables")
       .update({
@@ -428,8 +425,9 @@ export async function savePOSTables(tables: POSTable[]) {
         server_name: table.server_name,
         start_time: table.start_time,
         merged_with: table.merged_with,
-        current_order: currentOrder as any,
-      })
+        current_order: currentOrder as unknown as Json[],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
       .eq("table_number", table.table_number);
 
     if (error) {

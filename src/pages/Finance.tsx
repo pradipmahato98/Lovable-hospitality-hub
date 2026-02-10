@@ -199,7 +199,7 @@ export default function Finance() {
     }));
   };
 
-  const updateJournalLine = (index: number, field: string, value: any) => {
+  const updateJournalLine = (index: number, field: string, value: string | number) => {
     setNewJournalEntry((prev) => ({
       ...prev,
       lines: prev.lines.map((line, i) =>
@@ -405,9 +405,9 @@ export default function Finance() {
                     <TableBody>
                       {journalEntries.map((entry) => {
                         const totalDebit =
-                          entry.lines?.reduce((sum, l: any) => sum + (l.debit || 0), 0) || 0;
+                          entry.lines?.reduce((sum, l) => sum + (l.debit || 0), 0) || 0;
                         const totalCredit =
-                          entry.lines?.reduce((sum, l: any) => sum + (l.credit || 0), 0) || 0;
+                          entry.lines?.reduce((sum, l) => sum + (l.credit || 0), 0) || 0;
 
                         return (
                           <TableRow key={entry.id}>

@@ -61,19 +61,31 @@ export default function KitchenDisplay() {
 
   const orders: KitchenOrder[] = useMemo(() => {
     // ordersData is a joined result: pos_orders + pos_order_items
-    return (ordersData as any[])
+    return (ordersData as Array<{
+      id: string;
+      status: string;
+      table_number: string;
+      created_at: string;
+      pos_order_items: Array<{
+        id: string;
+        item_name: string;
+        quantity: number;
+        notes: string | null;
+        status: string;
+      }>;
+    }>)
       .filter((o) => !["paid", "cancelled"].includes(o.status))
       .map((o) => ({
-        id: o.id as string,
-        tableNumber: o.table_number as string,
-        createdAt: (o.created_at as string) ?? new Date().toISOString(),
-        items: ((o.pos_order_items ?? []) as any[])
+        id: o.id,
+        tableNumber: o.table_number,
+        createdAt: o.created_at ?? new Date().toISOString(),
+        items: (o.pos_order_items ?? [])
           .filter((i) => !["served", "cancelled"].includes(i.status))
           .map((i) => ({
-            id: i.id as string,
-            name: i.item_name as string,
-            quantity: i.quantity as number,
-            notes: (i.notes as string | null) ?? undefined,
+            id: i.id,
+            name: i.item_name,
+            quantity: i.quantity,
+            notes: i.notes ?? undefined,
             status: i.status as KitchenOrder["items"][number]["status"],
           })),
       }))
@@ -99,7 +111,7 @@ export default function KitchenDisplay() {
             }
           }
 
-          const row = payload.new as any;
+          const row = payload.new as { quantity?: number; item_name?: string };
           toast.info("New kitchen item", {
             description: `${row.quantity ?? 1}× ${row.item_name ?? "Item"}`,
           });

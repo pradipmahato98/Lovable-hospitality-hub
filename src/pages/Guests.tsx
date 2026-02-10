@@ -131,7 +131,15 @@ const Guests = () => {
   const handleAddFeedback = async () => {
     if (!selectedGuest) return;
     try {
-      await createFeedback.mutateAsync({ ...newFeedback, guest_id: selectedGuest.id, status: "pending" } as any);
+      await createFeedback.mutateAsync({
+        ...newFeedback,
+        guest_id: selectedGuest.id,
+        status: "pending",
+        reservation_id: null,
+        response: null,
+        responded_at: null,
+        responded_by: null,
+      });
       toast.success("Feedback recorded");
       setFeedbackDialogOpen(false);
       setNewFeedback({ feedback_type: "review", department: "", rating: 5, title: "", message: "" });

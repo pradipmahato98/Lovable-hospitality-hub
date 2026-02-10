@@ -37,6 +37,7 @@ const navItems = [
   { icon: CalendarDays, label: "Reservations", path: "/reservations" },
   { icon: Users, label: "Guests", path: "/guests" },
   { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
+  { icon: Receipt, label: "Billing", path: "/billing" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
   { icon: Wrench, label: "Engineering", path: "/engineering" },
   { icon: ShoppingCart, label: "POS", path: "/pos" },

@@ -34,6 +34,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   usePOSTables,
   useUpdatePOSTable,
@@ -391,32 +393,38 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleCheckout = async () => {
     if (!selectedTable) return;
+    if (paymentMethod === "room" && !roomNumber) {
+      toast.error("Please select a room");
+      return;
+    }
 
-    const subtotal = selectedTable.orders.reduce((sum, o) => sum + o.price * o.quantity, 0);
-    const tax = subtotal * 0.1;
-    const total = subtotal + tax;
+    const subtotal = getSubtotal();
+    const discount = getDiscount();
+    const tax = getTaxAmount();
+    const tip = getTipAmount();
+    const total = getBillingTotal();
 
     try {
       // Save transaction to database
       await createTransaction.mutateAsync({
         table_number: selectedTable.number,
-        customer_name: null,
-        customer_address: null,
+        customer_name: guestName || (paymentMethod === "room" ? `Guest in Room ${roomNumber}` : null),
+        customer_address: guestAddress || null,
         company_id: null,
         company_name: null,
         vat_number: null,
         pan_number: null,
         subtotal,
-        discount_amount: 0,
+        discount_amount: discount,
         tax_amount: tax,
-        tip_amount: 0,
+        tip_amount: tip,
         total,
-        payment_method: "cash",
+        payment_method: paymentMethod,
         rrn_number: null,
         transaction_ref: null,
         card_last_four: null,
         card_type: null,
-        room_number: null,
+        room_number: paymentMethod === "room" ? roomNumber : null,
         items_count: selectedTable.orders.length,
         items: selectedTable.orders.map((o) => ({
           id: o.id,
@@ -437,9 +445,9 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
           orderId,
           status: "paid",
           subtotal,
-          discount_amount: 0,
+          discount_amount: discount,
           tax_amount: tax,
-          tip_amount: 0,
+          tip_amount: tip,
           total,
         });
         await updatePOSOrderItemsStatusForOrder(orderId, "served");
@@ -668,6 +676,21 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   const [tipPercent, setTipPercent] = useState(0);
   const [guestName, setGuestName] = useState("");
   const [guestAddress, setGuestAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [roomNumber, setRoomNumber] = useState("");
+
+  const { data: occupiedRooms = [] } = useQuery({
+    queryKey: ["rooms-occupied-pos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("id, room_number")
+        .eq("status", "occupied")
+        .order("room_number", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Billing calculations
   const getSubtotal = () => selectedTable ? getTableTotal(selectedTable) : 0;
@@ -1344,6 +1367,56 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                       <span>Total</span>
                       <span className="text-primary">${getBillingTotal().toFixed(2)}</span>
                     </div>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Payment Method</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant={paymentMethod === "cash" ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentMethod("cash")}
+                      >
+                        Cash
+                      </Button>
+                      <Button
+                        variant={paymentMethod === "card" ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentMethod("card")}
+                      >
+                        Card
+                      </Button>
+                      <Button
+                        variant={paymentMethod === "room" ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentMethod("room")}
+                      >
+                        Room Charge
+                      </Button>
+                      <Button
+                        variant={paymentMethod === "wallet" ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentMethod("wallet")}
+                      >
+                        Wallet
+                      </Button>
+                    </div>
+
+                    {paymentMethod === "room" && (
+                      <Select value={roomNumber} onValueChange={setRoomNumber}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select room" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {occupiedRooms.map((room: { id: string; room_number: string }) => (
+                            <SelectItem key={room.id} value={room.room_number}>
+                              Room {room.room_number}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
