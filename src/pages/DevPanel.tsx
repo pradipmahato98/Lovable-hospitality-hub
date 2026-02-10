@@ -25,10 +25,7 @@ import {
   Loader2,
   Trash2,
   Sparkles,
-  CreditCard,
-  Wallet,
 } from "lucide-react";
-import { PaymentGatewayConfigPanel } from "@/components/dev/PaymentGatewayConfig";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
@@ -224,10 +221,6 @@ const DevPanel = () => {
             <Activity className="h-4 w-4" />
             System Status
           </TabsTrigger>
-          <TabsTrigger value="payments" className="gap-2">
-            <Wallet className="h-4 w-4" />
-            Payment Gateways
-          </TabsTrigger>
           <TabsTrigger value="seeder" className="gap-2">
             <Sparkles className="h-4 w-4" />
             Data Seeder
@@ -326,10 +319,6 @@ const DevPanel = () => {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="payments">
-          <PaymentGatewayConfigPanel />
         </TabsContent>
 
         <TabsContent value="seeder">

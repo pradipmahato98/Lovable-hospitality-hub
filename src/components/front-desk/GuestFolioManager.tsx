@@ -147,7 +147,7 @@ export const GuestFolioManager = () => {
   });
 
   const { data: gatewaysData } = usePaymentGateways();
-  const nationalGateways = gatewaysData?.gateways.filter(g => g.type === 'national' && g.enabled) || [];
+  const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
 
   // Refund State
   const [isRefundOpen, setIsRefundOpen] = useState(false);
@@ -1158,7 +1158,7 @@ export const GuestFolioManager = () => {
                 value={paymentDetails.method}
                 onValueChange={(v) => {
                   setPaymentDetails({...paymentDetails, method: v});
-                  if (v === 'upi' && nationalGateways.length === 1) setSelectedGateway(nationalGateways[0].id);
+                  if (v === 'upi' && availableGateways.length === 1) setSelectedGateway(availableGateways[0].id);
                 }}
               >
                 <SelectTrigger>
@@ -1173,11 +1173,11 @@ export const GuestFolioManager = () => {
               </Select>
             </div>
 
-            {paymentDetails.method === 'upi' && nationalGateways.length > 0 && (
+            {paymentDetails.method === 'upi' && availableGateways.length > 0 && (
               <div className="space-y-2">
                 <Label>Select Provider</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  {nationalGateways.map((gateway) => (
+                  {availableGateways.map((gateway) => (
                     <Button
                       key={gateway.id}
                       variant={selectedGateway === gateway.id ? "secondary" : "outline"}
