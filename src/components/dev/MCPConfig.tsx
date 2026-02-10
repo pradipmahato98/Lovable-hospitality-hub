@@ -72,21 +72,26 @@ export const MCPConfigPanel = () => {
     try {
       // 1. Check Buckets
       const requiredBuckets = ['avatars', 'property-images', 'lost-found-images'];
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      let bucketStatus: BucketStatus[] = requiredBuckets.map(id => ({ id, exists: false, public: false }));
 
-      if (bucketsError) throw bucketsError;
+      try {
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        if (!bucketsError && buckets) {
+          bucketStatus = requiredBuckets.map(id => {
+            const found = buckets.find(b => b.id === id);
+            return {
+              id,
+              exists: !!found,
+              public: found?.public ?? false
+            };
+          });
+        }
+      } catch (bucketErr) {
+        console.error("Bucket check failed:", bucketErr);
+        // We don't toast here to avoid annoying popups on load if storage isn't fully setup
+      }
 
-      const bucketStatus = requiredBuckets.map(id => {
-        const found = buckets?.find(b => b.id === id);
-        return {
-          id,
-          exists: !!found,
-          public: found?.public ?? false
-        };
-      });
-
-      // 2. Check Realtime (We can't directly check the publication easily,
-      // so we check if we can subscribe to a common table)
+      // 2. Check Realtime
       const testChannel = supabase.channel('mcp-status-check');
       let realtimeOk = false;
 
@@ -98,7 +103,7 @@ export const MCPConfigPanel = () => {
           });
 
         // Wait a bit for subscription
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         await supabase.removeChannel(testChannel);
       } catch (e) {
         realtimeOk = false;
@@ -112,7 +117,7 @@ export const MCPConfigPanel = () => {
 
     } catch (error) {
       console.error("Status check failed:", error);
-      toast.error("Failed to fetch system status");
+      // Only show toast if it's a major failure, otherwise fail silently
     } finally {
       setIsLoading(false);
     }
