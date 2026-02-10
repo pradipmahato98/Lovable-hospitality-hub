@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/hooks/use-sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "next-themes";
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
@@ -41,12 +42,13 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <SidebarProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <SidebarProvider>
             <QuickActionsProvider>
               <GlobalQuickActions />
               <Routes>
@@ -79,10 +81,11 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </QuickActionsProvider>
-          </SidebarProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+            </SidebarProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

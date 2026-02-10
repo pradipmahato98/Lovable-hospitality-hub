@@ -4,8 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, Lock, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 export const SecurityTab = () => {
+  const handleUpdatePassword = () => {
+    toast.success("Password updated successfully");
+  };
+
+  const handleSetup2FA = () => {
+    toast.info("2FA setup process initiated");
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -29,7 +38,7 @@ export const SecurityTab = () => {
             <Label htmlFor="confirm-password">Confirm New Password</Label>
             <Input id="confirm-password" type="password" />
           </div>
-          <Button variant="gold">Update Password</Button>
+          <Button variant="gold" onClick={handleUpdatePassword}>Update Password</Button>
         </CardContent>
       </Card>
 
@@ -47,7 +56,7 @@ export const SecurityTab = () => {
               <p className="font-medium">Authenticator App</p>
               <p className="text-sm text-muted-foreground">Use an app like Google Authenticator to get security codes.</p>
             </div>
-            <Button variant="outline">Setup 2FA</Button>
+            <Button variant="outline" onClick={handleSetup2FA}>Setup 2FA</Button>
           </div>
         </CardContent>
       </Card>

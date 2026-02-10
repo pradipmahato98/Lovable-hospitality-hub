@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bell, Search, Menu, Moon, Sun, User, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,7 +55,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const { theme, setTheme } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -64,18 +65,8 @@ export function Header({ title, subtitle }: HeaderProps) {
   const { notifications, unreadCount, markAsRead } = useNotifications();
   useRealtimeNotifications();
 
-  // Theme toggle
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [theme]);
-
   const toggleTheme = () => {
-    setTheme(prev => prev === "dark" ? "light" : "dark");
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   // Search functionality
@@ -232,7 +223,7 @@ export function Header({ title, subtitle }: HeaderProps) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="justify-center text-primary font-medium cursor-pointer"
-                    onClick={() => navigate("/staff?tab=about&sub=alerts")}
+                    onClick={() => navigate("/staff?tab=about&sub=alert")}
                   >
                     View All Alerts
                   </DropdownMenuItem>

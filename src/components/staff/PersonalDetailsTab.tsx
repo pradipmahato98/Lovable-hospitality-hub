@@ -4,9 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Mail, Phone, MapPin } from "lucide-react";
+import { toast } from "sonner";
 
 export const PersonalDetailsTab = () => {
   const { profile } = useAuth();
+
+  const handleSave = () => {
+    toast.success("Personal information updated successfully");
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -52,7 +57,7 @@ export const PersonalDetailsTab = () => {
               <Input id="phone" className="pl-9" placeholder="+1 (555) 000-0000" />
             </div>
           </div>
-          <Button variant="gold">Save Changes</Button>
+          <Button variant="gold" onClick={handleSave}>Save Changes</Button>
         </CardContent>
       </Card>
     </div>
