@@ -154,7 +154,17 @@ export const MCPConfigPanel = () => {
       project_id: status.projectId,
       realtime: true,
       storage: status.buckets.map(b => b.id),
-      custom_keys: (apiKeysData?.keys || []).map(k => k.name)
+      custom_keys: (apiKeysData?.keys || []).map(k => k.name),
+      tools: [
+        "get_room_availability",
+        "create_reservation",
+        "list_reservations",
+        "get_inventory_status",
+        "list_housekeeping_tasks",
+        "manage_guest_profile",
+        "supabase_query",
+        "get_schema_info"
+      ]
     }
   }, null, 2);
 
