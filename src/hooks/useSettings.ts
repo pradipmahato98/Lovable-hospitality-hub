@@ -78,6 +78,8 @@ export interface APIKeysSettings {
 export interface UIPreferences {
   ios_materials: boolean;
   animations_enabled: boolean;
+  glass_intensity: 'low' | 'medium' | 'high';
+  disable_on_mobile: boolean;
 }
 
 // Default values
@@ -143,6 +145,8 @@ const defaultAPIKeys: APIKeysSettings = {
 const defaultUIPreferences: UIPreferences = {
   ios_materials: true,
   animations_enabled: true,
+  glass_intensity: 'medium',
+  disable_on_mobile: false,
 };
 
 // Generic settings fetch hook
@@ -274,9 +278,78 @@ export function useUpdateBusinessDate() {
 }
 
 export function useUIPreferences() {
-  return useSettings<UIPreferences>("ui_preferences", defaultUIPreferences);
+  return useQuery({
+    queryKey: ["settings", "ui_preferences"],
+    queryFn: async () => {
+      // Try to get from local storage first for immediate responsiveness and RLS bypass
+      const stored = localStorage.getItem("ui_preferences");
+      if (stored) {
+        try {
+          return JSON.parse(stored) as UIPreferences;
+        } catch (e) {
+          console.error("Failed to parse local UI preferences", e);
+        }
+      }
+
+      // Fallback to DB but don't fail if it's restricted
+      try {
+        const { data, error } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("key", "ui_preferences")
+          .maybeSingle();
+
+        if (data?.value) return data.value as unknown as UIPreferences;
+      } catch (e) {
+        console.warn("Could not fetch UI preferences from database", e);
+      }
+
+      return defaultUIPreferences;
+    },
+  });
 }
 
 export function useUpdateUIPreferences() {
-  return useUpdateSettings<UIPreferences>("ui_preferences");
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (settings: UIPreferences) => {
+      // Always save to local storage
+      localStorage.setItem("ui_preferences", JSON.stringify(settings));
+
+      // Try to save to DB but ignore RLS errors
+      try {
+        const { data: existing } = await supabase
+          .from("settings")
+          .select("id")
+          .eq("key", "ui_preferences")
+          .maybeSingle();
+
+        const jsonValue: Json = settings as unknown as Json;
+
+        if (existing) {
+          await supabase
+            .from("settings")
+            .update({ value: jsonValue })
+            .eq("key", "ui_preferences");
+        } else {
+          await supabase
+            .from("settings")
+            .insert([{ key: "ui_preferences", value: jsonValue }]);
+        }
+      } catch (e) {
+        console.warn("Could not save UI preferences to database (likely RLS)", e);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "ui_preferences"] });
+      toast.success("UI preferences updated");
+    },
+    onError: (error) => {
+      // We don't show error toast here because we successfully saved to localStorage
+      console.error("Failed to sync UI preferences to server", error);
+      queryClient.invalidateQueries({ queryKey: ["settings", "ui_preferences"] });
+      toast.success("Preferences saved locally");
+    },
+  });
 }

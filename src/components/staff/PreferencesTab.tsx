@@ -2,9 +2,16 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun, Bell, Mail, Sparkles } from "lucide-react";
+import { Moon, Sun, Bell, Mail, Sparkles, Smartphone, Layers } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useUIPreferences, useUpdateUIPreferences } from "@/hooks/useSettings";
+import { useUIPreferences, useUpdateUIPreferences, UIPreferences } from "@/hooks/useSettings";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const PreferencesTab = () => {
   const { setTheme, resolvedTheme } = useTheme();
@@ -60,8 +67,9 @@ export const PreferencesTab = () => {
           <Switch />
         </div>
 
-        <div className="pt-4 border-t">
-          <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Global UI Features</h3>
+        <div className="pt-4 border-t space-y-4">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Global UI Features</h3>
+
           <div className="flex items-center justify-between p-4 border border-primary/20 bg-primary/5 rounded-lg">
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -80,6 +88,53 @@ export const PreferencesTab = () => {
               }}
             />
           </div>
+
+          {uiPrefs?.ios_materials && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+              <div className="p-4 border rounded-lg space-y-3">
+                <div className="flex items-center gap-3">
+                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Glass Intensity</p>
+                </div>
+                <Select
+                  value={uiPrefs.glass_intensity}
+                  onValueChange={(value: UIPreferences['glass_intensity']) => {
+                    updateUiPrefs.mutate({ ...uiPrefs, glass_intensity: value });
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select intensity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low (Subtle)</SelectItem>
+                    <SelectItem value="medium">Medium (Standard)</SelectItem>
+                    <SelectItem value="high">High (Deep Blur)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Adjust the blur and transparency level of the glass effect.
+                </p>
+              </div>
+
+              <div className="p-4 border rounded-lg flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium">Disable on Mobile</p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Recommended for better performance on older devices.
+                  </p>
+                </div>
+                <Switch
+                  checked={uiPrefs.disable_on_mobile}
+                  onCheckedChange={(checked) => {
+                    updateUiPrefs.mutate({ ...uiPrefs, disable_on_mobile: checked });
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

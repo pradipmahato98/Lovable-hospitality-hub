@@ -16,15 +16,33 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
   const { data: uiPrefs } = useUIPreferences();
 
   useEffect(() => {
+    // Basic enable/disable
     if (uiPrefs?.ios_materials) {
       document.body.classList.add("ios-enabled");
     } else {
       document.body.classList.remove("ios-enabled");
     }
-  }, [uiPrefs?.ios_materials]);
+
+    // Intensity classes
+    const intensities: UIPreferences['glass_intensity'][] = ['low', 'medium', 'high'];
+    intensities.forEach(intensity => {
+      if (uiPrefs?.glass_intensity === intensity) {
+        document.body.classList.add(`ios-intensity-${intensity}`);
+      } else {
+        document.body.classList.remove(`ios-intensity-${intensity}`);
+      }
+    });
+
+    // Mobile disabling
+    if (uiPrefs?.disable_on_mobile && isMobile) {
+      document.body.classList.add("ios-mobile-disabled");
+    } else {
+      document.body.classList.remove("ios-mobile-disabled");
+    }
+  }, [uiPrefs?.ios_materials, uiPrefs?.glass_intensity, uiPrefs?.disable_on_mobile, isMobile]);
 
   return (
-    <div className={cn("min-h-screen bg-background transition-all duration-500", uiPrefs?.ios_materials && "ios-materials-active")}>
+    <div className={cn("min-h-screen bg-background transition-all duration-500", uiPrefs?.ios_materials && !uiPrefs?.disable_on_mobile && "ios-materials-active")}>
       <Sidebar />
       <div 
         className={cn(
