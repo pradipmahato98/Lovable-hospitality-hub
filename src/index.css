@@ -127,6 +127,33 @@
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out forwards;
   }
+
+  .ios-material {
+    @apply backdrop-blur-xl bg-background/60 border-white/10;
+  }
+
+  .ios-material-elevated {
+    @apply backdrop-blur-2xl bg-white/5 border-white/20 shadow-2xl;
+  }
+
+  .ios-blur {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+.ios-enabled {
+  --card: 222 40% 10% / 0.6;
+  --popover: 222 40% 8% / 0.7;
+  --sidebar-background: 222 45% 8% / 0.8;
+}
+
+.ios-enabled .rounded-xl.border {
+  @apply backdrop-blur-xl border-white/10 shadow-2xl;
+}
+
+.ios-enabled aside {
+  @apply backdrop-blur-2xl;
 }
 
 @keyframes fadeIn {

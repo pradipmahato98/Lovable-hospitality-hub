@@ -75,6 +75,10 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
+export interface UIPreferences {
+  ios_materials_enabled: boolean;
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -133,6 +137,10 @@ const defaultQuickMenuSettings: QuickMenuSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
+};
+
+const defaultUIPreferences: UIPreferences = {
+  ios_materials_enabled: false,
 };
 
 // Generic settings fetch hook
@@ -253,4 +261,12 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
+}
+
+export function useUIPreferences() {
+  return useSettings<UIPreferences>("ui_preferences", defaultUIPreferences);
+}
+
+export function useUpdateUIPreferences() {
+  return useUpdateSettings<UIPreferences>("ui_preferences");
 }

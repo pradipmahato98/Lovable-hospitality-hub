@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,9 +13,10 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
+  const { data: uiPrefs } = useUIPreferences();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background", uiPrefs?.ios_materials_enabled && "ios-enabled")}>
       <Sidebar />
       <div 
         className={cn(

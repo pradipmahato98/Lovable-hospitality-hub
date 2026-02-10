@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -38,6 +40,8 @@ import {
   Calendar,
   Edit,
   Trash2,
+  Settings as SettingsIcon,
+  Sparkles,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +50,7 @@ import { format } from "date-fns";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useStaffMembers, StaffMember } from "@/hooks/useStaffMembers";
+import { useUIPreferences, useUpdateUIPreferences } from "@/hooks/useSettings";
 
 const departments = [
   "Front Desk",
@@ -73,6 +78,8 @@ const StaffManagement = () => {
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
   const queryClient = useQueryClient();
+  const { data: uiPrefs, isLoading: loadingPrefs } = useUIPreferences();
+  const updatePrefs = useUpdateUIPreferences();
 
   const [formData, setFormData] = useState({
     employee_id: "",
@@ -233,7 +240,7 @@ const StaffManagement = () => {
     return matchesSearch && matchesDepartment;
   });
 
-  if (loadingAdmin || loadingManager) {
+  if (loadingAdmin || loadingManager || loadingPrefs) {
     return (
       <MainLayout title="Staff Management" subtitle="Loading...">
         <div className="flex items-center justify-center py-20">
@@ -249,8 +256,21 @@ const StaffManagement = () => {
 
   return (
     <MainLayout title="Staff Management" subtitle="Manage hotel staff and employees">
-      <Card variant="elevated">
-        <CardHeader>
+      <Tabs defaultValue="directory" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="directory" className="gap-2">
+            <Users className="h-4 w-4" />
+            Staff Directory
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="gap-2">
+            <SettingsIcon className="h-4 w-4" />
+            Preferences
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="directory">
+          <Card variant="elevated">
+            <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -555,8 +575,48 @@ const StaffManagement = () => {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="preferences">
+          <Card variant="elevated">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SettingsIcon className="h-5 w-5" />
+                UI Preferences
+              </CardTitle>
+              <CardDescription>
+                Customize the look and feel of the ERP system for all staff
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/20">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-gold" />
+                    <Label className="text-base">iOS Materials (Glassmorphism)</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Enable Apple-style blur effects and semi-transparent backgrounds across the interface
+                  </p>
+                </div>
+                <Switch
+                  checked={uiPrefs?.ios_materials_enabled ?? false}
+                  onCheckedChange={(checked) => updatePrefs.mutate({ ios_materials_enabled: checked })}
+                  disabled={updatePrefs.isPending}
+                />
+              </div>
+
+              <div className="p-4 rounded-lg border border-gold/30 bg-gold/5">
+                <p className="text-sm text-amber-500 font-medium">
+                  Note: Some changes may require a page refresh to apply fully to all components.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </MainLayout>
   );
 };
