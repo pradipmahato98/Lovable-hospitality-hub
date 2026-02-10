@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -5,7 +6,12 @@ import { Moon, Sun, Bell, Mail } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export const PreferencesTab = () => {
-  const { theme, setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <Card>
@@ -16,13 +22,17 @@ export const PreferencesTab = () => {
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-3">
-            {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            {mounted && resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             <div>
               <p className="font-medium">Dark Mode</p>
               <p className="text-sm text-muted-foreground">Toggle between light and dark theme.</p>
             </div>
           </div>
-          <Switch checked={theme === "dark"} onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} />
+          <Switch
+            disabled={!mounted}
+            checked={mounted && resolvedTheme === "dark"}
+            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+          />
         </div>
 
         <div className="flex items-center justify-between p-4 border rounded-lg">
