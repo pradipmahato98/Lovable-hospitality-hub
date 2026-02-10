@@ -208,26 +208,35 @@ export function Header({ title, subtitle }: HeaderProps) {
                   No notifications
                 </div>
               ) : (
-                <div className="max-h-[300px] overflow-y-auto">
-                  {notifications.slice(0, 10).map((notification) => (
-                    <DropdownMenuItem
-                      key={notification.id}
-                      className="flex items-start gap-3 p-3 cursor-pointer"
-                      onClick={() => markAsRead.mutate(notification.id)}
-                    >
-                      <div className={`h-2 w-2 rounded-full mt-2 ${categoryColors[notification.category] || categoryColors.info}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${notification.is_read ? 'text-muted-foreground' : 'text-foreground'}`}>
-                          {notification.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(notification.created_at), "MMM d, h:mm a")}
-                        </p>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
+                <>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {notifications.slice(0, 5).map((notification) => (
+                      <DropdownMenuItem
+                        key={notification.id}
+                        className="flex items-start gap-3 p-3 cursor-pointer"
+                        onClick={() => markAsRead.mutate(notification.id)}
+                      >
+                        <div className={`h-2 w-2 rounded-full mt-2 ${categoryColors[notification.category] || categoryColors.info}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${notification.is_read ? 'text-muted-foreground' : 'text-foreground'}`}>
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(notification.created_at), "MMM d, h:mm a")}
+                          </p>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="justify-center text-primary font-medium cursor-pointer"
+                    onClick={() => navigate("/staff?tab=alerts")}
+                  >
+                    View All Alerts
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -250,9 +259,9 @@ export function Header({ title, subtitle }: HeaderProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                <Link to="/staff?tab=details" className="flex items-center gap-2 cursor-pointer">
                   <User className="h-4 w-4" />
-                  Profile
+                  My Account
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

@@ -18,10 +18,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
-  QuickMenuSettingsCard,
+  QuickMenuSettingsCard, BroadcastSettings,
 } from "@/components/settings";
+import { Megaphone } from "lucide-react";
 
-type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu";
+type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
@@ -64,6 +65,7 @@ const Settings = () => {
     { id: "quickmenu" as const, icon: Zap, label: "POS Quick Menu" },
     { id: "property" as const, icon: Hotel, label: "Property Details" },
     { id: "notifications" as const, icon: Bell, label: "Notifications" },
+    { id: "broadcast" as const, icon: Megaphone, label: "Broadcasts" },
     { id: "security" as const, icon: Shield, label: "Security" },
   ];
 
@@ -157,6 +159,7 @@ const Settings = () => {
                 onSettingChange={(key, value) => notificationSettings && updateNotifications.mutate({ ...notificationSettings, [key]: value })}
               />
             )}
+            {activeTab === "broadcast" && <BroadcastSettings />}
             {activeTab === "security" && <SecuritySettingsCard />}
           </div>
         </div>
