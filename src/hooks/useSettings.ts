@@ -136,7 +136,7 @@ const defaultAPIKeys: APIKeysSettings = {
 };
 
 // Generic settings fetch hook
-function useSettings<T>(key: string, defaultValue: T) {
+export function useSettings<T>(key: string, defaultValue: T) {
   return useQuery({
     queryKey: ["settings", key],
     queryFn: async () => {
@@ -154,7 +154,7 @@ function useSettings<T>(key: string, defaultValue: T) {
 }
 
 // Generic settings update hook
-function useUpdateSettings<T>(key: string) {
+export function useUpdateSettings<T>(key: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
