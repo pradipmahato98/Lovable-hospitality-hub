@@ -24,7 +24,6 @@ LuxeStay is a comprehensive, self-contained ERP system designed for hotels, reso
 - 📊 **Reports & Analytics** - Occupancy, revenue metrics
 - 👔 **Staff & HR** - Employee records, role management
 - 🔐 **Role-Based Access** - Admin, Manager, Staff, User levels
-- 🤖 **MCP Support** - Full Model Context Protocol integration for AI-driven management
 
 ---
 
@@ -117,7 +116,6 @@ luxestay-erp/
 | `npm run build` | Build for production |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |
-| `npm run mcp:start` | Start the MCP server |
 
 ---
 

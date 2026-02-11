@@ -75,13 +75,6 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
-export interface UIPreferences {
-  ios_materials: boolean;
-  animations_enabled: boolean;
-  glass_intensity: 'low' | 'medium' | 'high';
-  disable_on_mobile: boolean;
-}
-
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -140,13 +133,6 @@ const defaultQuickMenuSettings: QuickMenuSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
-};
-
-const defaultUIPreferences: UIPreferences = {
-  ios_materials: true,
-  animations_enabled: true,
-  glass_intensity: 'medium',
-  disable_on_mobile: false,
 };
 
 // Generic settings fetch hook
@@ -267,14 +253,6 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
-}
-
-export function useMCPConfig() {
-  return useSettings<MCPConfig>("mcp_config", defaultMCPConfig);
-}
-
-export function useUpdateMCPConfig() {
-  return useUpdateSettings<MCPConfig>("mcp_config");
 }
 
 export function useBusinessDate() {

@@ -51,7 +51,7 @@ export const PersonalDetailsTab = () => {
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${profile?.user_id}-${Math.random()}.${fileExt}`;
+      const fileName = `${profile?.id}-${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage

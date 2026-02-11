@@ -53,7 +53,7 @@ const Settings = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !import.meta.env.DEV) {
     return <Navigate to="/" replace />;
   }
 

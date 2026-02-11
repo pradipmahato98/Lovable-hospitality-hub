@@ -16,7 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import {
   Select,
   SelectContent,
@@ -27,54 +26,34 @@ import {
 
 export const LogsReportTab = () => {
   const { profile } = useAuth();
-  const { isAdmin } = useIsAdmin();
-  const { isManager } = useIsManager();
   const [searchTerm, setSearchTerm] = useState("");
-  const [staffFilter, setStaffFilter] = useState<string>(
-    isAdmin || isManager ? "all" : profile?.user_id || "all"
-  );
+  const [staffFilter, setStaffFilter] = useState<string>("all");
 
-  const { data: logs, isLoading, error: logsError } = useQuery({
+  const { data: logs, isLoading } = useQuery({
     queryKey: ["audit_logs", staffFilter],
     queryFn: async () => {
-      // Fetch logs and profiles separately if join fails, but try join first
       let query = supabase
         .from("audit_log")
         .select(`
-          id,
-          action,
-          entity_type,
-          created_at,
-          new_values,
-          user_id
-        `);
+          *,
+          profiles:user_id (
+            first_name,
+            last_name
+          )
+        `)
+        .order("created_at", { ascending: false });
 
       if (staffFilter !== "all") {
         query = query.eq("user_id", staffFilter);
+      } else if (profile?.id) {
+        // If not admin/manager and no filter, default to own logs?
+        // Actually RLS handles this, but we can be explicit.
       }
 
-      const { data: logsData, error: logsError } = await query
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (logsError) throw logsError;
-
-      // Get unique user IDs from logs
-      const userIds = Array.from(new Set(logsData.map(l => l.user_id).filter(Boolean)));
-
-      // Fetch profiles for these users
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("user_id, first_name, last_name")
-        .in("user_id", userIds);
-
-      // Join in memory
-      return logsData.map(log => ({
-        ...log,
-        profiles: profilesData?.find(p => p.user_id === log.user_id)
-      }));
+      const { data, error } = await query.limit(50);
+      if (error) throw error;
+      return data;
     },
-    retry: 1,
   });
 
   const { data: staffMembers } = useQuery({
@@ -88,12 +67,10 @@ export const LogsReportTab = () => {
     },
   });
 
-  const filteredLogs = logs?.filter(log => {
-    const actionMatch = log.action.toLowerCase().includes(searchTerm.toLowerCase());
-    const userName = `${log.profiles?.first_name || ""} ${log.profiles?.last_name || ""}`.toLowerCase();
-    const userMatch = userName.includes(searchTerm.toLowerCase());
-    return actionMatch || userMatch;
-  });
+  const filteredLogs = logs?.filter(log =>
+    log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (log.profiles?.first_name + " " + log.profiles?.last_name).toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Card>
@@ -118,21 +95,19 @@ export const LogsReportTab = () => {
               />
             </div>
 
-            {(isAdmin || isManager) && (
-              <Select value={staffFilter} onValueChange={setStaffFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="All Staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  {staffMembers?.map((staff) => (
-                    <SelectItem key={staff.user_id} value={staff.user_id}>
-                      {staff.first_name} {staff.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={staffFilter} onValueChange={setStaffFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="All Staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                {staffMembers?.map((staff) => (
+                  <SelectItem key={staff.user_id} value={staff.user_id}>
+                    {staff.first_name} {staff.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
@@ -152,25 +127,13 @@ export const LogsReportTab = () => {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="text-xs text-muted-foreground">Fetching activity logs...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : logsError ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-destructive">
-                    <div className="flex flex-col items-center gap-1">
-                      <p>Failed to load logs</p>
-                      <p className="text-xs opacity-70">{(logsError as any).message}</p>
-                    </div>
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredLogs?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No activity logs found for the selected criteria.
+                    No logs found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -188,12 +151,8 @@ export const LogsReportTab = () => {
                     <TableCell className="text-muted-foreground">
                       {format(new Date(log.created_at), "MMM d, h:mm a")}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate text-muted-foreground text-xs font-mono">
-                      {log.new_values ? (
-                        <span title={JSON.stringify(log.new_values, null, 2)}>
-                          {JSON.stringify(log.new_values)}
-                        </span>
-                      ) : "-"}
+                    <TableCell className="max-w-xs truncate text-muted-foreground">
+                      {log.new_values ? JSON.stringify(log.new_values) : "-"}
                     </TableCell>
                   </TableRow>
                 ))
