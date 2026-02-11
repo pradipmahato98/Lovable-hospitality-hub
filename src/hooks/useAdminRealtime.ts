@@ -21,6 +21,7 @@ export function useAdminRealtime() {
         { event: "*", schema: "public", table: "user_roles" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+          queryClient.invalidateQueries({ queryKey: ["users-with-multiple-roles"] });
         }
       )
       .on(
@@ -28,6 +29,7 @@ export function useAdminRealtime() {
         { event: "*", schema: "public", table: "profiles" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+          queryClient.invalidateQueries({ queryKey: ["users-with-multiple-roles"] });
         }
       )
       .on(
