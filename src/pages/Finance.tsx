@@ -66,6 +66,7 @@ import {
 import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
+import { FinanceDashboard } from "@/components/finance/FinanceDashboard";
 
 const accountTypeColors: Record<string, string> = {
   asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -76,7 +77,7 @@ const accountTypeColors: Record<string, string> = {
 };
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("accounts");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [accountCategory, setAccountCategory] = useState("all");
   const [postingTab, setPostingTab] = useState("new");
   const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
@@ -90,6 +91,7 @@ export default function Finance() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [ledgerView, setLedgerView] = useState<"table" | "dashboard">("table");
 
   // Account creation dialog
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -352,6 +354,10 @@ export default function Finance() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <TabsList>
+              <TabsTrigger value="dashboard" className="gap-2">
+                <PieChart className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
               <TabsTrigger value="accounts" className="gap-2">
                 <BookOpen className="h-4 w-4" />
                 Chart of Accounts
@@ -378,6 +384,11 @@ export default function Finance() {
               </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* Dashboard */}
+          <TabsContent value="dashboard" className="space-y-4">
+            <FinanceDashboard />
+          </TabsContent>
 
           {/* Chart of Accounts */}
           <TabsContent value="accounts" className="space-y-4">
@@ -578,8 +589,8 @@ export default function Finance() {
 
           {/* General Ledger */}
           <TabsContent value="ledger" className="space-y-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex-1 max-w-sm">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4 flex-1 max-w-sm">
                 <Select
                   value={selectedAccountId || ""}
                   onValueChange={(v) => setSelectedAccountId(v || null)}
@@ -597,10 +608,32 @@ export default function Finance() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex bg-secondary/50 p-1 rounded-lg">
+                <Button
+                  variant={ledgerView === "table" ? "gold" : "ghost"}
+                  size="sm"
+                  onClick={() => setLedgerView("table")}
+                  className="rounded-md"
+                >
+                  Table
+                </Button>
+                <Button
+                  variant={ledgerView === "dashboard" ? "gold" : "ghost"}
+                  size="sm"
+                  onClick={() => setLedgerView("dashboard")}
+                  className="rounded-md"
+                >
+                  Dashboard
+                </Button>
+              </div>
             </div>
 
-            <Card>
-              <CardContent className="p-0">
+            {ledgerView === "dashboard" ? (
+              <FinanceDashboard accountId={selectedAccountId} />
+            ) : (
+              <Card>
+                <CardContent className="p-0">
                 {ledgerLoading ? (
                   <div className="p-8 text-center text-muted-foreground">Loading ledger...</div>
                 ) : ledgerData.length === 0 ? (
@@ -646,8 +679,9 @@ export default function Finance() {
                     </TableBody>
                   </Table>
                 )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Trial Balance */}
