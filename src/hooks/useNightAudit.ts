@@ -220,6 +220,28 @@ export const useNightAudit = () => {
     }
   });
 
+  // 11. Mutation: Mark as No-Show
+  const markAsNoShow = useMutation({
+    mutationFn: async (reservationId: string) => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .update({ status: 'no-show' })
+        .eq("id", reservationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      toast({
+        title: "Status Updated",
+        description: "Reservation marked as No-Show.",
+      });
+    }
+  });
+
   return {
     businessDate,
     isDateLoading,
@@ -231,6 +253,7 @@ export const useNightAudit = () => {
     postCharges,
     closeDay,
     recordDayClose,
-    useDayCloseLogs
+    useDayCloseLogs,
+    markAsNoShow
   };
 };

@@ -41,12 +41,14 @@ export default function DayClose() {
     businessDate,
     usePosSummary,
     useRoomStatusSummary,
+    useStayOvers,
     useDayCloseLogs,
     recordDayClose
   } = useNightAudit();
 
   const { data: posSummary, isLoading: loadingPos } = usePosSummary(businessDate || "");
   const { data: roomStatus, isLoading: loadingRooms } = useRoomStatusSummary();
+  const { data: stayOvers = [] } = useStayOvers(businessDate || "");
   const { data: logs, isLoading: loadingLogs } = useDayCloseLogs();
 
   const [cashCount, setCashCount] = useState<string>("0");
@@ -71,6 +73,12 @@ export default function DayClose() {
 
   const cashDiscrepancy = Number(cashCount) - posTotals.cash;
   const cardDiscrepancy = Number(cardBatchTotal) - posTotals.card;
+
+  const adr = useMemo(() => {
+    if (stayOvers.length === 0) return 0;
+    const totalRoomRev = stayOvers.reduce((acc, s) => acc + (s.rooms?.price_per_night || 0), 0);
+    return totalRoomRev / stayOvers.length;
+  }, [stayOvers]);
 
   const handleCloseDay = async () => {
     if (!businessDate) return;
@@ -303,10 +311,10 @@ export default function DayClose() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">ADR (Avg Daily Rate)</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">$142.50</p>
+                <p className="text-2xl font-bold">${adr.toFixed(2)}</p>
                 <div className="flex items-center text-xs text-success mt-1">
                   <TrendingUp className="h-3 w-3 mr-1" />
-                  <span>+5.2% from yesterday</span>
+                  <span>{stayOvers.length} active stay-overs</span>
                 </div>
               </CardContent>
             </Card>
