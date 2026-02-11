@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Send, Trash2, Play, Code, Database, Info, Wifi, WifiOff, Cpu } from "lucide-react";
+import { Terminal, Send, Trash2, Play, Code, Database, Info, Wifi, WifiOff, Cpu, Loader2 } from "lucide-react";
 import { useMCP } from "@/hooks/useMCP";
 
 const AVAILABLE_TOOLS = [
@@ -19,6 +19,14 @@ const AVAILABLE_TOOLS = [
 export const MCPTerminal = () => {
   const { executeTool, isLoading, isConnected, connectionMode } = useMCP();
   const [logs, setLogs] = useState<{ type: 'input' | 'output' | 'error', content: string, timestamp: Date }[]>([]);
+
+  if (!connectionMode) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
   const [query, setQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState(AVAILABLE_TOOLS[0].name);
 
