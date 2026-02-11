@@ -16,6 +16,10 @@ export const RealtimeListener = () => {
         (payload: any) => {
           queryClient.invalidateQueries({ queryKey: ["settings"] });
 
+          if (payload.new?.key === "ui_preferences") {
+            queryClient.invalidateQueries({ queryKey: ["settings", "ui_preferences"] });
+          }
+
           if (payload.new?.key === "system_lockdown") {
             const isLockdown = payload.new.value === true;
             if (isLockdown) {
