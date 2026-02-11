@@ -47,6 +47,7 @@ import {
   History,
   Layers,
   Clock,
+  LayoutDashboard,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -61,6 +62,7 @@ import {
 } from "@/hooks/useFinance";
 import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
+import { MetricCard } from "@/components/dashboard/MetricCard";
 
 const accountTypeColors: Record<string, string> = {
   asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -71,7 +73,7 @@ const accountTypeColors: Record<string, string> = {
 };
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("transactions");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [subView, setSubView] = useState<string | null>(null);
   const [accountCategory, setAccountCategory] = useState("all");
   const [postingTab, setPostingTab] = useState("new");
@@ -131,6 +133,7 @@ export default function Finance() {
   // Calculate totals for trial balance
   const totalDebits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
   const totalCredits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
+  const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
 
   const handleCreateAccount = async () => {
     if (!newAccount.code || !newAccount.name) {
@@ -294,7 +297,11 @@ export default function Finance() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSubView(null); }}>
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+              <TabsTrigger value="dashboard" className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
               <TabsTrigger value="setup" className="gap-2">
                 <BookOpen className="h-4 w-4" />
                 Setup
@@ -303,12 +310,118 @@ export default function Finance() {
                 <RefreshCw className="h-4 w-4" />
                 Transactions
               </TabsTrigger>
+              <TabsTrigger value="posting" className="gap-2">
+                <Send className="h-4 w-4" />
+                Transaction Posting
+              </TabsTrigger>
               <TabsTrigger value="reports" className="gap-2">
                 <FileText className="h-4 w-4" />
                 Reports
               </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard" className="space-y-6 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                title="Total Accounts"
+                value={accounts.length.toString()}
+                change={`${accounts.filter((a) => a.is_active).length} active`}
+                changeType="neutral"
+                icon={BookOpen}
+                delay={0}
+              />
+              <MetricCard
+                title="Journal Entries"
+                value={journalEntries.length.toString()}
+                change={`${journalEntries.filter((e) => e.is_posted).length} posted`}
+                changeType="neutral"
+                icon={FileText}
+                delay={50}
+              />
+              <MetricCard
+                title="Total Debits"
+                value={`$${totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                change="Posted entries"
+                changeType="neutral"
+                icon={TrendingUp}
+                delay={100}
+              />
+              <MetricCard
+                title="Trial Balance"
+                value={isBalanced ? "Balanced" : "Unbalanced"}
+                change={
+                  isBalanced
+                    ? "All entries balanced"
+                    : `Diff: $${Math.abs(totalDebits - totalCredits).toFixed(2)}`
+                }
+                changeType={isBalanced ? "positive" : "negative"}
+                icon={Scale}
+                delay={150}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Recent Journal Entries</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {journalEntries.slice(0, 5).map((entry) => {
+                        const amount = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
+                        return (
+                          <TableRow key={entry.id}>
+                            <TableCell className="text-sm">{entry.date}</TableCell>
+                            <TableCell className="text-sm font-medium">{entry.description}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">${amount.toFixed(2)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {journalEntries.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No recent entries</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Quick Access</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
+                    <Plus className="h-5 w-5" />
+                    New Journal Entry
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("posting")}>
+                    <Send className="h-5 w-5" />
+                    Quick Post
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
+                    <PieChart className="h-5 w-5" />
+                    General Ledger
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
+                    <Scale className="h-5 w-5" />
+                    Trial Balance
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Setup Tab */}
           <TabsContent value="setup" className="space-y-4">
@@ -510,9 +623,9 @@ export default function Finance() {
                         <TableBody>
                           {journalEntries.map((entry) => {
                             const totalDebit =
-                              entry.lines?.reduce((sum, l: any) => sum + (l.debit || 0), 0) || 0;
+                              entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
                             const totalCredit =
-                              entry.lines?.reduce((sum, l: any) => sum + (l.credit || 0), 0) || 0;
+                              entry.lines?.reduce((sum: number, l: any) => sum + (l.credit || 0), 0) || 0;
 
                             return (
                               <TableRow key={entry.id}>
@@ -564,220 +677,13 @@ export default function Finance() {
                   </CardContent>
                 </Card>
               </div>
-            ) : subView === "posting" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Transactions
-                  </Button>
-                  <h2 className="text-lg font-semibold">Transaction Posting</h2>
-                </div>
-                <Tabs value={postingTab} onValueChange={setPostingTab}>
-                  <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-                    <TabsTrigger value="new" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      New Posting
-                    </TabsTrigger>
-                    <TabsTrigger value="bulk" className="gap-2">
-                      <Layers className="h-4 w-4" />
-                      Bulk Posting
-                    </TabsTrigger>
-                    <TabsTrigger value="pending" className="gap-2">
-                      <Clock className="h-4 w-4" />
-                      Pending
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="gap-2">
-                      <History className="h-4 w-4" />
-                      History
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="new" className="mt-4 space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Single Transaction Posting</CardTitle>
-                        <CardDescription>Post a manual transaction to the general ledger</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Main Account</Label>
-                              <Select
-                                value={quickPost.account_id}
-                                onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select account" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {accounts.map((acc) => (
-                                    <SelectItem key={acc.id} value={acc.id}>
-                                      {acc.code} - {acc.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Contra Account (Offset)</Label>
-                              <Select
-                                value={quickPost.contra_account_id}
-                                onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select offset account" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {accounts.map((acc) => (
-                                    <SelectItem key={acc.id} value={acc.id}>
-                                      {acc.code} - {acc.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Amount ($)</Label>
-                                <Input
-                                  type="number"
-                                  placeholder="0.00"
-                                  value={quickPost.amount || ""}
-                                  onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Action</Label>
-                                <Select
-                                  value={quickPost.type}
-                                  onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="debit">Debit Main</SelectItem>
-                                    <SelectItem value="credit">Credit Main</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Description</Label>
-                              <Input
-                                placeholder="e.g., Manual utility payment"
-                                value={quickPost.description}
-                                onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Date</Label>
-                              <Input type="date" value={businessDate || new Date().toISOString().slice(0, 10)} readOnly />
-                            </div>
-                            <div className="pt-4">
-                              <Button
-                                className="w-full gap-2"
-                                onClick={handleQuickPost}
-                                disabled={createJournalEntry.isPending}
-                              >
-                                <Send className="h-4 w-4" />
-                                {createJournalEntry.isPending ? "Posting..." : "Post Transaction"}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="bulk" className="mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Bulk Transaction Posting</CardTitle>
-                        <CardDescription>Upload a CSV or Excel file to post multiple transactions</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
-                        <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
-                        <p className="text-sm text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
-                        <Button variant="outline" className="gap-2">
-                          <Download className="h-4 w-4" />
-                          Select File
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="pending" className="mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Pending Postings</CardTitle>
-                        <CardDescription>Transactions waiting for review and approval</CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Account</TableHead>
-                              <TableHead>Description</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                No pending postings found.
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="history" className="mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Posting History</CardTitle>
-                        <CardDescription>Recent manual and bulk posting activities</CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Time</TableHead>
-                              <TableHead>Type</TableHead>
-                              <TableHead>User</TableHead>
-                              <TableHead>Items</TableHead>
-                              <TableHead className="text-right">Total Value</TableHead>
-                              <TableHead></TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                No posting history available.
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
                   { title: "Manual journal entries", id: "journal" },
                   { title: "Recurring journals" },
                   { title: "Reversing journal entries" },
-                  { title: "Auto-posting from PMS, POS, Inventory, Payroll", id: "posting" },
+                  { title: "Auto-posting from PMS, POS, Inventory, Payroll", onClick: () => setActiveTab("posting") },
                   { title: "Multi-currency journal postings" },
                   { title: "Corporate/cash/OTA invoice generation" },
                   { title: "Group and event billing" },
@@ -829,6 +735,207 @@ export default function Finance() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* Posting Tab */}
+          <TabsContent value="posting" className="space-y-4">
+            <Tabs value={postingTab} onValueChange={setPostingTab}>
+              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+                <TabsTrigger value="new" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Posting
+                </TabsTrigger>
+                <TabsTrigger value="bulk" className="gap-2">
+                  <Layers className="h-4 w-4" />
+                  Bulk Posting
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="gap-2">
+                  <Clock className="h-4 w-4" />
+                  Pending
+                </TabsTrigger>
+                <TabsTrigger value="history" className="gap-2">
+                  <History className="h-4 w-4" />
+                  History
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="new" className="mt-4 space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Single Transaction Posting</CardTitle>
+                    <CardDescription>Post a manual transaction to the general ledger</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Main Account</Label>
+                          <Select
+                            value={quickPost.account_id}
+                            onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Contra Account (Offset)</Label>
+                          <Select
+                            value={quickPost.contra_account_id}
+                            onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select offset account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Amount ($)</Label>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              value={quickPost.amount || ""}
+                              onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Action</Label>
+                            <Select
+                              value={quickPost.type}
+                              onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="debit">Debit Main</SelectItem>
+                                <SelectItem value="credit">Credit Main</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Input
+                            placeholder="e.g., Manual utility payment"
+                            value={quickPost.description}
+                            onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Date</Label>
+                          <Input type="date" value={businessDate || new Date().toISOString().slice(0, 10)} readOnly />
+                        </div>
+                        <div className="pt-4">
+                          <Button
+                            className="w-full gap-2"
+                            onClick={handleQuickPost}
+                            disabled={createJournalEntry.isPending}
+                          >
+                            <Send className="h-4 w-4" />
+                            {createJournalEntry.isPending ? "Posting..." : "Post Transaction"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="bulk" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bulk Transaction Posting</CardTitle>
+                    <CardDescription>Upload a CSV or Excel file to post multiple transactions</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
+                    <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                    <p className="text-sm text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
+                    <Button variant="outline" className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Select File
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="pending" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pending Postings</CardTitle>
+                    <CardDescription>Transactions waiting for review and approval</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No pending postings found.
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Posting History</CardTitle>
+                    <CardDescription>Recent manual and bulk posting activities</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Items</TableHead>
+                          <TableHead className="text-right">Total Value</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No posting history available.
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           {/* Reports Tab */}
