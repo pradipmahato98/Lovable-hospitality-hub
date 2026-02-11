@@ -194,6 +194,24 @@
   .ios-blur {
     @apply backdrop-blur-xl;
   }
+
+  .ios-enabled .bg-card,
+  .ios-enabled .bg-background {
+    @apply bg-background/70 backdrop-blur-lg;
+  }
+
+  .ios-enabled .bg-popover,
+  .ios-enabled [role="dialog"] {
+    @apply bg-background/80 backdrop-blur-xl border-white/20;
+  }
+
+  .ios-enabled .sidebar {
+    @apply bg-background/40 backdrop-blur-xl border-r border-white/10;
+  }
+
+  .ios-enabled .border {
+    @apply border-white/10;
+  }
 }
 
 @keyframes fadeIn {

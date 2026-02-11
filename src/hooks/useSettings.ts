@@ -64,6 +64,13 @@ export interface QuickMenuSettings {
   enabled_items: string[];
 }
 
+export interface UIPreferences {
+  ios_materials: boolean;
+  glass_intensity: "low" | "medium" | "high";
+  animations_enabled: boolean;
+  disable_on_mobile: boolean;
+}
+
 export interface APIKey {
   name: string;
   key: string;
@@ -129,6 +136,13 @@ const defaultNotificationSettings: NotificationSettings = {
 
 const defaultQuickMenuSettings: QuickMenuSettings = {
   enabled_items: ["1", "4", "5", "6", "12", "13"],
+};
+
+const defaultUIPreferences: UIPreferences = {
+  ios_materials: true,
+  glass_intensity: "medium",
+  animations_enabled: true,
+  disable_on_mobile: false,
 };
 
 const defaultAPIKeys: APIKeysSettings = {
@@ -245,6 +259,14 @@ export function useQuickMenuSettings() {
 
 export function useUpdateQuickMenuSettings() {
   return useUpdateSettings<QuickMenuSettings>("quick_menu");
+}
+
+export function useUIPreferences() {
+  return useSettings<UIPreferences>("ui_preferences", defaultUIPreferences);
+}
+
+export function useUpdateUIPreferences() {
+  return useUpdateSettings<UIPreferences>("ui_preferences");
 }
 
 export function useAPIKeysSettings() {

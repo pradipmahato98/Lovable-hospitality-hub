@@ -1,8 +1,9 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -12,9 +13,20 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
+  const { data: uiPrefs } = useUIPreferences();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const iosEnabled = mounted && uiPrefs?.ios_materials && !(isMobile && uiPrefs?.disable_on_mobile);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn(
+      "min-h-screen bg-background transition-all duration-500",
+      iosEnabled && "ios-enabled"
+    )}>
       <Sidebar />
       <div 
         className={cn(
