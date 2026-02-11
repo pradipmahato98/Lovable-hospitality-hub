@@ -311,3 +311,20 @@
 .ios-enabled [data-sonner-toast]:not([data-type="error"]):not([data-type="success"]) {
   @apply text-foreground shadow-2xl !important;
 }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}

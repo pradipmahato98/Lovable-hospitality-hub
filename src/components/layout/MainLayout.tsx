@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
 import { useSidebar } from "@/hooks/use-sidebar";
