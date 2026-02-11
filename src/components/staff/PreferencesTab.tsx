@@ -32,7 +32,7 @@ export const PreferencesTab = () => {
       <CardContent className="space-y-6">
         {/* iOS Materials / Interface Section */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Appearance & Interface</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Operating Preferences</h3>
 
           <div className="flex items-center justify-between p-4 border border-primary/20 bg-primary/5 rounded-lg">
             <div className="flex items-center gap-3">

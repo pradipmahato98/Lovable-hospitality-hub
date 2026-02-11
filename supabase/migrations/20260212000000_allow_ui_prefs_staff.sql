@@ -12,21 +12,33 @@ BEGIN
     CREATE POLICY "Staff can update UI preferences"
     ON public.settings
     FOR UPDATE
-    USING (is_staff(auth.uid()) AND key = 'ui_preferences')
-    WITH CHECK (is_staff(auth.uid()) AND key = 'ui_preferences');
+    USING (
+      (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('staff', 'manager', 'admin')))
+      AND key = 'ui_preferences'
+    )
+    WITH CHECK (
+      (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('staff', 'manager', 'admin')))
+      AND key = 'ui_preferences'
+    );
 
     -- Also allow insertion if it doesn't exist
     DROP POLICY IF EXISTS "Staff can insert UI preferences" ON public.settings;
     CREATE POLICY "Staff can insert UI preferences"
     ON public.settings
     FOR INSERT
-    WITH CHECK (is_staff(auth.uid()) AND key = 'ui_preferences');
+    WITH CHECK (
+      (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('staff', 'manager', 'admin')))
+      AND key = 'ui_preferences'
+    );
 
     -- Also allow reading the UI preferences
     DROP POLICY IF EXISTS "Staff can view UI preferences" ON public.settings;
     CREATE POLICY "Staff can view UI preferences"
     ON public.settings
     FOR SELECT
-    USING (is_staff(auth.uid()) AND key = 'ui_preferences');
+    USING (
+      (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('staff', 'manager', 'admin')))
+      AND key = 'ui_preferences'
+    );
   END IF;
 END $$;
