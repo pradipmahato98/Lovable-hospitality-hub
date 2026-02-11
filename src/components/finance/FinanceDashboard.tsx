@@ -86,15 +86,16 @@ export function FinanceDashboard({ accountId }: FinanceDashboardProps) {
     let assets = 0;
     let liabilities = 0;
 
-    trialBalance.forEach((item) => {
+    (trialBalance || []).forEach((item) => {
+      if (!item || !item.account) return;
       if (item.account.type === "revenue") {
-        revenue += (item.totalCredit - item.totalDebit);
+        revenue += ((item.totalCredit || 0) - (item.totalDebit || 0));
       } else if (item.account.type === "expense") {
-        expenses += (item.totalDebit - item.totalCredit);
+        expenses += ((item.totalDebit || 0) - (item.totalCredit || 0));
       } else if (item.account.type === "asset") {
-        assets += (item.totalDebit - item.totalCredit);
+        assets += ((item.totalDebit || 0) - (item.totalCredit || 0));
       } else if (item.account.type === "liability") {
-        liabilities += (item.totalCredit - item.totalDebit);
+        liabilities += ((item.totalCredit || 0) - (item.totalDebit || 0));
       }
     });
 
@@ -107,8 +108,8 @@ export function FinanceDashboard({ accountId }: FinanceDashboardProps) {
       assets,
       liabilities,
       isBalanced,
-      totalAccounts: accounts.length,
-      recentEntries: journalEntries.slice(0, 5)
+      totalAccounts: (accounts || []).length,
+      recentEntries: (journalEntries || []).slice(0, 5)
     };
   }, [accounts, journalEntries, trialBalance, accountId, selectedAccount]);
 
@@ -126,14 +127,14 @@ export function FinanceDashboard({ accountId }: FinanceDashboardProps) {
     });
 
     // Aggregate actual data from journalEntries
-    journalEntries.forEach(entry => {
-      if (!entry.is_posted) return;
+    (journalEntries || []).forEach(entry => {
+      if (!entry || !entry.is_posted) return;
 
       const entryDate = new Date(entry.date);
       months.forEach(m => {
         if (isWithinInterval(entryDate, { start: m.start, end: m.end })) {
-          entry.lines?.forEach(line => {
-            const account = accounts.find(a => a.id === line.account_id);
+          (entry.lines || []).forEach(line => {
+            const account = (accounts || []).find(a => a.id === line.account_id);
             if (account?.type === "revenue") {
               m.revenue += (line.credit - line.debit);
             } else if (account?.type === "expense") {
@@ -157,11 +158,13 @@ export function FinanceDashboard({ accountId }: FinanceDashboardProps) {
       expense: 0
     };
 
-    trialBalance.forEach(item => {
+    (trialBalance || []).forEach(item => {
+      if (!item || !item.account) return;
       const type = item.account.type;
+      if (!type || !dist.hasOwnProperty(type)) return;
       const amount = type === "asset" || type === "expense"
-        ? Math.max(0, item.totalDebit - item.totalCredit)
-        : Math.max(0, item.totalCredit - item.totalDebit);
+        ? Math.max(0, (item.totalDebit || 0) - (item.totalCredit || 0))
+        : Math.max(0, (item.totalCredit || 0) - (item.totalDebit || 0));
       dist[type] += amount;
     });
 
