@@ -120,6 +120,80 @@ export const useRoleChangeAudit = (enabled: boolean = true) => {
   });
 };
 
+export const useRolePermissions = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["role-permissions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("role_permissions")
+        .select("*");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled,
+  });
+};
+
+export const useOTAChannels = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["ota-channels"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ota_channels")
+        .select("*");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled,
+  });
+};
+
+export const useOTASyncLogs = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["ota-sync-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ota_sync_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled,
+  });
+};
+
+export const useAdminAuditLogs = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["admin-audit-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_log")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, email");
+
+      const profileMap = new Map(profiles?.map((p) => [p.user_id, p.email]) || []);
+
+      return data.map(log => ({
+        ...log,
+        user_email: profileMap.get(log.user_id || "") || "System",
+      }));
+    },
+    enabled,
+  });
+};
+
 export const useUpdateUserRole = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();

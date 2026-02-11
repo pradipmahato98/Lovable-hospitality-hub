@@ -28,12 +28,34 @@ import { useState } from "react";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useUpdateSettings, useSettings } from "@/hooks/useSettings";
+import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import {
+  useUsersWithRoles,
+  useAdminAuditLogs,
+  useRolePermissions,
+  useUpdateUserRole,
+  useOTAChannels,
+  useOTASyncLogs
+} from "@/hooks/useUsersWithRoles";
+import { UsersTable } from "@/components/users/UsersTable";
+import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 
 const AdminConsole = () => {
-  const { isAdmin, isLoading } = useIsAdmin();
+  const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
   const [isExporting, setIsExporting] = useState(false);
+
+  // Realtime hook
+  useAdminRealtime();
+
+  // Data hooks
+  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users");
+  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit");
+  const { data: permissions, isLoading: loadingPerms } = useRolePermissions(activeTab === "permissions");
+  const { data: otaChannels, isLoading: loadingChannels } = useOTAChannels(activeTab === "integrations");
+  const { data: otaLogs, isLoading: loadingOTALogs } = useOTASyncLogs(activeTab === "integrations");
+  const updateUserRole = useUpdateUserRole();
 
   const { data: lockdownEnabled } = useSettings<boolean>("system_lockdown", false);
   const updateSettings = useUpdateSettings<boolean>("system_lockdown");
@@ -89,7 +111,7 @@ const AdminConsole = () => {
     });
   };
 
-  if (isLoading) return null;
+  if (loadingAdmin) return null;
   if (!isAdmin) return <Navigate to="/" replace />;
 
   return (
@@ -238,18 +260,14 @@ const AdminConsole = () => {
         </TabsContent>
 
         <TabsContent value="users">
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle>Account Management</CardTitle>
-              <CardDescription>Manage user access and verification status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-8 text-center border border-dashed rounded-lg">
-                <Users className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">User listing and management tools will appear here.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <UsersTable
+            users={users}
+            isLoading={loadingUsers}
+            searchQuery=""
+            onSearchChange={() => {}}
+            onRoleChange={(userId, oldRole, newRole) => updateUserRole.mutate({ userId, oldRole, newRole })}
+            isUpdating={updateUserRole.isPending}
+          />
         </TabsContent>
 
         <TabsContent value="security">
@@ -289,91 +307,135 @@ const AdminConsole = () => {
         <TabsContent value="permissions">
           <Card variant="elevated">
             <CardHeader>
-              <CardTitle>Granular RBAC System</CardTitle>
-              <CardDescription>Define module-level permissions for each role</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Granular RBAC System</CardTitle>
+                  <CardDescription>Role-based access control policies</CardDescription>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
+                  <div className="w-1.5 h-1.5 bg-success rounded-full" />
+                  Live
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-6">
-                Assign Read, Write, and Admin permissions for each application module.
-              </p>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted text-muted-foreground uppercase text-[10px] tracking-wider">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Module</th>
-                      <th className="px-4 py-3 font-medium">Admin</th>
-                      <th className="px-4 py-3 font-medium">Manager</th>
-                      <th className="px-4 py-3 font-medium">Staff</th>
-                      <th className="px-4 py-3 font-medium">User</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {["Reservations", "POS", "Finance", "Inventory", "Housekeeping"].map((module) => (
-                      <tr key={module} className="hover:bg-secondary/30 transition-colors">
-                        <td className="px-4 py-3 font-medium">{module}</td>
-                        <td className="px-4 py-3"><Badge className="bg-success/20 text-success border-success/30">All</Badge></td>
-                        <td className="px-4 py-3"><Badge variant="outline">RW</Badge></td>
-                        <td className="px-4 py-3"><Badge variant="outline">R</Badge></td>
-                        <td className="px-4 py-3 text-muted-foreground">-</td>
+              {loadingPerms ? (
+                <TableSkeleton columns={3} rows={5} />
+              ) : (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted text-muted-foreground uppercase text-[10px] tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Role</th>
+                        <th className="px-4 py-3 font-medium">Permission</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {permissions?.map((p: any) => (
+                        <tr key={p.id} className="hover:bg-secondary/30 transition-colors">
+                          <td className="px-4 py-3 capitalize font-bold">{p.role}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="border-primary/30 text-primary">
+                              {p.permission}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="audit">
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle>Audit Trails</CardTitle>
-              <CardDescription>Detailed history of all administrative actions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-8 text-center border border-dashed rounded-lg">
-                <Terminal className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">Comprehensive system logs will appear here.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <GeneralAuditLogTable logs={adminLogs} isLoading={loadingLogs} />
         </TabsContent>
 
         <TabsContent value="integrations">
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle>Connected Integrations</CardTitle>
-              <CardDescription>External services and API connections</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg border border-border flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center">
-                      <Database className="h-5 w-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Supabase</p>
-                      <Badge variant="outline" className="text-[10px] h-4">Connected</Badge>
-                    </div>
+          <div className="space-y-6">
+            <Card variant="elevated">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>OTA Channels</CardTitle>
+                    <CardDescription>External booking service connections</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm">Settings</Button>
+                  <Badge className="bg-success/20 text-success border-success/30">
+                    {otaChannels?.length || 0} Active
+                  </Badge>
                 </div>
-                <div className="p-4 rounded-lg border border-border flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
-                      <Globe className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {loadingChannels ? (
+                    <div className="col-span-2 py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+                  ) : otaChannels?.map((channel: any) => (
+                    <div key={channel.id} className="p-4 rounded-lg border border-border flex items-center justify-between bg-secondary/10">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
+                          <Globe className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{channel.name}</p>
+                          <Badge variant="outline" className={`text-[10px] h-4 ${channel.is_active ? 'text-success' : 'text-muted-foreground'}`}>
+                            {channel.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground">Sync Status</p>
+                        <p className="text-xs font-medium">{channel.sync_status || 'Idle'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">Channel Manager</p>
-                      <Badge variant="outline" className="text-[10px] h-4 text-success">Active</Badge>
-                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="elevated">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-amber-500" />
+                      Recent OTA Sync Events
+                    </CardTitle>
+                    <CardDescription>Real-time channel synchronization logs</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm">Sync</Button>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
+                    <div className="w-1.5 h-1.5 bg-success rounded-full" />
+                    Live
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                {loadingOTALogs ? (
+                  <TableSkeleton columns={3} rows={5} />
+                ) : (
+                  <div className="space-y-3">
+                    {otaLogs?.map((log: any) => (
+                      <div key={log.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-secondary/5">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className={log.status === 'success' ? 'border-success/50 text-success' : 'border-destructive/50 text-destructive'}>
+                            {log.direction.toUpperCase()}
+                          </Badge>
+                          <div>
+                            <p className="text-sm font-medium">{log.ota_name}</p>
+                            <p className="text-xs text-muted-foreground">{log.message}</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(log.created_at), "HH:mm:ss")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="security_breach">
