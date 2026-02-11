@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Send, Trash2, Play, Code, Database, Info } from "lucide-react";
+import { Terminal, Send, Trash2, Play, Code, Database, Info, Wifi, WifiOff, Cpu } from "lucide-react";
 import { useMCP } from "@/hooks/useMCP";
 
 const AVAILABLE_TOOLS = [
@@ -17,7 +17,7 @@ const AVAILABLE_TOOLS = [
 ];
 
 export const MCPTerminal = () => {
-  const { executeTool, isLoading } = useMCP();
+  const { executeTool, isLoading, isConnected, connectionMode } = useMCP();
   const [logs, setLogs] = useState<{ type: 'input' | 'output' | 'error', content: string, timestamp: Date }[]>([]);
   const [query, setQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState(AVAILABLE_TOOLS[0].name);
@@ -51,7 +51,21 @@ export const MCPTerminal = () => {
               <Terminal className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle>MCP Tool Terminal</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>MCP Tool Terminal</CardTitle>
+          <Badge variant={connectionMode === 'remote' ? 'default' : 'outline'} className="text-[10px] h-4">
+            {connectionMode === 'remote' ? 'Remote Mode' : 'Local Mode'}
+          </Badge>
+          {connectionMode === 'remote' && (
+            isConnected ?
+              <Badge variant="outline" className="text-[10px] h-4 bg-success/20 text-success border-success/30 gap-1">
+                <Wifi className="h-2 w-2" /> Connected
+              </Badge> :
+              <Badge variant="outline" className="text-[10px] h-4 bg-destructive/20 text-destructive border-destructive/30 gap-1">
+                <WifiOff className="h-2 w-2" /> Disconnected
+              </Badge>
+          )}
+        </div>
               <CardDescription>Directly interact with Supabase MCP tools</CardDescription>
             </div>
           </div>
