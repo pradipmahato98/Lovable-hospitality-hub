@@ -46,6 +46,20 @@ export function useAdminRealtime() {
           queryClient.invalidateQueries({ queryKey: ["ota-sync-logs"] });
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ota_channels" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["ota-channels"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "settings" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["settings"] });
+        }
+      )
       .subscribe();
 
     return () => {

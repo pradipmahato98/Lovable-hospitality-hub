@@ -194,6 +194,57 @@ export const useAdminAuditLogs = (enabled: boolean = true) => {
   });
 };
 
+export const useUpdateRolePermission = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ role, permission, action }: { role: AppRole; permission: string; action: 'add' | 'remove' }) => {
+      if (action === 'add') {
+        const { error } = await supabase
+          .from("role_permissions")
+          .insert({ role, permission });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("role_permissions")
+          .delete()
+          .eq("role", role)
+          .eq("permission", permission);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
+      toast.success("Role permissions updated");
+    },
+    onError: (error) => {
+      toast.error("Failed to update permissions: " + error.message);
+    },
+  });
+};
+
+export const useUpdateOTAChannel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, is_active, sync_status }: { id: string; is_active?: boolean; sync_status?: string }) => {
+      const { error } = await supabase
+        .from("ota_channels")
+        .update({ is_active, sync_status, updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ota-channels"] });
+      toast.success("Channel configuration updated");
+    },
+    onError: (error) => {
+      toast.error("Failed to update channel: " + error.message);
+    },
+  });
+};
+
 export const useUpdateUserRole = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
