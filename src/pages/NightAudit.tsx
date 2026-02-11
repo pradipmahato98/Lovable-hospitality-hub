@@ -27,7 +27,9 @@ import {
   ChevronRight,
   TrendingUp,
   Receipt,
-  FileText
+  FileText,
+  Bed,
+  Utensils
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -42,8 +44,10 @@ export default function NightAudit() {
     usePendingArrivals,
     useStayOvers,
     useDueOuts,
+    useRoomStatusSummary,
     usePosSummary,
     postCharges,
+    markAsNoShow,
     closeDay
   } = useNightAudit();
 
@@ -53,6 +57,7 @@ export default function NightAudit() {
   const { data: arrivals = [], isLoading: arrivalsLoading } = usePendingArrivals(businessDate || "");
   const { data: stayOvers = [], isLoading: stayOversLoading } = useStayOvers(businessDate || "");
   const { data: dueOuts = [], isLoading: dueOutsLoading } = useDueOuts(businessDate || "");
+  const { data: roomSummary } = useRoomStatusSummary();
   const { data: posSummary } = usePosSummary(businessDate || "");
 
   const [postedStats, setPostedStats] = useState<{ posted_count: number; total_revenue: number } | null>(null);
@@ -61,6 +66,16 @@ export default function NightAudit() {
     if (!posSummary) return 0;
     return Object.values(posSummary).reduce((acc: number, data: any) => acc + data.total, 0);
   }, [posSummary]);
+
+  const totalRooms = useMemo(() => {
+    if (!roomSummary) return 0;
+    return Object.values(roomSummary).reduce((acc: number, count) => acc + count, 0);
+  }, [roomSummary]);
+
+  const occupancyRate = useMemo(() => {
+    if (!totalRooms) return 0;
+    return (stayOvers.length / totalRooms) * 100;
+  }, [stayOvers.length, totalRooms]);
 
   const steps: AuditStep[] = ['welcome', 'validation', 'noshow', 'revenue', 'posting', 'closing', 'summary'];
   const stepIndex = steps.indexOf(currentStep);
@@ -109,7 +124,7 @@ export default function NightAudit() {
         log: {
           total_charges_posted: postedStats.posted_count,
           total_room_revenue: postedStats.total_revenue,
-          occupancy_rate: stayOvers.length > 0 ? (stayOvers.length / 50) * 100 : 0 // Assuming 50 rooms total for demo
+          occupancy_rate: occupancyRate
         }
       });
       setAuditProgress(100);
@@ -249,23 +264,50 @@ export default function NightAudit() {
                     <TableRow>
                       <TableHead>Guest</TableHead>
                       <TableHead>Reservation</TableHead>
-                      <TableHead>Original Status</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                        {arrivals.length === 0 ? (
+                    {arrivals.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                           <div className="space-y-2">
                             <CheckCircle2 className="h-8 w-8 mx-auto text-success opacity-50" />
                             <p>No pending arrivals to process as No-Show.</p>
                           </div>
-                        ) : (
-                          <p>{arrivals.length} reservations will be reviewed.</p>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      arrivals.map((arrival) => (
+                        <TableRow key={arrival.id}>
+                          <TableCell className="font-medium">
+                            {arrival.guests?.first_name} {arrival.guests?.last_name}
+                          </TableCell>
+                          <TableCell>{arrival.id.slice(0, 8)}...</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{arrival.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={markAsNoShow.isPending}
+                              onClick={async () => {
+                                try {
+                                  await markAsNoShow.mutateAsync(arrival.id);
+                                  toast.success("Guest marked as No-Show");
+                                } catch (e) {
+                                  toast.error("Failed to update status");
+                                }
+                              }}
+                            >
+                              {markAsNoShow.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Mark No-Show"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
 
@@ -326,7 +368,7 @@ export default function NightAudit() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm opacity-70">
                       <span>Occupancy Rate</span>
-                      <span>{((stayOvers.length / 50) * 100).toFixed(1)}%</span>
+                      <span>{occupancyRate.toFixed(1)}%</span>
                     </div>
                     <div className="flex justify-between text-sm opacity-70">
                       <span>Average Daily Rate (ADR)</span>
