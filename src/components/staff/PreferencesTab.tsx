@@ -90,10 +90,10 @@ export const PreferencesTab = () => {
           </div>
 
           {uiPrefs?.ios_materials && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-              <div className="p-4 border rounded-lg space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-scale-in">
+              <div className="p-4 border rounded-lg space-y-3 bg-card/50">
                 <div className="flex items-center gap-3">
-                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <Layers className="h-4 w-4 text-primary" />
                   <p className="text-sm font-medium">Glass Intensity</p>
                 </div>
                 <Select
@@ -116,10 +116,10 @@ export const PreferencesTab = () => {
                 </p>
               </div>
 
-              <div className="p-4 border rounded-lg flex items-center justify-between">
+              <div className="p-4 border rounded-lg flex items-center justify-between bg-card/50">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
-                    <Smartphone className="h-4 w-4 text-muted-foreground" />
+                    <Smartphone className="h-4 w-4 text-primary" />
                     <p className="text-sm font-medium">Disable on Mobile</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
