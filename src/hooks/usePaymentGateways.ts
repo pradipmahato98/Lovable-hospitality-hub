@@ -14,6 +14,8 @@ export interface PaymentGatewayConfig {
   logo_url?: string;
   description: string;
   api_key?: string;
+  /** @deprecated SECURITY: Secret keys should ideally never be handled on the client side.
+   * Consider moving payment processing to a backend/Edge Function for production. */
   secret_key?: string;
   merchant_id?: string;
   sandbox_mode: boolean;
@@ -229,7 +231,8 @@ export async function processPayment(
   redirectUrl?: string;
   error?: string;
 }> {
-  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef, customerInfo });
+  // SECURITY: Avoid logging customerInfo (PII) to the console to prevent data leakage
+  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef });
   
   // Fetch gateway config from DB
   const { data: settings } = await supabase
