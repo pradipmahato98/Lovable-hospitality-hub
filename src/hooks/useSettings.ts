@@ -75,11 +75,11 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
-export interface MCPConfig {
-  server_url: string;
-  service_role_key: string;
-  enabled_tools: string[];
-  connection_mode: 'local' | 'remote';
+export interface UIPreferences {
+  ios_materials: boolean;
+  animations_enabled: boolean;
+  glass_intensity: 'low' | 'medium' | 'high';
+  disable_on_mobile: boolean;
 }
 
 // Default values
@@ -142,20 +142,11 @@ const defaultAPIKeys: APIKeysSettings = {
   keys: [],
 };
 
-const defaultMCPConfig: MCPConfig = {
-  server_url: "",
-  service_role_key: "",
-  enabled_tools: [
-    "get_room_availability",
-    "create_reservation",
-    "list_reservations",
-    "get_inventory_status",
-    "list_housekeeping_tasks",
-    "manage_guest_profile",
-    "supabase_query",
-    "get_schema_info"
-  ],
-  connection_mode: 'local'
+const defaultUIPreferences: UIPreferences = {
+  ios_materials: true,
+  animations_enabled: true,
+  glass_intensity: 'medium',
+  disable_on_mobile: false,
 };
 
 // Generic settings fetch hook
@@ -292,4 +283,89 @@ export function useBusinessDate() {
 
 export function useUpdateBusinessDate() {
   return useUpdateSettings<string>("business_date");
+}
+
+export function useUIPreferences() {
+  return useQuery({
+    queryKey: ["settings", "ui_preferences"],
+    queryFn: async () => {
+      // Try to get from local storage first for immediate responsiveness and RLS bypass
+      const stored = localStorage.getItem("ui_preferences");
+      let localPrefs: Partial<UIPreferences> | null = null;
+
+      if (stored) {
+        try {
+          localPrefs = JSON.parse(stored);
+        } catch (e) {
+          console.error("Failed to parse local UI preferences", e);
+        }
+      }
+
+      // Fallback to DB but don't fail if it's restricted
+      try {
+        const { data, error } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("key", "ui_preferences")
+          .maybeSingle();
+
+        if (data?.value) {
+          const dbPrefs = data.value as unknown as UIPreferences;
+          // Merge with local to ensure any immediate changes are kept but DB is primary
+          return { ...defaultUIPreferences, ...dbPrefs, ...localPrefs } as UIPreferences;
+        }
+      } catch (e) {
+        console.warn("Could not fetch UI preferences from database", e);
+      }
+
+      return { ...defaultUIPreferences, ...localPrefs } as UIPreferences;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: defaultUIPreferences,
+  });
+}
+
+export function useUpdateUIPreferences() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (settings: UIPreferences) => {
+      // Always save to local storage
+      localStorage.setItem("ui_preferences", JSON.stringify(settings));
+
+      // Try to save to DB but ignore RLS errors
+      try {
+        const { data: existing } = await supabase
+          .from("settings")
+          .select("id")
+          .eq("key", "ui_preferences")
+          .maybeSingle();
+
+        const jsonValue: Json = settings as unknown as Json;
+
+        if (existing) {
+          await supabase
+            .from("settings")
+            .update({ value: jsonValue })
+            .eq("key", "ui_preferences");
+        } else {
+          await supabase
+            .from("settings")
+            .insert([{ key: "ui_preferences", value: jsonValue }]);
+        }
+      } catch (e) {
+        console.warn("Could not save UI preferences to database (likely RLS)", e);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "ui_preferences"] });
+      toast.success("UI preferences updated");
+    },
+    onError: (error) => {
+      // We don't show error toast here because we successfully saved to localStorage
+      console.error("Failed to sync UI preferences to server", error);
+      queryClient.invalidateQueries({ queryKey: ["settings", "ui_preferences"] });
+      toast.success("Preferences saved locally");
+    },
+  });
 }
