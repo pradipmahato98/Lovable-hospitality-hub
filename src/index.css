@@ -163,34 +163,6 @@
     box-shadow: var(--shadow-elevated);
   }
 
-  .ios-material {
-    @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border-white/20 dark:border-white/10;
-  }
-
-  .ios-material-elevated {
-    @apply backdrop-blur-xl bg-white/80 dark:bg-black/80 shadow-elevated border-white/30 dark:border-white/20;
-  }
-
-  .ios-blur {
-    @apply backdrop-blur-lg;
-  }
-
-  /* Intensity Variables */
-  .ios-intensity-low {
-    --ios-blur: 8px;
-    --ios-bg-opacity: 0.85;
-  }
-
-  .ios-intensity-medium {
-    --ios-blur: 16px;
-    --ios-bg-opacity: 0.65;
-  }
-
-  .ios-intensity-high {
-    --ios-blur: 24px;
-    --ios-bg-opacity: 0.45;
-  }
-
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
   }
@@ -272,66 +244,4 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
-}
-
-/* Global iOS Material Styles */
-.ios-enabled:not(.ios-mobile-disabled) .card,
-.ios-enabled:not(.ios-mobile-disabled) .bg-card,
-.ios-enabled:not(.ios-mobile-disabled) .bg-gradient-card,
-.ios-enabled:not(.ios-mobile-disabled) [role="dialog"],
-.ios-enabled:not(.ios-mobile-disabled) [role="alertdialog"],
-.ios-enabled:not(.ios-mobile-disabled) .popover-content,
-.ios-enabled:not(.ios-mobile-disabled) .dropdown-menu-content,
-.ios-enabled:not(.ios-mobile-disabled) .select-content,
-.ios-enabled:not(.ios-mobile-disabled) .sheet-content,
-.ios-enabled:not(.ios-mobile-disabled) .command-dialog,
-.ios-enabled:not(.ios-mobile-disabled) .menubar-content,
-.ios-enabled:not(.ios-mobile-disabled) .context-menu-content,
-.ios-enabled:not(.ios-mobile-disabled) .hover-card-content,
-.ios-enabled:not(.ios-mobile-disabled) aside,
-.ios-enabled:not(.ios-mobile-disabled) header,
-.ios-enabled:not(.ios-mobile-disabled) thead,
-.ios-enabled:not(.ios-mobile-disabled) .inline-flex.items-center.justify-center.rounded-lg.bg-muted, /* TabsList */
-.ios-enabled:not(.ios-mobile-disabled) .sticky.top-0.z-10 /* Table headers in some cases */ {
-  backdrop-filter: blur(var(--ios-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--ios-blur, 16px)) !important;
-  background-color: hsl(var(--background) / var(--ios-bg-opacity, 0.65)) !important;
-  background-image: none !important;
-  border-color: hsl(var(--border) / 0.4) !important;
-  box-shadow: var(--shadow-elevated) !important;
-  transition: backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
-}
-
-/* Specific handling for Toasts and Alerts to preserve status colors */
-.ios-enabled .toast:not(.destructive):not([data-type="error"]):not([data-type="success"]),
-.ios-enabled [data-sonner-toast]:not([data-type="error"]):not([data-type="success"]),
-.ios-enabled [role="alert"]:not([class*="destructive"]) {
-  @apply backdrop-blur-xl bg-background/60 border-border/40 !important;
-}
-
-.ios-enabled [role="alert"][class*="destructive"] {
-  @apply backdrop-blur-xl bg-destructive/10 border-destructive/30 !important;
-}
-
-/* Glass effect for Error/Success Toasts with slight tint */
-.ios-enabled .toast.destructive,
-.ios-enabled [data-sonner-toast][data-type="error"] {
-  @apply backdrop-blur-xl bg-destructive/90 text-destructive-foreground shadow-elevated !important;
-}
-
-.ios-enabled [data-sonner-toast][data-type="success"] {
-  @apply backdrop-blur-xl bg-success/90 text-success-foreground shadow-elevated !important;
-}
-
-.ios-enabled .bg-gradient-sidebar {
-  background-color: hsl(var(--background) / 0.6) !important;
-  background-image: none !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-}
-
-/* Ensure default toast text remains readable */
-.ios-enabled .toast:not(.destructive),
-.ios-enabled [data-sonner-toast]:not([data-type="error"]):not([data-type="success"]) {
-  @apply text-foreground shadow-2xl !important;
 }
