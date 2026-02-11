@@ -67,6 +67,7 @@ import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
 import { FinanceDashboard } from "@/components/finance/FinanceDashboard";
+import { PendingPostingsNotification } from "@/components/finance/PendingPostingsNotification";
 
 const accountTypeColors: Record<string, string> = {
   asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -80,7 +81,6 @@ export default function Finance() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [accountCategory, setAccountCategory] = useState("all");
   const [postingTab, setPostingTab] = useState("new");
-  const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
   const [quickPost, setQuickPost] = useState({
     account_id: "",
@@ -123,7 +123,6 @@ export default function Finance() {
   const { data: ledgerData, isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
   const { data: trialBalance, isLoading: trialBalanceLoading } = useTrialBalance();
   const { data: businessDate } = useBusinessDate();
-  const updateBusinessDate = useUpdateBusinessDate();
 
   // Filtered accounts
   const filteredAccounts = accounts.filter((a) => {
@@ -260,22 +259,6 @@ export default function Finance() {
     }
   };
 
-  const handleDayClose = async () => {
-    if (!businessDate) return;
-
-    const currentDate = new Date(businessDate);
-    currentDate.setDate(currentDate.getDate() + 1);
-    const nextDate = currentDate.toISOString().split("T")[0];
-
-    try {
-      await updateBusinessDate.mutateAsync(nextDate);
-      toast.success(`Business day closed. New date: ${nextDate}`);
-      setIsDayCloseDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to close business day");
-    }
-  };
-
   const addJournalLine = () => {
     setNewJournalEntry((prev) => ({
       ...prev,
@@ -297,6 +280,7 @@ export default function Finance() {
       title="Finance"
       subtitle={`Chart of accounts, journal entries, and ledger | Business Date: ${businessDate || "Loading..."}`}
     >
+      <PendingPostingsNotification />
       <div className="space-y-6">
         {/* Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -352,37 +336,39 @@ export default function Finance() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <TabsList>
-              <TabsTrigger value="dashboard" className="gap-2">
-                <PieChart className="h-4 w-4" />
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="accounts" className="gap-2">
-                <BookOpen className="h-4 w-4" />
-                Chart of Accounts
-              </TabsTrigger>
-              <TabsTrigger value="journal" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Journal Entries
-              </TabsTrigger>
-              <TabsTrigger value="ledger" className="gap-2">
-                <PieChart className="h-4 w-4" />
-                General Ledger
-              </TabsTrigger>
-              <TabsTrigger value="trial-balance" className="gap-2">
-                <Scale className="h-4 w-4" />
-                Trial Balance
-              </TabsTrigger>
-              <TabsTrigger value="posting" className="gap-2">
-                <Send className="h-4 w-4" />
-                Transaction Posting
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="gap-2">
-                <DollarSign className="h-4 w-4" />
-                Reports
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex items-center justify-between flex-wrap gap-4 border-b">
+            <div className="w-full overflow-x-auto pb-1 scrollbar-hide">
+              <TabsList className="flex-nowrap justify-start h-auto p-1 bg-transparent">
+                <TabsTrigger value="dashboard" className="gap-2 whitespace-nowrap py-2">
+                  <PieChart className="h-4 w-4" />
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="accounts" className="gap-2 whitespace-nowrap py-2">
+                  <BookOpen className="h-4 w-4" />
+                  Chart of Accounts
+                </TabsTrigger>
+                <TabsTrigger value="journal" className="gap-2 whitespace-nowrap py-2">
+                  <FileText className="h-4 w-4" />
+                  Journal Entries
+                </TabsTrigger>
+                <TabsTrigger value="ledger" className="gap-2 whitespace-nowrap py-2">
+                  <PieChart className="h-4 w-4" />
+                  General Ledger
+                </TabsTrigger>
+                <TabsTrigger value="trial-balance" className="gap-2 whitespace-nowrap py-2">
+                  <Scale className="h-4 w-4" />
+                  Trial Balance
+                </TabsTrigger>
+                <TabsTrigger value="posting" className="gap-2 whitespace-nowrap py-2">
+                  <Send className="h-4 w-4" />
+                  Transaction Posting
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="gap-2 whitespace-nowrap py-2">
+                  <DollarSign className="h-4 w-4" />
+                  Reports
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </div>
 
           {/* Dashboard */}
@@ -414,15 +400,6 @@ export default function Finance() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsDayCloseDialogOpen(true)}
-                    className="gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Day Close
-                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setPostingDialogOpen(true)} className="gap-2">
                     <Send className="h-4 w-4" />
                     Quick Post
@@ -1057,26 +1034,6 @@ export default function Finance() {
         </DialogContent>
       </Dialog>
 
-      {/* Day Close Confirmation Dialog */}
-      <Dialog open={isDayCloseDialogOpen} onOpenChange={setIsDayCloseDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close Business Day?</DialogTitle>
-            <DialogDescription>
-              This will advance the business date from {businessDate} to the next day.
-              Make sure all transactions for today have been posted.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setIsDayCloseDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDayClose} disabled={updateBusinessDate.isPending}>
-              {updateBusinessDate.isPending ? "Closing..." : "Confirm Day Close"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* New Account Dialog */}
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
