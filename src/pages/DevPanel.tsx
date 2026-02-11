@@ -36,7 +36,7 @@ import { Database as DbTypes } from "@/integrations/supabase/types";
 import { DataSeeder } from "@/components/dev/DataSeeder";
 import { MCPConfigPanel } from "@/components/dev/MCPConfig";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
-import { MCPTerminal } from "@/components/dev/MCPTerminal";
+import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 type AppRole = DbTypes["public"]["Enums"]["app_role"];
 
@@ -63,6 +63,7 @@ interface UserWithMultipleRoles {
 }
 
 const DevPanel = () => {
+  useAdminRealtime();
   const { isAdmin, isLoading } = useIsAdmin();
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();

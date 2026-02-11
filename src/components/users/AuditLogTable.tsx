@@ -72,14 +72,20 @@ export const AuditLogTable = ({
     <Card variant="elevated">
       <CardHeader>
         <div className="flex flex-col gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              Role Change Audit Log
-            </CardTitle>
-            <CardDescription>
-              Track all role changes for security and compliance
-            </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Role Change Audit Log
+              </CardTitle>
+              <CardDescription>
+                Track all role changes for security and compliance
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
+              <div className="w-1.5 h-1.5 bg-success rounded-full" />
+              Live
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">

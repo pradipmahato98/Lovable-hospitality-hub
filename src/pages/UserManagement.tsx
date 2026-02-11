@@ -7,8 +7,10 @@ import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
 import { UsersTable, AuditLogTable } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 const UserManagement = () => {
+  useAdminRealtime();
   const [searchQuery, setSearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
   const [auditRoleFilter, setAuditRoleFilter] = useState<string>("all");
