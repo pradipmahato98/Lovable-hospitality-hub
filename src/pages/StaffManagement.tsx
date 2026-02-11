@@ -26,7 +26,7 @@ const StaffManagement = () => {
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
 
-  const activeTab = searchParams.get("tab") || (isAdmin || isManager ? "directory" : "about");
+  const activeTab = searchParams.get("tab") || "directory";
   const subTab = searchParams.get("sub") || "details";
 
   const handleTabChange = (value: string) => {
@@ -51,20 +51,16 @@ const StaffManagement = () => {
     );
   }
 
-  const canSeeRestricted = isAdmin || isManager;
-
   return (
     <MainLayout title="Staff Management" subtitle="Manage employees and your professional profile">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex flex-col md:flex-row gap-6 md:gap-10">
           <aside className="w-full md:w-64 flex-shrink-0">
             <TabsList className="flex md:flex-col h-auto w-full bg-card/50 border border-border/50 p-2 gap-1 overflow-x-auto md:overflow-visible justify-start md:items-stretch rounded-xl scrollbar-hide">
-              {canSeeRestricted && (
-                <TabsTrigger value="directory" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
-                  <Users className="h-4 w-4" />
-                  <span className="whitespace-nowrap">Staff Directory</span>
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="directory" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <Users className="h-4 w-4" />
+                <span className="whitespace-nowrap">Staff Directory</span>
+              </TabsTrigger>
 
               <TabsTrigger value="about" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
                 <Info className="h-4 w-4" />
@@ -80,7 +76,7 @@ const StaffManagement = () => {
 
           <main className="flex-1 min-w-0">
             <TabsContent value="directory" className="mt-0">
-              {canSeeRestricted && <StaffDirectoryTab />}
+              <StaffDirectoryTab />
             </TabsContent>
 
             <TabsContent value="about" className="mt-0">
@@ -89,7 +85,7 @@ const StaffManagement = () => {
                   <TabsList className="bg-muted/50 p-1 h-auto inline-flex">
                     <TabsTrigger value="details" className="gap-2 px-4 py-2">
                       <UserCircle className="h-4 w-4" />
-                      Details
+                      User Details
                     </TabsTrigger>
                     <TabsTrigger value="preferences" className="gap-2 px-4 py-2">
                       <Settings className="h-4 w-4" />

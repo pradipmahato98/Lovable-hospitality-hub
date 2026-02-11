@@ -261,6 +261,10 @@ const DevPanel = () => {
               <Shield className="h-4 w-4" />
               MCP Config
             </TabsTrigger>
+            <TabsTrigger value="mcp-terminal" className="gap-2 whitespace-nowrap">
+              <Terminal className="h-4 w-4" />
+              MCP Terminal
+            </TabsTrigger>
             <TabsTrigger value="security" className="gap-2 text-destructive whitespace-nowrap">
               <ShieldAlert className="h-4 w-4" />
               Security Breach
@@ -607,6 +611,10 @@ const DevPanel = () => {
 
         <TabsContent value="mcp">
           <MCPConfigPanel />
+        </TabsContent>
+
+        <TabsContent value="mcp-terminal">
+          <MCPTerminal />
         </TabsContent>
 
         <TabsContent value="security">

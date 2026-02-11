@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Copy,
   ExternalLink,
+  Server,
   Zap,
   Plus,
   Trash2,
@@ -33,7 +34,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
+import { useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey, useMCPConfig, useUpdateMCPConfig, MCPConfig } from "@/hooks/useSettings";
 
 interface BucketStatus {
   id: string;
@@ -45,6 +46,8 @@ export const MCPConfigPanel = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { data: apiKeysData } = useAPIKeysSettings();
   const updateAPIKeys = useUpdateAPIKeysSettings();
+  const { data: mcpConfig } = useMCPConfig();
+  const updateMCPConfig = useUpdateMCPConfig();
 
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<APIKey | null>(null);
@@ -68,25 +71,31 @@ export const MCPConfigPanel = () => {
   });
 
   const checkStatus = async () => {
+    console.log("Checking MCP system status...");
     setIsLoading(true);
     try {
       // 1. Check Buckets
       const requiredBuckets = ['avatars', 'property-images', 'lost-found-images'];
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      let bucketStatus: BucketStatus[] = requiredBuckets.map(id => ({ id, exists: false, public: false }));
 
-      if (bucketsError) throw bucketsError;
+      try {
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        if (!bucketsError && buckets) {
+          bucketStatus = requiredBuckets.map(id => {
+            const found = buckets.find(b => b.id === id);
+            return {
+              id,
+              exists: !!found,
+              public: found?.public ?? false
+            };
+          });
+        }
+      } catch (bucketErr) {
+        console.error("Bucket check failed:", bucketErr);
+        // We don't toast here to avoid annoying popups on load if storage isn't fully setup
+      }
 
-      const bucketStatus = requiredBuckets.map(id => {
-        const found = buckets?.find(b => b.id === id);
-        return {
-          id,
-          exists: !!found,
-          public: found?.public ?? false
-        };
-      });
-
-      // 2. Check Realtime (We can't directly check the publication easily,
-      // so we check if we can subscribe to a common table)
+      // 2. Check Realtime
       const testChannel = supabase.channel('mcp-status-check');
       let realtimeOk = false;
 
@@ -98,7 +107,7 @@ export const MCPConfigPanel = () => {
           });
 
         // Wait a bit for subscription
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         await supabase.removeChannel(testChannel);
       } catch (e) {
         realtimeOk = false;
@@ -112,7 +121,7 @@ export const MCPConfigPanel = () => {
 
     } catch (error) {
       console.error("Status check failed:", error);
-      toast.error("Failed to fetch system status");
+      // Only show toast if it's a major failure, otherwise fail silently
     } finally {
       setIsLoading(false);
     }
@@ -147,16 +156,31 @@ export const MCPConfigPanel = () => {
     toast.success(`${label} copied to clipboard`);
   };
 
-  const mcpConfigJson = JSON.stringify({
-    name: "LuxeStay ERP Supabase MCP",
-    version: "1.0.0",
-    supabase: {
-      project_id: status.projectId,
-      realtime: true,
-      storage: status.buckets.map(b => b.id),
-      custom_keys: (apiKeysData?.keys || []).map(k => k.name)
-    }
-  }, null, 2);
+  let mcpConfigJson = "{}";
+  try {
+    mcpConfigJson = JSON.stringify({
+      name: "LuxeStay ERP Supabase MCP",
+      version: "1.0.0",
+      supabase: {
+        project_id: status.projectId,
+        realtime: true,
+        storage: status.buckets.map(b => b.id),
+        custom_keys: (apiKeysData?.keys || []).map(k => k.name),
+        tools: [
+          "get_room_availability",
+          "create_reservation",
+          "list_reservations",
+          "get_inventory_status",
+          "list_housekeeping_tasks",
+          "manage_guest_profile",
+          "supabase_query",
+          "get_schema_info"
+        ]
+      }
+    }, null, 2);
+  } catch (e) {
+    console.error("Failed to generate MCP JSON preview", e);
+  }
 
   const handleAddOrEditKey = (key?: APIKey) => {
     if (key) {
@@ -208,6 +232,20 @@ export const MCPConfigPanel = () => {
   const toggleSecretVisibility = (name: string) => {
     setShowSecrets(prev => ({ ...prev, [name]: !prev[name] }));
   };
+
+  const handleUpdateMCPConfig = (updates: Partial<MCPConfig>) => {
+    if (mcpConfig) {
+      updateMCPConfig.mutate({ ...mcpConfig, ...updates });
+    }
+  };
+
+  if (!mcpConfig) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -345,12 +383,20 @@ export const MCPConfigPanel = () => {
               </div>
             </div>
 
-            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs flex gap-3">
-              <AlertCircle className="h-5 w-5 shrink-0" />
-              <p>
-                To enable full write access for the MCP host, you must also provide your <strong>Service Role Key</strong>.
-                Keep this key secret and only share it with trusted MCP providers.
-              </p>
+            <div className="space-y-2">
+              <Label>Service Role Key (Used for terminal & checks)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type={showSecrets['service_role'] ? "text" : "password"}
+                  placeholder="Paste service_role key here..."
+                  value={mcpConfig.service_role_key || ""}
+                  onChange={(e) => handleUpdateMCPConfig({ service_role_key: e.target.value })}
+                  className="font-mono text-xs h-8"
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleSecretVisibility('service_role')}>
+                  {showSecrets['service_role'] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
 
             <div className="pt-2">
@@ -364,6 +410,57 @@ export const MCPConfigPanel = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Remote MCP Server Config */}
+      <Card variant="elevated">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Server className="h-5 w-5" />
+            Remote MCP Server Configuration
+          </CardTitle>
+          <CardDescription>Connect this ERP to an external MCP host via SSE</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-primary/20">
+            <div>
+              <p className="font-medium text-sm">Connection Mode</p>
+              <p className="text-xs text-muted-foreground">Switch between local direct access and remote MCP server</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-medium ${mcpConfig.connection_mode === 'local' ? 'text-primary' : 'text-muted-foreground'}`}>Local</span>
+              <Switch
+                checked={mcpConfig.connection_mode === 'remote'}
+                onCheckedChange={(checked) => handleUpdateMCPConfig({ connection_mode: checked ? 'remote' : 'local' })}
+              />
+              <span className={`text-xs font-medium ${mcpConfig.connection_mode === 'remote' ? 'text-primary' : 'text-muted-foreground'}`}>Remote (SSE)</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="server-url">Remote Server URL (SSE)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="server-url"
+                placeholder="https://mcp-host.example.com/sse"
+                value={mcpConfig.server_url || ""}
+                onChange={(e) => handleUpdateMCPConfig({ server_url: e.target.value })}
+                className="font-mono text-xs"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toast.info("Ping test not implemented yet")}
+                disabled={!mcpConfig.server_url}
+              >
+                Test Connection
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              The URL should point to an MCP-compatible SSE endpoint.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Key Management */}
       <Card variant="elevated">

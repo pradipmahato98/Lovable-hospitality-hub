@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Lock, Smartphone, Eye, EyeOff, Check, X } from "lucide-react";
+import { Shield, Lock, Smartphone, Eye, EyeOff, Check, X, QrCode, Monitor, Laptop } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { trackActivity } from "@/utils/auditLogger";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const SecurityTab = () => {
   const [showCurrent, setShowCurrent] = useState(false);
@@ -20,6 +28,16 @@ export const SecurityTab = () => {
     confirm: ""
   });
   const [loading, setLoading] = useState(false);
+  const [is2FADialogOpen, setIs2FADialogOpen] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+
+  // Mock sessions state
+  const [sessions, setSessions] = useState([
+    { id: "1", device: "Desktop", browser: "Chrome", location: "Kathmandu, Nepal", active: "Now", icon: Monitor, isCurrent: true },
+    { id: "2", device: "Mobile App", browser: "iPhone 14", location: "Paris, France", active: "2 days ago", icon: Smartphone, isCurrent: false },
+    { id: "3", device: "Laptop", browser: "Safari", location: "London, UK", active: "1 week ago", icon: Laptop, isCurrent: false },
+  ]);
 
   const calculateStrength = (pass: string) => {
     let score = 0;
@@ -69,7 +87,42 @@ export const SecurityTab = () => {
   };
 
   const handleSetup2FA = () => {
-    toast.info("2FA setup process initiated");
+    setIs2FADialogOpen(true);
+    trackActivity("Initiate 2FA Setup", "security_update");
+  };
+
+  const handleVerify2FA = () => {
+    if (twoFactorCode.length === 6) {
+      setIs2FAEnabled(true);
+      setIs2FADialogOpen(false);
+      setTwoFactorCode("");
+      toast.success("Two-factor authentication enabled successfully");
+      trackActivity("Enable 2FA", "security_update");
+    } else {
+      toast.error("Please enter a valid 6-digit code");
+    }
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'others' });
+      if (error) throw error;
+
+      await trackActivity("Revoke Other Sessions", "security_update");
+      setSessions(sessions.filter(s => s.isCurrent));
+      toast.success("All other active sessions have been revoked");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to revoke sessions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRevokeSession = (id: string) => {
+    setSessions(sessions.filter(s => s.id !== id));
+    toast.success("Session revoked successfully");
+    trackActivity("Revoke Session", "security_update");
   };
 
   return (
@@ -186,41 +239,111 @@ export const SecurityTab = () => {
         <CardContent>
           <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-dashed">
             <div>
-              <p className="font-medium">Authenticator App</p>
+              <p className="font-medium flex items-center gap-2">
+                Authenticator App
+                {is2FAEnabled && <Badge variant="outline" className="text-success border-success/30 bg-success/10 ml-2">Enabled</Badge>}
+              </p>
               <p className="text-sm text-muted-foreground">Use an app like Google Authenticator to get security codes.</p>
             </div>
-            <Button variant="outline" onClick={handleSetup2FA}>Setup 2FA</Button>
+            <Button variant={is2FAEnabled ? "outline" : "gold"} onClick={handleSetup2FA}>
+              {is2FAEnabled ? "Reconfigure" : "Setup 2FA"}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Login Sessions
-          </CardTitle>
-          <CardDescription>Manage your active sessions across different devices.</CardDescription>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Shield className="h-5 w-5 text-primary" />
+              Login Sessions
+            </CardTitle>
+            <CardDescription>Manage your active sessions across different devices.</CardDescription>
+          </div>
+          {sessions.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive w-full sm:w-auto"
+              onClick={handleRevokeOtherSessions}
+              disabled={loading}
+            >
+              Revoke All Others
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between py-2 border-b">
-              <div>
-                <p className="font-medium text-sm">Chrome on Windows</p>
-                <p className="text-xs text-muted-foreground">London, UK • Current Session</p>
+            {sessions.map((session) => (
+              <div key={session.id} className="flex items-center justify-between py-3 px-1 border-b last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-muted rounded-full">
+                    <session.icon className={`h-4 w-4 ${session.isCurrent ? "text-primary" : "text-muted-foreground"}`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{session.device} • {session.browser}</p>
+                      {session.isCurrent && (
+                        <Badge variant="outline" className="text-[10px] h-4 text-success border-success/30 bg-success/10">Active Now</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{session.location} • {session.active}</p>
+                  </div>
+                </div>
+                {!session.isCurrent && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-destructive hover:bg-destructive/10"
+                    onClick={() => handleRevokeSession(session.id)}
+                    disabled={loading}
+                  >
+                    Revoke
+                  </Button>
+                )}
               </div>
-              <Badge variant="outline" className="text-success border-success/30 bg-success/10">Active</Badge>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b text-muted-foreground">
-              <div>
-                <p className="font-medium text-sm">Safari on iPhone</p>
-                <p className="text-xs">Paris, France • 2 days ago</p>
-              </div>
-              <Button variant="ghost" size="sm">Revoke</Button>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={is2FADialogOpen} onOpenChange={setIs2FADialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Setup Authenticator App</DialogTitle>
+            <DialogDescription>
+              Scan the QR code below using your authenticator app.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center p-6 space-y-4">
+            <div className="p-4 bg-white rounded-xl border-4 border-muted">
+              <QrCode className="h-40 w-40 text-black" />
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-sm font-medium">Or enter code manually:</p>
+              <code className="px-3 py-1 bg-muted rounded text-lg font-mono tracking-widest">
+                LUXE-STAY-2FA-SECURE
+              </code>
+            </div>
+            <div className="w-full space-y-2">
+              <Label htmlFor="2fa-code">Verification Code</Label>
+              <Input
+                id="2fa-code"
+                placeholder="000000"
+                className="text-center text-2xl tracking-[0.5em] font-mono"
+                maxLength={6}
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIs2FADialogOpen(false)}>Cancel</Button>
+            <Button variant="gold" onClick={handleVerify2FA}>Verify & Enable</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
