@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Copy,
   ExternalLink,
+  Server,
   Zap,
   Plus,
   Trash2,
