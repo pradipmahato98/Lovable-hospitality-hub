@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,6 @@ import {
   ChefHat,
   BarChart3,
   History,
-  LayoutDashboard,
 } from "lucide-react";
  import { Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -77,8 +75,7 @@ const menuItems = [
   { id: "12", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
 ];
 
-const POSTerminal = () => {
-  const navigate = useNavigate();
+const POS = () => {
   const [activeTab, setActiveTab] = useState("tables");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -232,7 +229,7 @@ const POSTerminal = () => {
   };
 
   return (
-    <MainLayout title="POS Terminal" subtitle="Restaurant and bar transactions">
+    <MainLayout title="Point of Sale" subtitle="Restaurant and bar transactions">
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -255,21 +252,17 @@ const POSTerminal = () => {
              </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos/kitchen")} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/kitchen"} className="gap-2">
               <ChefHat className="h-4 w-4" />
               Kitchen
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos/reports")} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/reports"} className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Reports
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos/history")} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/history"} className="gap-2">
               <History className="h-4 w-4" />
               History
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos")} className="gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
             </Button>
           </div>
         </div>
@@ -678,4 +671,4 @@ const POSTerminal = () => {
   );
 };
 
-export default POSTerminal;
+export default POS;

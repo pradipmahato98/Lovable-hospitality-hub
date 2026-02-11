@@ -75,13 +75,6 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
-export interface MCPConfig {
-  server_url: string;
-  service_role_key: string;
-  enabled_tools: string[];
-  connection_mode: 'local' | 'remote';
-}
-
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -140,22 +133,6 @@ const defaultQuickMenuSettings: QuickMenuSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
-};
-
-const defaultMCPConfig: MCPConfig = {
-  server_url: "",
-  service_role_key: "",
-  enabled_tools: [
-    "get_room_availability",
-    "create_reservation",
-    "list_reservations",
-    "get_inventory_status",
-    "list_housekeeping_tasks",
-    "manage_guest_profile",
-    "supabase_query",
-    "get_schema_info"
-  ],
-  connection_mode: 'local'
 };
 
 // Generic settings fetch hook
@@ -276,14 +253,6 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
-}
-
-export function useMCPConfig() {
-  return useSettings<MCPConfig>("mcp_config", defaultMCPConfig);
-}
-
-export function useUpdateMCPConfig() {
-  return useUpdateSettings<MCPConfig>("mcp_config");
 }
 
 export function useBusinessDate() {

@@ -1,7 +1,7 @@
 {
   "name": "LuxeStay ERP Supabase MCP",
   "version": "1.0.0",
-  "description": "MCP configuration for LuxeStay ERP Supabase integration with custom domain tools",
+  "description": "MCP configuration for LuxeStay ERP Supabase integration",
   "supabase": {
     "project_id": "rhajtijfptfnezeetcvx",
     "realtime": {
@@ -17,49 +17,8 @@
       "methods": ["email", "google"]
     }
   },
-  "mcp": {
-    "server": {
-      "command": "npm",
-      "args": ["run", "mcp:start"],
-      "env_file": ".env"
-    },
-    "tools": [
-      {
-        "name": "get_room_availability",
-        "description": "Check available rooms for specific dates"
-      },
-      {
-        "name": "create_reservation",
-        "description": "Create a new room reservation"
-      },
-      {
-        "name": "list_reservations",
-        "description": "List recent or filtered reservations"
-      },
-      {
-        "name": "get_inventory_status",
-        "description": "Check stock levels for inventory items"
-      },
-      {
-        "name": "list_housekeeping_tasks",
-        "description": "List current housekeeping tasks"
-      },
-      {
-        "name": "manage_guest_profile",
-        "description": "Create or update a guest profile"
-      },
-      {
-        "name": "supabase_query",
-        "description": "Run a read-only SQL query against the database"
-      },
-      {
-        "name": "get_schema_info",
-        "description": "Get database schema information"
-      }
-    ]
-  },
   "runtime": {
-    "environment": "node",
+    "environment": "browser",
     "framework": "react"
   }
 }

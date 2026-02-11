@@ -57,10 +57,15 @@ import {
   useRolePermissions,
   useUpdateUserRole,
   useOTAChannels,
-  useOTASyncLogs
+  useOTASyncLogs,
+  useUpdateRolePermission,
+  useUpdateOTAChannel,
+  AppRole
 } from "@/hooks/useUsersWithRoles";
 import { UsersTable } from "@/components/users/UsersTable";
 import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
+import { TableSkeleton } from "@/components/skeletons";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AdminConsole = () => {
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
@@ -210,11 +215,21 @@ const AdminConsole = () => {
     });
   };
 
-  if (loadingAdmin) return null;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (loadingAdmin) {
+    return (
+      <MainLayout title="Admin Console" subtitle="Loading...">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!isAdmin && !import.meta.env.DEV) return <Navigate to="/" replace />;
 
   return (
     <MainLayout title="Admin Console" subtitle="System-wide administrative controls and security">
+      <ErrorBoundary>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="overflow-x-auto pb-1 scrollbar-hide">
           <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
@@ -695,6 +710,7 @@ const AdminConsole = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </ErrorBoundary>
     </MainLayout>
   );
 };
