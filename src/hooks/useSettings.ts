@@ -283,9 +283,11 @@ export function useUIPreferences() {
     queryFn: async () => {
       // Try to get from local storage first for immediate responsiveness and RLS bypass
       const stored = localStorage.getItem("ui_preferences");
+      let localPrefs: Partial<UIPreferences> | null = null;
+
       if (stored) {
         try {
-          return JSON.parse(stored) as UIPreferences;
+          localPrefs = JSON.parse(stored);
         } catch (e) {
           console.error("Failed to parse local UI preferences", e);
         }
@@ -299,13 +301,19 @@ export function useUIPreferences() {
           .eq("key", "ui_preferences")
           .maybeSingle();
 
-        if (data?.value) return data.value as unknown as UIPreferences;
+        if (data?.value) {
+          const dbPrefs = data.value as unknown as UIPreferences;
+          // Merge with local to ensure any immediate changes are kept but DB is primary
+          return { ...defaultUIPreferences, ...dbPrefs, ...localPrefs } as UIPreferences;
+        }
       } catch (e) {
         console.warn("Could not fetch UI preferences from database", e);
       }
 
-      return defaultUIPreferences;
+      return { ...defaultUIPreferences, ...localPrefs } as UIPreferences;
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: defaultUIPreferences,
   });
 }
 

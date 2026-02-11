@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
+import { useUIPreferences, type UIPreferences } from "@/hooks/useSettings";
 
 interface MainLayoutProps {
   children: ReactNode;

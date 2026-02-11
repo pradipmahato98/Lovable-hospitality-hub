@@ -21,5 +21,12 @@ BEGIN
     ON public.settings
     FOR INSERT
     WITH CHECK (is_staff(auth.uid()) AND key = 'ui_preferences');
+
+    -- Also allow reading the UI preferences
+    DROP POLICY IF EXISTS "Staff can view UI preferences" ON public.settings;
+    CREATE POLICY "Staff can view UI preferences"
+    ON public.settings
+    FOR SELECT
+    USING (is_staff(auth.uid()) AND key = 'ui_preferences');
   END IF;
 END $$;
