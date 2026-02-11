@@ -38,8 +38,6 @@ import {
   Download,
   ChevronRight,
   Check,
-  Wifi,
-  WifiOff,
   RefreshCw,
   DollarSign,
   TrendingUp,
@@ -49,8 +47,6 @@ import {
   History,
   Layers,
   Clock,
-  Calendar,
-  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -64,7 +60,6 @@ import {
   Account,
 } from "@/hooks/useFinance";
 import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
-import { MetricCard } from "@/components/dashboard/MetricCard";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
 
 const accountTypeColors: Record<string, string> = {
@@ -76,7 +71,8 @@ const accountTypeColors: Record<string, string> = {
 };
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("accounts");
+  const [activeTab, setActiveTab] = useState("transactions");
+  const [subView, setSubView] = useState<string | null>(null);
   const [accountCategory, setAccountCategory] = useState("all");
   const [postingTab, setPostingTab] = useState("new");
   const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
@@ -113,7 +109,7 @@ export default function Finance() {
   });
 
   // Hooks
-  const { data: accounts, isLoading: accountsLoading, realtimeStatus } = useAccounts();
+  const { data: accounts, isLoading: accountsLoading } = useAccounts();
   const createAccount = useCreateAccount();
   const { data: journalEntries, isLoading: entriesLoading } = useJournalEntries();
   const createJournalEntry = useCreateJournalEntry();
@@ -132,10 +128,9 @@ export default function Finance() {
     return matchesSearch && matchesCategory;
   });
 
-  // Calculate totals for metrics
+  // Calculate totals for trial balance
   const totalDebits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
   const totalCredits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
-  const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
 
   const handleCreateAccount = async () => {
     if (!newAccount.code || !newAccount.name) {
@@ -292,640 +287,782 @@ export default function Finance() {
 
   return (
     <MainLayout
-      title="Finance"
-      subtitle={`Chart of accounts, journal entries, and ledger | Business Date: ${businessDate || "Loading..."}`}
+      title="Finance & Accounting"
+      subtitle={`Business Date: ${businessDate || "Loading..."}`}
     >
       <div className="space-y-6">
-        {/* Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard
-            title="Total Accounts"
-            value={accounts.length.toString()}
-            change={`${accounts.filter((a) => a.is_active).length} active`}
-            changeType="neutral"
-            icon={BookOpen}
-            delay={0}
-          />
-          <MetricCard
-            title="Journal Entries"
-            value={journalEntries.length.toString()}
-            change={`${journalEntries.filter((e) => e.is_posted).length} posted`}
-            changeType="neutral"
-            icon={FileText}
-            delay={50}
-          />
-          <MetricCard
-            title="Total Debits"
-            value={`$${totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-            change="Posted entries"
-            changeType="neutral"
-            icon={TrendingUp}
-            delay={100}
-          />
-          <MetricCard
-            title="Trial Balance"
-            value={isBalanced ? "Balanced" : "Unbalanced"}
-            change={
-              isBalanced
-                ? "All entries balanced"
-                : `Diff: $${Math.abs(totalDebits - totalCredits).toFixed(2)}`
-            }
-            changeType={isBalanced ? "positive" : "negative"}
-            icon={Scale}
-            delay={150}
-          />
-        </div>
-
-        {/* Connection Status */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {realtimeStatus === "connected" ? (
-            <Wifi className="h-4 w-4 text-success" />
-          ) : (
-            <WifiOff className="h-4 w-4 text-destructive" />
-          )}
-          <span>
-            {realtimeStatus === "connected" ? "Real-time sync active" : "Connecting..."}
-          </span>
-        </div>
-
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSubView(null); }}>
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <TabsList>
-              <TabsTrigger value="accounts" className="gap-2">
+            <TabsList className="grid grid-cols-3 w-full max-w-md">
+              <TabsTrigger value="setup" className="gap-2">
                 <BookOpen className="h-4 w-4" />
-                Chart of Accounts
+                Setup
               </TabsTrigger>
-              <TabsTrigger value="journal" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Journal Entries
-              </TabsTrigger>
-              <TabsTrigger value="ledger" className="gap-2">
-                <PieChart className="h-4 w-4" />
-                General Ledger
-              </TabsTrigger>
-              <TabsTrigger value="trial-balance" className="gap-2">
-                <Scale className="h-4 w-4" />
-                Trial Balance
-              </TabsTrigger>
-              <TabsTrigger value="posting" className="gap-2">
-                <Send className="h-4 w-4" />
-                Transaction Posting
+              <TabsTrigger value="transactions" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Transactions
               </TabsTrigger>
               <TabsTrigger value="reports" className="gap-2">
-                <DollarSign className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 Reports
               </TabsTrigger>
             </TabsList>
           </div>
 
-          {/* Chart of Accounts */}
-          <TabsContent value="accounts" className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <Tabs value={accountCategory} onValueChange={setAccountCategory} className="w-auto">
-                <TabsList className="bg-secondary/50">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="asset">Assets</TabsTrigger>
-                  <TabsTrigger value="liability">Liabilities</TabsTrigger>
-                  <TabsTrigger value="equity">Equity</TabsTrigger>
-                  <TabsTrigger value="revenue">Revenue</TabsTrigger>
-                  <TabsTrigger value="expense">Expenses</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="flex items-center gap-2">
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search accounts..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+          {/* Setup Tab */}
+          <TabsContent value="setup" className="space-y-4">
+            {subView === "accounts" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Setup
+                  </Button>
+                  <h2 className="text-lg font-semibold">Chart of Accounts</h2>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsDayCloseDialogOpen(true)}
-                    className="gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Day Close
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setPostingDialogOpen(true)} className="gap-2">
-                    <Send className="h-4 w-4" />
-                    Quick Post
-                  </Button>
-                  <Button size="sm" onClick={() => setAccountDialogOpen(true)} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New
-                  </Button>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <Tabs value={accountCategory} onValueChange={setAccountCategory} className="w-auto">
+                    <TabsList className="bg-secondary/50">
+                      <TabsTrigger value="all">All</TabsTrigger>
+                      <TabsTrigger value="asset">Assets</TabsTrigger>
+                      <TabsTrigger value="liability">Liabilities</TabsTrigger>
+                      <TabsTrigger value="equity">Equity</TabsTrigger>
+                      <TabsTrigger value="revenue">Revenue</TabsTrigger>
+                      <TabsTrigger value="expense">Expenses</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search accounts..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Button size="sm" onClick={() => setAccountDialogOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      New
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <Card>
-              <CardContent className="p-0">
-                {accountsLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">Loading accounts...</div>
-                ) : filteredAccounts.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No accounts found</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAccounts.map((account) => (
-                        <TableRow
-                          key={account.id}
-                          className="cursor-pointer hover:bg-secondary/50"
-                          onClick={() => {
-                            setSelectedAccountId(account.id);
-                            setActiveTab("ledger");
-                          }}
-                        >
-                          <TableCell className="font-mono">{account.code}</TableCell>
-                          <TableCell className="font-medium">{account.name}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={accountTypeColors[account.type]}
+                <Card>
+                  <CardContent className="p-0">
+                    {accountsLoading ? (
+                      <div className="p-8 text-center text-muted-foreground">Loading accounts...</div>
+                    ) : filteredAccounts.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">No accounts found</div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredAccounts.map((account) => (
+                            <TableRow
+                              key={account.id}
+                              className="cursor-pointer hover:bg-secondary/50"
+                              onClick={() => {
+                                setSelectedAccountId(account.id);
+                                setActiveTab("reports");
+                                setSubView("ledger");
+                              }}
                             >
-                              {account.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {account.description || "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                account.is_active
-                                  ? "bg-success/20 text-success"
-                                  : "bg-muted text-muted-foreground"
-                              }
-                            >
-                              {account.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                              <TableCell className="font-mono">{account.code}</TableCell>
+                              <TableCell className="font-medium">{account.name}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={accountTypeColors[account.type]}
+                                >
+                                  {account.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {account.description || "-"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    account.is_active
+                                      ? "bg-success/20 text-success"
+                                      : "bg-muted text-muted-foreground"
+                                  }
+                                >
+                                  {account.is_active ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { title: "Chart of Accounts configuration", id: "accounts" },
+                  { title: "Account hierarchy and segments" },
+                  { title: "Fiscal year and accounting periods" },
+                  { title: "Journal types and approval workflows" },
+                  { title: "Exchange rate tables" },
+                  { title: "Posting rules and module mappings" },
+                  { title: "Customer and corporate account setup" },
+                  { title: "Credit limits and customer terms" },
+                  { title: "Billing templates" },
+                  { title: "Invoice numbering rules" },
+                  { title: "Vendor master setup" },
+                  { title: "Vendor payment terms" },
+                  { title: "Withholding tax setup" },
+                  { title: "PO/GRN matching rules" },
+                  { title: "AP and AR approval workflows" },
+                  { title: "Bank account configuration" },
+                  { title: "Cash register setup" },
+                  { title: "Bank reconciliation rules" },
+                  { title: "Signatory and mandate settings" },
+                  { title: "Asset categories and useful life settings" },
+                  { title: "Depreciation methods" },
+                  { title: "Asset numbering rules" },
+                  { title: "Asset location and custodian mapping" },
+                  { title: "Tax codes and slabs (VAT, GST, service tax)" },
+                  { title: "Tax-inclusive/exclusive calculation rules" },
+                  { title: "Region-specific tax compliance settings" },
+                  { title: "Budget templates" },
+                  { title: "Department-wise budget allocation" },
+                  { title: "Budget approval workflows" },
+                  { title: "Role-based permissions" },
+                  { title: "Maker–checker rules" },
+                  { title: "Audit period locking" },
+                  { title: "Compliance framework rules" },
+                  { title: "Financial statement layout configuration" },
+                  { title: "Account-to-statement mapping" },
+                  { title: "Scheduled reporting setup" },
+                ].map((item, idx) => (
+                  <Card
+                    key={idx}
+                    className="cursor-pointer hover:bg-secondary/50 transition-colors"
+                    onClick={() => item.id && setSubView(item.id)}
+                  >
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <span className="text-sm font-medium">{item.title}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
-          {/* Journal Entries */}
-          <TabsContent value="journal" className="space-y-4">
-            <div className="flex items-center justify-end">
-              <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Journal Entry
-              </Button>
-            </div>
+          {/* Transactions Tab */}
+          <TabsContent value="transactions" className="space-y-4">
+            {subView === "journal" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Transactions
+                  </Button>
+                  <h2 className="text-lg font-semibold">Journal Entries</h2>
+                </div>
+                <div className="flex items-center justify-end">
+                  <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New Journal Entry
+                  </Button>
+                </div>
 
-            <Card>
-              <CardContent className="p-0">
-                {entriesLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    Loading journal entries...
-                  </div>
-                ) : journalEntries.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No journal entries yet
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Entry #</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Reference</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {journalEntries.map((entry) => {
-                        const totalDebit =
-                          entry.lines?.reduce((sum, l: any) => sum + (l.debit || 0), 0) || 0;
-                        const totalCredit =
-                          entry.lines?.reduce((sum, l: any) => sum + (l.credit || 0), 0) || 0;
+                <Card>
+                  <CardContent className="p-0">
+                    {entriesLoading ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        Loading journal entries...
+                      </div>
+                    ) : journalEntries.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No journal entries yet
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Entry #</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Reference</TableHead>
+                            <TableHead className="text-right">Debit</TableHead>
+                            <TableHead className="text-right">Credit</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {journalEntries.map((entry) => {
+                            const totalDebit =
+                              entry.lines?.reduce((sum, l: any) => sum + (l.debit || 0), 0) || 0;
+                            const totalCredit =
+                              entry.lines?.reduce((sum, l: any) => sum + (l.credit || 0), 0) || 0;
 
-                        return (
-                          <TableRow key={entry.id}>
-                            <TableCell className="font-mono text-primary">
-                              {entry.entry_number}
-                            </TableCell>
-                            <TableCell>{entry.date}</TableCell>
-                            <TableCell>{entry.description}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {entry.reference || "-"}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              ${totalDebit.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              ${totalCredit.toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  entry.is_posted
-                                    ? "bg-success/20 text-success"
-                                    : "bg-amber-500/20 text-amber-400"
-                                }
+                            return (
+                              <TableRow key={entry.id}>
+                                <TableCell className="font-mono text-primary">
+                                  {entry.entry_number}
+                                </TableCell>
+                                <TableCell>{entry.date}</TableCell>
+                                <TableCell>{entry.description}</TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {entry.reference || "-"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  ${totalDebit.toFixed(2)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  ${totalCredit.toFixed(2)}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      entry.is_posted
+                                        ? "bg-success/20 text-success"
+                                        : "bg-amber-500/20 text-amber-400"
+                                    }
+                                  >
+                                    {entry.is_posted ? "Posted" : "Draft"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {!entry.is_posted && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handlePostEntry(entry.id)}
+                                      disabled={postJournalEntry.isPending}
+                                    >
+                                      <Check className="h-4 w-4 mr-1" />
+                                      Post
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : subView === "posting" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Transactions
+                  </Button>
+                  <h2 className="text-lg font-semibold">Transaction Posting</h2>
+                </div>
+                <Tabs value={postingTab} onValueChange={setPostingTab}>
+                  <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+                    <TabsTrigger value="new" className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      New Posting
+                    </TabsTrigger>
+                    <TabsTrigger value="bulk" className="gap-2">
+                      <Layers className="h-4 w-4" />
+                      Bulk Posting
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" className="gap-2">
+                      <Clock className="h-4 w-4" />
+                      Pending
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="gap-2">
+                      <History className="h-4 w-4" />
+                      History
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="new" className="mt-4 space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Single Transaction Posting</CardTitle>
+                        <CardDescription>Post a manual transaction to the general ledger</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Main Account</Label>
+                              <Select
+                                value={quickPost.account_id}
+                                onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
                               >
-                                {entry.is_posted ? "Posted" : "Draft"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {!entry.is_posted && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handlePostEntry(entry.id)}
-                                  disabled={postJournalEntry.isPending}
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {accounts.map((acc) => (
+                                    <SelectItem key={acc.id} value={acc.id}>
+                                      {acc.code} - {acc.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Contra Account (Offset)</Label>
+                              <Select
+                                value={quickPost.contra_account_id}
+                                onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select offset account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {accounts.map((acc) => (
+                                    <SelectItem key={acc.id} value={acc.id}>
+                                      {acc.code} - {acc.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Amount ($)</Label>
+                                <Input
+                                  type="number"
+                                  placeholder="0.00"
+                                  value={quickPost.amount || ""}
+                                  onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Action</Label>
+                                <Select
+                                  value={quickPost.type}
+                                  onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
                                 >
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Post
-                                </Button>
-                              )}
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="debit">Debit Main</SelectItem>
+                                    <SelectItem value="credit">Credit Main</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Description</Label>
+                              <Input
+                                placeholder="e.g., Manual utility payment"
+                                value={quickPost.description}
+                                onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Date</Label>
+                              <Input type="date" value={businessDate || new Date().toISOString().slice(0, 10)} readOnly />
+                            </div>
+                            <div className="pt-4">
+                              <Button
+                                className="w-full gap-2"
+                                onClick={handleQuickPost}
+                                disabled={createJournalEntry.isPending}
+                              >
+                                <Send className="h-4 w-4" />
+                                {createJournalEntry.isPending ? "Posting..." : "Post Transaction"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="bulk" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Bulk Transaction Posting</CardTitle>
+                        <CardDescription>Upload a CSV or Excel file to post multiple transactions</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
+                        <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                        <p className="text-sm text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
+                        <Button variant="outline" className="gap-2">
+                          <Download className="h-4 w-4" />
+                          Select File
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="pending" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Pending Postings</CardTitle>
+                        <CardDescription>Transactions waiting for review and approval</CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Account</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                No pending postings found.
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="history" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Posting History</CardTitle>
+                        <CardDescription>Recent manual and bulk posting activities</CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>User</TableHead>
+                              <TableHead>Items</TableHead>
+                              <TableHead className="text-right">Total Value</TableHead>
+                              <TableHead></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                No posting history available.
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { title: "Manual journal entries", id: "journal" },
+                  { title: "Recurring journals" },
+                  { title: "Reversing journal entries" },
+                  { title: "Auto-posting from PMS, POS, Inventory, Payroll", id: "posting" },
+                  { title: "Multi-currency journal postings" },
+                  { title: "Corporate/cash/OTA invoice generation" },
+                  { title: "Group and event billing" },
+                  { title: "Manual invoice creation" },
+                  { title: "Credit notes & adjustments" },
+                  { title: "Payment receipts (cash, card, bank, cheque)" },
+                  { title: "Advance deposits and prepayments" },
+                  { title: "Payment application (full/partial)" },
+                  { title: "Dunning actions" },
+                  { title: "Vendor invoice posting" },
+                  { title: "GRN and invoice matching" },
+                  { title: "Recurring vendor invoices" },
+                  { title: "Vendor payments (single or batch)" },
+                  { title: "Debit notes" },
+                  { title: "Withholding tax deduction" },
+                  { title: "Cash collections from operations" },
+                  { title: "Cash deposits to bank" },
+                  { title: "Bank payments and receipts" },
+                  { title: "Bank reconciliation" },
+                  { title: "Petty cash issuance and settlement" },
+                  { title: "Asset addition (purchase/capitalization)" },
+                  { title: "Asset disposal" },
+                  { title: "Asset revaluation" },
+                  { title: "Depreciation run" },
+                  { title: "Asset transfers" },
+                  { title: "Maintenance cost posting" },
+                  { title: "Tax calculation on invoices" },
+                  { title: "Tax adjustments" },
+                  { title: "Tax period closing" },
+                  { title: "Budget entry or revision" },
+                  { title: "Forecast submission" },
+                  { title: "Variance calculation" },
+                  { title: "Approval actions (JEs, vendors, payments, budgets)" },
+                  { title: "Financial period close and reopen", onClick: () => setIsDayCloseDialogOpen(true) },
+                ].map((item: any, idx) => (
+                  <Card
+                    key={idx}
+                    className="cursor-pointer hover:bg-secondary/50 transition-colors"
+                    onClick={() => {
+                      if (item.onClick) item.onClick();
+                      else if (item.id) setSubView(item.id);
+                    }}
+                  >
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <span className="text-sm font-medium">{item.title}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="space-y-4">
+            {subView === "ledger" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Reports
+                  </Button>
+                  <h2 className="text-lg font-semibold">General Ledger</h2>
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex-1 max-w-sm">
+                    <Select
+                      value={selectedAccountId || ""}
+                      onValueChange={(v) => setSelectedAccountId(v || null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account to view ledger" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Accounts</SelectItem>
+                        {accounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.code} - {acc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Card>
+                  <CardContent className="p-0">
+                    {ledgerLoading ? (
+                      <div className="p-8 text-center text-muted-foreground">Loading ledger...</div>
+                    ) : ledgerData.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No ledger entries found. Post some journal entries first.
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Entry #</TableHead>
+                            <TableHead>Account</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Debit</TableHead>
+                            <TableHead className="text-right">Credit</TableHead>
+                            <TableHead className="text-right">Balance</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {ledgerData.map((entry) => (
+                            <TableRow key={entry.id}>
+                              <TableCell>{entry.date}</TableCell>
+                              <TableCell className="font-mono text-primary">
+                                {entry.entry_number}
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-mono text-xs">{entry.account_code}</span>{" "}
+                                {entry.account_name}
+                              </TableCell>
+                              <TableCell>{entry.description}</TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-semibold">
+                                ${entry.running_balance.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : subView === "trial-balance" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Reports
+                  </Button>
+                  <h2 className="text-lg font-semibold">Trial Balance</h2>
+                </div>
+                <div className="flex items-center justify-end">
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Trial Balance</CardTitle>
+                    <CardDescription>
+                      Summary of all posted journal entries
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {trialBalanceLoading ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        Loading trial balance...
+                      </div>
+                    ) : trialBalance.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No posted entries yet
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Account Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead className="text-right">Debit</TableHead>
+                            <TableHead className="text-right">Credit</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {trialBalance.map((row) => (
+                            <TableRow key={row.account.id}>
+                              <TableCell className="font-mono">{row.account.code}</TableCell>
+                              <TableCell className="font-medium">{row.account.name}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={accountTypeColors[row.account.type]}>
+                                  {row.account.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                ${row.totalDebit.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                ${row.totalCredit.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="font-bold border-t-2">
+                            <TableCell colSpan={3} className="text-right">
+                              Totals
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${totalDebits.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${totalCredits.toFixed(2)}
                             </TableCell>
                           </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* General Ledger */}
-          <TabsContent value="ledger" className="space-y-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex-1 max-w-sm">
-                <Select
-                  value={selectedAccountId || ""}
-                  onValueChange={(v) => setSelectedAccountId(v || null)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select account to view ledger" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Accounts</SelectItem>
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-
-            <Card>
-              <CardContent className="p-0">
-                {ledgerLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">Loading ledger...</div>
-                ) : ledgerData.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No ledger entries found. Post some journal entries first.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Entry #</TableHead>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {ledgerData.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell>{entry.date}</TableCell>
-                          <TableCell className="font-mono text-primary">
-                            {entry.entry_number}
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs">{entry.account_code}</span>{" "}
-                            {entry.account_name}
-                          </TableCell>
-                          <TableCell>{entry.description}</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-semibold">
-                            ${entry.running_balance.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Trial Balance */}
-          <TabsContent value="trial-balance" className="space-y-4">
-            <div className="flex items-center justify-end">
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Trial Balance</CardTitle>
-                <CardDescription>
-                  Summary of all posted journal entries
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {trialBalanceLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    Loading trial balance...
-                  </div>
-                ) : trialBalance.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No posted entries yet
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Account Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {trialBalance.map((row) => (
-                        <TableRow key={row.account.id}>
-                          <TableCell className="font-mono">{row.account.code}</TableCell>
-                          <TableCell className="font-medium">{row.account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={accountTypeColors[row.account.type]}>
-                              {row.account.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            ${row.totalDebit.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            ${row.totalCredit.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow className="font-bold border-t-2">
-                        <TableCell colSpan={3} className="text-right">
-                          Totals
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${totalDebits.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${totalCredits.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Transaction Posting */}
-          <TabsContent value="posting" className="space-y-4">
-            <Tabs value={postingTab} onValueChange={setPostingTab}>
-              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-                <TabsTrigger value="new" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Posting
-                </TabsTrigger>
-                <TabsTrigger value="bulk" className="gap-2">
-                  <Layers className="h-4 w-4" />
-                  Bulk Posting
-                </TabsTrigger>
-                <TabsTrigger value="pending" className="gap-2">
-                  <Clock className="h-4 w-4" />
-                  Pending
-                </TabsTrigger>
-                <TabsTrigger value="history" className="gap-2">
-                  <History className="h-4 w-4" />
-                  History
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="new" className="mt-4 space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Single Transaction Posting</CardTitle>
-                    <CardDescription>Post a manual transaction to the general ledger</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Main Account</Label>
-                          <Select
-                            value={quickPost.account_id}
-                            onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {accounts.map((acc) => (
-                                <SelectItem key={acc.id} value={acc.id}>
-                                  {acc.code} - {acc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Contra Account (Offset)</Label>
-                          <Select
-                            value={quickPost.contra_account_id}
-                            onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select offset account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {accounts.map((acc) => (
-                                <SelectItem key={acc.id} value={acc.id}>
-                                  {acc.code} - {acc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Amount ($)</Label>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={quickPost.amount || ""}
-                              onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Action</Label>
-                            <Select
-                              value={quickPost.type}
-                              onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="debit">Debit Main</SelectItem>
-                                <SelectItem value="credit">Credit Main</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Input
-                            placeholder="e.g., Manual utility payment"
-                            value={quickPost.description}
-                            onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Date</Label>
-                          <Input type="date" value={businessDate || new Date().toISOString().slice(0, 10)} readOnly />
-                        </div>
-                        <div className="pt-4">
-                          <Button
-                            className="w-full gap-2"
-                            onClick={handleQuickPost}
-                            disabled={createJournalEntry.isPending}
-                          >
-                            <Send className="h-4 w-4" />
-                            {createJournalEntry.isPending ? "Posting..." : "Post Transaction"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="bulk" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Bulk Transaction Posting</CardTitle>
-                    <CardDescription>Upload a CSV or Excel file to post multiple transactions</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
-                    <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
-                    <p className="text-sm text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
-                    <Button variant="outline" className="gap-2">
-                      <Download className="h-4 w-4" />
-                      Select File
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="pending" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Postings</CardTitle>
-                    <CardDescription>Transactions waiting for review and approval</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Account</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No pending postings found.
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="history" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Posting History</CardTitle>
-                    <CardDescription>Recent manual and bulk posting activities</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>User</TableHead>
-                          <TableHead>Items</TableHead>
-                          <TableHead className="text-right">Total Value</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No posting history available.
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          {/* Financial Reports */}
-          <TabsContent value="reports" className="space-y-4">
-            <FinancialStatements />
+            ) : subView === "financial-statements" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Reports
+                  </Button>
+                  <h2 className="text-lg font-semibold">Financial Statements</h2>
+                </div>
+                <FinancialStatements />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { title: "Trial Balance", id: "trial-balance" },
+                  { title: "General ledger detail", id: "ledger" },
+                  { title: "COA summary" },
+                  { title: "Journal register" },
+                  { title: "Journal audit log" },
+                  { title: "Period close report" },
+                  { title: "Consolidated Balance Sheet", id: "financial-statements" },
+                  { title: "Consolidated Profit & Loss", id: "financial-statements" },
+                  { title: "Consolidated Cash Flow", id: "financial-statements" },
+                  { title: "AR Aging" },
+                  { title: "Customer statements" },
+                  { title: "Invoice register" },
+                  { title: "Receipt register" },
+                  { title: "Outstanding balances" },
+                  { title: "Credit utilization report" },
+                  { title: "AP Aging" },
+                  { title: "Vendor statements" },
+                  { title: "Vendor invoice register" },
+                  { title: "Payment register" },
+                  { title: "GRN vs invoice variance report" },
+                  { title: "Outstanding vendor liabilities" },
+                  { title: "Cash register reconciliation report" },
+                  { title: "Daily cash movement report" },
+                  { title: "Bank reconciliation statement" },
+                  { title: "Cash flow statements (direct / indirect)" },
+                  { title: "Asset register" },
+                  { title: "Depreciation schedule" },
+                  { title: "Asset disposal report" },
+                  { title: "Asset verification report" },
+                  { title: "Capitalization summary" },
+                  { title: "Tax summary (sales/purchase)" },
+                  { title: "Tax liability report" },
+                  { title: "Withholding tax report" },
+                  { title: "Tax audit trail" },
+                  { title: "Budget vs Actual" },
+                  { title: "Forecast vs Actual" },
+                  { title: "Departmental variance reports" },
+                  { title: "Audit logs" },
+                  { title: "Internal control exception reports" },
+                  { title: "Transaction history (before/after values)" },
+                  { title: "Daily Revenue Report (financial extract)" },
+                  { title: "Hospitality financial KPIs (RevPAR, ADR, OCC)" },
+                  { title: "Departmental P&L" },
+                  { title: "Enterprise-level consolidated financial statements" },
+                ].map((item, idx) => (
+                  <Card
+                    key={idx}
+                    className="cursor-pointer hover:bg-secondary/50 transition-colors"
+                    onClick={() => item.id && setSubView(item.id)}
+                  >
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <span className="text-sm font-medium">{item.title}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
