@@ -24,7 +24,8 @@ import NotFound from "./pages/NotFound";
 import UserManagement from "./pages/UserManagement";
 import DevPanel from "./pages/DevPanel";
 import AdminConsole from "./pages/AdminConsole";
-import POS from "./pages/POS";
+import POSDashboard from "./pages/POSDashboard";
+import POSTerminal from "./pages/POSTerminal";
 import POSHistory from "./pages/POSHistory";
 import POSReports from "./pages/POSReports";
 import KitchenDisplay from "./pages/KitchenDisplay";
@@ -64,7 +65,8 @@ const App = () => (
                 <Route path="/front-desk" element={<ProtectedRoute><FrontDesk /></ProtectedRoute>} />
                 <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
                 <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+                <Route path="/pos" element={<ProtectedRoute><POSDashboard /></ProtectedRoute>} />
+                <Route path="/pos/terminal" element={<ProtectedRoute><POSTerminal /></ProtectedRoute>} />
                 <Route path="/pos/history" element={<ProtectedRoute><POSHistory /></ProtectedRoute>} />
                 <Route path="/pos/reports" element={<ProtectedRoute><POSReports /></ProtectedRoute>} />
                 <Route path="/pos/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
