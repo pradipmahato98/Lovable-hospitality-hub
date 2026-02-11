@@ -112,7 +112,11 @@ export const PreferencesTab = () => {
           <Switch
             disabled={!mounted}
             checked={mounted && resolvedTheme === "dark"}
-            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+            onCheckedChange={(checked) => {
+              const newTheme = checked ? "dark" : "light";
+              setTheme(newTheme);
+              trackActivity("Change Theme", "preferences_update", { theme: newTheme });
+            }}
           />
         </div>
 

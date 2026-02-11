@@ -4,11 +4,44 @@ This project is configured with a full Supabase integration, including Database,
 
 ## Supabase MCP Setup
 
-The project is "MCP-ready". To use the Supabase MCP server with this project:
+The project includes a custom MCP server with LuxeStay-specific domain tools.
 
-1. Use the project ID: `rhajtijfptfnezeetcvx`
-2. Configure the MCP host with your `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL`.
-3. The project includes a `mcp.json` configuration file in the root.
+### Connecting to Claude Desktop
+
+1. Open your Claude Desktop configuration (usually `~/Library/Application Support/Claude/claude_desktop_config.json`).
+2. Add the LuxeStay MCP server:
+   ```json
+   {
+     "mcpServers": {
+       "luxestay-erp": {
+         "command": "npm",
+         "args": ["run", "mcp:start"],
+         "cwd": "/path/to/luxestay-erp",
+         "env": {
+           "VITE_SUPABASE_URL": "your_supabase_url",
+           "SUPABASE_SERVICE_ROLE_KEY": "your_service_role_key",
+           "VITE_SUPABASE_PROJECT_ID": "rhajtijfptfnezeetcvx"
+         }
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop.
+
+### Available Custom Tools
+
+- `get_room_availability`: Check room availability by dates and type.
+- `create_reservation`: Book rooms directly.
+- `list_reservations`: View recent bookings.
+- `get_inventory_status`: Check stock levels and low stock alerts.
+- `list_housekeeping_tasks`: Monitor cleaning and maintenance status.
+- `manage_guest_profile`: Create or update guest information.
+- `supabase_query`: Run read-only SQL queries (requires `execute_sql` RPC).
+- `get_schema_info`: Inspect the database structure.
+
+### Built-in MCP Terminal
+
+Admin users can access the **MCP Terminal** in the **Developer Panel** (`/dev`) to test these tools directly from the ERP UI.
 
 ## Realtime Synchronization
 

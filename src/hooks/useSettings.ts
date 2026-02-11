@@ -150,7 +150,7 @@ const defaultUIPreferences: UIPreferences = {
 };
 
 // Generic settings fetch hook
-function useSettings<T>(key: string, defaultValue: T) {
+export function useSettings<T>(key: string, defaultValue: T) {
   return useQuery({
     queryKey: ["settings", key],
     queryFn: async () => {
@@ -168,7 +168,7 @@ function useSettings<T>(key: string, defaultValue: T) {
 }
 
 // Generic settings update hook
-function useUpdateSettings<T>(key: string) {
+export function useUpdateSettings<T>(key: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -267,6 +267,14 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
+}
+
+export function useMCPConfig() {
+  return useSettings<MCPConfig>("mcp_config", defaultMCPConfig);
+}
+
+export function useUpdateMCPConfig() {
+  return useUpdateSettings<MCPConfig>("mcp_config");
 }
 
 export function useBusinessDate() {

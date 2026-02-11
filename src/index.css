@@ -202,6 +202,27 @@
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out forwards;
   }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .ios-material {
+    @apply bg-background/60 backdrop-blur-md border-white/20;
+  }
+
+  .ios-material-elevated {
+    @apply bg-background/80 backdrop-blur-lg border-white/30 shadow-elevated;
+  }
+
+  .ios-blur {
+    @apply backdrop-blur-xl;
+  }
 }
 
 @keyframes fadeIn {

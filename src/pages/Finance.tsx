@@ -66,6 +66,8 @@ import {
 import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
+import { FinanceDashboard } from "@/components/finance/FinanceDashboard";
+import { PendingPostingsNotification } from "@/components/finance/PendingPostingsNotification";
 
 const accountTypeColors: Record<string, string> = {
   asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -76,10 +78,9 @@ const accountTypeColors: Record<string, string> = {
 };
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("accounts");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [accountCategory, setAccountCategory] = useState("all");
   const [postingTab, setPostingTab] = useState("new");
-  const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
   const [quickPost, setQuickPost] = useState({
     account_id: "",
@@ -90,6 +91,7 @@ export default function Finance() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [ledgerView, setLedgerView] = useState<"table" | "dashboard">("table");
 
   // Account creation dialog
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -113,18 +115,17 @@ export default function Finance() {
   });
 
   // Hooks
-  const { data: accounts, isLoading: accountsLoading, realtimeStatus } = useAccounts();
+  const { data: accounts = [], isLoading: accountsLoading, realtimeStatus } = useAccounts();
   const createAccount = useCreateAccount();
-  const { data: journalEntries, isLoading: entriesLoading } = useJournalEntries();
+  const { data: journalEntries = [], isLoading: entriesLoading } = useJournalEntries();
   const createJournalEntry = useCreateJournalEntry();
   const postJournalEntry = usePostJournalEntry();
-  const { data: ledgerData, isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
-  const { data: trialBalance, isLoading: trialBalanceLoading } = useTrialBalance();
+  const { data: ledgerData = [], isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
+  const { data: trialBalance = [], isLoading: trialBalanceLoading } = useTrialBalance();
   const { data: businessDate } = useBusinessDate();
-  const updateBusinessDate = useUpdateBusinessDate();
 
   // Filtered accounts
-  const filteredAccounts = accounts.filter((a) => {
+  const filteredAccounts = (accounts || []).filter((a) => {
     const matchesSearch =
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.code.toLowerCase().includes(searchQuery.toLowerCase());
@@ -258,22 +259,6 @@ export default function Finance() {
     }
   };
 
-  const handleDayClose = async () => {
-    if (!businessDate) return;
-
-    const currentDate = new Date(businessDate);
-    currentDate.setDate(currentDate.getDate() + 1);
-    const nextDate = currentDate.toISOString().split("T")[0];
-
-    try {
-      await updateBusinessDate.mutateAsync(nextDate);
-      toast.success(`Business day closed. New date: ${nextDate}`);
-      setIsDayCloseDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to close business day");
-    }
-  };
-
   const addJournalLine = () => {
     setNewJournalEntry((prev) => ({
       ...prev,
@@ -295,6 +280,7 @@ export default function Finance() {
       title="Finance"
       subtitle={`Chart of accounts, journal entries, and ledger | Business Date: ${businessDate || "Loading..."}`}
     >
+      <PendingPostingsNotification />
       <div className="space-y-6">
         {/* Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -350,34 +336,45 @@ export default function Finance() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <TabsList>
-              <TabsTrigger value="accounts" className="gap-2">
-                <BookOpen className="h-4 w-4" />
-                Chart of Accounts
-              </TabsTrigger>
-              <TabsTrigger value="journal" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Journal Entries
-              </TabsTrigger>
-              <TabsTrigger value="ledger" className="gap-2">
-                <PieChart className="h-4 w-4" />
-                General Ledger
-              </TabsTrigger>
-              <TabsTrigger value="trial-balance" className="gap-2">
-                <Scale className="h-4 w-4" />
-                Trial Balance
-              </TabsTrigger>
-              <TabsTrigger value="posting" className="gap-2">
-                <Send className="h-4 w-4" />
-                Transaction Posting
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="gap-2">
-                <DollarSign className="h-4 w-4" />
-                Reports
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex items-center justify-between gap-4 border-b overflow-hidden">
+            <div className="flex-1 overflow-x-auto pb-1 scrollbar-hide">
+              <TabsList className="flex flex-nowrap justify-start h-auto p-1 bg-transparent border-none shadow-none">
+                <TabsTrigger value="dashboard" className="gap-2 whitespace-nowrap py-2">
+                  <PieChart className="h-4 w-4" />
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="accounts" className="gap-2 whitespace-nowrap py-2">
+                  <BookOpen className="h-4 w-4" />
+                  Chart of Accounts
+                </TabsTrigger>
+                <TabsTrigger value="journal" className="gap-2 whitespace-nowrap py-2">
+                  <FileText className="h-4 w-4" />
+                  Journal Entries
+                </TabsTrigger>
+                <TabsTrigger value="ledger" className="gap-2 whitespace-nowrap py-2">
+                  <PieChart className="h-4 w-4" />
+                  General Ledger
+                </TabsTrigger>
+                <TabsTrigger value="trial-balance" className="gap-2 whitespace-nowrap py-2">
+                  <Scale className="h-4 w-4" />
+                  Trial Balance
+                </TabsTrigger>
+                <TabsTrigger value="posting" className="gap-2 whitespace-nowrap py-2">
+                  <Send className="h-4 w-4" />
+                  Transaction Posting
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="gap-2 whitespace-nowrap py-2">
+                  <DollarSign className="h-4 w-4" />
+                  Reports
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </div>
+
+          {/* Dashboard */}
+          <TabsContent value="dashboard" className="space-y-4">
+            <FinanceDashboard />
+          </TabsContent>
 
           {/* Chart of Accounts */}
           <TabsContent value="accounts" className="space-y-4">
@@ -403,15 +400,6 @@ export default function Finance() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsDayCloseDialogOpen(true)}
-                    className="gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Day Close
-                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setPostingDialogOpen(true)} className="gap-2">
                     <Send className="h-4 w-4" />
                     Quick Post
@@ -578,18 +566,18 @@ export default function Finance() {
 
           {/* General Ledger */}
           <TabsContent value="ledger" className="space-y-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex-1 max-w-sm">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4 flex-1 max-w-sm">
                 <Select
-                  value={selectedAccountId || ""}
-                  onValueChange={(v) => setSelectedAccountId(v || null)}
+                  value={selectedAccountId || "all"}
+                  onValueChange={(v) => setSelectedAccountId(v === "all" ? null : v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select account to view ledger" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Accounts</SelectItem>
-                    {accounts.map((acc) => (
+                    <SelectItem value="all">All Accounts</SelectItem>
+                    {(accounts || []).map((acc) => (
                       <SelectItem key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
                       </SelectItem>
@@ -597,57 +585,82 @@ export default function Finance() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex bg-secondary/50 p-1 rounded-lg">
+                <Button
+                  variant={ledgerView === "table" ? "gold" : "ghost"}
+                  size="sm"
+                  onClick={() => setLedgerView("table")}
+                  className="rounded-md"
+                >
+                  Table
+                </Button>
+                <Button
+                  variant={ledgerView === "dashboard" ? "gold" : "ghost"}
+                  size="sm"
+                  onClick={() => setLedgerView("dashboard")}
+                  className="rounded-md"
+                >
+                  Dashboard
+                </Button>
+              </div>
             </div>
 
-            <Card>
-              <CardContent className="p-0">
+            {ledgerView === "dashboard" ? (
+              <FinanceDashboard accountId={selectedAccountId} />
+            ) : (
+              <Card>
+                <CardContent className="p-0">
                 {ledgerLoading ? (
                   <div className="p-8 text-center text-muted-foreground">Loading ledger...</div>
-                ) : ledgerData.length === 0 ? (
+                ) : (ledgerData || []).length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
                     No ledger entries found. Post some journal entries first.
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Entry #</TableHead>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {ledgerData.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell>{entry.date}</TableCell>
-                          <TableCell className="font-mono text-primary">
-                            {entry.entry_number}
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs">{entry.account_code}</span>{" "}
-                            {entry.account_name}
-                          </TableCell>
-                          <TableCell>{entry.description}</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-semibold">
-                            ${entry.running_balance.toFixed(2)}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Entry #</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Debit</TableHead>
+                          <TableHead className="text-right">Credit</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {(ledgerData || []).map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="whitespace-nowrap">{entry.date}</TableCell>
+                            <TableCell className="font-mono text-primary">
+                              {entry.entry_number}
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs">{entry.account_code}</span>{" "}
+                              {entry.account_name}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-semibold">
+                              ${entry.running_balance.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Trial Balance */}
@@ -1023,26 +1036,6 @@ export default function Finance() {
         </DialogContent>
       </Dialog>
 
-      {/* Day Close Confirmation Dialog */}
-      <Dialog open={isDayCloseDialogOpen} onOpenChange={setIsDayCloseDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close Business Day?</DialogTitle>
-            <DialogDescription>
-              This will advance the business date from {businessDate} to the next day.
-              Make sure all transactions for today have been posted.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setIsDayCloseDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDayClose} disabled={updateBusinessDate.isPending}>
-              {updateBusinessDate.isPending ? "Closing..." : "Confirm Day Close"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* New Account Dialog */}
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>

@@ -235,7 +235,7 @@ export function Header({ title, subtitle }: HeaderProps) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="justify-center text-primary font-medium cursor-pointer"
-                    onClick={() => navigate("/staff?tab=alerts")}
+                    onClick={() => navigate("/staff?tab=about&sub=alerts")}
                   >
                     View All Alerts
                   </DropdownMenuItem>
@@ -262,7 +262,7 @@ export function Header({ title, subtitle }: HeaderProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/staff?tab=details" className="flex items-center gap-2 cursor-pointer">
+                <Link to="/staff?tab=about&sub=details" className="flex items-center gap-2 cursor-pointer">
                   <User className="h-4 w-4" />
                   My Account
                 </Link>
