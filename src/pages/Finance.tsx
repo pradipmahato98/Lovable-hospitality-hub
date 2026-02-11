@@ -115,17 +115,17 @@ export default function Finance() {
   });
 
   // Hooks
-  const { data: accounts, isLoading: accountsLoading, realtimeStatus } = useAccounts();
+  const { data: accounts = [], isLoading: accountsLoading, realtimeStatus } = useAccounts();
   const createAccount = useCreateAccount();
-  const { data: journalEntries, isLoading: entriesLoading } = useJournalEntries();
+  const { data: journalEntries = [], isLoading: entriesLoading } = useJournalEntries();
   const createJournalEntry = useCreateJournalEntry();
   const postJournalEntry = usePostJournalEntry();
-  const { data: ledgerData, isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
-  const { data: trialBalance, isLoading: trialBalanceLoading } = useTrialBalance();
+  const { data: ledgerData = [], isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
+  const { data: trialBalance = [], isLoading: trialBalanceLoading } = useTrialBalance();
   const { data: businessDate } = useBusinessDate();
 
   // Filtered accounts
-  const filteredAccounts = accounts.filter((a) => {
+  const filteredAccounts = (accounts || []).filter((a) => {
     const matchesSearch =
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.code.toLowerCase().includes(searchQuery.toLowerCase());
@@ -336,9 +336,9 @@ export default function Finance() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex items-center justify-between flex-wrap gap-4 border-b">
-            <div className="w-full overflow-x-auto pb-1 scrollbar-hide">
-              <TabsList className="flex-nowrap justify-start h-auto p-1 bg-transparent">
+          <div className="flex items-center justify-between gap-4 border-b overflow-hidden">
+            <div className="flex-1 overflow-x-auto pb-1 scrollbar-hide">
+              <TabsList className="flex flex-nowrap justify-start h-auto p-1 bg-transparent border-none shadow-none">
                 <TabsTrigger value="dashboard" className="gap-2 whitespace-nowrap py-2">
                   <PieChart className="h-4 w-4" />
                   Dashboard
@@ -569,15 +569,15 @@ export default function Finance() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-4 flex-1 max-w-sm">
                 <Select
-                  value={selectedAccountId || ""}
-                  onValueChange={(v) => setSelectedAccountId(v || null)}
+                  value={selectedAccountId || "all"}
+                  onValueChange={(v) => setSelectedAccountId(v === "all" ? null : v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select account to view ledger" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Accounts</SelectItem>
-                    {accounts.map((acc) => (
+                    <SelectItem value="all">All Accounts</SelectItem>
+                    {(accounts || []).map((acc) => (
                       <SelectItem key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
                       </SelectItem>
@@ -613,48 +613,50 @@ export default function Finance() {
                 <CardContent className="p-0">
                 {ledgerLoading ? (
                   <div className="p-8 text-center text-muted-foreground">Loading ledger...</div>
-                ) : ledgerData.length === 0 ? (
+                ) : (ledgerData || []).length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
                     No ledger entries found. Post some journal entries first.
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Entry #</TableHead>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {ledgerData.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell>{entry.date}</TableCell>
-                          <TableCell className="font-mono text-primary">
-                            {entry.entry_number}
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs">{entry.account_code}</span>{" "}
-                            {entry.account_name}
-                          </TableCell>
-                          <TableCell>{entry.description}</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-semibold">
-                            ${entry.running_balance.toFixed(2)}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Entry #</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Debit</TableHead>
+                          <TableHead className="text-right">Credit</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {(ledgerData || []).map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="whitespace-nowrap">{entry.date}</TableCell>
+                            <TableCell className="font-mono text-primary">
+                              {entry.entry_number}
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs">{entry.account_code}</span>{" "}
+                              {entry.account_name}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-semibold">
+                              ${entry.running_balance.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
                 </CardContent>
               </Card>
