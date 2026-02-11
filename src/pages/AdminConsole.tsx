@@ -29,10 +29,12 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { format } from "date-fns";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { supabase } from "@/integrations/supabase/client";
-import { useUpdateSettings, useSettings } from "@/hooks/useSettings";
+import { useUpdateSettings, useSettings, useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
 import {
   Dialog,
   DialogContent,
@@ -68,9 +70,16 @@ import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AdminConsole = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
 
   // Realtime hook
@@ -87,6 +96,8 @@ const AdminConsole = () => {
   const { data: permissions, isLoading: loadingPerms } = useRolePermissions(activeTab === "permissions");
   const { data: otaChannels, isLoading: loadingChannels } = useOTAChannels(activeTab === "integrations");
   const { data: otaLogs, isLoading: loadingOTALogs } = useOTASyncLogs(activeTab === "integrations");
+  const { data: apiKeysSettings, isLoading: loadingAPIKeys } = useAPIKeysSettings();
+  const updateAPIKeys = useUpdateAPIKeysSettings();
 
   // State for RBAC
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -164,7 +175,7 @@ const AdminConsole = () => {
           email: newUserData.email,
           first_name: newUserData.firstName,
           last_name: newUserData.lastName,
-          user_id: crypto.randomUUID(), // Mock user_id since we can't create actual auth user
+          user_id: crypto.randomUUID(), // Mock user_id for profile-only entry
         })
         .select()
         .single();
@@ -181,6 +192,7 @@ const AdminConsole = () => {
 
       if (roleError) throw roleError;
 
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
       toast.success("Account provisioned successfully. User can now sign up with this email.");
       setProvisionModalOpen(false);
       setNewUserData({ email: "", firstName: "", lastName: "", role: "staff" });
@@ -196,6 +208,22 @@ const AdminConsole = () => {
     setTimeout(() => {
       updateOTAChannel.mutate({ id, sync_status: "Last sync: Just now" });
     }, 2000);
+  };
+
+  const handleAddAPIKey = () => {
+    const newKey: APIKey = {
+      name: "New API Key",
+      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      is_secret: true,
+      description: "Auto-generated system key"
+    };
+    const currentKeys = apiKeysSettings?.keys || [];
+    updateAPIKeys.mutate({ keys: [...currentKeys, newKey] });
+  };
+
+  const handleDeleteAPIKey = (keyName: string) => {
+    const currentKeys = apiKeysSettings?.keys || [];
+    updateAPIKeys.mutate({ keys: currentKeys.filter(k => k.name !== keyName) });
   };
 
   const handleAddPermission = () => {
@@ -215,7 +243,7 @@ const AdminConsole = () => {
     });
   };
 
-  if (loadingAdmin) {
+  if (!mounted || loadingAdmin) {
     return (
       <MainLayout title="Admin Console" subtitle="Loading...">
         <div className="flex items-center justify-center py-20">
@@ -231,33 +259,33 @@ const AdminConsole = () => {
     <MainLayout title="Admin Console" subtitle="System-wide administrative controls and security">
       <ErrorBoundary>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="overflow-x-auto pb-1 scrollbar-hide">
-          <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
-            <TabsTrigger value="overview" className="gap-2 whitespace-nowrap">
+        <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
+            <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">
             <Activity className="h-4 w-4" />
             System Overview
           </TabsTrigger>
-            <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="users" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Account Management
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="security" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Lock className="h-4 w-4" />
               Security Policies
             </TabsTrigger>
-            <TabsTrigger value="permissions" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="permissions" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Shield className="h-4 w-4" />
               RBAC
             </TabsTrigger>
-            <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="audit" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Terminal className="h-4 w-4" />
               Audit Trails
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Globe className="h-4 w-4" />
               Integrations
             </TabsTrigger>
-            <TabsTrigger value="security_breach" className="gap-2 text-destructive whitespace-nowrap">
+            <TabsTrigger value="security_breach" className="gap-2 text-destructive whitespace-nowrap flex-shrink-0">
               <ShieldAlert className="h-4 w-4" />
               Security Breach
             </TabsTrigger>
@@ -487,6 +515,54 @@ const AdminConsole = () => {
 
         <TabsContent value="integrations">
           <div className="space-y-6">
+            <Card variant="elevated">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5 text-primary" />
+                      System API Keys
+                    </CardTitle>
+                    <CardDescription>Manage security credentials for external services</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={handleAddAPIKey} disabled={updateAPIKeys.isPending}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Key
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingAPIKeys ? (
+                  <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+                ) : (
+                  <div className="space-y-4">
+                    {apiKeysSettings?.keys.map((key) => (
+                      <div key={key.name} className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/5">
+                        <div className="space-y-1">
+                          <p className="font-medium text-sm">{key.name}</p>
+                          <p className="text-xs font-mono text-muted-foreground">
+                            {key.is_secret ? "••••••••••••••••" : key.key}
+                          </p>
+                          {key.description && <p className="text-[10px] text-muted-foreground">{key.description}</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => toast.info("Key copied to clipboard")}>
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAPIKey(key.name)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {(!apiKeysSettings?.keys || apiKeysSettings.keys.length === 0) && (
+                      <p className="text-center text-sm text-muted-foreground py-8">No API keys configured</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card variant="elevated">
               <CardHeader>
                 <div className="flex items-center justify-between">

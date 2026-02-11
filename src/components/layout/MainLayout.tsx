@@ -1,9 +1,8 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
-import { useUIPreferences, type UIPreferences } from "@/hooks/useSettings";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -13,38 +12,9 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
-  const { data: uiPrefs } = useUIPreferences();
-
-  useEffect(() => {
-    // Basic enable/disable with default to true
-    const iosEnabled = uiPrefs?.ios_materials ?? true;
-    if (iosEnabled) {
-      document.body.classList.add("ios-enabled");
-    } else {
-      document.body.classList.remove("ios-enabled");
-    }
-
-    // Intensity classes with default to medium
-    const intensity = uiPrefs?.glass_intensity || 'medium';
-    const intensities: UIPreferences['glass_intensity'][] = ['low', 'medium', 'high'];
-    intensities.forEach(i => {
-      if (intensity === i) {
-        document.body.classList.add(`ios-intensity-${i}`);
-      } else {
-        document.body.classList.remove(`ios-intensity-${i}`);
-      }
-    });
-
-    // Mobile disabling
-    if (uiPrefs?.disable_on_mobile && isMobile) {
-      document.body.classList.add("ios-mobile-disabled");
-    } else {
-      document.body.classList.remove("ios-mobile-disabled");
-    }
-  }, [uiPrefs?.ios_materials, uiPrefs?.glass_intensity, uiPrefs?.disable_on_mobile, isMobile]);
 
   return (
-    <div className="min-h-screen bg-background transition-all duration-500">
+    <div className="min-h-screen bg-background">
       <Sidebar />
       <div 
         className={cn(

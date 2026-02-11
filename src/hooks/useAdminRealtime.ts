@@ -6,8 +6,10 @@ export function useAdminRealtime() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Unique channel name for each component instance to avoid conflicts
+    const channelId = `admin-changes-${Math.random().toString(36).substr(2, 9)}`;
     const channel = supabase
-      .channel("admin-changes")
+      .channel(channelId)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "audit_log" },

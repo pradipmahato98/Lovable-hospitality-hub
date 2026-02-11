@@ -230,17 +230,17 @@ const DevPanel = () => {
   return (
     <MainLayout title="Developer Panel" subtitle="System monitoring and diagnostics (Admin only)">
       <Tabs defaultValue="status" className="space-y-6">
-        <div className="overflow-x-auto pb-1 scrollbar-hide">
-          <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
-            <TabsTrigger value="status" className="gap-2 whitespace-nowrap">
+        <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
+            <TabsTrigger value="status" className="gap-2 whitespace-nowrap flex-shrink-0">
             <Activity className="h-4 w-4" />
             System Status
           </TabsTrigger>
-            <TabsTrigger value="seeder" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="seeder" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Sparkles className="h-4 w-4" />
               Data Seeder
             </TabsTrigger>
-            <TabsTrigger value="cleanup" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="cleanup" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Role Cleanup
               {(usersWithMultipleRoles?.length ?? 0) > 0 && (
@@ -249,19 +249,19 @@ const DevPanel = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="email" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="email" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Mail className="h-4 w-4" />
               Email Config
             </TabsTrigger>
-            <TabsTrigger value="logs" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="logs" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Terminal className="h-4 w-4" />
               Logs
             </TabsTrigger>
-            <TabsTrigger value="mcp" className="gap-2 whitespace-nowrap">
+            <TabsTrigger value="mcp" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Shield className="h-4 w-4" />
               MCP Config
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2 text-destructive whitespace-nowrap">
+            <TabsTrigger value="security" className="gap-2 text-destructive whitespace-nowrap flex-shrink-0">
               <ShieldAlert className="h-4 w-4" />
               Security Breach
             </TabsTrigger>

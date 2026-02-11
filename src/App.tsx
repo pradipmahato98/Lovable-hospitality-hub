@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { RealtimeListener } from "@/components/layout/RealtimeListener";
 import Index from "./pages/Index";
 import Reservations from "./pages/Reservations";
 import ReservationCalendar from "./pages/ReservationCalendar";
@@ -55,6 +56,7 @@ const App = () => (
           <AuthProvider>
             <SidebarProvider>
             <QuickActionsProvider>
+              <RealtimeListener />
               <GlobalQuickActions />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
