@@ -48,6 +48,11 @@ import {
   Layers,
   Clock,
   LayoutDashboard,
+  ArrowLeft,
+  Settings2,
+  Activity,
+  CalendarDays,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -75,6 +80,7 @@ const accountTypeColors: Record<string, string> = {
 export default function Finance() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [subView, setSubView] = useState<string | null>(null);
+  const [selectedModule, setSelectedModule] = useState<{ title: string; category: string } | null>(null);
   const [accountCategory, setAccountCategory] = useState("all");
   const [postingTab, setPostingTab] = useState("new");
   const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
@@ -288,6 +294,110 @@ export default function Finance() {
     }));
   };
 
+  const ModuleDetailView = ({ title, category }: { title: string; category: string }) => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" onClick={() => setSelectedModule(null)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to {category}
+        </Button>
+        <h2 className="text-xl font-bold font-display">{title}</h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Configuration & Details</CardTitle>
+                <CardDescription>Manage settings and view status for {title}</CardDescription>
+              </div>
+              <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                <ShieldCheck className="h-3 w-3 mr-1" /> Verified
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Service Name</Label>
+                <Input defaultValue={title} readOnly className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Input defaultValue={category} readOnly className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Last Audit</Label>
+                <div className="flex items-center text-sm text-muted-foreground pt-2">
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  {businessDate || "Today"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <div className="flex items-center text-sm text-success font-medium pt-2">
+                  <Activity className="h-4 w-4 mr-2" />
+                  Live & Operational
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="text-sm font-semibold">Active Rules & Parameters</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border">
+                    <span className="text-sm">Compliance Rule #{i}00{i}</span>
+                    <Badge variant="secondary">Active</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+          <div className="p-6 pt-0 flex justify-end gap-2">
+            <Button variant="outline" size="sm">Download Audit Log</Button>
+            <Button size="sm" className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              Update Rules
+            </Button>
+          </div>
+        </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground font-medium">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              <Button variant="outline" className="w-full justify-start gap-2 h-11">
+                <Download className="h-4 w-4" /> Export Configuration
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2 h-11">
+                <History className="h-4 w-4" /> View History
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2 h-11 text-destructive hover:text-destructive">
+                <RefreshCw className="h-4 w-4" /> Reset Module
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-primary/5 border-primary/10">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Module Intelligence</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This module is currently processing real-time financial data for {title}.
+                All changes are recorded in the system audit log and compliant with local financial regulations.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <MainLayout
       title="Finance & Accounting"
@@ -295,26 +405,41 @@ export default function Finance() {
     >
       <div className="space-y-6">
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSubView(null); }}>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
-              <TabsTrigger value="dashboard" className="gap-2">
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSubView(null); setSelectedModule(null); }}>
+          <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
+              <TabsTrigger
+                value="dashboard"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </TabsTrigger>
-              <TabsTrigger value="setup" className="gap-2">
+              <TabsTrigger
+                value="setup"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
                 <BookOpen className="h-4 w-4" />
                 Setup
               </TabsTrigger>
-              <TabsTrigger value="transactions" className="gap-2">
+              <TabsTrigger
+                value="transactions"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
                 <RefreshCw className="h-4 w-4" />
                 Transactions
               </TabsTrigger>
-              <TabsTrigger value="posting" className="gap-2">
+              <TabsTrigger
+                value="posting"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
                 <Send className="h-4 w-4" />
                 Transaction Posting
               </TabsTrigger>
-              <TabsTrigger value="reports" className="gap-2">
+              <TabsTrigger
+                value="reports"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
                 <FileText className="h-4 w-4" />
                 Reports
               </TabsTrigger>
@@ -425,7 +550,9 @@ export default function Finance() {
 
           {/* Setup Tab */}
           <TabsContent value="setup" className="space-y-4">
-            {subView === "accounts" ? (
+            {selectedModule ? (
+              <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
+            ) : subView === "accounts" ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
@@ -565,8 +692,11 @@ export default function Finance() {
                 ].map((item, idx) => (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:bg-secondary/50 transition-colors"
-                    onClick={() => item.id && setSubView(item.id)}
+                    className="cursor-pointer hover:bg-secondary/50 transition-colors group"
+                    onClick={() => {
+                      if (item.id) setSubView(item.id);
+                      else setSelectedModule({ title: item.title, category: "Setup" });
+                    }}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
                       <span className="text-sm font-medium">{item.title}</span>
@@ -580,7 +710,9 @@ export default function Finance() {
 
           {/* Transactions Tab */}
           <TabsContent value="transactions" className="space-y-4">
-            {subView === "journal" ? (
+            {selectedModule ? (
+              <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
+            ) : subView === "journal" ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
@@ -721,10 +853,11 @@ export default function Finance() {
                 ].map((item: any, idx) => (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:bg-secondary/50 transition-colors"
+                    className="cursor-pointer hover:bg-secondary/50 transition-colors group"
                     onClick={() => {
                       if (item.onClick) item.onClick();
                       else if (item.id) setSubView(item.id);
+                      else setSelectedModule({ title: item.title, category: "Transactions" });
                     }}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
@@ -940,7 +1073,9 @@ export default function Finance() {
 
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-4">
-            {subView === "ledger" ? (
+            {selectedModule ? (
+              <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
+            ) : subView === "ledger" ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
@@ -1159,8 +1294,11 @@ export default function Finance() {
                 ].map((item, idx) => (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:bg-secondary/50 transition-colors"
-                    onClick={() => item.id && setSubView(item.id)}
+                    className="cursor-pointer hover:bg-secondary/50 transition-colors group"
+                    onClick={() => {
+                      if (item.id) setSubView(item.id);
+                      else setSelectedModule({ title: item.title, category: "Reports" });
+                    }}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
                       <span className="text-sm font-medium">{item.title}</span>
