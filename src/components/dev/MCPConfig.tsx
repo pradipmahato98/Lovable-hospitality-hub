@@ -71,6 +71,7 @@ export const MCPConfigPanel = () => {
   });
 
   const checkStatus = async () => {
+    console.log("Checking MCP system status...");
     setIsLoading(true);
     try {
       // 1. Check Buckets
@@ -155,26 +156,31 @@ export const MCPConfigPanel = () => {
     toast.success(`${label} copied to clipboard`);
   };
 
-  const mcpConfigJson = JSON.stringify({
-    name: "LuxeStay ERP Supabase MCP",
-    version: "1.0.0",
-    supabase: {
-      project_id: status.projectId,
-      realtime: true,
-      storage: status.buckets.map(b => b.id),
-      custom_keys: (apiKeysData?.keys || []).map(k => k.name),
-      tools: [
-        "get_room_availability",
-        "create_reservation",
-        "list_reservations",
-        "get_inventory_status",
-        "list_housekeeping_tasks",
-        "manage_guest_profile",
-        "supabase_query",
-        "get_schema_info"
-      ]
-    }
-  }, null, 2);
+  let mcpConfigJson = "{}";
+  try {
+    mcpConfigJson = JSON.stringify({
+      name: "LuxeStay ERP Supabase MCP",
+      version: "1.0.0",
+      supabase: {
+        project_id: status.projectId,
+        realtime: true,
+        storage: status.buckets.map(b => b.id),
+        custom_keys: (apiKeysData?.keys || []).map(k => k.name),
+        tools: [
+          "get_room_availability",
+          "create_reservation",
+          "list_reservations",
+          "get_inventory_status",
+          "list_housekeeping_tasks",
+          "manage_guest_profile",
+          "supabase_query",
+          "get_schema_info"
+        ]
+      }
+    }, null, 2);
+  } catch (e) {
+    console.error("Failed to generate MCP JSON preview", e);
+  }
 
   const handleAddOrEditKey = (key?: APIKey) => {
     if (key) {
@@ -232,6 +238,14 @@ export const MCPConfigPanel = () => {
       updateMCPConfig.mutate({ ...mcpConfig, ...updates });
     }
   };
+
+  if (!mcpConfig) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -375,7 +389,7 @@ export const MCPConfigPanel = () => {
                 <Input
                   type={showSecrets['service_role'] ? "text" : "password"}
                   placeholder="Paste service_role key here..."
-                  value={mcpConfig?.service_role_key || ""}
+                  value={mcpConfig.service_role_key || ""}
                   onChange={(e) => handleUpdateMCPConfig({ service_role_key: e.target.value })}
                   className="font-mono text-xs h-8"
                 />
@@ -413,12 +427,12 @@ export const MCPConfigPanel = () => {
               <p className="text-xs text-muted-foreground">Switch between local direct access and remote MCP server</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-medium ${mcpConfig?.connection_mode === 'local' ? 'text-primary' : 'text-muted-foreground'}`}>Local</span>
+              <span className={`text-xs font-medium ${mcpConfig.connection_mode === 'local' ? 'text-primary' : 'text-muted-foreground'}`}>Local</span>
               <Switch
-                checked={mcpConfig?.connection_mode === 'remote'}
+                checked={mcpConfig.connection_mode === 'remote'}
                 onCheckedChange={(checked) => handleUpdateMCPConfig({ connection_mode: checked ? 'remote' : 'local' })}
               />
-              <span className={`text-xs font-medium ${mcpConfig?.connection_mode === 'remote' ? 'text-primary' : 'text-muted-foreground'}`}>Remote (SSE)</span>
+              <span className={`text-xs font-medium ${mcpConfig.connection_mode === 'remote' ? 'text-primary' : 'text-muted-foreground'}`}>Remote (SSE)</span>
             </div>
           </div>
 
@@ -428,7 +442,7 @@ export const MCPConfigPanel = () => {
               <Input
                 id="server-url"
                 placeholder="https://mcp-host.example.com/sse"
-                value={mcpConfig?.server_url || ""}
+                value={mcpConfig.server_url || ""}
                 onChange={(e) => handleUpdateMCPConfig({ server_url: e.target.value })}
                 className="font-mono text-xs"
               />
@@ -436,7 +450,7 @@ export const MCPConfigPanel = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => toast.info("Ping test not implemented yet")}
-                disabled={!mcpConfig?.server_url}
+                disabled={!mcpConfig.server_url}
               >
                 Test Connection
               </Button>

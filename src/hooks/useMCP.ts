@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useMCPConfig } from "./useSettings";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse";
 import { createClient } from "@supabase/supabase-js";
 
 export const useMCP = () => {
@@ -15,10 +15,20 @@ export const useMCP = () => {
 
   // Initialize Remote MCP Client if in remote mode
   useEffect(() => {
+    let mounted = true;
+
     if (mcpConfig?.connection_mode === 'remote' && mcpConfig.server_url) {
       const initClient = async () => {
         try {
-          const url = new URL(mcpConfig.server_url);
+          // Validate URL before attempting connection
+          let url;
+          try {
+            url = new URL(mcpConfig.server_url);
+          } catch (e) {
+            if (mounted) toast.error("Invalid MCP Server URL");
+            return;
+          }
+
           const transport = new SSEClientTransport(url);
           const client = new Client(
             { name: "luxestay-erp-client", version: "1.0.0" },
@@ -26,14 +36,19 @@ export const useMCP = () => {
           );
 
           await client.connect(transport);
-          transportRef.current = transport;
-          setMcpClient(client);
-          setIsConnected(true);
-          toast.success("Connected to remote MCP server");
+
+          if (mounted) {
+            transportRef.current = transport;
+            setMcpClient(client);
+            setIsConnected(true);
+            toast.success("Connected to remote MCP server");
+          }
         } catch (error) {
           console.error("Failed to connect to remote MCP server:", error);
-          toast.error("MCP Connection failed. Falling back to local mode.");
-          setIsConnected(false);
+          if (mounted) {
+            toast.error("MCP Connection failed. Falling back to local mode.");
+            setIsConnected(false);
+          }
         }
       };
 
@@ -44,8 +59,9 @@ export const useMCP = () => {
     }
 
     return () => {
+      mounted = false;
       if (transportRef.current) {
-        // Handle cleanup if necessary
+        // SSE transport cleanup if necessary
       }
     };
   }, [mcpConfig?.connection_mode, mcpConfig?.server_url]);
