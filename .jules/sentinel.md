@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-12 - PII Leak in Payment Logs
+**Vulnerability:** The `processPayment` function in `usePaymentGateways.ts` was logging the entire `customerInfo` object (containing name, email, and phone) to the browser console.
+**Learning:** Even "temporary" debug logs can leak sensitive data in a production environment if not strictly audited. Client-side logging of PII is a high-risk practice.
+**Prevention:** Explicitly destructure objects before logging to ensure only non-sensitive metadata (IDs, amounts, etc.) is captured. Added a JSDoc deprecation notice to `secret_key` to warn against client-side secret handling.
