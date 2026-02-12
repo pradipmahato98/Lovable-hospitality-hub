@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,8 @@ import {
   Activity,
   CalendarDays,
   ShieldCheck,
+  Lock,
+  UserCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -68,6 +71,8 @@ import {
 import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
 import { FinancialStatements } from "@/components/finance/FinancialStatements";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PermissionMatrix } from "@/components/finance/PermissionMatrix";
+import { useFinancePermissions } from "@/hooks/useFinancePermissions";
 
 const accountTypeColors: Record<string, string> = {
   asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -94,6 +99,16 @@ export default function Finance() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+
+  // Permissions hook
+  const {
+    activeRole,
+    setActiveRole,
+    canEdit,
+    canView,
+    checkPermission,
+    roleLabel
+  } = useFinancePermissions('FA');
 
   // Account creation dialog
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -294,7 +309,11 @@ export default function Finance() {
     }));
   };
 
-  const ModuleDetailView = ({ title, category }: { title: string; category: string }) => (
+  const ModuleDetailView = ({ title, category }: { title: string; category: string }) => {
+    const permission = checkPermission(title);
+    const isReadOnly = permission === 'view';
+
+    return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => setSelectedModule(null)}>
@@ -343,6 +362,16 @@ export default function Finance() {
               </div>
             </div>
 
+            {isReadOnly && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
+                <Lock className="h-5 w-5 text-amber-500 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-500">Read-Only Access</h4>
+                  <p className="text-xs text-muted-foreground">Your current role ({activeRole}) only has viewing privileges for this module. Modification actions are disabled.</p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-semibold">Active Rules & Parameters</h4>
               <div className="grid grid-cols-1 gap-2">
@@ -357,7 +386,7 @@ export default function Finance() {
           </CardContent>
           <div className="p-6 pt-0 flex justify-end gap-2">
             <Button variant="outline" size="sm">Download Audit Log</Button>
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2" disabled={isReadOnly}>
               <Settings2 className="h-4 w-4" />
               Update Rules
             </Button>
@@ -396,12 +425,25 @@ export default function Finance() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <MainLayout
       title="Finance & Accounting"
       subtitle={`Business Date: ${businessDate || "Loading..."}`}
+      actions={
+        <div className="flex items-center gap-3 bg-muted/50 px-3 py-1.5 rounded-full border border-border/50">
+          <UserCircle className="h-4 w-4 text-primary" />
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Access Level</span>
+            <span className="text-xs font-semibold">{roleLabel} ({activeRole})</span>
+          </div>
+          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 h-4">
+            LIVE
+          </Badge>
+        </div>
+      }
     >
       <div className="space-y-6">
         {/* Tabs */}
@@ -552,6 +594,21 @@ export default function Finance() {
           <TabsContent value="setup" className="space-y-4">
             {selectedModule ? (
               <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
+            ) : subView === "role-permissions" ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
+                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                    Back to Setup
+                  </Button>
+                  <h2 className="text-lg font-semibold">Role-based Permissions</h2>
+                </div>
+                <PermissionMatrix
+                  currentRole={activeRole}
+                  onRoleChange={setActiveRole}
+                  simulationMode={true}
+                />
+              </div>
             ) : subView === "accounts" ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
@@ -689,21 +746,34 @@ export default function Finance() {
                   { title: "Financial statement layout configuration" },
                   { title: "Account-to-statement mapping" },
                   { title: "Scheduled reporting setup" },
-                ].map((item, idx) => (
+                ].map((item, idx) => {
+                  const hasAccess = canView(item.title);
+                  const isReadOnly = checkPermission(item.title) === 'view';
+
+                  return (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:bg-secondary/50 transition-colors group"
+                    className={cn(
+                      "cursor-pointer transition-colors group",
+                      !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
+                    )}
                     onClick={() => {
-                      if (item.id) setSubView(item.id);
+                      if (item.title === "Role-based permissions") setSubView("role-permissions");
+                      else if (item.id) setSubView(item.id);
                       else setSelectedModule({ title: item.title, category: "Setup" });
                     }}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
-                      <span className="text-sm font-medium">{item.title}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">{item.title}</span>
+                        {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
+                        {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
+                      </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -850,10 +920,17 @@ export default function Finance() {
                   { title: "Variance calculation" },
                   { title: "Approval actions (JEs, vendors, payments, budgets)" },
                   { title: "Financial period close and reopen", onClick: () => setIsDayCloseDialogOpen(true) },
-                ].map((item: any, idx) => (
+                ].map((item: any, idx) => {
+                  const hasAccess = canView(item.title);
+                  const isReadOnly = checkPermission(item.title) === 'view';
+
+                  return (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:bg-secondary/50 transition-colors group"
+                    className={cn(
+                      "cursor-pointer transition-colors group",
+                      !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
+                    )}
                     onClick={() => {
                       if (item.onClick) item.onClick();
                       else if (item.id) setSubView(item.id);
@@ -861,11 +938,16 @@ export default function Finance() {
                     }}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
-                      <span className="text-sm font-medium">{item.title}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">{item.title}</span>
+                        {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
+                        {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
+                      </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -1291,21 +1373,33 @@ export default function Finance() {
                   { title: "Hospitality financial KPIs (RevPAR, ADR, OCC)" },
                   { title: "Departmental P&L" },
                   { title: "Enterprise-level consolidated financial statements" },
-                ].map((item, idx) => (
+                ].map((item, idx) => {
+                  const hasAccess = canView(item.title);
+                  const isReadOnly = checkPermission(item.title) === 'view';
+
+                  return (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:bg-secondary/50 transition-colors group"
+                    className={cn(
+                      "cursor-pointer transition-colors group",
+                      !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
+                    )}
                     onClick={() => {
                       if (item.id) setSubView(item.id);
                       else setSelectedModule({ title: item.title, category: "Reports" });
                     }}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
-                      <span className="text-sm font-medium">{item.title}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">{item.title}</span>
+                        {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
+                        {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
+                      </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>
