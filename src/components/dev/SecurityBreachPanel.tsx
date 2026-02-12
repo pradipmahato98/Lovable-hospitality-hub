@@ -3,10 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, AlertCircle, Loader2, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 export const SecurityBreachPanel = () => {
-  useAdminRealtime();
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["security-audit-logs"],
     queryFn: async () => {
@@ -41,18 +39,10 @@ export const SecurityBreachPanel = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-4 w-4" /> Security Event Log
-              </CardTitle>
-              <CardDescription>Real-time security monitoring from audit trails</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
-              <div className="w-1.5 h-1.5 bg-success rounded-full" />
-              Live
-            </div>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-4 w-4" /> Security Event Log
+          </CardTitle>
+          <CardDescription>Real-time security monitoring from audit trails</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (

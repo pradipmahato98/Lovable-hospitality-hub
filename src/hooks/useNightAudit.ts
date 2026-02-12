@@ -17,13 +17,9 @@ export const useNightAudit = () => {
         .eq("key", "business_date")
         .single();
 
-      if (error) {
-        console.warn("Could not fetch business date, using default:", error);
-        return format(new Date(), "yyyy-MM-dd");
-      }
+      if (error) throw error;
       return (data.value as string); // Expected format: "YYYY-MM-DD"
     },
-    initialData: format(new Date(), "yyyy-MM-dd"),
   });
 
   // 2. Fetch Pending Arrivals for the current business date
@@ -66,72 +62,7 @@ export const useNightAudit = () => {
     enabled: !!date
   });
 
-  // 4. Fetch Due-outs (supposed to check out today but still checked-in)
-  const useDueOuts = (date: string) => useQuery({
-    queryKey: ["reservations", "due-outs", date],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .select(`
-          *,
-          guests (first_name, last_name),
-          rooms (room_number)
-        `)
-        .eq("status", "checked-in")
-        .eq("check_out_date", date);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!date
-  });
-
-  // 5. Fetch Room Status Summary
-  const useRoomStatusSummary = () => useQuery({
-    queryKey: ["rooms", "status-summary"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("status");
-
-      if (error) throw error;
-
-      const summary = data.reduce((acc: Record<string, number>, room) => {
-        acc[room.status] = (acc[room.status] || 0) + 1;
-        return acc;
-      }, {});
-
-      return summary;
-    }
-  });
-
-  // 6. Fetch POS Summary for the business date
-  const usePosSummary = (date: string) => useQuery({
-    queryKey: ["pos", "summary", date],
-    queryFn: async () => {
-      // Get all transactions for the date
-      const { data, error } = await supabase
-        .from("pos_transactions")
-        .select("total, payment_method")
-        .gte("created_at", `${date}T00:00:00`)
-        .lte("created_at", `${date}T23:59:59`);
-
-      if (error) throw error;
-
-      const summary = data.reduce((acc: any, trans) => {
-        const method = trans.payment_method || 'Other';
-        if (!acc[method]) acc[method] = { count: 0, total: 0 };
-        acc[method].count += 1;
-        acc[method].total += Number(trans.total);
-        return acc;
-      }, {});
-
-      return summary;
-    },
-    enabled: !!date
-  });
-
-  // 7. Mutation: Post Daily Room Charges
+  // 4. Mutation: Post Daily Room Charges
   const postCharges = useMutation({
     mutationFn: async (date: string) => {
       const { data, error } = await supabase.rpc('post_daily_room_charges', {
@@ -142,7 +73,7 @@ export const useNightAudit = () => {
     }
   });
 
-  // 8. Mutation: Close Day & Increment Business Date
+  // 5. Mutation: Close Day & Increment Business Date
   const closeDay = useMutation({
     mutationFn: async ({ currentDate, log }: { currentDate: string, log: {
       total_charges_posted: number;
@@ -181,79 +112,12 @@ export const useNightAudit = () => {
     }
   });
 
-  // 9. Mutation: Record Day Close (Front Office Cashiering)
-  const recordDayClose = useMutation({
-    mutationFn: async (log: {
-      business_date: string;
-      total_revenue: number;
-      dept_summaries: any;
-    }) => {
-      const { data, error } = await supabase
-        .from("day_close_logs")
-        .insert([log])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["day_close_logs"] });
-      toast({
-        title: "Day Close Recorded",
-        description: "Cashiering day has been successfully closed and recorded.",
-      });
-    }
-  });
-
-  // 10. Fetch Day Close Logs
-  const useDayCloseLogs = () => useQuery({
-    queryKey: ["day_close_logs"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("day_close_logs")
-        .select("*")
-        .order("business_date", { ascending: false });
-
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // 11. Mutation: Mark as No-Show
-  const markAsNoShow = useMutation({
-    mutationFn: async (reservationId: string) => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .update({ status: 'no-show' })
-        .eq("id", reservationId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reservations"] });
-      toast({
-        title: "Status Updated",
-        description: "Reservation marked as No-Show.",
-      });
-    }
-  });
-
   return {
     businessDate,
     isDateLoading,
     usePendingArrivals,
     useStayOvers,
-    useDueOuts,
-    useRoomStatusSummary,
-    usePosSummary,
     postCharges,
-    closeDay,
-    recordDayClose,
-    useDayCloseLogs,
-    markAsNoShow
+    closeDay
   };
 };

@@ -51,20 +51,14 @@ export const UsersTable = ({
     <Card variant="elevated">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                All Users
-              </CardTitle>
-              <CardDescription>
-                View and manage user roles across the system
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
-              <div className="w-1.5 h-1.5 bg-success rounded-full" />
-              Live
-            </div>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              All Users
+            </CardTitle>
+            <CardDescription>
+              View and manage user roles across the system
+            </CardDescription>
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

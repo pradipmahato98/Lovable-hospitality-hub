@@ -7,10 +7,8 @@ import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
 import { UsersTable, AuditLogTable } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 const UserManagement = () => {
-  useAdminRealtime();
   const [searchQuery, setSearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
   const [auditRoleFilter, setAuditRoleFilter] = useState<string>("all");
@@ -48,18 +46,16 @@ const UserManagement = () => {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <div className="overflow-x-auto pb-1 scrollbar-hide">
-            <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
-              <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
-                <Users className="h-4 w-4" />
-                Users
-              </TabsTrigger>
-              <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
-                <History className="h-4 w-4" />
-                Audit Log
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList>
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <History className="h-4 w-4" />
+              Audit Log
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="users">
             <UsersTable

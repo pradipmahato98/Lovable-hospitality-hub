@@ -41,10 +41,21 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
     } else {
       document.body.classList.remove("ios-mobile-disabled");
     }
-  }, [uiPrefs?.ios_materials, uiPrefs?.glass_intensity, uiPrefs?.disable_on_mobile, isMobile]);
+
+    // Animations toggle
+    const animationsEnabled = uiPrefs?.animations_enabled ?? true;
+    if (animationsEnabled) {
+      document.body.classList.remove("animations-disabled");
+    } else {
+      document.body.classList.add("animations-disabled");
+    }
+  }, [uiPrefs?.ios_materials, uiPrefs?.glass_intensity, uiPrefs?.disable_on_mobile, uiPrefs?.animations_enabled, isMobile]);
 
   return (
-    <div className="min-h-screen bg-background transition-all duration-500">
+    <div className={cn(
+      "min-h-screen bg-background transition-all duration-500",
+      (uiPrefs?.ios_materials ?? true) && !uiPrefs?.disable_on_mobile && "ios-materials-active"
+    )}>
       <Sidebar />
       <div 
         className={cn(

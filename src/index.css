@@ -202,27 +202,6 @@
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out forwards;
   }
-
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .ios-material {
-    @apply bg-background/60 backdrop-blur-md border-white/20;
-  }
-
-  .ios-material-elevated {
-    @apply bg-background/80 backdrop-blur-lg border-white/30 shadow-elevated;
-  }
-
-  .ios-blur {
-    @apply backdrop-blur-xl;
-  }
 }
 
 @keyframes fadeIn {
@@ -276,6 +255,15 @@
 }
 
 /* Global iOS Material Styles */
+.ios-enabled:not(.ios-mobile-disabled) {
+  background:
+    radial-gradient(at 0% 0%, hsla(38, 92%, 50%, 0.15) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(222, 47%, 11%, 0.05) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(38, 92%, 50%, 0.15) 0, transparent 50%),
+    hsl(var(--background)) !important;
+  background-attachment: fixed !important;
+}
+
 .ios-enabled:not(.ios-mobile-disabled) .card,
 .ios-enabled:not(.ios-mobile-disabled) .bg-card,
 .ios-enabled:not(.ios-mobile-disabled) .bg-gradient-card,
@@ -292,8 +280,11 @@
 .ios-enabled:not(.ios-mobile-disabled) aside,
 .ios-enabled:not(.ios-mobile-disabled) header,
 .ios-enabled:not(.ios-mobile-disabled) thead,
-.ios-enabled:not(.ios-mobile-disabled) .inline-flex.items-center.justify-center.rounded-lg.bg-muted, /* TabsList */
-.ios-enabled:not(.ios-mobile-disabled) .sticky.top-0.z-10 /* Table headers in some cases */ {
+.ios-enabled:not(.ios-mobile-disabled) .inline-flex.items-center.justify-center.rounded-lg.bg-muted,
+.ios-enabled:not(.ios-mobile-disabled) .sticky.top-0.z-10,
+.ios-enabled:not(.ios-mobile-disabled) .bg-white,
+.ios-enabled:not(.ios-mobile-disabled) .bg-slate-50,
+.ios-enabled:not(.ios-mobile-disabled) .bg-slate-100 {
   backdrop-filter: blur(var(--ios-blur, 16px)) !important;
   -webkit-backdrop-filter: blur(var(--ios-blur, 16px)) !important;
   background-color: hsl(var(--background) / var(--ios-bg-opacity, 0.65)) !important;
@@ -335,4 +326,14 @@
 .ios-enabled .toast:not(.destructive),
 .ios-enabled [data-sonner-toast]:not([data-type="error"]):not([data-type="success"]) {
   @apply text-foreground shadow-2xl !important;
+}
+
+/* Animations disabled mode */
+.animations-disabled *,
+.animations-disabled *::before,
+.animations-disabled *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
