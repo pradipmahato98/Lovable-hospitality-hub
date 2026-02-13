@@ -110,7 +110,16 @@ export function usePaymentGateways() {
       const mergedGateways = defaultPaymentGateways.gateways.map(defaultGw => {
         const stored = storedGateways.find(g => g.id === defaultGw.id);
         // If stored exists, use its configured values but keep the default type and description
-        return stored ? { ...defaultGw, ...stored, type: defaultGw.type } : defaultGw;
+        // Mask secret_key for security - it should not be sent to the client in plain text
+        if (stored) {
+          return {
+            ...defaultGw,
+            ...stored,
+            type: defaultGw.type,
+            secret_key: stored.secret_key ? "••••••••" : undefined
+          };
+        }
+        return defaultGw;
       });
       
       return { gateways: mergedGateways };
@@ -142,7 +151,13 @@ export function useUpdatePaymentGateway() {
 
       if (gatewayIndex > -1) {
         updatedGateways = [...currentGateways];
-        updatedGateways[gatewayIndex] = gateway;
+        const existingGateway = updatedGateways[gatewayIndex];
+        // If the incoming secret_key is masked, preserve the existing one from the DB
+        const updatedGateway = {
+          ...gateway,
+          secret_key: gateway.secret_key === "••••••••" ? existingGateway.secret_key : gateway.secret_key
+        };
+        updatedGateways[gatewayIndex] = updatedGateway;
       } else {
         updatedGateways = [...currentGateways, gateway];
       }
@@ -229,7 +244,7 @@ export async function processPayment(
   redirectUrl?: string;
   error?: string;
 }> {
-  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef, customerInfo });
+  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef });
   
   // Fetch gateway config from DB
   const { data: settings } = await supabase

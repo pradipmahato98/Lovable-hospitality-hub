@@ -17,3 +17,9 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-10 - PII Logging and Secret Masking
+**Vulnerability:** Personally Identifiable Information (PII) was being logged to the browser console during payment processing, and sensitive payment gateway secret keys were exposed in the plain-text frontend state.
+**Learning:** Console logs are often overlooked as a source of data leaks. Additionally, storing raw secrets in the frontend state for "ease of update" exposes them to any client-side inspection.
+**Prevention:** Mask all sensitive fields (e.g., with '••••••••') at the hook level before they reach the component state, and ensure the backend/mutation logic can handle the mask sentinel to avoid data loss. Always audit logs for PII before production.
+**Prevention:** Use `crypto.randomUUID()` instead of `Math.random()` for any security-sensitive random strings or identifiers.
