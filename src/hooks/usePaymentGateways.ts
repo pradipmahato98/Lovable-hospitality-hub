@@ -229,7 +229,8 @@ export async function processPayment(
   redirectUrl?: string;
   error?: string;
 }> {
-  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef, customerInfo });
+  // PII Security: Never log customerInfo (name, email, phone) to the console
+  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef });
   
   // Fetch gateway config from DB
   const { data: settings } = await supabase

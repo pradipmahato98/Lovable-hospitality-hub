@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-12 - Re-introduced PII Leak in Payment Logs
+**Vulnerability:** Personally Identifiable Information (PII) like name, email, and phone were being logged to the browser console during payment processing.
+**Learning:** Even when a vulnerability is marked as "resolved" in project history or memory, it can be re-introduced or partially reverted during subsequent refactors. Automated grep-based checks for sensitive logging should be part of the CI/CD pipeline.
+**Prevention:** Avoid passing entire objects (like `customerInfo`) to logging functions. Explicitly select non-sensitive fields to log.
