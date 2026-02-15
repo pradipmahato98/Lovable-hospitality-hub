@@ -13,7 +13,10 @@ import {
   WifiOff,
   Volume2,
   VolumeX,
+  LayoutDashboard,
+  ShoppingCart,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePOSOrders, useUpdateOrderItemStatus } from "@/hooks/usePOS";
@@ -194,6 +197,22 @@ export default function KitchenDisplay() {
   return (
     <MainLayout title="Kitchen Display" subtitle="Real-time order management">
       <div className="space-y-6">
+        {/* Navigation Shortcuts */}
+        <div className="flex items-center gap-2 mb-2">
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <Link to="/pos">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <Link to="/pos/terminal">
+              <ShoppingCart className="h-4 w-4" />
+              Terminal
+            </Link>
+          </Button>
+        </div>
+
         {/* Enhanced Header with Stats */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-secondary/30 rounded-lg">
           <div className="flex items-center gap-6 flex-wrap">
