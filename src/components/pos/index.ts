@@ -6,4 +6,7 @@ export * from "./TableActionsPanel";
 export * from "./SplitBillDialog";
 export * from "./TableSelectionCheckbox";
 export * from "./TableActionBar";
- export * from "./StaffClockPanel";
+export * from "./StaffClockPanel";
+export * from "./POSDashboard";
+export * from "./POSHeader";
+export * from "./ThreeDBar";
