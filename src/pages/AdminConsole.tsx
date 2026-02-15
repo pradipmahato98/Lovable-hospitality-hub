@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Plus,
   Trash2,
+  Layout,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -67,6 +68,7 @@ import {
 import { UsersTable } from "@/components/users/UsersTable";
 import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
+import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AdminConsole = () => {
@@ -284,6 +286,10 @@ const AdminConsole = () => {
             <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Globe className="h-4 w-4" />
               Integrations
+            </TabsTrigger>
+            <TabsTrigger value="design_system" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <Layout className="h-4 w-4" />
+              Design System
             </TabsTrigger>
             <TabsTrigger value="security_breach" className="gap-2 text-destructive whitespace-nowrap flex-shrink-0">
               <ShieldAlert className="h-4 w-4" />
@@ -661,6 +667,10 @@ const AdminConsole = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="design_system">
+          <DesignSystemTab />
         </TabsContent>
 
         <TabsContent value="security_breach">

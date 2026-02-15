@@ -13,19 +13,10 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
-  const { data: uiPrefs } = useUIPreferences();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const iosEnabled = mounted && uiPrefs?.ios_materials && !(isMobile && uiPrefs?.disable_on_mobile);
 
   return (
     <div className={cn(
-      "min-h-screen bg-background transition-all duration-500",
-      iosEnabled && "ios-enabled"
+      "min-h-screen bg-background transition-all duration-500"
     )}>
       <Sidebar />
       <div 

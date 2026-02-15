@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/hooks/use-sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DesignSystemProvider } from "@/components/theme/DesignSystemProvider";
+import { DynamicIslandProvider } from "@/components/ui/ios/DynamicIslandProvider";
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
@@ -56,6 +58,8 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <SidebarProvider>
+            <DesignSystemProvider>
+            <DynamicIslandProvider>
             <QuickActionsProvider>
               <RealtimeListener />
               <GlobalQuickActions />
@@ -90,6 +94,8 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </QuickActionsProvider>
+            </DynamicIslandProvider>
+            </DesignSystemProvider>
             </SidebarProvider>
           </AuthProvider>
         </BrowserRouter>
