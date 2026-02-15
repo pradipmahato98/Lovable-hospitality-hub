@@ -28,9 +28,13 @@ import { format } from "date-fns";
 
 interface FinancialStatementsProps {
   companyName?: string;
+  isReadOnly?: boolean;
 }
 
-export function FinancialStatements({ companyName = "LuxeStay Hotel" }: FinancialStatementsProps) {
+export function FinancialStatements({
+  companyName = "LuxeStay Hotel",
+  isReadOnly
+}: FinancialStatementsProps) {
   const [asOfDate, setAsOfDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [activeTab, setActiveTab] = useState("pnl");
   const printRef = useRef<HTMLDivElement>(null);

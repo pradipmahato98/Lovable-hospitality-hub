@@ -1,437 +1,217 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  BookOpen,
-  FileText,
-  PieChart,
-  Plus,
-  Search,
-  Download,
-  ChevronRight,
-  Check,
-  RefreshCw,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Scale,
-  Send,
-  History,
-  Layers,
-  Clock,
   LayoutDashboard,
-  ArrowLeft,
   Settings2,
-  Activity,
-  CalendarDays,
-  ShieldCheck,
-  Lock,
+  RefreshCw,
+  FileText,
   UserCircle,
+  ChevronRight,
+  ArrowLeft,
+  Lock,
+  Eye,
 } from "lucide-react";
-import { toast } from "sonner";
-import {
-  useAccounts,
-  useCreateAccount,
-  useJournalEntries,
-  useCreateJournalEntry,
-  usePostJournalEntry,
-  useLedger,
-  useTrialBalance,
-  Account,
-} from "@/hooks/useFinance";
-import { useBusinessDate, useUpdateBusinessDate } from "@/hooks/useSettings";
-import { FinancialStatements } from "@/components/finance/FinancialStatements";
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { PermissionMatrix } from "@/components/finance/PermissionMatrix";
-import { useFinancePermissions } from "@/hooks/useFinancePermissions";
 
-const accountTypeColors: Record<string, string> = {
-  asset: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  liability: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  equity: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  revenue: "bg-success/20 text-success border-success/30",
-  expense: "bg-destructive/20 text-destructive border-destructive/30",
-};
+// Setup Layer Services
+import { ChartOfAccountsService } from "@/components/finance/setup/ChartOfAccountsService";
+import { FinancialConfigurationService } from "@/components/finance/setup/FinancialConfigurationService";
+import { CustomerMasterService } from "@/components/finance/setup/CustomerMasterService";
+import { VendorMasterService } from "@/components/finance/setup/VendorMasterService";
+import { BankCashSetupService } from "@/components/finance/setup/BankCashSetupService";
+import { AssetMasterService } from "@/components/finance/setup/AssetMasterService";
+import { TaxConfigurationService } from "@/components/finance/setup/TaxConfigurationService";
+import { BudgetSetupService } from "@/components/finance/setup/BudgetSetupService";
+import { AccessControlService } from "@/components/finance/setup/AccessControlService";
+import { FinancialStatementMappingService } from "@/components/finance/setup/FinancialStatementMappingService";
+
+// Transaction Layer Services
+import { JournalManagementService } from "@/components/finance/transactions/JournalManagementService";
+import { ARTransactionService } from "@/components/finance/transactions/ARTransactionService";
+import { APTransactionService } from "@/components/finance/transactions/APTransactionService";
+import { BankCashTransactionService } from "@/components/finance/transactions/BankCashTransactionService";
+import { AssetOperationsService } from "@/components/finance/transactions/AssetOperationsService";
+import { TaxCalculationService } from "@/components/finance/transactions/TaxCalculationService";
+import { BudgetExecutionService } from "@/components/finance/transactions/BudgetExecutionService";
+import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
+import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
+import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
+
+// Reporting Layer Services
+import { FinancialReportingService } from "@/components/finance/reporting/FinancialReportingService";
+import { LedgerInquiryService } from "@/components/finance/reporting/LedgerInquiryService";
+import { ARReportingService } from "@/components/finance/reporting/ARReportingService";
+import { APReportingService } from "@/components/finance/reporting/APReportingService";
+import { CashBankReportingService } from "@/components/finance/reporting/CashBankReportingService";
+import { FixedAssetsReportingService } from "@/components/finance/reporting/FixedAssetsReportingService";
+import { TaxReportingService } from "@/components/finance/reporting/TaxReportingService";
+import { BudgetForecastReportingService } from "@/components/finance/reporting/BudgetForecastReportingService";
+import { AuditReportingService } from "@/components/finance/reporting/AuditReportingService";
+import { ConsolidationBIService } from "@/components/finance/reporting/ConsolidationBIService";
+
+import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
+import { useBusinessDate } from "@/hooks/useSettings";
+import { useFinancePermissions } from "@/hooks/useFinancePermissions";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import { TrendingUp, Scale, BookOpen, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useMemo } from "react";
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [subView, setSubView] = useState<string | null>(null);
-  const [selectedModule, setSelectedModule] = useState<{ title: string; category: string } | null>(null);
-  const [accountCategory, setAccountCategory] = useState("all");
-  const [postingTab, setPostingTab] = useState("new");
-  const [isDayCloseDialogOpen, setIsDayCloseDialogOpen] = useState(false);
-  const [postingDialogOpen, setPostingDialogOpen] = useState(false);
-  const [quickPost, setQuickPost] = useState({
-    account_id: "",
-    contra_account_id: "",
-    amount: 0,
-    type: "debit" as "debit" | "credit",
-    description: "",
-  });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
 
-  // Permissions hook
   const {
     activeRole,
-    setActiveRole,
-    canEdit,
-    canView,
     checkPermission,
     roleLabel
   } = useFinancePermissions('FA');
 
-  // Account creation dialog
-  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-  const [newAccount, setNewAccount] = useState({
-    code: "",
-    name: "",
-    type: "asset" as Account["type"],
-    description: "",
-  });
-
-  // Journal entry dialog
-  const [journalDialogOpen, setJournalDialogOpen] = useState(false);
-  const [newJournalEntry, setNewJournalEntry] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    description: "",
-    reference: "",
-    lines: [
-      { account_id: "", debit: 0, credit: 0 },
-      { account_id: "", debit: 0, credit: 0 },
-    ],
-  });
-
-  // Hooks
-  const { data: accounts, isLoading: accountsLoading } = useAccounts();
-  const createAccount = useCreateAccount();
-  const { data: journalEntries, isLoading: entriesLoading } = useJournalEntries();
-  const createJournalEntry = useCreateJournalEntry();
-  const postJournalEntry = usePostJournalEntry();
-  const { data: ledgerData, isLoading: ledgerLoading } = useLedger(selectedAccountId || undefined);
-  const { data: trialBalance, isLoading: trialBalanceLoading } = useTrialBalance();
+  const { data: accounts } = useAccounts();
+  const { data: journalEntries } = useJournalEntries();
+  const { data: trialBalance } = useTrialBalance();
   const { data: businessDate } = useBusinessDate();
-  const updateBusinessDate = useUpdateBusinessDate();
 
-  // Filtered accounts
-  const filteredAccounts = accounts.filter((a) => {
-    const matchesSearch =
-      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = accountCategory === "all" || a.type === accountCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Calculate totals and financial metrics for dashboard
+  const { totalDebits, totalCredits, isBalanced, totalAssets, totalLiabilities, netIncome } = useMemo(() => {
+    const debits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
+    const credits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
 
-  // Calculate totals for trial balance
-  const totalDebits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
-  const totalCredits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
-  const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
+    let assets = 0;
+    let liabilities = 0;
+    let revenue = 0;
+    let expenses = 0;
 
-  const handleCreateAccount = async () => {
-    if (!newAccount.code || !newAccount.name) {
-      toast.error("Please fill in account code and name");
-      return;
+    trialBalance.forEach(item => {
+      const balance = item.totalDebit - item.totalCredit;
+      const type = item.account.type;
+
+      if (type === 'asset') assets += balance;
+      else if (type === 'liability') liabilities -= balance;
+      else if (type === 'revenue') revenue -= balance;
+      else if (type === 'expense') expenses += balance;
+    });
+
+    return {
+      totalDebits: debits,
+      totalCredits: credits,
+      isBalanced: Math.abs(debits - credits) < 0.01,
+      totalAssets: assets,
+      totalLiabilities: Math.abs(liabilities),
+      netIncome: Math.abs(revenue) - expenses
+    };
+  }, [trialBalance]);
+
+  const setupServices = [
+    { id: "coa", title: "1.1 Chart of Accounts Service", Component: ChartOfAccountsService },
+    { id: "fin-config", title: "1.2 Financial Configuration Service", Component: FinancialConfigurationService },
+    { id: "customer-master", title: "1.3 Customer Master Service", Component: CustomerMasterService },
+    { id: "vendor-master", title: "1.4 Vendor Master Service", Component: VendorMasterService },
+    { id: "bank-cash-setup", title: "1.5 Bank & Cash Setup Service", Component: BankCashSetupService },
+    { id: "asset-master", title: "1.6 Asset Master Service", Component: AssetMasterService },
+    { id: "tax-config", title: "1.7 Tax Configuration Service", Component: TaxConfigurationService },
+    { id: "budget-setup", title: "1.8 Budget Setup Service", Component: BudgetSetupService },
+    { id: "access-control", title: "1.9 Access Control & Compliance Service", Component: AccessControlService },
+    { id: "statement-mapping", title: "1.10 Financial Statement Mapping Service", Component: FinancialStatementMappingService },
+  ];
+
+  const transactionServices = [
+    { id: "journal-mgmt", title: "2.1 Journal Management Service", Component: JournalManagementService },
+    { id: "ar-transaction", title: "2.2 AR Transaction Service", Component: ARTransactionService },
+    { id: "ap-transaction", title: "2.3 AP Transaction Service", Component: APTransactionService },
+    { id: "bank-cash-trans", title: "2.4 Bank & Cash Transaction Service", Component: BankCashTransactionService },
+    { id: "asset-ops", title: "2.5 Asset Operations Service", Component: AssetOperationsService },
+    { id: "tax-calc", title: "2.6 Tax Calculation & Booking Service", Component: TaxCalculationService },
+    { id: "budget-exec", title: "2.7 Budget Execution Service", Component: BudgetExecutionService },
+    { id: "period-close", title: "2.8 Financial Period Close Service", Component: FinancialPeriodCloseService },
+    { id: "approval-workflow", title: "2.9 Approval Workflow Engine", Component: ApprovalWorkflowService },
+    { id: "integration-orchestrator", title: "2.10 Integration Orchestrator Service", Component: IntegrationOrchestratorService },
+  ];
+
+  const reportingServices = [
+    { id: "fin-reporting", title: "3.1 Financial Reporting Service", Component: FinancialReportingService },
+    { id: "ledger-inquiry", title: "3.2 Ledger & Inquiry Service", Component: LedgerInquiryService },
+    { id: "ar-reporting", title: "3.3 AR Reporting Service", Component: ARReportingService },
+    { id: "ap-reporting", title: "3.4 AP Reporting Service", Component: APReportingService },
+    { id: "cash-bank-reporting", title: "3.5 Cash & Bank Reporting Service", Component: CashBankReportingService },
+    { id: "fixed-assets-reporting", title: "3.6 Fixed Assets Reporting Service", Component: FixedAssetsReportingService },
+    { id: "tax-reporting", title: "3.7 Tax Reporting Service", Component: TaxReportingService },
+    { id: "budget-forecast-reporting", title: "3.8 Budget & Forecast Reporting Service", Component: BudgetForecastReportingService },
+    { id: "audit-reporting", title: "3.9 Audit Reporting Service", Component: AuditReportingService },
+    { id: "consolidation-bi", title: "3.10 Consolidation & BI Service", Component: ConsolidationBIService },
+  ];
+
+  const renderServiceList = (services: any[]) => {
+    if (selectedService) {
+      const service = services.find(s => s.id === selectedService);
+      if (service) {
+        const permission = checkPermission(service.title);
+        const isReadOnly = permission === 'view';
+
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedService(null)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Microservices
+              </Button>
+              <h2 className="text-xl font-bold font-display">{service.title}</h2>
+              {isReadOnly && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
+                  <Eye className="h-3 w-3" /> View Only
+                </Badge>
+              )}
+            </div>
+            <service.Component isReadOnly={isReadOnly} />
+          </div>
+        );
+      }
     }
-
-    try {
-      await createAccount.mutateAsync({
-        code: newAccount.code,
-        name: newAccount.name,
-        type: newAccount.type,
-        description: newAccount.description || null,
-        parent_id: null,
-        is_active: true,
-      });
-      toast.success("Account created successfully");
-      setAccountDialogOpen(false);
-      setNewAccount({ code: "", name: "", type: "asset", description: "" });
-    } catch (error) {
-      toast.error("Failed to create account");
-    }
-  };
-
-  const handleCreateJournalEntry = async () => {
-    if (!newJournalEntry.description) {
-      toast.error("Please enter a description");
-      return;
-    }
-
-    const validLines = newJournalEntry.lines.filter(
-      (l) => l.account_id && (l.debit > 0 || l.credit > 0)
-    );
-
-    if (validLines.length < 2) {
-      toast.error("Please add at least two lines");
-      return;
-    }
-
-    const totalDebit = validLines.reduce((sum, l) => sum + l.debit, 0);
-    const totalCredit = validLines.reduce((sum, l) => sum + l.credit, 0);
-
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      toast.error("Debits must equal credits");
-      return;
-    }
-
-    try {
-      await createJournalEntry.mutateAsync({
-        date: newJournalEntry.date,
-        description: newJournalEntry.description,
-        reference: newJournalEntry.reference || null,
-        lines: validLines,
-      });
-      toast.success("Journal entry created");
-      setJournalDialogOpen(false);
-      setNewJournalEntry({
-        date: new Date().toISOString().slice(0, 10),
-        description: "",
-        reference: "",
-        lines: [
-          { account_id: "", debit: 0, credit: 0 },
-          { account_id: "", debit: 0, credit: 0 },
-        ],
-      });
-    } catch (error) {
-      toast.error("Failed to create journal entry");
-    }
-  };
-
-  const handlePostEntry = async (entryId: string) => {
-    try {
-      await postJournalEntry.mutateAsync(entryId);
-      toast.success("Journal entry posted to ledger");
-    } catch (error) {
-      toast.error("Failed to post journal entry");
-    }
-  };
-
-  const handleQuickPost = async () => {
-    if (!quickPost.account_id || !quickPost.contra_account_id || !quickPost.amount || !quickPost.description) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    try {
-      const lines = [
-        {
-          account_id: quickPost.account_id,
-          debit: quickPost.type === "debit" ? quickPost.amount : 0,
-          credit: quickPost.type === "credit" ? quickPost.amount : 0,
-        },
-        {
-          account_id: quickPost.contra_account_id,
-          debit: quickPost.type === "credit" ? quickPost.amount : 0,
-          credit: quickPost.type === "debit" ? quickPost.amount : 0,
-        },
-      ];
-
-      const entry = await createJournalEntry.mutateAsync({
-        date: businessDate || new Date().toISOString().split("T")[0],
-        description: quickPost.description,
-        lines: lines,
-      });
-
-      // Auto-post the journal entry
-      await postJournalEntry.mutateAsync(entry.id);
-
-      toast.success("Transaction posted successfully");
-      setPostingDialogOpen(false);
-      setQuickPost({
-        account_id: "",
-        contra_account_id: "",
-        amount: 0,
-        type: "debit",
-        description: "",
-      });
-    } catch (error) {
-      toast.error("Failed to post transaction");
-    }
-  };
-
-  const handleDayClose = async () => {
-    if (!businessDate) return;
-
-    const currentDate = new Date(businessDate);
-    currentDate.setDate(currentDate.getDate() + 1);
-    const nextDate = currentDate.toISOString().split("T")[0];
-
-    try {
-      await updateBusinessDate.mutateAsync(nextDate);
-      toast.success(`Business day closed. New date: ${nextDate}`);
-      setIsDayCloseDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to close business day");
-    }
-  };
-
-  const addJournalLine = () => {
-    setNewJournalEntry((prev) => ({
-      ...prev,
-      lines: [...prev.lines, { account_id: "", debit: 0, credit: 0 }],
-    }));
-  };
-
-  const updateJournalLine = (index: number, field: string, value: any) => {
-    setNewJournalEntry((prev) => ({
-      ...prev,
-      lines: prev.lines.map((line, i) =>
-        i === index ? { ...line, [field]: value } : line
-      ),
-    }));
-  };
-
-  const ModuleDetailView = ({ title, category }: { title: string; category: string }) => {
-    const permission = checkPermission(title);
-    const isReadOnly = permission === 'view';
 
     return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => setSelectedModule(null)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to {category}
-        </Button>
-        <h2 className="text-xl font-bold font-display">{title}</h2>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {services.map((service) => {
+          const permission = checkPermission(service.title);
+          const hasAccess = permission !== 'none';
+          const isReadOnly = permission === 'view';
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Configuration & Details</CardTitle>
-                <CardDescription>Manage settings and view status for {title}</CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                <ShieldCheck className="h-3 w-3 mr-1" /> Verified
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Service Name</Label>
-                <Input defaultValue={title} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Input defaultValue={category} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label>Last Audit</Label>
-                <div className="flex items-center text-sm text-muted-foreground pt-2">
-                  <CalendarDays className="h-4 w-4 mr-2" />
-                  {businessDate || "Today"}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <div className="flex items-center text-sm text-success font-medium pt-2">
-                  <Activity className="h-4 w-4 mr-2" />
-                  Live & Operational
-                </div>
-              </div>
-            </div>
-
-            {isReadOnly && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
-                <Lock className="h-5 w-5 text-amber-500 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-semibold text-amber-500">Read-Only Access</h4>
-                  <p className="text-xs text-muted-foreground">Your current role ({activeRole}) only has viewing privileges for this module. Modification actions are disabled.</p>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-semibold">Active Rules & Parameters</h4>
-              <div className="grid grid-cols-1 gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border">
-                    <span className="text-sm">Compliance Rule #{i}00{i}</span>
-                    <Badge variant="secondary">Active</Badge>
+          return (
+            <Card
+              key={service.id}
+              className={cn(
+                "cursor-pointer transition-all hover:shadow-md group border-primary/10",
+                !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
+              )}
+              onClick={() => setSelectedService(service.id)}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/5 rounded-lg group-hover:bg-primary/10 transition-colors">
+                    <Settings2 className="h-4 w-4 text-primary" />
                   </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-          <div className="p-6 pt-0 flex justify-end gap-2">
-            <Button variant="outline" size="sm">Download Audit Log</Button>
-            <Button size="sm" className="gap-2" disabled={isReadOnly}>
-              <Settings2 className="h-4 w-4" />
-              Update Rules
-            </Button>
-          </div>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground font-medium">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2">
-              <Button variant="outline" className="w-full justify-start gap-2 h-11">
-                <Download className="h-4 w-4" /> Export Configuration
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2 h-11">
-                <History className="h-4 w-4" /> View History
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2 h-11 text-destructive hover:text-destructive">
-                <RefreshCw className="h-4 w-4" /> Reset Module
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-primary/5 border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Module Intelligence</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                This module is currently processing real-time financial data for {title}.
-                All changes are recorded in the system audit log and compliant with local financial regulations.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{service.title}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Operational Service</span>
+                  </div>
+                  {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
+                  {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
-    </div>
     );
   };
 
   return (
     <MainLayout
       title="Finance & Accounting"
-      subtitle={`Business Date: ${businessDate || "Loading..."}`}
+      subtitle={`Microservices Architecture | Business Date: ${businessDate || "Loading..."}`}
       actions={
         <div className="flex items-center gap-3 bg-muted/50 px-3 py-1.5 rounded-full border border-border/50">
           <UserCircle className="h-4 w-4 text-primary" />
@@ -446,8 +226,7 @@ export default function Finance() {
       }
     >
       <div className="space-y-6">
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSubView(null); setSelectedModule(null); }}>
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedService(null); }}>
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
               <TabsTrigger
@@ -461,50 +240,42 @@ export default function Finance() {
                 value="setup"
                 className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
               >
-                <BookOpen className="h-4 w-4" />
-                Setup
+                <Settings2 className="h-4 w-4" />
+                Setup Layer
               </TabsTrigger>
               <TabsTrigger
                 value="transactions"
                 className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
               >
                 <RefreshCw className="h-4 w-4" />
-                Transactions
-              </TabsTrigger>
-              <TabsTrigger
-                value="posting"
-                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
-              >
-                <Send className="h-4 w-4" />
-                Transaction Posting
+                Transaction Layer
               </TabsTrigger>
               <TabsTrigger
                 value="reports"
                 className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
               >
                 <FileText className="h-4 w-4" />
-                Reports
+                Reporting Layer
               </TabsTrigger>
             </TabsList>
           </div>
 
-          {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6 mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
-                title="Total Accounts"
-                value={accounts.length.toString()}
-                change={`${accounts.filter((a) => a.is_active).length} active`}
+                title="Total Assets"
+                value={`$${totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                change="Current period balance"
                 changeType="neutral"
-                icon={BookOpen}
+                icon={Wallet}
                 delay={0}
               />
               <MetricCard
-                title="Journal Entries"
-                value={journalEntries.length.toString()}
-                change={`${journalEntries.filter((e) => e.is_posted).length} posted`}
-                changeType="neutral"
-                icon={FileText}
+                title="Net Income"
+                value={`$${netIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                change={netIncome >= 0 ? "Profit" : "Loss"}
+                changeType={netIncome >= 0 ? "positive" : "negative"}
+                icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight}
                 delay={50}
               />
               <MetricCard
@@ -529,1168 +300,100 @@ export default function Finance() {
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                title="Total Accounts"
+                value={accounts.length.toString()}
+                change={`${accounts.filter((a) => a.is_active).length} active`}
+                changeType="neutral"
+                icon={BookOpen}
+                delay={200}
+              />
+              <MetricCard
+                title="Journal Entries"
+                value={journalEntries.length.toString()}
+                change={`${journalEntries.filter((e) => e.is_posted).length} posted`}
+                changeType="neutral"
+                icon={FileText}
+                delay={250}
+              />
+              <MetricCard
+                title="Total Liabilities"
+                value={`$${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                change="Outstanding obligations"
+                changeType="neutral"
+                icon={Scale}
+                delay={300}
+              />
+              <MetricCard
+                title="Operational Status"
+                value="Active"
+                change="All layers functional"
+                changeType="positive"
+                icon={RefreshCw}
+                delay={350}
+              />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Recent Journal Entries</CardTitle>
+                  <CardTitle className="text-lg">Microservice Health Status</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {journalEntries.slice(0, 5).map((entry) => {
-                        const amount = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
-                        return (
-                          <TableRow key={entry.id}>
-                            <TableCell className="text-sm">{entry.date}</TableCell>
-                            <TableCell className="text-sm font-medium">{entry.description}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">${amount.toFixed(2)}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {journalEntries.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No recent entries</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                <CardContent className="space-y-4">
+                  {[
+                    { name: "Setup Layer Services", status: "Operational", color: "text-success" },
+                    { name: "Transaction Layer Services", status: "Operational", color: "text-success" },
+                    { name: "Reporting Layer Services", status: "Operational", color: "text-success" },
+                    { name: "Integration Gateway", status: "Connected", color: "text-primary" },
+                  ].map((s, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <Badge variant="outline" className={cn(s.color, "bg-background")}>{s.status}</Badge>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Quick Access</CardTitle>
+                  <CardTitle className="text-lg">Quick Access Architecture</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("setup")}>
+                    <Settings2 className="h-5 w-5" />
+                    Setup Layer
+                  </Button>
                   <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
-                    <Plus className="h-5 w-5" />
-                    New Journal Entry
-                  </Button>
-                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("posting")}>
-                    <Send className="h-5 w-5" />
-                    Quick Post
+                    <RefreshCw className="h-5 w-5" />
+                    Transactions
                   </Button>
                   <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
-                    <PieChart className="h-5 w-5" />
-                    General Ledger
+                    <FileText className="h-5 w-5" />
+                    Reporting
                   </Button>
-                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
-                    <Scale className="h-5 w-5" />
-                    Trial Balance
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => { setActiveTab("transactions"); setSelectedService("period-close"); }}>
+                    <Lock className="h-5 w-5" />
+                    Period Close
                   </Button>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Setup Tab */}
-          <TabsContent value="setup" className="space-y-4">
-            {selectedModule ? (
-              <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
-            ) : subView === "role-permissions" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Setup
-                  </Button>
-                  <h2 className="text-lg font-semibold">Role-based Permissions</h2>
-                </div>
-                <PermissionMatrix
-                  currentRole={activeRole}
-                  onRoleChange={setActiveRole}
-                  simulationMode={true}
-                />
-              </div>
-            ) : subView === "accounts" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Setup
-                  </Button>
-                  <h2 className="text-lg font-semibold">Chart of Accounts</h2>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <Tabs value={accountCategory} onValueChange={setAccountCategory} className="w-auto">
-                    <TabsList className="bg-secondary/50">
-                      <TabsTrigger value="all">All</TabsTrigger>
-                      <TabsTrigger value="asset">Assets</TabsTrigger>
-                      <TabsTrigger value="liability">Liabilities</TabsTrigger>
-                      <TabsTrigger value="equity">Equity</TabsTrigger>
-                      <TabsTrigger value="revenue">Revenue</TabsTrigger>
-                      <TabsTrigger value="expense">Expenses</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-full sm:w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search accounts..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                    <Button size="sm" onClick={() => setAccountDialogOpen(true)} className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      New
-                    </Button>
-                  </div>
-                </div>
-
-                <Card>
-                  <CardContent className="p-0">
-                    {accountsLoading ? (
-                      <div className="p-8 text-center text-muted-foreground">Loading accounts...</div>
-                    ) : filteredAccounts.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">No accounts found</div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Code</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredAccounts.map((account) => (
-                            <TableRow
-                              key={account.id}
-                              className="cursor-pointer hover:bg-secondary/50"
-                              onClick={() => {
-                                setSelectedAccountId(account.id);
-                                setActiveTab("reports");
-                                setSubView("ledger");
-                              }}
-                            >
-                              <TableCell className="font-mono">{account.code}</TableCell>
-                              <TableCell className="font-medium">{account.name}</TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={accountTypeColors[account.type]}
-                                >
-                                  {account.type}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {account.description || "-"}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    account.is_active
-                                      ? "bg-success/20 text-success"
-                                      : "bg-muted text-muted-foreground"
-                                  }
-                                >
-                                  {account.is_active ? "Active" : "Inactive"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { title: "Chart of Accounts configuration", id: "accounts" },
-                  { title: "Account hierarchy and segments" },
-                  { title: "Fiscal year and accounting periods" },
-                  { title: "Journal types and approval workflows" },
-                  { title: "Exchange rate tables" },
-                  { title: "Posting rules and module mappings" },
-                  { title: "Customer and corporate account setup" },
-                  { title: "Credit limits and customer terms" },
-                  { title: "Billing templates" },
-                  { title: "Invoice numbering rules" },
-                  { title: "Vendor master setup" },
-                  { title: "Vendor payment terms" },
-                  { title: "Withholding tax setup" },
-                  { title: "PO/GRN matching rules" },
-                  { title: "AP and AR approval workflows" },
-                  { title: "Bank account configuration" },
-                  { title: "Cash register setup" },
-                  { title: "Bank reconciliation rules" },
-                  { title: "Signatory and mandate settings" },
-                  { title: "Asset categories and useful life settings" },
-                  { title: "Depreciation methods" },
-                  { title: "Asset numbering rules" },
-                  { title: "Asset location and custodian mapping" },
-                  { title: "Tax codes and slabs (VAT, GST, service tax)" },
-                  { title: "Tax-inclusive/exclusive calculation rules" },
-                  { title: "Region-specific tax compliance settings" },
-                  { title: "Budget templates" },
-                  { title: "Department-wise budget allocation" },
-                  { title: "Budget approval workflows" },
-                  { title: "Role-based permissions" },
-                  { title: "Maker–checker rules" },
-                  { title: "Audit period locking" },
-                  { title: "Compliance framework rules" },
-                  { title: "Financial statement layout configuration" },
-                  { title: "Account-to-statement mapping" },
-                  { title: "Scheduled reporting setup" },
-                ].map((item, idx) => {
-                  const hasAccess = canView(item.title);
-                  const isReadOnly = checkPermission(item.title) === 'view';
-
-                  return (
-                  <Card
-                    key={idx}
-                    className={cn(
-                      "cursor-pointer transition-colors group",
-                      !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
-                    )}
-                    onClick={() => {
-                      if (item.title === "Role-based permissions") setSubView("role-permissions");
-                      else if (item.id) setSubView(item.id);
-                      else setSelectedModule({ title: item.title, category: "Setup" });
-                    }}
-                  >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium">{item.title}</span>
-                        {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
-                        {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-              </div>
-            )}
+          <TabsContent value="setup" className="space-y-4 mt-4">
+            {renderServiceList(setupServices)}
           </TabsContent>
 
-          {/* Transactions Tab */}
-          <TabsContent value="transactions" className="space-y-4">
-            {selectedModule ? (
-              <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
-            ) : subView === "journal" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Transactions
-                  </Button>
-                  <h2 className="text-lg font-semibold">Journal Entries</h2>
-                </div>
-                <div className="flex items-center justify-end">
-                  <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Journal Entry
-                  </Button>
-                </div>
-
-                <Card>
-                  <CardContent className="p-0">
-                    {entriesLoading ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        Loading journal entries...
-                      </div>
-                    ) : journalEntries.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        No journal entries yet
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Entry #</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Reference</TableHead>
-                            <TableHead className="text-right">Debit</TableHead>
-                            <TableHead className="text-right">Credit</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {journalEntries.map((entry) => {
-                            const totalDebit =
-                              entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
-                            const totalCredit =
-                              entry.lines?.reduce((sum: number, l: any) => sum + (l.credit || 0), 0) || 0;
-
-                            return (
-                              <TableRow key={entry.id}>
-                                <TableCell className="font-mono text-primary">
-                                  {entry.entry_number}
-                                </TableCell>
-                                <TableCell>{entry.date}</TableCell>
-                                <TableCell>{entry.description}</TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {entry.reference || "-"}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  ${totalDebit.toFixed(2)}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  ${totalCredit.toFixed(2)}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={
-                                      entry.is_posted
-                                        ? "bg-success/20 text-success"
-                                        : "bg-amber-500/20 text-amber-400"
-                                    }
-                                  >
-                                    {entry.is_posted ? "Posted" : "Draft"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {!entry.is_posted && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handlePostEntry(entry.id)}
-                                      disabled={postJournalEntry.isPending}
-                                    >
-                                      <Check className="h-4 w-4 mr-1" />
-                                      Post
-                                    </Button>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { title: "Manual journal entries", id: "journal" },
-                  { title: "Recurring journals" },
-                  { title: "Reversing journal entries" },
-                  { title: "Auto-posting from PMS, POS, Inventory, Payroll", onClick: () => setActiveTab("posting") },
-                  { title: "Multi-currency journal postings" },
-                  { title: "Corporate/cash/OTA invoice generation" },
-                  { title: "Group and event billing" },
-                  { title: "Manual invoice creation" },
-                  { title: "Credit notes & adjustments" },
-                  { title: "Payment receipts (cash, card, bank, cheque)" },
-                  { title: "Advance deposits and prepayments" },
-                  { title: "Payment application (full/partial)" },
-                  { title: "Dunning actions" },
-                  { title: "Vendor invoice posting" },
-                  { title: "GRN and invoice matching" },
-                  { title: "Recurring vendor invoices" },
-                  { title: "Vendor payments (single or batch)" },
-                  { title: "Debit notes" },
-                  { title: "Withholding tax deduction" },
-                  { title: "Cash collections from operations" },
-                  { title: "Cash deposits to bank" },
-                  { title: "Bank payments and receipts" },
-                  { title: "Bank reconciliation" },
-                  { title: "Petty cash issuance and settlement" },
-                  { title: "Asset addition (purchase/capitalization)" },
-                  { title: "Asset disposal" },
-                  { title: "Asset revaluation" },
-                  { title: "Depreciation run" },
-                  { title: "Asset transfers" },
-                  { title: "Maintenance cost posting" },
-                  { title: "Tax calculation on invoices" },
-                  { title: "Tax adjustments" },
-                  { title: "Tax period closing" },
-                  { title: "Budget entry or revision" },
-                  { title: "Forecast submission" },
-                  { title: "Variance calculation" },
-                  { title: "Approval actions (JEs, vendors, payments, budgets)" },
-                  { title: "Financial period close and reopen", onClick: () => setIsDayCloseDialogOpen(true) },
-                ].map((item: any, idx) => {
-                  const hasAccess = canView(item.title);
-                  const isReadOnly = checkPermission(item.title) === 'view';
-
-                  return (
-                  <Card
-                    key={idx}
-                    className={cn(
-                      "cursor-pointer transition-colors group",
-                      !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
-                    )}
-                    onClick={() => {
-                      if (item.onClick) item.onClick();
-                      else if (item.id) setSubView(item.id);
-                      else setSelectedModule({ title: item.title, category: "Transactions" });
-                    }}
-                  >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium">{item.title}</span>
-                        {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
-                        {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-              </div>
-            )}
+          <TabsContent value="transactions" className="space-y-4 mt-4">
+            {renderServiceList(transactionServices)}
           </TabsContent>
 
-          {/* Posting Tab */}
-          <TabsContent value="posting" className="space-y-4">
-            <Tabs value={postingTab} onValueChange={setPostingTab}>
-              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-                <TabsTrigger value="new" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Posting
-                </TabsTrigger>
-                <TabsTrigger value="bulk" className="gap-2">
-                  <Layers className="h-4 w-4" />
-                  Bulk Posting
-                </TabsTrigger>
-                <TabsTrigger value="pending" className="gap-2">
-                  <Clock className="h-4 w-4" />
-                  Pending
-                </TabsTrigger>
-                <TabsTrigger value="history" className="gap-2">
-                  <History className="h-4 w-4" />
-                  History
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="new" className="mt-4 space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Single Transaction Posting</CardTitle>
-                    <CardDescription>Post a manual transaction to the general ledger</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Main Account</Label>
-                          <Select
-                            value={quickPost.account_id}
-                            onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {accounts.map((acc) => (
-                                <SelectItem key={acc.id} value={acc.id}>
-                                  {acc.code} - {acc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Contra Account (Offset)</Label>
-                          <Select
-                            value={quickPost.contra_account_id}
-                            onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select offset account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {accounts.map((acc) => (
-                                <SelectItem key={acc.id} value={acc.id}>
-                                  {acc.code} - {acc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Amount ($)</Label>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={quickPost.amount || ""}
-                              onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Action</Label>
-                            <Select
-                              value={quickPost.type}
-                              onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="debit">Debit Main</SelectItem>
-                                <SelectItem value="credit">Credit Main</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Input
-                            placeholder="e.g., Manual utility payment"
-                            value={quickPost.description}
-                            onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Date</Label>
-                          <Input type="date" value={businessDate || new Date().toISOString().slice(0, 10)} readOnly />
-                        </div>
-                        <div className="pt-4">
-                          <Button
-                            className="w-full gap-2"
-                            onClick={handleQuickPost}
-                            disabled={createJournalEntry.isPending}
-                          >
-                            <Send className="h-4 w-4" />
-                            {createJournalEntry.isPending ? "Posting..." : "Post Transaction"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="bulk" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Bulk Transaction Posting</CardTitle>
-                    <CardDescription>Upload a CSV or Excel file to post multiple transactions</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
-                    <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
-                    <p className="text-sm text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
-                    <Button variant="outline" className="gap-2">
-                      <Download className="h-4 w-4" />
-                      Select File
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="pending" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Postings</CardTitle>
-                    <CardDescription>Transactions waiting for review and approval</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Account</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No pending postings found.
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="history" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Posting History</CardTitle>
-                    <CardDescription>Recent manual and bulk posting activities</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>User</TableHead>
-                          <TableHead>Items</TableHead>
-                          <TableHead className="text-right">Total Value</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No posting history available.
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          {/* Reports Tab */}
-          <TabsContent value="reports" className="space-y-4">
-            {selectedModule ? (
-              <ModuleDetailView title={selectedModule.title} category={selectedModule.category} />
-            ) : subView === "ledger" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Reports
-                  </Button>
-                  <h2 className="text-lg font-semibold">General Ledger</h2>
-                </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex-1 max-w-sm">
-                    <Select
-                      value={selectedAccountId || ""}
-                      onValueChange={(v) => setSelectedAccountId(v || null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account to view ledger" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Accounts</SelectItem>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.code} - {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Card>
-                  <CardContent className="p-0">
-                    {ledgerLoading ? (
-                      <div className="p-8 text-center text-muted-foreground">Loading ledger...</div>
-                    ) : ledgerData.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        No ledger entries found. Post some journal entries first.
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Entry #</TableHead>
-                            <TableHead>Account</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Debit</TableHead>
-                            <TableHead className="text-right">Credit</TableHead>
-                            <TableHead className="text-right">Balance</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {ledgerData.map((entry) => (
-                            <TableRow key={entry.id}>
-                              <TableCell>{entry.date}</TableCell>
-                              <TableCell className="font-mono text-primary">
-                                {entry.entry_number}
-                              </TableCell>
-                              <TableCell>
-                                <span className="font-mono text-xs">{entry.account_code}</span>{" "}
-                                {entry.account_name}
-                              </TableCell>
-                              <TableCell>{entry.description}</TableCell>
-                              <TableCell className="text-right font-mono">
-                                {entry.debit > 0 ? `$${entry.debit.toFixed(2)}` : "-"}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {entry.credit > 0 ? `$${entry.credit.toFixed(2)}` : "-"}
-                              </TableCell>
-                              <TableCell className="text-right font-mono font-semibold">
-                                ${entry.running_balance.toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : subView === "trial-balance" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Reports
-                  </Button>
-                  <h2 className="text-lg font-semibold">Trial Balance</h2>
-                </div>
-                <div className="flex items-center justify-end">
-                  <Button variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Trial Balance</CardTitle>
-                    <CardDescription>
-                      Summary of all posted journal entries
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {trialBalanceLoading ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        Loading trial balance...
-                      </div>
-                    ) : trialBalance.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        No posted entries yet
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Code</TableHead>
-                            <TableHead>Account Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead className="text-right">Debit</TableHead>
-                            <TableHead className="text-right">Credit</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {trialBalance.map((row) => (
-                            <TableRow key={row.account.id}>
-                              <TableCell className="font-mono">{row.account.code}</TableCell>
-                              <TableCell className="font-medium">{row.account.name}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={accountTypeColors[row.account.type]}>
-                                  {row.account.type}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                ${row.totalDebit.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                ${row.totalCredit.toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          <TableRow className="font-bold border-t-2">
-                            <TableCell colSpan={3} className="text-right">
-                              Totals
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              ${totalDebits.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              ${totalCredits.toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : subView === "financial-statements" ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSubView(null)}>
-                    <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-                    Back to Reports
-                  </Button>
-                  <h2 className="text-lg font-semibold">Financial Statements</h2>
-                </div>
-                <FinancialStatements />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { title: "Trial Balance", id: "trial-balance" },
-                  { title: "General ledger detail", id: "ledger" },
-                  { title: "COA summary" },
-                  { title: "Journal register" },
-                  { title: "Journal audit log" },
-                  { title: "Period close report" },
-                  { title: "Consolidated Balance Sheet", id: "financial-statements" },
-                  { title: "Consolidated Profit & Loss", id: "financial-statements" },
-                  { title: "Consolidated Cash Flow", id: "financial-statements" },
-                  { title: "AR Aging" },
-                  { title: "Customer statements" },
-                  { title: "Invoice register" },
-                  { title: "Receipt register" },
-                  { title: "Outstanding balances" },
-                  { title: "Credit utilization report" },
-                  { title: "AP Aging" },
-                  { title: "Vendor statements" },
-                  { title: "Vendor invoice register" },
-                  { title: "Payment register" },
-                  { title: "GRN vs invoice variance report" },
-                  { title: "Outstanding vendor liabilities" },
-                  { title: "Cash register reconciliation report" },
-                  { title: "Daily cash movement report" },
-                  { title: "Bank reconciliation statement" },
-                  { title: "Cash flow statements (direct / indirect)" },
-                  { title: "Asset register" },
-                  { title: "Depreciation schedule" },
-                  { title: "Asset disposal report" },
-                  { title: "Asset verification report" },
-                  { title: "Capitalization summary" },
-                  { title: "Tax summary (sales/purchase)" },
-                  { title: "Tax liability report" },
-                  { title: "Withholding tax report" },
-                  { title: "Tax audit trail" },
-                  { title: "Budget vs Actual" },
-                  { title: "Forecast vs Actual" },
-                  { title: "Departmental variance reports" },
-                  { title: "Audit logs" },
-                  { title: "Internal control exception reports" },
-                  { title: "Transaction history (before/after values)" },
-                  { title: "Daily Revenue Report (financial extract)" },
-                  { title: "Hospitality financial KPIs (RevPAR, ADR, OCC)" },
-                  { title: "Departmental P&L" },
-                  { title: "Enterprise-level consolidated financial statements" },
-                ].map((item, idx) => {
-                  const hasAccess = canView(item.title);
-                  const isReadOnly = checkPermission(item.title) === 'view';
-
-                  return (
-                  <Card
-                    key={idx}
-                    className={cn(
-                      "cursor-pointer transition-colors group",
-                      !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
-                    )}
-                    onClick={() => {
-                      if (item.id) setSubView(item.id);
-                      else setSelectedModule({ title: item.title, category: "Reports" });
-                    }}
-                  >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium">{item.title}</span>
-                        {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
-                        {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-              </div>
-            )}
+          <TabsContent value="reports" className="space-y-4 mt-4">
+            {renderServiceList(reportingServices)}
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Quick Posting Dialog */}
-      <Dialog open={postingDialogOpen} onOpenChange={setPostingDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Quick Transaction Posting</DialogTitle>
-            <DialogDescription>Directly post a transaction between two accounts</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Account</Label>
-              <Select
-                value={quickPost.account_id}
-                onValueChange={(v) => setQuickPost({ ...quickPost, account_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.code} - {acc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Contra Account</Label>
-              <Select
-                value={quickPost.contra_account_id}
-                onValueChange={(v) => setQuickPost({ ...quickPost, contra_account_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select offset account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.code} - {acc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Amount</Label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={quickPost.amount || ""}
-                  onChange={(e) => setQuickPost({ ...quickPost, amount: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={quickPost.type}
-                  onValueChange={(v: "debit" | "credit") => setQuickPost({ ...quickPost, type: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="debit">Debit</SelectItem>
-                    <SelectItem value="credit">Credit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                placeholder="What is this for?"
-                value={quickPost.description}
-                onChange={(e) => setQuickPost({ ...quickPost, description: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPostingDialogOpen(false)}>Cancel</Button>
-            <Button
-              className="gap-2"
-              onClick={handleQuickPost}
-              disabled={createJournalEntry.isPending}
-            >
-              <Send className="h-4 w-4" />
-              {createJournalEntry.isPending ? "Posting..." : "Post Now"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Day Close Confirmation Dialog */}
-      <Dialog open={isDayCloseDialogOpen} onOpenChange={setIsDayCloseDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close Business Day?</DialogTitle>
-            <DialogDescription>
-              This will advance the business date from {businessDate} to the next day.
-              Make sure all transactions for today have been posted.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setIsDayCloseDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDayClose} disabled={updateBusinessDate.isPending}>
-              {updateBusinessDate.isPending ? "Closing..." : "Confirm Day Close"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Account Dialog */}
-      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Account</DialogTitle>
-            <DialogDescription>Add a new account to the chart of accounts</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Account Code</Label>
-                <Input
-                  placeholder="e.g., 1000"
-                  value={newAccount.code}
-                  onChange={(e) => setNewAccount((p) => ({ ...p, code: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Account Type</Label>
-                <Select
-                  value={newAccount.type}
-                  onValueChange={(v: Account["type"]) =>
-                    setNewAccount((p) => ({ ...p, type: v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="asset">Asset</SelectItem>
-                    <SelectItem value="liability">Liability</SelectItem>
-                    <SelectItem value="equity">Equity</SelectItem>
-                    <SelectItem value="revenue">Revenue</SelectItem>
-                    <SelectItem value="expense">Expense</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Account Name</Label>
-              <Input
-                placeholder="e.g., Cash on Hand"
-                value={newAccount.name}
-                onChange={(e) => setNewAccount((p) => ({ ...p, name: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description (Optional)</Label>
-              <Input
-                placeholder="Brief description..."
-                value={newAccount.description}
-                onChange={(e) => setNewAccount((p) => ({ ...p, description: e.target.value }))}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setAccountDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateAccount} disabled={createAccount.isPending}>
-                {createAccount.isPending ? "Creating..." : "Create Account"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Journal Entry Dialog */}
-      <Dialog open={journalDialogOpen} onOpenChange={setJournalDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Journal Entry</DialogTitle>
-            <DialogDescription>Enter debits and credits for this transaction</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={newJournalEntry.date}
-                  onChange={(e) =>
-                    setNewJournalEntry((p) => ({ ...p, date: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Description</Label>
-                <Input
-                  placeholder="Transaction description"
-                  value={newJournalEntry.description}
-                  onChange={(e) =>
-                    setNewJournalEntry((p) => ({ ...p, description: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Reference (Optional)</Label>
-              <Input
-                placeholder="Invoice #, Check #, etc."
-                value={newJournalEntry.reference}
-                onChange={(e) =>
-                  setNewJournalEntry((p) => ({ ...p, reference: e.target.value }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Lines</Label>
-              <div className="space-y-2">
-                {newJournalEntry.lines.map((line, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-2">
-                    <Select
-                      value={line.account_id}
-                      onValueChange={(v) => updateJournalLine(index, "account_id", v)}
-                    >
-                      <SelectTrigger className="col-span-2">
-                        <SelectValue placeholder="Select account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.code} - {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      placeholder="Debit"
-                      value={line.debit || ""}
-                      onChange={(e) =>
-                        updateJournalLine(index, "debit", parseFloat(e.target.value) || 0)
-                      }
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Credit"
-                      value={line.credit || ""}
-                      onChange={(e) =>
-                        updateJournalLine(index, "credit", parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-              <Button variant="outline" size="sm" onClick={addJournalLine}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Line
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-muted-foreground">
-                Debit: $
-                {newJournalEntry.lines.reduce((s, l) => s + l.debit, 0).toFixed(2)} | Credit: $
-                {newJournalEntry.lines.reduce((s, l) => s + l.credit, 0).toFixed(2)}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setJournalDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateJournalEntry} disabled={createJournalEntry.isPending}>
-                  {createJournalEntry.isPending ? "Creating..." : "Create Entry"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 }
