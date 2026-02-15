@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePOSOrders, useUpdateOrderItemStatus } from "@/hooks/usePOS";
+import { POSHeader } from "@/components/pos";
 
 interface KitchenOrder {
   id: string;
@@ -192,7 +193,8 @@ export default function KitchenDisplay() {
   }
 
   return (
-    <MainLayout title="Kitchen Display" subtitle="Real-time order management">
+    <MainLayout>
+      <POSHeader />
       <div className="space-y-6">
         {/* Enhanced Header with Stats */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-secondary/30 rounded-lg">

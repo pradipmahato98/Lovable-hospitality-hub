@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { POSHeader } from "@/components/pos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,7 +262,8 @@ export default function POSReports() {
   };
 
   return (
-    <MainLayout title="POS Reports" subtitle="Sales analytics and performance metrics">
+    <MainLayout>
+      <POSHeader />
       <div className="space-y-6">
         {/* Period Selector */}
         <Card>

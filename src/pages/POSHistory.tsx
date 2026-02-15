@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { POSHeader } from "@/components/pos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,7 +163,8 @@ export default function POSHistory() {
   };
 
   return (
-    <MainLayout title="POS History" subtitle="View and export transaction history">
+    <MainLayout>
+      <POSHeader />
       <div className="space-y-6">
         {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
