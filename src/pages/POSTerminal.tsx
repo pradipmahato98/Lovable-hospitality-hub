@@ -222,7 +222,7 @@ const POSTerminal = () => {
   };
 
   return (
-    <MainLayout>
+    <MainLayout title="POS Terminal" subtitle="Process orders and handle table service">
       <POSHeader />
 
       {/* Tab Navigation */}

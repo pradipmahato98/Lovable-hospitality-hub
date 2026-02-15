@@ -193,7 +193,7 @@ export default function KitchenDisplay() {
   }
 
   return (
-    <MainLayout>
+    <MainLayout title="Kitchen Display" subtitle="Monitor and manage active food and bar orders">
       <POSHeader />
       <div className="space-y-6">
         {/* Enhanced Header with Stats */}

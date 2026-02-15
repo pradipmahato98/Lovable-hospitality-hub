@@ -17,6 +17,9 @@ export const ThreeDBar: React.FC<ThreeDBarProps> = ({
 }) => {
   const percentage = Math.min(Math.max((value / maxValue) * 100, 5), 100);
   const barHeight = (percentage / 100) * height;
+  const id = React.useId();
+  const brightnessUpId = `pos-brightness-up-${id.replace(/:/g, "")}`;
+  const brightnessDownId = `pos-brightness-down-${id.replace(/:/g, "")}`;
 
   return (
     <div className="flex flex-col items-center group cursor-default">
@@ -31,14 +34,14 @@ export const ThreeDBar: React.FC<ThreeDBarProps> = ({
           className="overflow-visible drop-shadow-xl"
         >
           <defs>
-            <filter id="pos-brightness-up">
+            <filter id={brightnessUpId}>
               <feComponentTransfer>
                 <feFuncR type="linear" slope="1.4" />
                 <feFuncG type="linear" slope="1.4" />
                 <feFuncB type="linear" slope="1.4" />
               </feComponentTransfer>
             </filter>
-            <filter id="pos-brightness-down">
+            <filter id={brightnessDownId}>
               <feComponentTransfer>
                 <feFuncR type="linear" slope="0.7" />
                 <feFuncG type="linear" slope="0.7" />
@@ -68,7 +71,7 @@ export const ThreeDBar: React.FC<ThreeDBarProps> = ({
           <path
             d={`M 32 ${height - barHeight} L 40 ${height - barHeight - 8} L 40 ${height - 8} L 32 ${height} Z`}
             fill={color}
-            filter="url(#pos-brightness-down)"
+            filter={`url(#${brightnessDownId})`}
             className="transition-all duration-700 ease-out"
           />
 
@@ -76,7 +79,7 @@ export const ThreeDBar: React.FC<ThreeDBarProps> = ({
           <path
             d={`M 8 ${height - barHeight} L 16 ${height - barHeight - 8} L 40 ${height - barHeight - 8} L 32 ${height - barHeight} Z`}
             fill={color}
-            filter="url(#pos-brightness-up)"
+            filter={`url(#${brightnessUpId})`}
             className="transition-all duration-700 ease-out"
           />
         </svg>
