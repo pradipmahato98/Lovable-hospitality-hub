@@ -15,6 +15,8 @@ import {
   ArrowLeft,
   Lock,
   Eye,
+  Server,
+  ShieldCheck,
 } from "lucide-react";
 
 // Setup Layer Services
@@ -53,11 +55,26 @@ import { BudgetForecastReportingService } from "@/components/finance/reporting/B
 import { AuditReportingService } from "@/components/finance/reporting/AuditReportingService";
 import { ConsolidationBIService } from "@/components/finance/reporting/ConsolidationBIService";
 
+// Infrastructure Layer Services
+import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
+import { SharedDataService } from "@/components/finance/infrastructure/SharedDataService";
+import { APIGatewayService } from "@/components/finance/infrastructure/APIGatewayService";
+import { SecurityLayerService } from "@/components/finance/infrastructure/SecurityLayerService";
+
 import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
 import { useFinancePermissions } from "@/hooks/useFinancePermissions";
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { TrendingUp, Scale, BookOpen, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import {
+  TrendingUp,
+  Scale,
+  BookOpen,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Zap,
+  Database
+} from "lucide-react";
 import { useMemo } from "react";
 
 export default function Finance() {
@@ -142,6 +159,13 @@ export default function Finance() {
     { id: "budget-forecast-reporting", title: "3.8 Budget & Forecast Reporting Service", Component: BudgetForecastReportingService },
     { id: "audit-reporting", title: "3.9 Audit Reporting Service", Component: AuditReportingService },
     { id: "consolidation-bi", title: "3.10 Consolidation & BI Service", Component: ConsolidationBIService },
+  ];
+
+  const infrastructureServices = [
+    { id: "event-bus", title: "4.1 Event Bus", Component: EventBusService },
+    { id: "data-lake", title: "4.2 Shared Data Services", Component: SharedDataService },
+    { id: "api-gateway", title: "4.3 API Gateway", Component: APIGatewayService },
+    { id: "security-layer", title: "4.4 Security Layer", Component: SecurityLayerService },
   ];
 
   const renderServiceList = (services: any[]) => {
@@ -256,6 +280,13 @@ export default function Finance() {
               >
                 <FileText className="h-4 w-4" />
                 Reporting Layer
+              </TabsTrigger>
+              <TabsTrigger
+                value="infrastructure"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
+                <Server className="h-4 w-4" />
+                Infrastructure
               </TabsTrigger>
             </TabsList>
           </div>
@@ -379,6 +410,45 @@ export default function Finance() {
                 </CardContent>
               </Card>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <Card className="bg-primary/5 border-primary/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Zap className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Event Bus</p>
+                    <p className="text-sm font-bold">12k events/hr</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-success/5 border-success/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <ShieldCheck className="h-8 w-8 text-success" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Security Layer</p>
+                    <p className="text-sm font-bold">100% Policy Match</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-blue-500/5 border-blue-500/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Server className="h-8 w-8 text-blue-500" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">API Gateway</p>
+                    <p className="text-sm font-bold">24ms Avg Latency</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-purple-500/5 border-purple-500/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Database className="h-8 w-8 text-purple-500" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Data Lake</p>
+                    <p className="text-sm font-bold">85% Optimization</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="setup" className="space-y-4 mt-4">
@@ -391,6 +461,10 @@ export default function Finance() {
 
           <TabsContent value="reports" className="space-y-4 mt-4">
             {renderServiceList(reportingServices)}
+          </TabsContent>
+
+          <TabsContent value="infrastructure" className="space-y-4 mt-4">
+            {renderServiceList(infrastructureServices)}
           </TabsContent>
         </Tabs>
       </div>
