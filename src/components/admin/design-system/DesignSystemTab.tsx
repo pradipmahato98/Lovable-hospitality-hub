@@ -12,6 +12,39 @@ import { AnimationControls } from "./AnimationControls";
 import { TemplateManager } from "./TemplateManager";
 import { ReleaseWorkflow } from "./ReleaseWorkflow";
 import { SegmentedControl } from "@/components/ui/ios/SegmentedControl";
+import { IOSList } from "@/components/ui/ios/patterns/IOSList";
+import { Shield, Bell, Settings, User } from "lucide-react";
+
+const PatternLibrary = () => {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Layout className="h-4 w-4" />
+            Reusable UI Patterns
+          </CardTitle>
+          <CardDescription>Common iOS-style structural patterns for consistency.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">iOS Settings List</h4>
+            <div className="max-w-md mx-auto">
+              <IOSList
+                items={[
+                  { id: "1", title: "Security", subtitle: "FaceID and Passcode", icon: <Shield className="h-4 w-4" /> },
+                  { id: "2", title: "Notifications", subtitle: "Manage alerts", icon: <Bell className="h-4 w-4" /> },
+                  { id: "3", title: "General", subtitle: "Software updates", icon: <Settings className="h-4 w-4" /> },
+                  { id: "4", title: "Profile", subtitle: "Personal details", icon: <User className="h-4 w-4" /> },
+                ]}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const PreviewArea = ({ prefs }: { prefs: UIPreferences }) => {
   const [segValue, setSegValue] = useState("daily");
@@ -186,6 +219,10 @@ export const DesignSystemTab = () => {
               <TabsTrigger value="preview" className="gap-2">
                 <Layout className="h-4 w-4" />
                 Preview
+            </TabsTrigger>
+            <TabsTrigger value="patterns" className="gap-2">
+              <Box className="h-4 w-4" />
+              Patterns
               </TabsTrigger>
             </TabsList>
 
@@ -207,6 +244,10 @@ export const DesignSystemTab = () => {
 
             <TabsContent value="preview" className="mt-0 space-y-6">
               <PreviewArea prefs={localPrefs} />
+            </TabsContent>
+
+            <TabsContent value="patterns" className="mt-0 space-y-6">
+              <PatternLibrary />
             </TabsContent>
           </Tabs>
         </div>

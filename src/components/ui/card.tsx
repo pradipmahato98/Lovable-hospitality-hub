@@ -4,13 +4,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "rounded-xl border text-card-foreground transition-all duration-300",
+  "rounded-xl border text-card-foreground transition-all duration-300 ios-enabled:rounded-[var(--ios-radius)] ios-enabled:border-foreground/5",
   {
     variants: {
       variant: {
-        default: "bg-card border-border shadow-card",
-        elevated: "bg-gradient-card border-border shadow-elevated hover:shadow-glow",
-        glass: "bg-card/50 backdrop-blur-xl border-border/50",
+        default: "bg-card border-border shadow-card ios-enabled:bg-background/60 ios-enabled:backdrop-blur-[var(--ios-blur)] ios-enabled:shadow-none",
+        elevated: "bg-gradient-card border-border shadow-elevated hover:shadow-glow ios-enabled:bg-background/80 ios-enabled:shadow-lg",
+        glass: "bg-card/50 backdrop-blur-xl border-border/50 ios-enabled:bg-background/40",
         highlight: "bg-gradient-card border-primary/20 shadow-glow",
       },
     },

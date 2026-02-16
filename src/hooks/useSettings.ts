@@ -198,6 +198,20 @@ const defaultUITemplates: UITemplatesSettings = {
       is_system: true
     },
     {
+      id: "modern-light",
+      name: "Modern iOS Light",
+      description: "Cleaner, white-based iOS aesthetic with blue accents",
+      preferences: {
+        ...defaultUIPreferences,
+        primary_color: "221 83% 53%", // Apple Blue
+        background_opacity: 0.7,
+        blur_amount: 20,
+        base_radius: 14,
+        font_family_display: "Inter",
+      },
+      is_system: true
+    },
+    {
       id: "minimalist",
       name: "Clean Minimalist",
       description: "Reduced blur and higher contrast",
