@@ -3,7 +3,7 @@ import { POSDashboard, POSHeader } from "@/components/pos";
 
 const POS = () => {
   return (
-    <MainLayout>
+    <MainLayout title="Point of Sale" subtitle="Manage your restaurant and bar operations">
       <POSHeader />
       <POSDashboard />
     </MainLayout>

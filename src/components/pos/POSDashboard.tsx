@@ -3,22 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  ShoppingCart,
-  ChefHat,
-  BarChart3,
   History,
-  Plus,
-  ArrowRight,
-  Utensils,
   DollarSign,
   Clock,
   TrendingUp,
-  Activity
+  Activity,
+  BarChart3,
+  Map as MapIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePOSTransactions } from "@/hooks/usePOS";
-import { format, subHours } from "date-fns";
-import { ThreeDBar } from "./ThreeDBar";
+import { format, subHours, subDays } from "date-fns";
+import { ThreeDBar, ThreeDLineChart, ThreeDTableMap } from "@/components/pos";
 
 export function POSDashboard() {
   const navigate = useNavigate();
@@ -43,7 +39,7 @@ export function POSDashboard() {
     return [
       { label: "Today's Sales", value: `$${todaySales.toFixed(2)}`, icon: DollarSign, color: "text-success" },
       { label: "Total Transactions", value: transactions.length, icon: TrendingUp, color: "text-primary" },
-      { label: "Active Tables", value: "4/12", icon: Utensils, color: "text-amber-500" },
+      { label: "Active Tables", value: "4/12", icon: BarChart3, color: "text-amber-500" },
       { label: "Staff on Shift", value: "6", icon: Clock, color: "text-blue-500" },
     ];
   }, [transactions]);
@@ -56,6 +52,16 @@ export function POSDashboard() {
     { hour: "6pm", value: 1500 },
     { hour: "8pm", value: 2100 },
     { hour: "10pm", value: 950 },
+  ];
+
+  const dailyRevenueData = [
+    { label: format(subDays(new Date(), 6), "EEE"), value: 1200 },
+    { label: format(subDays(new Date(), 5), "EEE"), value: 1800 },
+    { label: format(subDays(new Date(), 4), "EEE"), value: 1400 },
+    { label: format(subDays(new Date(), 3), "EEE"), value: 2200 },
+    { label: format(subDays(new Date(), 2), "EEE"), value: 2100 },
+    { label: format(subDays(new Date(), 1), "EEE"), value: 2800 },
+    { label: "Today", value: 3100 },
   ];
 
   const maxHourlyValue = Math.max(...hourlyData.map(d => d.value));
@@ -86,14 +92,14 @@ export function POSDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 3D Analytics Chart */}
+        {/* 3D Bar Chart */}
         <Card variant="elevated" className="lg:col-span-2 overflow-hidden bg-gradient-to-br from-card to-secondary/20">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              Sales Velocity
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Activity className="h-5 w-5" />
+              Hourly Sales Velocity
             </CardTitle>
-            <CardDescription>Hourly performance and peak times</CardDescription>
+            <CardDescription>Real-time performance and peak traffic</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="flex justify-between items-end h-[180px] px-4 pb-4">
@@ -110,68 +116,34 @@ export function POSDashboard() {
           </CardContent>
         </Card>
 
-        {/* Quick Access Grid */}
-        <div className="grid grid-cols-1 gap-4">
-          <Card
-            variant="highlight"
-            className="cursor-pointer group relative overflow-hidden transform-gpu transition-all duration-500 hover:rotate-x-2 hover:shadow-2xl"
-            onClick={() => navigate("/pos/terminal")}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-6 w-6 text-primary" />
-                Terminal
-              </CardTitle>
-              <CardDescription>Open POS for new orders</CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <Button className="w-full gap-2 transform group-hover:translate-x-1 transition-transform">
-                New Transaction
-                <Plus className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card
-            variant="elevated"
-            className="cursor-pointer group hover:border-amber-500/50 transition-all duration-300"
-            onClick={() => navigate("/pos/kitchen")}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ChefHat className="h-6 w-6 text-amber-500" />
-                Kitchen Display
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full gap-2 group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-colors">
-                View KDS
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card
-            variant="elevated"
-            className="cursor-pointer group hover:border-blue-500/50 transition-all duration-300"
-            onClick={() => navigate("/pos/reports")}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-6 w-6 text-blue-500" />
-                Reports
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full gap-2 group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                View Analytics
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* 3D Table Map / Mapping Details */}
+        <Card variant="elevated" className="overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-500">
+              <MapIcon className="h-5 w-5" />
+              Restaurant Floor Plan
+            </CardTitle>
+            <CardDescription>Live isometric table status map</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ThreeDTableMap />
+          </CardContent>
+        </Card>
       </div>
+
+      {/* 3D Line Chart */}
+      <Card variant="elevated" className="overflow-hidden bg-gradient-to-tr from-card to-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-success">
+            <TrendingUp className="h-5 w-5" />
+            Weekly Revenue Trend
+          </CardTitle>
+          <CardDescription>Visualizing financial growth over the last 7 days</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <ThreeDLineChart data={dailyRevenueData} color="hsl(var(--success))" height={250} />
+        </CardContent>
+      </Card>
 
       {/* Recent Activity */}
       <Card variant="elevated" className="overflow-hidden">

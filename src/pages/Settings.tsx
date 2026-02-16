@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
@@ -20,7 +20,6 @@ import {
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel,
 } from "@/components/settings";
-import { Megaphone } from "lucide-react";
 
 type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast";
 
