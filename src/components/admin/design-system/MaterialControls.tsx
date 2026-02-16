@@ -62,6 +62,20 @@ export const MaterialControls = ({ prefs, onUpdate }: MaterialControlsProps) => 
               onValueChange={([val]) => onUpdate({ saturation: val / 100 })}
             />
           </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <Label>Surface Tint ({Math.round(prefs.surface_tint_opacity * 100)}%)</Label>
+              <span className="text-xs text-muted-foreground">Subtle primary color overlay on glass</span>
+            </div>
+            <Slider
+              value={[prefs.surface_tint_opacity * 100]}
+              min={0}
+              max={30}
+              step={1}
+              onValueChange={([val]) => onUpdate({ surface_tint_opacity: val / 100 })}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -69,11 +83,39 @@ export const MaterialControls = ({ prefs, onUpdate }: MaterialControlsProps) => 
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Box className="h-4 w-4" />
-            Shape & Spacing
+            Depth & Definition
           </CardTitle>
-          <CardDescription>Control the curvature and density of the interface.</CardDescription>
+          <CardDescription>Control borders, shadows, and spacing for structural clarity.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8 py-6">
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <Label>Border Width ({prefs.border_width}px)</Label>
+              <span className="text-xs text-muted-foreground">Thin structural lines for separation</span>
+            </div>
+            <Slider
+              value={[prefs.border_width]}
+              min={0}
+              max={4}
+              step={0.5}
+              onValueChange={([val]) => onUpdate({ border_width: val })}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <Label>Shadow Intensity ({Math.round(prefs.shadow_intensity * 100)}%)</Label>
+              <span className="text-xs text-muted-foreground">Softness and depth of elevated elements</span>
+            </div>
+            <Slider
+              value={[prefs.shadow_intensity * 100]}
+              min={0}
+              max={100}
+              step={5}
+              onValueChange={([val]) => onUpdate({ shadow_intensity: val / 100 })}
+            />
+          </div>
+
           <div className="space-y-4">
             <div className="flex justify-between">
               <Label>Corner Radius ({prefs.base_radius}px)</Label>

@@ -83,6 +83,9 @@ export interface UIPreferences {
   blur_amount: number;
   background_opacity: number;
   saturation: number;
+  surface_tint_opacity: number;
+  border_width: number;
+  shadow_intensity: number;
   // Animations
   animation_preset: "linear" | "smooth" | "spring" | "none";
   // Release Management
@@ -184,6 +187,9 @@ const defaultUIPreferences: UIPreferences = {
   blur_amount: 12,
   background_opacity: 0.6,
   saturation: 1.2,
+  surface_tint_opacity: 0.05,
+  border_width: 1,
+  shadow_intensity: 0.2,
   animation_preset: "spring",
   is_staged: false,
 };
@@ -220,6 +226,68 @@ const defaultUITemplates: UITemplatesSettings = {
         blur_amount: 4,
         background_opacity: 0.9,
         base_radius: 8,
+      },
+      is_system: true
+    },
+    {
+      id: "vision-pro",
+      name: "Vision Pro Glass",
+      description: "High depth, thick borders, and vibrant saturation inspired by visionOS",
+      preferences: {
+        ...defaultUIPreferences,
+        blur_amount: 40,
+        background_opacity: 0.4,
+        saturation: 1.8,
+        surface_tint_opacity: 0.12,
+        border_width: 2,
+        shadow_intensity: 0.6,
+        base_radius: 24,
+      },
+      is_system: true
+    },
+    {
+      id: "compact-finance",
+      name: "Compact Productivity",
+      description: "Optimized for data-heavy views with reduced spacing and high contrast",
+      preferences: {
+        ...defaultUIPreferences,
+        base_font_size: 14,
+        base_spacing: 3,
+        base_radius: 6,
+        background_opacity: 0.85,
+        blur_amount: 4,
+        border_width: 1,
+        shadow_intensity: 0.1,
+      },
+      is_system: true
+    },
+    {
+      id: "vibrant-pos",
+      name: "Vibrant POS",
+      description: "High-energy interface for fast-paced service environments",
+      preferences: {
+        ...defaultUIPreferences,
+        primary_color: "340 82% 52%", // Vibrant Pink/Red
+        saturation: 2.0,
+        background_opacity: 0.5,
+        animation_preset: "spring",
+        base_radius: 16,
+      },
+      is_system: true
+    },
+    {
+      id: "accessibility-plus",
+      name: "Accessibility Focused",
+      description: "Maximum readability with zero transparency and simplified motion",
+      preferences: {
+        ...defaultUIPreferences,
+        background_opacity: 1.0,
+        blur_amount: 0,
+        base_font_size: 18,
+        border_width: 2,
+        animations_enabled: false,
+        animation_preset: "none",
+        shadow_intensity: 0,
       },
       is_system: true
     }

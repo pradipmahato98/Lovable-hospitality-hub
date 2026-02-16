@@ -19,6 +19,9 @@ export const DesignSystemProvider = ({ children }: { children: ReactNode }) => {
     root.style.setProperty("--ios-blur", `${prefs.blur_amount || 12}px`);
     root.style.setProperty("--ios-bg-opacity", `${prefs.background_opacity || 0.6}`);
     root.style.setProperty("--ios-saturation", `${(prefs.saturation || 1.2) * 100}%`);
+    root.style.setProperty("--ios-surface-tint", `${prefs.surface_tint_opacity || 0.05}`);
+    root.style.setProperty("--ios-border-width", `${prefs.border_width ?? 1}px`);
+    root.style.setProperty("--ios-shadow-intensity", `${prefs.shadow_intensity ?? 0.2}`);
 
     // Inject CSS Variables for Layout
     root.style.setProperty("--ios-radius", `${prefs.base_radius || 12}px`);

@@ -36,6 +36,18 @@ export const TemplateManager = ({ currentPrefs, onApply }: TemplateManagerProps)
     updateTemplates.mutate({ templates: currentTemplates.filter(t => t.id !== id) });
   };
 
+  const getTemplateTags = (prefs: UIPreferences) => {
+    const tags = [];
+    if (prefs.blur_amount > 25) tags.push("Deep Glass");
+    if (!prefs.animations_enabled) tags.push("Static");
+    if (prefs.base_spacing < 4) tags.push("Data Rich");
+    if (prefs.saturation > 1.5) tags.push("Vibrant");
+    if (prefs.border_width > 1.5) tags.push("High Def");
+    if (prefs.background_opacity > 0.9) tags.push("High Contrast");
+    if (prefs.background_opacity < 0.5) tags.push("Ultra Clear");
+    return tags;
+  };
+
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-2">
@@ -62,9 +74,18 @@ export const TemplateManager = ({ currentPrefs, onApply }: TemplateManagerProps)
               toast.info(`Applied template: ${template.name}`);
             }}
           >
-            <div className="flex flex-col">
-              <span className="text-xs font-medium">{template.name}</span>
-              {template.is_system && <Badge className="text-[8px] h-3 px-1 w-fit bg-primary/20 text-primary">System</Badge>}
+            <div className="flex flex-col gap-1 overflow-hidden">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium truncate">{template.name}</span>
+                {template.is_system && <Badge className="text-[8px] h-3 px-1 bg-primary/20 text-primary border-none">System</Badge>}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {getTemplateTags(template.preferences).map(tag => (
+                  <Badge key={tag} variant="outline" className="text-[7px] h-3 px-1 py-0 opacity-70">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
             {!template.is_system && (
               <Button

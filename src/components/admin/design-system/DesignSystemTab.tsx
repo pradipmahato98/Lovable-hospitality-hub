@@ -52,12 +52,14 @@ const PreviewArea = ({ prefs }: { prefs: UIPreferences }) => {
   return (
     <div className="space-y-6 p-8 rounded-2xl bg-slate-900/10 border border-dashed border-border flex flex-col items-center">
       <div
-        className="w-full max-w-md p-6 rounded-3xl shadow-2xl transition-all duration-500"
+        className="w-full max-w-md p-6 rounded-3xl transition-all duration-500"
         style={{
           backgroundColor: `hsla(var(--background) / ${prefs.background_opacity})`,
+          backgroundImage: `linear-gradient(to bottom, hsla(var(--primary) / ${prefs.surface_tint_opacity}), transparent)`,
           backdropFilter: `blur(${prefs.blur_amount}px) saturate(${prefs.saturation})`,
           borderRadius: `${prefs.base_radius * 2}px`,
-          border: `1px solid hsla(var(--foreground) / 0.1)`,
+          border: `${prefs.border_width}px solid hsla(var(--foreground) / 0.1)`,
+          boxShadow: `0 8px 32px hsla(var(--foreground) / ${prefs.shadow_intensity})`,
           fontFamily: prefs.font_family_sans
         }}
       >
