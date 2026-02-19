@@ -229,7 +229,13 @@ export async function processPayment(
   redirectUrl?: string;
   error?: string;
 }> {
-  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef, customerInfo });
+  // Only log non-sensitive info. Using boolean flag for customerInfo to protect PII.
+  console.log(`Processing payment via ${gatewayId}:`, {
+    amount,
+    currency,
+    orderRef,
+    hasCustomerInfo: !!customerInfo
+  });
   
   // Fetch gateway config from DB
   const { data: settings } = await supabase

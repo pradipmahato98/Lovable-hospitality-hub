@@ -17,3 +17,13 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Persistent PII Leak in Payment Logs
+**Vulnerability:** Raw `customerInfo` (name, email, phone) was being logged to the console during payment processing, creating a significant privacy and security risk.
+**Learning:** "Shadow" logs in hooks can easily bypass standard security reviews if they are used for debugging during development and forgotten.
+**Prevention:** Always use boolean presence checks or sanitized objects when logging data that might contain PII. Avoid logging raw objects from external sources.
+
+## 2026-02-11 - Insecure Randomness for API Keys
+**Vulnerability:** The system used `Math.random()` to generate API keys, which is not cryptographically secure and can lead to predictable keys.
+**Learning:** Relying on built-in language features for security purposes (like `Math.random()`) is a common pitfall. Modern web apps should always use the Web Crypto API for high-entropy requirements.
+**Prevention:** Centralize secure random generation in a utility that uses `window.crypto.getRandomValues()` with rejection sampling to ensure uniform distribution and avoid modulo bias.
