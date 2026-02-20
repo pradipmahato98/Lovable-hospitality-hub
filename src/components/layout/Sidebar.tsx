@@ -224,7 +224,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border transition-[width] duration-300",
+        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border transition-all duration-300",
         collapsed ? "w-20" : "w-64"
       )}
     >

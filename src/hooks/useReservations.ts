@@ -9,6 +9,9 @@ export interface Reservation {
   status: string;
   total_amount: number;
   guest?: {
+  room_id?: string;
+  guest_id?: string;
+  guest: {
     first_name: string;
     last_name: string;
   } | null;
@@ -23,6 +26,7 @@ export const useReservations = () => {
     queryKey: ["reservations"],
     queryFn: async () => {
       const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from("reservations")
         .select(`
           id,
@@ -42,6 +46,9 @@ export const useReservations = () => {
       return data as unknown as Reservation[];
     },
     staleTime: 30 * 1000,
+      if (error) throw error;
+      return data as unknown as Reservation[];
+    },
   });
 
   const filterReservations = (queryStr: string) => {
