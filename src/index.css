@@ -164,15 +164,18 @@
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
+    animation: fadeIn 0.4s ease-out forwards;
+    will-change: opacity;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.5s ease-out forwards;
+    animation: slideUp 0.4s ease-out forwards;
+    will-change: transform, opacity;
   }
 
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out forwards;
+    will-change: transform, opacity;
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -187,6 +190,7 @@
     background-color: hsla(var(--background) / var(--ios-bg-opacity));
     backdrop-filter: blur(var(--ios-blur)) saturate(var(--ios-saturation));
     border: 1px solid hsla(var(--foreground) / 0.1);
+    transform: translateZ(0); /* Hardware acceleration */
   }
 
   .ios-material-elevated {
