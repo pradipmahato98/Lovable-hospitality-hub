@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt } from "lucide-react";
+import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt, XCircle, Ban } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
@@ -13,8 +13,9 @@ import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
-import { useReservations } from "@/hooks/useReservations";
+import { useReservations, useUpdateReservation } from "@/hooks/useReservations";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
+import { toast } from "sonner";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -24,6 +25,7 @@ const statusColors: Record<string, string> = {
   "checked-in": "bg-primary/20 text-primary border-primary/30",
   "checked-out": "bg-muted text-muted-foreground border-border",
   cancelled: "bg-destructive/20 text-destructive border-destructive/30",
+  rejected: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const Reservations = () => {
@@ -39,7 +41,17 @@ const Reservations = () => {
   }>({ open: false, mode: "check-in", reservationId: "" });
 
   const { isLoading, refetch, filterReservations } = useReservations();
+  const updateReservation = useUpdateReservation();
   const filteredReservations = filterReservations(searchQuery);
+
+  const handleStatusUpdate = async (id: string, status: string) => {
+    try {
+      await updateReservation.mutateAsync({ id, status });
+      toast.success(`Reservation status updated to ${status}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update status");
+    }
+  };
 
   // Enable realtime updates
   useRealtimeReservations({
@@ -53,16 +65,21 @@ const Reservations = () => {
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <TabsList>
-              <TabsTrigger value="list" className="gap-2">
-                <List className="h-4 w-4" />
-                List View
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-2">
-                <CalendarDays className="h-4 w-4" />
-                Calendar
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center gap-4">
+              <TabsList>
+                <TabsTrigger value="list" className="gap-2">
+                  <List className="h-4 w-4" />
+                  List View
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Calendar
+                </TabsTrigger>
+              </TabsList>
+              <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider border-primary/30 text-primary">
+                Status Management
+              </Badge>
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setWalkInDialogOpen(true)} className="gap-2">
                 <UserPlus className="h-4 w-4" />
@@ -163,6 +180,16 @@ const Reservations = () => {
                                     {reservation.status === "checked-in" && (
                                       <DropdownMenuItem onClick={() => setCheckInOutDialog({ open: true, mode: "check-out", reservationId: reservation.id })}>
                                         <LogOut className="h-4 w-4 mr-2" />Check Out
+                                      </DropdownMenuItem>
+                                    )}
+                                    {reservation.status === "pending" && (
+                                      <DropdownMenuItem onClick={() => handleStatusUpdate(reservation.id, "rejected")} className="text-destructive">
+                                        <Ban className="h-4 w-4 mr-2" />Reject Booking
+                                      </DropdownMenuItem>
+                                    )}
+                                    {(reservation.status === "confirmed" || reservation.status === "pending") && (
+                                      <DropdownMenuItem onClick={() => handleStatusUpdate(reservation.id, "cancelled")} className="text-destructive">
+                                        <XCircle className="h-4 w-4 mr-2" />Cancel Booking
                                       </DropdownMenuItem>
                                     )}
                                     <DropdownMenuItem onClick={() => navigate(`/front-desk?reservationId=${reservation.id}`)}>

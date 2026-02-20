@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 
 export interface Reservation {
   id: string;
@@ -10,11 +8,11 @@ export interface Reservation {
   check_out_date: string;
   status: string;
   total_amount: number;
-  guest: {
+  guest?: {
     first_name: string;
     last_name: string;
   } | null;
-  room: {
+  room?: {
     room_number: string;
     room_type: string;
   } | null;
@@ -22,10 +20,6 @@ export interface Reservation {
 
 export const useReservations = () => {
   const query = useQuery({
-    queryKey: ["reservations"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-  const { data: reservations = [], isLoading, error, refetch } = useQuery({
     queryKey: ["reservations"],
     queryFn: async () => {
       const { data, error: fetchError } = await supabase
@@ -44,9 +38,6 @@ export const useReservations = () => {
         `)
         .order("check_in_date", { ascending: false });
 
-      if (error) throw error;
-      return data as unknown as Reservation[];
-    },
       if (fetchError) throw fetchError;
       return data as unknown as Reservation[];
     },
@@ -69,10 +60,6 @@ export const useReservations = () => {
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
-    reservations,
-    isLoading,
-    error,
-    refetch,
     filterReservations,
     data: query.data || [], // Compatibility with FrontDesk.tsx
   };

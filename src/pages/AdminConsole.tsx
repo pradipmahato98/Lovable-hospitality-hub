@@ -53,6 +53,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import {
   useUsersWithRoles,
   useAdminAuditLogs,
@@ -92,8 +93,9 @@ const AdminConsole = () => {
   const [isProvisioning, setIsProvisioning] = useState(false);
 
   // Data hooks
-  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users");
-  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit");
+  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users" || activeTab === "overview");
+  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit" || activeTab === "overview");
+  const { data: stats, isLoading: loadingStats } = useDashboardStats();
   const { data: permissions, isLoading: loadingPerms } = useRolePermissions(activeTab === "permissions");
   const { data: otaChannels, isLoading: loadingChannels } = useOTAChannels(activeTab === "integrations");
   const { data: otaLogs, isLoading: loadingOTALogs } = useOTASyncLogs(activeTab === "integrations");
@@ -298,7 +300,7 @@ const AdminConsole = () => {
         </div>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -307,8 +309,59 @@ const AdminConsole = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{users?.length || 0}</div>
+                <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
                 <p className="text-xs text-muted-foreground mt-1">Active accounts</p>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Layout className="h-4 w-4 text-success" />
+                  Total Rooms
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalRooms || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total listings</p>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-500" />
+                  Total Bookings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalBookings || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Lifetime reservations</p>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  Lifetime Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.lifetimeRevenue || "$0"}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total earnings</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <Card variant="elevated">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-purple-500" />
+                  Monthly Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.monthlyRevenue || "$0"}</div>
+                <p className="text-xs text-muted-foreground mt-1">This month</p>
               </CardContent>
             </Card>
             <Card variant="elevated">
@@ -351,6 +404,14 @@ const AdminConsole = () => {
                 >
                   <UserPlus className="h-4 w-4" />
                   Provision Account
+                </Button>
+                <Button
+                  variant="gold"
+                  className="justify-start gap-2"
+                  onClick={() => navigate("/reports")}
+                >
+                  <Activity className="h-4 w-4" />
+                  Dashboard Overview
                 </Button>
                 <Button
                   variant="outline"
