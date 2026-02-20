@@ -1829,6 +1829,7 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          is_blocked: boolean | null
           last_name: string | null
           phone: string | null
           updated_at: string
@@ -1840,6 +1841,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -1851,6 +1853,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -2173,6 +2176,8 @@ export type Database = {
           description: string | null
           floor: number
           id: string
+          image_url: string | null
+          is_active: boolean | null
           price_per_night: number
           room_number: string
           room_type: string
@@ -2186,6 +2191,8 @@ export type Database = {
           description?: string | null
           floor: number
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           price_per_night: number
           room_number: string
           room_type: string
@@ -2199,6 +2206,8 @@ export type Database = {
           description?: string | null
           floor?: number
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           price_per_night?: number
           room_number?: string
           room_type?: string

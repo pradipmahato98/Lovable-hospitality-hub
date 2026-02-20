@@ -29,6 +29,7 @@ export interface UserWithRole {
   role: AppRole;
   allRoles: AppRole[];
   hasMultipleRoles: boolean;
+  is_blocked: boolean;
   created_at: string;
 }
 
@@ -82,6 +83,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
           role: highestRole,
           allRoles,
           hasMultipleRoles,
+          is_blocked: !!profile.is_blocked,
           created_at: profile.created_at,
         };
       });
@@ -241,6 +243,28 @@ export const useUpdateOTAChannel = () => {
     },
     onError: (error) => {
       toast.error("Failed to update channel: " + error.message);
+    },
+  });
+};
+
+export const useToggleUserBlock = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, isBlocked }: { userId: string; isBlocked: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_blocked: isBlocked, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast.success("User block status updated");
+    },
+    onError: (error) => {
+      toast.error("Failed to update block status: " + error.message);
     },
   });
 };
