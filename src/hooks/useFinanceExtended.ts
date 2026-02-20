@@ -102,7 +102,7 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
   });
 
   const createInvoice = useMutation({
-    mutationFn: async ({ items, ...invoice }: Omit<Invoice, "id" | "created_at" | "invoice_number" | "guest" | "items"> & { items: Omit<InvoiceItem, "id" | "invoice_id">[] }) => {
+    mutationFn: async ({ items, ...invoice }: Omit<Invoice, "id" | "created_at" | "invoice_number" | "guest" | "items" | "subtotal" | "tax_amount" | "total" | "balance_due"> & { items: Omit<InvoiceItem, "id" | "invoice_id">[] }) => {
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
       
       // Calculate totals
