@@ -10,21 +10,29 @@ export const useDashboardStats = () => {
       startOfMonth.setDate(1);
       const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
 
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+
       // Run all queries in parallel for better performance
       const [
         { data: rooms, error: roomsError },
         { count: totalGuests, error: guestsError },
         { data: reservationsToday, error: revError },
+        { data: allReservations, error: allResError },
         { count: pendingBookings, error: pendingError },
         { count: securityAlerts, error: secError },
         { count: totalUsers, error: usersError },
         { count: totalBookings, error: bookingsError },
         { data: monthlyRevData, error: monthlyRevError },
-        { data: lifetimeRevData, error: lifetimeRevError }
+        { data: lifetimeRevData, error: lifetimeRevError },
+        { data: userTrends, error: userTrendsError }
       ] = await Promise.all([
-        supabase.from("rooms").select("status"),
+        supabase.from("rooms").select("status, room_type"),
         supabase.from("guests").select("*", { count: "exact", head: true }),
         supabase.from("reservations").select("total_amount").eq("check_in_date", today),
+        supabase.from("reservations").select("status, total_amount, created_at").gte("created_at", sixMonthsAgoStr),
         supabase.from("reservations").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("audit_log").select("*", { count: "exact", head: true })
           .or("action.ilike.%fail%,action.ilike.%unauthorized%")
@@ -32,43 +40,21 @@ export const useDashboardStats = () => {
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("reservations").select("*", { count: "exact", head: true }),
         supabase.from("reservations").select("total_amount").gte("created_at", startOfMonthStr),
-        supabase.from("reservations").select("total_amount")
+        supabase.from("reservations").select("total_amount"),
+        supabase.from("profiles").select("created_at").gte("created_at", sixMonthsAgoStr)
       ]);
-      // 1. Get Room Stats
-      const { data: rooms, error: roomsError } = await supabase.from("rooms").select("status");
+
       if (roomsError) throw roomsError;
-
-      const totalRooms = rooms.length;
-      const occupiedRooms = rooms.filter(r => r.status === 'occupied').length;
-      const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
-
-      // 2. Get Guest Stats
-      const { count: totalGuests, error: guestsError } = await supabase
-        .from("guests")
-        .select("*", { count: "exact", head: true });
       if (guestsError) throw guestsError;
-
-      // 3. Get Revenue Stats (Today's total from reservations)
-      const today = new Date().toISOString().split('T')[0];
-      const { data: reservations, error: revError } = await supabase
-        .from("reservations")
-        .select("total_amount")
-        .eq("check_in_date", today);
       if (revError) throw revError;
-
-      const todayRevenue = reservations.reduce((sum, res) => sum + Number(res.total_amount), 0);
-
-      // 4. Get Pending Bookings
-      const { count: pendingBookings, error: pendingError } = await supabase
-        .from("reservations")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
+      if (allResError) throw allResError;
       if (pendingError) throw pendingError;
       if (secError) throw secError;
       if (usersError) throw usersError;
       if (bookingsError) throw bookingsError;
       if (monthlyRevError) throw monthlyRevError;
       if (lifetimeRevError) throw lifetimeRevError;
+      if (userTrendsError) throw userTrendsError;
 
       const totalRooms = rooms?.length || 0;
       const occupiedRooms = rooms?.filter(r => r.status === 'occupied').length || 0;
@@ -77,13 +63,53 @@ export const useDashboardStats = () => {
       const monthlyRevenue = monthlyRevData?.reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
       const lifetimeRevenue = lifetimeRevData?.reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
 
-      // 5. Get Security Stats (Audit logs today)
-      const { count: securityAlerts, error: secError } = await supabase
-        .from("audit_log")
-        .select("*", { count: "exact", head: true })
-        .or("action.ilike.%fail%,action.ilike.%unauthorized%")
-        .gte("created_at", today);
-      if (secError) throw secError;
+      // Process Revenue Trends (Last 6 months)
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const revenueTrends = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - (5 - i));
+        const monthName = months[d.getMonth()];
+        const monthNum = d.getMonth();
+        const year = d.getFullYear();
+
+        const monthlyTotal = allReservations?.filter(res => {
+          const resDate = new Date(res.created_at);
+          return resDate.getMonth() === monthNum && resDate.getFullYear() === year;
+        }).reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
+
+        return { name: monthName, revenue: monthlyTotal };
+      });
+
+      // Process Booking Status Distribution
+      const bookingStatusData = [
+        { name: 'Confirmed', value: allReservations?.filter(r => r.status === 'confirmed').length || 0, color: '#10b981' },
+        { name: 'Pending', value: allReservations?.filter(r => r.status === 'pending').length || 0, color: '#f59e0b' },
+        { name: 'Cancelled', value: allReservations?.filter(r => r.status === 'cancelled').length || 0, color: '#ef4444' },
+        { name: 'Rejected', value: allReservations?.filter(r => r.status === 'rejected').length || 0, color: '#6b7280' },
+      ];
+
+      // Process Room Type Distribution
+      const roomTypes = [...new Set(rooms?.map(r => r.room_type) || [])];
+      const roomTypeData = roomTypes.map(type => ({
+        name: type,
+        value: rooms?.filter(r => r.room_type === type).length || 0
+      }));
+
+      // Process User Growth
+      const userGrowthData = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - (5 - i));
+        const monthName = months[d.getMonth()];
+        const monthNum = d.getMonth();
+        const year = d.getFullYear();
+
+        const count = userTrends?.filter(u => {
+          const uDate = new Date(u.created_at);
+          return uDate.getMonth() === monthNum && uDate.getFullYear() === year;
+        }).length || 0;
+
+        return { name: monthName, users: count };
+      });
 
       return {
         occupancyRate: `${occupancyRate}%`,
@@ -96,7 +122,12 @@ export const useDashboardStats = () => {
         totalUsers: totalUsers || 0,
         totalRooms: totalRooms || 0,
         totalBookings: totalBookings || 0,
+        revenueTrends,
+        bookingStatusData,
+        roomTypeData,
+        userGrowthData
       };
     },
+    staleTime: 60 * 1000, // Consider dashboard stats stale after 1 minute
   });
 };

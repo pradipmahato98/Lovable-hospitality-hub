@@ -25,6 +25,7 @@ import {
   Plus,
   Trash2,
   Layout,
+  BarChart3,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -70,6 +71,10 @@ import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
+} from "recharts";
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -265,9 +270,13 @@ const AdminConsole = () => {
         <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
             <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">
-            <Activity className="h-4 w-4" />
-            System Overview
-          </TabsTrigger>
+              <Activity className="h-4 w-4" />
+              System Overview
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Account Management
@@ -462,6 +471,106 @@ const AdminConsole = () => {
                   {(!adminLogs || adminLogs.length === 0) && !loadingLogs && (
                     <p className="text-xs text-muted-foreground text-center py-4">No recent activity</p>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle>Revenue Growth</CardTitle>
+                <CardDescription>Monthly revenue trends for the last 6 months</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={stats?.revenueTrends || []}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#d4af37" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#d4af37" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `$${value}`} />
+                      <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                      <Area type="monotone" dataKey="revenue" stroke="#d4af37" fillOpacity={1} fill="url(#colorRevenue)" strokeWidth={3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle>Booking Status Distribution</CardTitle>
+                <CardDescription>Breakdown of reservations by their current status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats?.bookingStatusData || []}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {stats?.bookingStatusData?.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle>User Growth</CardTitle>
+                <CardDescription>New user registrations over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats?.userGrowthData || []}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <Tooltip />
+                      <Bar dataKey="users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle>Room Inventory by Type</CardTitle>
+                <CardDescription>Distribution of available room categories</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats?.roomTypeData || []} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.1} />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>

@@ -62,12 +62,6 @@ export const useGuestFolios = () => {
 
       if (error) {
         console.error("Error fetching folios:", error);
-
-        // Handle PostgREST schema cache error gracefully
-        if (error.message?.includes("schema cache") || error.code === "PGRST103") {
-          console.warn("Schema cache issue detected for guest_folios, using fallback data.");
-        }
-
         // Fallback for demo/verification
         return [
           {
@@ -112,13 +106,6 @@ export const useGuestFolios = () => {
           .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Error fetching folio items:", error);
-
-        // Handle PostgREST schema cache error gracefully
-        if (error.message?.includes("schema cache") || error.code === "PGRST103") {
-          console.warn("Schema cache issue detected for folio_items, using fallback data.");
-        }
-
         // Fallback for demo
         if (folioId === "folio-1") {
           return [
@@ -139,15 +126,11 @@ export const useGuestFolios = () => {
   const addFolioItem = useMutation({
     mutationFn: async (item: Omit<FolioItem, "id" | "created_at">) => {
       // Check for routing rules
-      const { data: rules, error: rulesError } = await db
+      const { data: rules } = await db
         .from("routing_rules")
         .select("*")
         .eq("folio_id", item.folio_id)
         .eq("is_active", true);
-
-      if (rulesError) {
-        console.warn("Could not fetch routing rules, proceeding without routing:", rulesError.message);
-      }
 
       let targetFolioId = item.folio_id;
       if (rules && rules.length > 0) {
