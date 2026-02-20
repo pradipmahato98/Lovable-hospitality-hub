@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export interface Reservation {
   id: string;
@@ -19,15 +20,9 @@ export interface Reservation {
 }
 
 export const useReservations = () => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchReservations = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
+  const { data: reservations = [], isLoading, error, refetch } = useQuery({
+    queryKey: ["reservations"],
+    queryFn: async () => {
       const { data, error: fetchError } = await supabase
         .from("reservations")
         .select(`
@@ -43,17 +38,10 @@ export const useReservations = () => {
         .order("check_in_date", { ascending: false });
 
       if (fetchError) throw fetchError;
-      setReservations(data as unknown as Reservation[]);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch reservations"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchReservations();
-  }, [fetchReservations]);
+      return data as unknown as Reservation[];
+    },
+    staleTime: 30 * 1000,
+  });
 
   const filterReservations = useCallback((query: string) => {
     if (!query) return reservations;
@@ -69,7 +57,7 @@ export const useReservations = () => {
     reservations,
     isLoading,
     error,
-    refetch: fetchReservations,
+    refetch,
     filterReservations,
   };
 };

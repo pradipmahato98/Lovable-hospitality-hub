@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, 
 import { cn } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
+import { RoomCard, roomStatusStyles, amenityIcons } from "@/components/front-desk/RoomCard";
 import { QueueManager } from "@/components/front-desk/QueueManager";
 import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -29,20 +30,6 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 
 type Room = Tables<"rooms">;
 
-const statusStyles = {
-  available: "bg-success/20 text-success border-success/30",
-  occupied: "bg-primary/20 text-primary border-primary/30",
-  cleaning: "bg-warning/20 text-warning border-warning/30",
-  maintenance: "bg-destructive/20 text-destructive border-destructive/30",
-};
-
-const amenityIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  wifi: Wifi,
-  tv: Tv,
-  minibar: Coffee,
-  jacuzzi: Bath,
-};
-
 // Sample invoice data for billing tab
 const invoices = [
   { id: "INV-001", guest: "Sarah Johnson", reservation: "RES-001", date: "2024-12-20", amount: "$1,560", status: "paid", method: "Credit Card" },
@@ -59,10 +46,85 @@ const invoiceStatusColors = {
   overdue: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
+const columns: Column<Room>[] = [
+  {
+    key: "room_number",
+    header: "Room",
+    render: (room) => (
+      <span className="font-mono font-bold text-primary">{room.room_number}</span>
+    ),
+  },
+  {
+    key: "room_type",
+    header: "Type",
+    render: (room) => <span>{room.room_type}</span>,
+  },
+  {
+    key: "floor",
+    header: "Floor",
+    render: (room) => <span>Floor {room.floor}</span>,
+  },
+  {
+    key: "capacity",
+    header: "Capacity",
+    render: (room) => (
+      <div className="flex items-center gap-1">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span>{room.capacity}</span>
+      </div>
+    ),
+  },
+  {
+    key: "price_per_night",
+    header: "Price/Night",
+    render: (room) => (
+      <span className="font-semibold text-primary">${room.price_per_night}</span>
+    ),
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (room) => (
+      <Badge
+        variant="outline"
+          className={roomStatusStyles[room.status as keyof typeof roomStatusStyles] || roomStatusStyles.available}
+      >
+        {room.status}
+      </Badge>
+    ),
+  },
+  {
+    key: "amenities",
+    header: "Amenities",
+    sortable: false,
+    searchable: false,
+    render: (room) => (
+      <div className="flex gap-1">
+        {(room.amenities || []).slice(0, 4).map((amenity) => {
+          const Icon = amenityIcons[amenity.toLowerCase()];
+          return Icon ? (
+            <div
+              key={amenity}
+              className="h-6 w-6 rounded bg-secondary flex items-center justify-center"
+              title={amenity}
+            >
+              <Icon className="h-3 w-3 text-muted-foreground" />
+            </div>
+          ) : null;
+        })}
+      </div>
+    ),
+  },
+];
+
 const FrontDesk = () => {
   const { data: rooms = [], isLoading } = useRooms();
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
+  const handleRoomClick = useCallback((room: Room) => {
+    setSelectedRoom(room);
+  }, []);
   const [activeTab, setActiveTab] = useState("rooms");
   const { setNewRoomOpen } = useQuickActions();
 
@@ -74,77 +136,6 @@ const FrontDesk = () => {
       maintenance: rooms.filter((r) => r.status === "maintenance").length,
     };
   }, [rooms]);
-
-  const columns: Column<Room>[] = [
-    {
-      key: "room_number",
-      header: "Room",
-      render: (room) => (
-        <span className="font-mono font-bold text-primary">{room.room_number}</span>
-      ),
-    },
-    {
-      key: "room_type",
-      header: "Type",
-      render: (room) => <span>{room.room_type}</span>,
-    },
-    {
-      key: "floor",
-      header: "Floor",
-      render: (room) => <span>Floor {room.floor}</span>,
-    },
-    {
-      key: "capacity",
-      header: "Capacity",
-      render: (room) => (
-        <div className="flex items-center gap-1">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span>{room.capacity}</span>
-        </div>
-      ),
-    },
-    {
-      key: "price_per_night",
-      header: "Price/Night",
-      render: (room) => (
-        <span className="font-semibold text-primary">${room.price_per_night}</span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (room) => (
-        <Badge
-          variant="outline"
-          className={statusStyles[room.status as keyof typeof statusStyles] || statusStyles.available}
-        >
-          {room.status}
-        </Badge>
-      ),
-    },
-    {
-      key: "amenities",
-      header: "Amenities",
-      sortable: false,
-      searchable: false,
-      render: (room) => (
-        <div className="flex gap-1">
-          {(room.amenities || []).slice(0, 4).map((amenity) => {
-            const Icon = amenityIcons[amenity.toLowerCase()];
-            return Icon ? (
-              <div
-                key={amenity}
-                className="h-6 w-6 rounded bg-secondary flex items-center justify-center"
-                title={amenity}
-              >
-                <Icon className="h-3 w-3 text-muted-foreground" />
-              </div>
-            ) : null;
-          })}
-        </div>
-      ),
-    },
-  ];
 
   return (
     <MainLayout title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
@@ -240,66 +231,13 @@ const FrontDesk = () => {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {rooms.map((room, index) => (
-                      <Card
+                      <RoomCard
                         key={room.id}
-                        variant="elevated"
-                        className={cn(
-                          "animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group",
-                          selectedRoom?.id === room.id && "ring-2 ring-primary"
-                        )}
-                        style={{ animationDelay: `${index * 50}ms` }}
-                        onClick={() => setSelectedRoom(room)}
-                      >
-                        {/* Room Header */}
-                        <div className="h-32 bg-gradient-card flex items-center justify-center relative">
-                          <span className="text-5xl font-display font-bold text-gradient-gold">
-                            {room.room_number}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "absolute top-3 right-3",
-                              statusStyles[room.status as keyof typeof statusStyles] || statusStyles.available
-                            )}
-                          >
-                            {room.status}
-                          </Badge>
-                        </div>
-
-                        <CardContent className="p-4">
-                          <div className="mb-3">
-                            <h3 className="font-semibold text-foreground">{room.room_type}</h3>
-                            <p className="text-sm text-muted-foreground">Floor {room.floor}</p>
-                          </div>
-
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Users className="h-4 w-4" />
-                              <span>Up to {room.capacity}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xl font-bold text-primary">${room.price_per_night}</span>
-                              <span className="text-xs text-muted-foreground">/night</span>
-                            </div>
-                          </div>
-
-                          {/* Amenities */}
-                          <div className="flex gap-2 pt-3 border-t border-border">
-                            {(room.amenities || []).map((amenity) => {
-                              const Icon = amenityIcons[amenity.toLowerCase()];
-                              return Icon ? (
-                                <div
-                                  key={amenity}
-                                  className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center"
-                                  title={amenity}
-                                >
-                                  <Icon className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
-                        </CardContent>
-                      </Card>
+                        room={room}
+                        index={index}
+                        isSelected={selectedRoom?.id === room.id}
+                        onClick={handleRoomClick}
+                      />
                     ))}
                     {rooms.length === 0 && (
                       <div className="col-span-full text-center py-12 text-muted-foreground">

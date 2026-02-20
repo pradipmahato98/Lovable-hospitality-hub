@@ -2,6 +2,7 @@ import { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { memo } from "react";
 
 interface MetricCardProps {
   title: string;
@@ -13,7 +14,7 @@ interface MetricCardProps {
   link?: string;
 }
 
-export function MetricCard({
+export const MetricCard = memo(function MetricCard({
   title,
   value,
   change,
@@ -62,4 +63,4 @@ export function MetricCard({
   }
 
   return content;
-}
+});
