@@ -96,13 +96,7 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
       if (filters?.endDate) q = q.lte("invoice_date", filters.endDate);
 
       const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("Invoices table not found, using empty fallback");
-          return [] as Invoice[];
-        }
-        throw error;
-      }
+      if (error) throw error;
       return data as Invoice[];
     },
   });
@@ -161,13 +155,7 @@ export function usePayments(filters?: { startDate?: string; endDate?: string }) 
       if (filters?.endDate) q = q.lte("payment_date", filters.endDate);
 
       const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("Payments table not found, using empty fallback");
-          return [] as Payment[];
-        }
-        throw error;
-      }
+      if (error) throw error;
       return data as Payment[];
     },
   });
@@ -218,13 +206,7 @@ export function useExpenses(filters?: { status?: string; category?: string; star
       if (filters?.endDate) q = q.lte("expense_date", filters.endDate);
 
       const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("Expenses table not found, using empty fallback");
-          return [] as Expense[];
-        }
-        throw error;
-      }
+      if (error) throw error;
       return data as Expense[];
     },
   });
