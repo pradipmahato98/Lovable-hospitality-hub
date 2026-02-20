@@ -229,7 +229,12 @@ export async function processPayment(
   redirectUrl?: string;
   error?: string;
 }> {
-  console.log(`Processing payment via ${gatewayId}:`, { amount, currency, orderRef, customerInfo });
+  console.log(`Processing payment via ${gatewayId}:`, {
+    amount,
+    currency,
+    orderRef,
+    hasCustomerInfo: !!customerInfo
+  });
   
   // Fetch gateway config from DB
   const { data: settings } = await supabase
