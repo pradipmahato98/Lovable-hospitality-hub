@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useInvoices, useFinancialStats } from "@/hooks/useFinanceExtended";
 import { useGuests } from "@/hooks/useGuests";
 import { useHousekeepingTasks } from "@/hooks/useHousekeeping";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
+import { RoomCard, roomStatusStyles, amenityIcons } from "@/components/front-desk/RoomCard";
 import { QueueManager } from "@/components/front-desk/QueueManager";
 import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -60,6 +61,14 @@ const amenityIcons: Record<string, React.ComponentType<{ className?: string }>> 
   jacuzzi: Bath,
 };
 
+// Sample invoice data for billing tab
+const invoices = [
+  { id: "INV-001", guest: "Sarah Johnson", reservation: "RES-001", date: "2024-12-20", amount: "$1,560", status: "paid", method: "Credit Card" },
+  { id: "INV-002", guest: "Michael Chen", reservation: "RES-002", date: "2024-12-19", amount: "$480", status: "pending", method: "-" },
+  { id: "INV-003", guest: "Emma Wilson", reservation: "RES-003", date: "2024-12-18", amount: "$360", status: "paid", method: "Cash" },
+  { id: "INV-004", guest: "James Brown", reservation: "RES-004", date: "2024-12-17", amount: "$2,400", status: "partial", method: "Credit Card" },
+  { id: "INV-005", guest: "Lisa Anderson", reservation: "RES-005", date: "2024-12-16", amount: "$520", status: "paid", method: "Bank Transfer" },
+];
 
 const invoiceStatusColors = {
   paid: "bg-success/20 text-success border-success/30",
@@ -67,6 +76,77 @@ const invoiceStatusColors = {
   partial: "bg-primary/20 text-primary border-primary/30",
   overdue: "bg-destructive/20 text-destructive border-destructive/30",
 };
+
+const columns: Column<Room>[] = [
+  {
+    key: "room_number",
+    header: "Room",
+    render: (room) => (
+      <span className="font-mono font-bold text-primary">{room.room_number}</span>
+    ),
+  },
+  {
+    key: "room_type",
+    header: "Type",
+    render: (room) => <span>{room.room_type}</span>,
+  },
+  {
+    key: "floor",
+    header: "Floor",
+    render: (room) => <span>Floor {room.floor}</span>,
+  },
+  {
+    key: "capacity",
+    header: "Capacity",
+    render: (room) => (
+      <div className="flex items-center gap-1">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span>{room.capacity}</span>
+      </div>
+    ),
+  },
+  {
+    key: "price_per_night",
+    header: "Price/Night",
+    render: (room) => (
+      <span className="font-semibold text-primary">${room.price_per_night}</span>
+    ),
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (room) => (
+      <Badge
+        variant="outline"
+          className={roomStatusStyles[room.status as keyof typeof roomStatusStyles] || roomStatusStyles.available}
+      >
+        {room.status}
+      </Badge>
+    ),
+  },
+  {
+    key: "amenities",
+    header: "Amenities",
+    sortable: false,
+    searchable: false,
+    render: (room) => (
+      <div className="flex gap-1">
+        {(room.amenities || []).slice(0, 4).map((amenity) => {
+          const Icon = amenityIcons[amenity.toLowerCase()];
+          return Icon ? (
+            <div
+              key={amenity}
+              className="h-6 w-6 rounded bg-secondary flex items-center justify-center"
+              title={amenity}
+            >
+              <Icon className="h-3 w-3 text-muted-foreground" />
+            </div>
+          ) : null;
+        })}
+      </div>
+    ),
+  },
+];
 
 const FrontDesk = () => {
   const { data: rooms = [], isLoading } = useRooms();
@@ -86,6 +166,10 @@ const FrontDesk = () => {
     search: "",
   });
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
+  const handleRoomClick = useCallback((room: Room) => {
+    setSelectedRoom(room);
+  }, []);
   const [activeTab, setActiveTab] = useState("rooms");
   const { setNewRoomOpen } = useQuickActions();
 
@@ -524,6 +608,14 @@ const FrontDesk = () => {
                           </div>
                         </CardContent>
                       </Card>
+                    {rooms.map((room, index) => (
+                      <RoomCard
+                        key={room.id}
+                        room={room}
+                        index={index}
+                        isSelected={selectedRoom?.id === room.id}
+                        onClick={handleRoomClick}
+                      />
                     ))}
                     {filteredRooms.length === 0 && (
                       <div className="col-span-full text-center py-12 text-muted-foreground">
