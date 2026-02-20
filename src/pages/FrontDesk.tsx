@@ -86,6 +86,7 @@ const FrontDesk = () => {
     search: "",
   });
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [isRoomActionsOpen, setIsRoomActionsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("rooms");
   const { setNewRoomOpen } = useQuickActions();
 
@@ -132,6 +133,11 @@ const FrontDesk = () => {
     } catch (error) {
       toast.error("Failed to create invoice");
     }
+  };
+
+  const handleRoomClick = (room: Room) => {
+    setSelectedRoom(room);
+    setIsRoomActionsOpen(true);
   };
 
   const handlePrintInvoice = (invoice: Invoice) => {
@@ -436,7 +442,7 @@ const FrontDesk = () => {
                         searchPlaceholder="Search rooms..."
                         emptyMessage="No rooms found."
                         pageSize={10}
-                        onRowClick={(room) => setSelectedRoom(room)}
+                        onRowClick={(room) => handleRoomClick(room)}
                       />
                     </CardContent>
                   </Card>
@@ -451,7 +457,7 @@ const FrontDesk = () => {
                           selectedRoom?.id === room.id && "ring-2 ring-primary"
                         )}
                         style={{ animationDelay: `${index * 50}ms` }}
-                        onClick={() => setSelectedRoom(room)}
+                        onClick={() => handleRoomClick(room)}
                       >
                         {/* Room Header */}
                         <div className="h-32 bg-gradient-card flex items-center justify-center relative">
@@ -532,14 +538,6 @@ const FrontDesk = () => {
                     )}
                   </div>
                 )}
-              </div>
-
-              {/* Actions Panel */}
-              <div className="lg:col-span-1">
-                <RoomActionsPanel 
-                  selectedRoom={selectedRoom} 
-                  onClearSelection={() => setSelectedRoom(null)}
-                />
               </div>
             </div>
           </TabsContent>
@@ -824,6 +822,18 @@ const FrontDesk = () => {
           </TabsContent>
         </Tabs>
       </ErrorBoundary>
+
+      <Dialog open={isRoomActionsOpen} onOpenChange={setIsRoomActionsOpen}>
+        <DialogContent className="sm:max-w-[450px] p-0 border-none bg-transparent">
+          <RoomActionsPanel
+            selectedRoom={selectedRoom}
+            onClearSelection={() => {
+              setSelectedRoom(null);
+              setIsRoomActionsOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
