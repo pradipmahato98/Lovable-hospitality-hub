@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Reservation {
@@ -19,16 +19,10 @@ export interface Reservation {
 }
 
 export const useReservations = () => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchReservations = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: fetchError } = await supabase
+  const query = useQuery({
+    queryKey: ["reservations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("reservations")
         .select(`
           id,
@@ -37,39 +31,56 @@ export const useReservations = () => {
           check_out_date,
           status,
           total_amount,
+          guest_id,
+          room_id,
           guest:guests(first_name, last_name),
           room:rooms(room_number, room_type)
         `)
         .order("check_in_date", { ascending: false });
 
-      if (fetchError) throw fetchError;
-      setReservations(data as unknown as Reservation[]);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch reservations"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      if (error) throw error;
+      return data as unknown as Reservation[];
+    },
+  });
 
-  useEffect(() => {
-    fetchReservations();
-  }, [fetchReservations]);
-
-  const filterReservations = useCallback((query: string) => {
-    if (!query) return reservations;
-    const searchLower = query.toLowerCase();
+  const filterReservations = (queryStr: string) => {
+    const reservations = query.data || [];
+    if (!queryStr) return reservations;
+    const searchLower = queryStr.toLowerCase();
     return reservations.filter((res) =>
       res.reservation_code.toLowerCase().includes(searchLower) ||
       `${res.guest?.first_name} ${res.guest?.last_name}`.toLowerCase().includes(searchLower) ||
       res.room?.room_number.toLowerCase().includes(searchLower)
     );
-  }, [reservations]);
+  };
 
   return {
-    reservations,
-    isLoading,
-    error,
-    refetch: fetchReservations,
+    reservations: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
     filterReservations,
+    data: query.data || [], // Compatibility with FrontDesk.tsx
   };
+};
+
+export const useUpdateReservation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Reservation>) => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+    },
+  });
 };

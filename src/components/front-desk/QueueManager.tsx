@@ -28,11 +28,13 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Bell, Check, Trash2, Clock, Star } from "lucide-react";
+import { UserPlus, Bell, Check, Trash2, Clock, Star, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
+import { useLoyaltyMembers } from "@/hooks/useGuestManagement";
 
 export const QueueManager = () => {
   const { queue, isLoading, addToQueue, updateQueueStatus, deleteFromQueue } = useFrontDeskQueue();
+  const { data: loyaltyMembers = [] } = useLoyaltyMembers();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newEntry, setNewEntry] = useState({
     guest_name: "",
@@ -47,12 +49,25 @@ export const QueueManager = () => {
     setNewEntry({ guest_name: "", requested_room_type: "Standard", priority: "normal", notes: "" });
   };
 
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'vip': return <Badge className="bg-gold text-white"><Star className="h-3 w-3 mr-1 fill-white" /> VIP</Badge>;
-      case 'urgent': return <Badge variant="destructive">Urgent</Badge>;
-      default: return <Badge variant="secondary">Normal</Badge>;
-    }
+  const getPriorityBadge = (priority: string, guestId?: string | null) => {
+    const loyalty = guestId ? loyaltyMembers.find(m => m.guest_id === guestId) : null;
+
+    return (
+      <div className="flex gap-1 flex-wrap">
+        {priority === 'vip' && (
+          <Badge className="bg-gold text-white">
+            <Star className="h-3 w-3 mr-1 fill-white" /> VIP
+          </Badge>
+        )}
+        {loyalty && (
+          <Badge variant="outline" className="border-gold text-gold">
+            <ShieldCheck className="h-3 w-3 mr-1" /> {loyalty.tier}
+          </Badge>
+        )}
+        {priority === 'urgent' && <Badge variant="destructive">Urgent</Badge>}
+        {priority === 'normal' && !loyalty && <Badge variant="secondary">Normal</Badge>}
+      </div>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -154,7 +169,7 @@ export const QueueManager = () => {
                   </TableCell>
                   <TableCell className="font-medium">{entry.guest_name}</TableCell>
                   <TableCell>{entry.requested_room_type}</TableCell>
-                  <TableCell>{getPriorityBadge(entry.priority)}</TableCell>
+                  <TableCell>{getPriorityBadge(entry.priority, entry.guest_id)}</TableCell>
                   <TableCell>{getStatusBadge(entry.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

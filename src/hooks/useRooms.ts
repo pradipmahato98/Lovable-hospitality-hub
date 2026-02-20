@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Room {
@@ -16,6 +16,8 @@ export interface Room {
 }
 
 export const useRooms = () => {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ["rooms"],
     queryFn: async () => {
@@ -26,6 +28,27 @@ export const useRooms = () => {
 
       if (error) throw error;
       return data as Room[];
+    },
+  });
+};
+
+export const useUpdateRoomStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
     },
   });
 };
