@@ -66,6 +66,29 @@ export const useGuestFolios = () => {
         return [
           {
             id: "folio-1",
+      try {
+        const { data, error } = await db
+          .from("guest_folios")
+          .select(`
+            *,
+            rooms (room_number, room_type),
+            guests (first_name, last_name, email),
+            reservations (reservation_code)
+          `)
+          .not("status", "in", '("closed","void")')
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          // Check for PostgREST schema cache error (PGRST103)
+          if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
+            console.warn("Table guest_folios not found or schema cache issue, using fallback data.");
+          } else {
+            console.error("Error fetching folios:", error);
+          }
+
+          return [
+            {
+              id: "folio-1",
             folio_number: "FOL-100234",
             status: "open",
             total_charges: 450.00,
@@ -86,11 +109,15 @@ export const useGuestFolios = () => {
             guests: { first_name: "Michael", last_name: "Chen", email: "michael@example.com" },
             rooms: { room_number: "102", room_type: "Standard" },
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ] as GuestFolio[];
+              updated_at: new Date().toISOString()
+            }
+          ] as GuestFolio[];
+        }
+        return data as GuestFolio[];
+      } catch (err) {
+        console.warn("Failed to fetch guest_folios, returning empty array:", err);
+        return [] as GuestFolio[];
       }
-      return data as GuestFolio[];
     },
   });
 
@@ -114,10 +141,36 @@ export const useGuestFolios = () => {
             { id: "item-3", folio_id: "folio-1", item_type: "payment", source: "manual", description: "Advance Deposit", amount: -100.00, created_at: new Date().toISOString() },
             { id: "item-4", folio_id: "folio-1", item_type: "charge", source: "minibar", description: "Minibar Items", amount: 100.00, created_at: new Date().toISOString() },
           ] as FolioItem[];
+        try {
+          const { data, error } = await db
+            .from("folio_items")
+            .select("*")
+            .eq("folio_id", folioId)
+            .order("created_at", { ascending: true });
+
+          if (error) {
+            if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
+              console.warn("Table folio_items not found or schema cache issue, using fallback data.");
+            } else {
+              console.error("Error fetching folio items:", error);
+            }
+
+            // Fallback for demo
+            if (folioId === "folio-1") {
+              return [
+                { id: "item-1", folio_id: "folio-1", item_type: "charge", source: "room_rate", description: "Room Charge - 2 Nights", amount: 240.00, created_at: new Date().toISOString() },
+                { id: "item-2", folio_id: "folio-1", item_type: "charge", source: "restaurant", description: "Dinner Service", amount: 110.00, created_at: new Date().toISOString() },
+                { id: "item-3", folio_id: "folio-1", item_type: "payment", source: "manual", description: "Advance Deposit", amount: -100.00, created_at: new Date().toISOString() },
+                { id: "item-4", folio_id: "folio-1", item_type: "charge", source: "minibar", description: "Minibar Items", amount: 100.00, created_at: new Date().toISOString() },
+              ] as FolioItem[];
+            }
+            return [];
+          }
+          return data as FolioItem[];
+        } catch (err) {
+          console.warn("Failed to fetch folio_items:", err);
+          return [];
         }
-        return [];
-      }
-        return data as FolioItem[];
       },
       enabled: !!folioId,
     });

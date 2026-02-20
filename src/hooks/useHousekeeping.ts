@@ -75,7 +75,13 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
       if (filters?.priority) q = q.eq("priority", filters.priority);
 
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
+          console.warn("housekeeping_tasks table not found, using empty fallback");
+          return [] as HousekeepingTask[];
+        }
+        throw error;
+      }
       return data as HousekeepingTask[];
     },
   });
@@ -140,7 +146,13 @@ export function useLostAndFound(status?: string) {
       if (status) q = q.eq("status", status);
 
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
+          console.warn("lost_and_found table not found, using empty fallback");
+          return [] as LostAndFound[];
+        }
+        throw error;
+      }
       return data as LostAndFound[];
     },
   });
@@ -195,7 +207,13 @@ export function useHousekeepingInspections(roomId?: string) {
       if (roomId) q = q.eq("room_id", roomId);
 
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
+          console.warn("housekeeping_inspections table not found, using empty fallback");
+          return [] as HousekeepingInspection[];
+        }
+        throw error;
+      }
       return data as HousekeepingInspection[];
     },
   });
