@@ -106,11 +106,23 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
         console.warn("Exception in useInvoices:", err);
         return [] as Invoice[];
       }
+      let q = db
+        .from("invoices")
+        .select(`*, guest:guests(first_name, last_name), items:invoice_items(*)`)
+        .order("invoice_date", { ascending: false });
+
+      if (filters?.status) q = q.eq("status", filters.status);
+      if (filters?.startDate) q = q.gte("invoice_date", filters.startDate);
+      if (filters?.endDate) q = q.lte("invoice_date", filters.endDate);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Invoice[];
     },
   });
 
   const createInvoice = useMutation({
-    mutationFn: async ({ items, ...invoice }: Omit<Invoice, "id" | "created_at" | "invoice_number" | "guest" | "items" | "subtotal" | "tax_amount" | "total" | "balance_due"> & { items: Omit<InvoiceItem, "id" | "invoice_id">[] }) => {
+    mutationFn: async ({ items, ...invoice }: Omit<Invoice, "id" | "created_at" | "invoice_number" | "guest" | "items"> & { items: Omit<InvoiceItem, "id" | "invoice_id">[] }) => {
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
       
       const subtotal = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
@@ -171,6 +183,17 @@ export function usePayments(filters?: { startDate?: string; endDate?: string }) 
       } catch (err) {
         return [] as Payment[];
       }
+      let q = db
+        .from("payments")
+        .select("*")
+        .order("payment_date", { ascending: false });
+
+      if (filters?.startDate) q = q.gte("payment_date", filters.startDate);
+      if (filters?.endDate) q = q.lte("payment_date", filters.endDate);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Payment[];
     },
   });
 
@@ -228,6 +251,19 @@ export function useExpenses(filters?: { status?: string; category?: string; star
       } catch (err) {
         return [] as Expense[];
       }
+      let q = db
+        .from("expenses")
+        .select("*")
+        .order("expense_date", { ascending: false });
+
+      if (filters?.status) q = q.eq("status", filters.status);
+      if (filters?.category) q = q.eq("category", filters.category);
+      if (filters?.startDate) q = q.gte("expense_date", filters.startDate);
+      if (filters?.endDate) q = q.lte("expense_date", filters.endDate);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Expense[];
     },
   });
 

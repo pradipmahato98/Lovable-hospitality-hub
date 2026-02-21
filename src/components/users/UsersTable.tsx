@@ -15,9 +15,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users } from "lucide-react";
-import { UserWithRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Search, Users, Eye, Ban, ShieldCheck } from "lucide-react";
+import { UserWithRole, AppRole, roleConfig, useToggleUserBlock } from "@/hooks/useUsersWithRoles";
+import { useState } from "react";
+import { format } from "date-fns";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
 
@@ -38,6 +49,9 @@ export const UsersTable = ({
   onRoleChange,
   isUpdating,
 }: UsersTableProps) => {
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const toggleBlock = useToggleUserBlock();
+
   const filteredUsers = users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -89,6 +103,8 @@ export const UsersTable = ({
                   <TableHead>Email</TableHead>
                   <TableHead>Current Role</TableHead>
                   <TableHead>Change Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,6 +165,22 @@ export const UsersTable = ({
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={!userItem.is_blocked}
+                            onCheckedChange={(checked) => toggleBlock.mutate({ userId: userItem.user_id, isBlocked: !checked })}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {userItem.is_blocked ? "Blocked" : "Active"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedUser(userItem)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -157,6 +189,74 @@ export const UsersTable = ({
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the user account.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-secondary/30">
+                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary">
+                  {(selectedUser.first_name?.[0] || "") + (selectedUser.last_name?.[0] || "") || "U"}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">
+                    {selectedUser.first_name} {selectedUser.last_name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">User ID</p>
+                  <p className="text-sm font-mono">{selectedUser.user_id}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Joined Date</p>
+                  <p className="text-sm">
+                    {format(new Date(selectedUser.created_at), "PPP")}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Current Role</p>
+                  <Badge variant="outline" className="capitalize">
+                    {selectedUser.role}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Account Status</p>
+                  <Badge variant={selectedUser.is_blocked ? "destructive" : "success"}>
+                    {selectedUser.is_blocked ? "Blocked" : "Active"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t flex justify-end gap-2">
+                <Button
+                  variant={selectedUser.is_blocked ? "outline" : "destructive"}
+                  className="gap-2"
+                  onClick={() => {
+                    toggleBlock.mutate({ userId: selectedUser.user_id, isBlocked: !selectedUser.is_blocked });
+                    setSelectedUser(null);
+                  }}
+                >
+                  {selectedUser.is_blocked ? <ShieldCheck className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                  {selectedUser.is_blocked ? "Unblock User" : "Block User"}
+                </Button>
+                <Button variant="secondary" onClick={() => setSelectedUser(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

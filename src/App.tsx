@@ -12,37 +12,54 @@ import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { RealtimeListener } from "@/components/layout/RealtimeListener";
-import Index from "./pages/Index";
-import Reservations from "./pages/Reservations";
-import ReservationCalendar from "./pages/ReservationCalendar";
-import Guests from "./pages/Guests";
-import FrontDesk from "./pages/FrontDesk";
-import Billing from "./pages/Billing";
-import Inventory from "./pages/Inventory";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import Profile from "./pages/Profile";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import UserManagement from "./pages/UserManagement";
-import DevPanel from "./pages/DevPanel";
-import AdminConsole from "./pages/AdminConsole";
-import POS from "./pages/POS";
-import POSTerminal from "./pages/POSTerminal";
-import POSHistory from "./pages/POSHistory";
-import POSReports from "./pages/POSReports";
-import KitchenDisplay from "./pages/KitchenDisplay";
-import HR from "./pages/HR";
-import ChannelManager from "./pages/ChannelManager";
-import NightAudit from "./pages/NightAudit";
-import DayClose from "./pages/DayClose";
-import Housekeeping from "./pages/Housekeeping";
-import Engineering from "./pages/Engineering";
-import StaffManagement from "./pages/StaffManagement";
-import Finance from "./pages/Finance";
-import Payments from "./pages/Payments";
-import Banquet from "./pages/Banquet";
-const queryClient = new QueryClient();
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
+
+// Lazy load all pages
+const Index = lazy(() => import("./pages/Index"));
+const Reservations = lazy(() => import("./pages/Reservations"));
+const Guests = lazy(() => import("./pages/Guests"));
+const FrontDesk = lazy(() => import("./pages/FrontDesk"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Auth = lazy(() => import("./pages/Auth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const DevPanel = lazy(() => import("./pages/DevPanel"));
+const AdminConsole = lazy(() => import("./pages/AdminConsole"));
+const POS = lazy(() => import("./pages/POS"));
+const POSTerminal = lazy(() => import("./pages/POSTerminal"));
+const POSHistory = lazy(() => import("./pages/POSHistory"));
+const POSReports = lazy(() => import("./pages/POSReports"));
+const KitchenDisplay = lazy(() => import("./pages/KitchenDisplay"));
+const HR = lazy(() => import("./pages/HR"));
+const ChannelManager = lazy(() => import("./pages/ChannelManager"));
+const NightAudit = lazy(() => import("./pages/NightAudit"));
+const DayClose = lazy(() => import("./pages/DayClose"));
+const Housekeeping = lazy(() => import("./pages/Housekeeping"));
+const Engineering = lazy(() => import("./pages/Engineering"));
+const StaffManagement = lazy(() => import("./pages/StaffManagement"));
+const Finance = lazy(() => import("./pages/Finance"));
+const Payments = lazy(() => import("./pages/Payments"));
+const Banquet = lazy(() => import("./pages/Banquet"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
+
+const PageLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-background">
+    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -63,36 +80,38 @@ const App = () => (
             <QuickActionsProvider>
               <RealtimeListener />
               <GlobalQuickActions />
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
-                <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
-                <Route path="/front-desk" element={<ProtectedRoute><FrontDesk /></ProtectedRoute>} />
-                <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
-                <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
-                <Route path="/pos/terminal" element={<ProtectedRoute><POSTerminal /></ProtectedRoute>} />
-                <Route path="/pos/history" element={<ProtectedRoute><POSHistory /></ProtectedRoute>} />
-                <Route path="/pos/reports" element={<ProtectedRoute><POSReports /></ProtectedRoute>} />
-                <Route path="/pos/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-                <Route path="/channel-manager" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
-                <Route path="/night-audit" element={<ProtectedRoute><NightAudit /></ProtectedRoute>} />
-                <Route path="/day-close" element={<ProtectedRoute><DayClose /></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-                <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-                <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
-                <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-                <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-                <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
-                <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
-                <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                  <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
+                  <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
+                  <Route path="/front-desk" element={<ProtectedRoute><FrontDesk /></ProtectedRoute>} />
+                  <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
+                  <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
+                  <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+                  <Route path="/pos/terminal" element={<ProtectedRoute><POSTerminal /></ProtectedRoute>} />
+                  <Route path="/pos/history" element={<ProtectedRoute><POSHistory /></ProtectedRoute>} />
+                  <Route path="/pos/reports" element={<ProtectedRoute><POSReports /></ProtectedRoute>} />
+                  <Route path="/pos/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
+                  <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                  <Route path="/channel-manager" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
+                  <Route path="/night-audit" element={<ProtectedRoute><NightAudit /></ProtectedRoute>} />
+                  <Route path="/day-close" element={<ProtectedRoute><DayClose /></ProtectedRoute>} />
+                  <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                  <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+                  <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
+                  <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
+                  <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+                  <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
+                  <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
+                  <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </QuickActionsProvider>
             </DynamicIslandProvider>
             </DesignSystemProvider>
