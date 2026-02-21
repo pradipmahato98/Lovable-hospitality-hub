@@ -21,11 +21,11 @@ export const ThreeDLineChart: React.FC<ThreeDLineChartProps> = ({
   const id = React.useId();
   if (data.length === 0) return null;
 
-  const maxValue = Math.max(...data.map((d) => d.value));
+  const maxValue = Math.max(...data.map((d) => d.value)) || 1;
   const padding = 40;
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
-  const stepX = chartWidth / (data.length - 1);
+  const stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0;
 
   const points = data.map((d, i) => ({
     x: padding + i * stepX,

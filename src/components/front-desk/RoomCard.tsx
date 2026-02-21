@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Wifi, Tv, Coffee, Bath } from "lucide-react";
+import { Users, Wifi, Tv, Coffee, Bath, Star, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tables } from "@/integrations/supabase/types";
 
@@ -26,9 +26,11 @@ interface RoomCardProps {
   index: number;
   isSelected: boolean;
   onClick: (room: Room) => void;
+  guest?: { first_name: string; last_name: string; is_vip?: boolean } | null;
+  loyaltyTier?: string | null;
 }
 
-export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClick }: RoomCardProps) {
+export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClick, guest, loyaltyTier }: RoomCardProps) {
   return (
     <Card
       variant="elevated"
@@ -44,15 +46,26 @@ export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClic
         <span className="text-5xl font-display font-bold text-gradient-gold">
           {room.room_number}
         </span>
-        <Badge
-          variant="outline"
-          className={cn(
-            "absolute top-3 right-3",
-            roomStatusStyles[room.status as keyof typeof roomStatusStyles] || roomStatusStyles.available
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+          <Badge
+            variant="outline"
+            className={cn(
+              roomStatusStyles[room.status as keyof typeof roomStatusStyles] || roomStatusStyles.available
+            )}
+          >
+            {room.status}
+          </Badge>
+          {guest?.is_vip && (
+            <Badge className="bg-gold text-white text-[10px] h-5 px-1">
+              <Star className="h-3 w-3 mr-1 fill-white" /> VIP
+            </Badge>
           )}
-        >
-          {room.status}
-        </Badge>
+          {loyaltyTier && (
+            <Badge variant="outline" className="border-gold text-gold text-[10px] h-5 px-1 bg-background/50">
+              <ShieldCheck className="h-3 w-3 mr-1" /> {loyaltyTier}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <CardContent className="p-4">

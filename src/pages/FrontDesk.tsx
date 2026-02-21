@@ -455,89 +455,23 @@ const FrontDesk = () => {
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {filteredRooms.map((room, index) => (
-                      <Card
-                        key={room.id}
-                        variant="elevated"
-                        className={cn(
-                          "animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group",
-                          selectedRoom?.id === room.id && "ring-2 ring-primary"
-                        )}
-                        style={{ animationDelay: `${index * 50}ms` }}
-                        onClick={() => setSelectedRoom(room)}
-                      >
-                        {/* Room Header */}
-                        <div className="h-32 bg-gradient-card flex items-center justify-center relative">
-                          <span className="text-5xl font-display font-bold text-gradient-gold">
-                            {room.room_number}
-                          </span>
-                          <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                statusStyles[room.status as keyof typeof statusStyles] || statusStyles.available
-                              )}
-                            >
-                              {room.status}
-                            </Badge>
-                            {room.status === "occupied" && (() => {
-                              const activeRes = reservations.find(r => r.room_id === room.id && r.status === "checked_in");
-                              const guest = guests.find(g => g.id === activeRes?.guest_id);
-                              const loyalty = loyaltyMembers.find(m => m.guest_id === guest?.id);
+                    {filteredRooms.map((room, index) => {
+                      const activeRes = reservations.find(r => r.room_id === room.id && r.status === "checked_in");
+                      const guest = guests.find(g => g.id === activeRes?.guest_id);
+                      const loyalty = loyaltyMembers.find(m => m.guest_id === guest?.id);
 
-                              return (
-                                <>
-                                  {guest?.is_vip && (
-                                    <Badge className="bg-gold text-white text-[10px] h-5 px-1">
-                                      <Star className="h-3 w-3 mr-1 fill-white" /> VIP
-                                    </Badge>
-                                  )}
-                                  {loyalty && (
-                                    <Badge variant="outline" className="border-gold text-gold text-[10px] h-5 px-1 bg-background/50">
-                                      <ShieldCheck className="h-3 w-3 mr-1" /> {loyalty.tier}
-                                    </Badge>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-
-                        <CardContent className="p-4">
-                          <div className="mb-3">
-                            <h3 className="font-semibold text-foreground">{room.room_type}</h3>
-                            <p className="text-sm text-muted-foreground">Floor {room.floor}</p>
-                          </div>
-
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Users className="h-4 w-4" />
-                              <span>Up to {room.capacity}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xl font-bold text-primary">${room.price_per_night}</span>
-                              <span className="text-xs text-muted-foreground">/night</span>
-                            </div>
-                          </div>
-
-                          {/* Amenities */}
-                          <div className="flex gap-2 pt-3 border-t border-border">
-                            {(room.amenities || []).map((amenity) => {
-                              const Icon = amenityIcons[amenity.toLowerCase()];
-                              return Icon ? (
-                                <div
-                                  key={amenity}
-                                  className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center"
-                                  title={amenity}
-                                >
-                                  <Icon className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                      return (
+                        <RoomCard
+                          key={room.id}
+                          room={room}
+                          index={index}
+                          isSelected={selectedRoom?.id === room.id}
+                          onClick={handleRoomClick}
+                          guest={guest}
+                          loyaltyTier={loyalty?.tier}
+                        />
+                      );
+                    })}
                     {filteredRooms.length === 0 && (
                       <div className="col-span-full text-center py-12 text-muted-foreground">
                         No rooms match the selected filters
