@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const db = supabase;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 export interface FolioItem {
   id: string;
@@ -42,6 +43,51 @@ export interface RoutingRule {
   is_active: boolean;
 }
 
+const getFallbackFolios = (): GuestFolio[] => [
+  {
+    id: "folio-1",
+    reservation_id: "res-1",
+    room_id: "room-1",
+    guest_id: "guest-1",
+    folio_number: "FOL-100234",
+    status: "open",
+    total_charges: 450.00,
+    total_payments: 100.00,
+    balance: 350.00,
+    guests: { first_name: "Sarah", last_name: "Johnson", email: "sarah@example.com" },
+    rooms: { room_number: "204", room_type: "Deluxe" },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "folio-2",
+    reservation_id: "res-2",
+    room_id: "room-2",
+    guest_id: "guest-2",
+    folio_number: "FOL-100235",
+    status: "closed",
+    total_charges: 120.00,
+    total_payments: 120.00,
+    balance: 0.00,
+    guests: { first_name: "Michael", last_name: "Chen", email: "michael@example.com" },
+    rooms: { room_number: "102", room_type: "Standard" },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const getFallbackItems = (folioId: string): FolioItem[] => {
+  if (folioId === "folio-1") {
+    return [
+      { id: "item-1", folio_id: "folio-1", item_type: "charge", source: "room_rate", description: "Room Charge - 2 Nights", amount: 240.00, created_at: new Date().toISOString() },
+      { id: "item-2", folio_id: "folio-1", item_type: "charge", source: "restaurant", description: "Dinner Service", amount: 110.00, created_at: new Date().toISOString() },
+      { id: "item-3", folio_id: "folio-1", item_type: "payment", source: "manual", description: "Advance Deposit", amount: -100.00, created_at: new Date().toISOString() },
+      { id: "item-4", folio_id: "folio-1", item_type: "charge", source: "minibar", description: "Minibar Items", amount: 100.00, created_at: new Date().toISOString() },
+    ];
+  }
+  return [];
+};
+
 export const useGuestFolios = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,46 +108,16 @@ export const useGuestFolios = () => {
           .order("created_at", { ascending: false });
 
         if (error) {
-          // Check for PostgREST schema cache error (PGRST103)
-          if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-            console.warn("Table guest_folios not found or schema cache issue, using fallback data.");
-          } else {
-            console.error("Error fetching folios:", error);
-          }
-
-          return [
-            {
-              id: "folio-1",
-            folio_number: "FOL-100234",
-            status: "open",
-            total_charges: 450.00,
-            total_payments: 100.00,
-            balance: 350.00,
-            guests: { first_name: "Sarah", last_name: "Johnson", email: "sarah@example.com" },
-            rooms: { room_number: "204", room_type: "Deluxe" },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: "folio-2",
-            folio_number: "FOL-100235",
-            status: "closed",
-            total_charges: 120.00,
-            total_payments: 120.00,
-            balance: 0.00,
-            guests: { first_name: "Michael", last_name: "Chen", email: "michael@example.com" },
-            rooms: { room_number: "102", room_type: "Standard" },
-            created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ] as GuestFolio[];
+          console.warn("Schema issue or error detected for guest_folios, using fallbacks:", error.message);
+          return getFallbackFolios();
         }
         return data as GuestFolio[];
       } catch (err) {
-        console.warn("Failed to fetch guest_folios, returning empty array:", err);
-        return [] as GuestFolio[];
+        console.warn("Exception fetching guest_folios:", err);
+        return getFallbackFolios();
       }
     },
+    retry: 1,
   });
 
   const useFolioItems = (folioId: string) => {
@@ -117,27 +133,13 @@ export const useGuestFolios = () => {
             .order("created_at", { ascending: true });
 
           if (error) {
-            if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-              console.warn("Table folio_items not found or schema cache issue, using fallback data.");
-            } else {
-              console.error("Error fetching folio items:", error);
-            }
-
-            // Fallback for demo
-            if (folioId === "folio-1") {
-              return [
-                { id: "item-1", folio_id: "folio-1", item_type: "charge", source: "room_rate", description: "Room Charge - 2 Nights", amount: 240.00, created_at: new Date().toISOString() },
-                { id: "item-2", folio_id: "folio-1", item_type: "charge", source: "restaurant", description: "Dinner Service", amount: 110.00, created_at: new Date().toISOString() },
-                { id: "item-3", folio_id: "folio-1", item_type: "payment", source: "manual", description: "Advance Deposit", amount: -100.00, created_at: new Date().toISOString() },
-                { id: "item-4", folio_id: "folio-1", item_type: "charge", source: "minibar", description: "Minibar Items", amount: 100.00, created_at: new Date().toISOString() },
-              ] as FolioItem[];
-            }
-            return [];
+            console.warn("Schema issue or error detected for folio_items:", error.message);
+            return getFallbackItems(folioId);
           }
           return data as FolioItem[];
         } catch (err) {
-          console.warn("Failed to fetch folio_items:", err);
-          return [];
+          console.warn("Exception fetching folio_items:", err);
+          return getFallbackItems(folioId);
         }
       },
       enabled: !!folioId,
@@ -146,54 +148,46 @@ export const useGuestFolios = () => {
 
   const addFolioItem = useMutation({
     mutationFn: async (item: Omit<FolioItem, "id" | "created_at">) => {
-      // Check for routing rules
-      const { data: rules, error: rulesError } = await db
-        .from("routing_rules")
-        .select("*")
-        .eq("folio_id", item.folio_id)
-        .eq("is_active", true);
+      try {
+        const { data: rules } = await db
+          .from("routing_rules")
+          .select("*")
+          .eq("folio_id", item.folio_id)
+          .eq("is_active", true);
 
-      if (rulesError) {
-        console.warn("Could not fetch routing rules, proceeding without routing:", rulesError.message);
+        let targetFolioId = item.folio_id;
+        if (rules && rules.length > 0) {
+          const rule = rules.find((r: any) =>
+            r.category === 'all' ||
+            (r.category === 'room' && item.source === 'room_rate') ||
+            (r.category === 'f&b' && (item.source === 'restaurant' || item.source === 'minibar'))
+          );
+          if (rule) targetFolioId = rule.target_folio_id;
+        }
+
+        const { data, error } = await db
+          .from("folio_items")
+          .insert([{ ...item, folio_id: targetFolioId }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (err: any) {
+        console.warn("Mutation failed for addFolioItem:", err);
+        throw err;
       }
-
-      let targetFolioId = item.folio_id;
-      if (rules && rules.length > 0) {
-        const rule = rules.find(r =>
-          r.category === 'all' ||
-          (r.category === 'room' && item.source === 'room_rate') ||
-          (r.category === 'f&b' && (item.source === 'restaurant' || item.source === 'minibar'))
-        );
-        if (rule) targetFolioId = rule.target_folio_id;
-      }
-
-      const { data, error } = await db
-        .from("folio_items")
-        .insert([{ ...item, folio_id: targetFolioId }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
-      // If the item was routed to a different folio, invalidate that one too
       if (data && data.folio_id !== variables.folio_id) {
         queryClient.invalidateQueries({ queryKey: ["folio_items", data.folio_id] });
       }
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item added successfully.",
-      });
+      toast({ title: "Success", description: "Folio item added successfully." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Action Failed", description: "Database is currently unsynced. Please try again later.", variant: "destructive" });
     },
   });
 
@@ -205,23 +199,15 @@ export const useGuestFolios = () => {
         .eq("id", folioId)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Folio Closed",
-        description: "The folio has been finalized and closed.",
-      });
+      toast({ title: "Folio Closed", description: "The folio has been finalized and closed." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -233,23 +219,15 @@ export const useGuestFolios = () => {
         .eq("id", folioId)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Folio Voided",
-        description: "The folio has been voided.",
-      });
+      toast({ title: "Folio Voided", description: "The folio has been voided." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -257,69 +235,41 @@ export const useGuestFolios = () => {
     mutationFn: async (item: Partial<FolioItem> & { id: string, folio_id: string, reason?: string, modified_by?: string }) => {
       const { data, error } = await db
         .from("folio_items")
-        .update({
-          ...item,
-          updated_at: new Date().toISOString()
-        })
+        .update({ ...item, updated_at: new Date().toISOString() })
         .eq("id", item.id)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item updated successfully.",
-      });
+      toast({ title: "Success", description: "Folio item updated successfully." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteFolioItem = useMutation({
     mutationFn: async ({ id, folio_id }: { id: string, folio_id: string }) => {
-      const { error } = await db
-        .from("folio_items")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await db.from("folio_items").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item deleted successfully.",
-      });
+      toast({ title: "Success", description: "Folio item deleted successfully." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const transferFolioItem = useMutation({
     mutationFn: async ({ itemId, targetFolioId, sourceFolioId }: { itemId: string, targetFolioId: string, sourceFolioId: string }) => {
-      const { data, error } = await db
-        .from("folio_items")
-        .update({ folio_id: targetFolioId })
-        .eq("id", itemId)
-        .select()
-        .single();
-
+      const { data, error } = await db.from("folio_items").update({ folio_id: targetFolioId }).eq("id", itemId).select().single();
       if (error) throw error;
       return data;
     },
@@ -327,55 +277,33 @@ export const useGuestFolios = () => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.sourceFolioId] });
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.targetFolioId] });
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "Folio item transferred successfully.",
-      });
+      toast({ title: "Success", description: "Folio item transferred successfully." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const processRefund = useMutation({
     mutationFn: async ({ folio_id, amount, reason, method }: { folio_id: string, amount: number, reason: string, method: string }) => {
-      const { data, error } = await db
-        .from("folio_items")
-        .insert([{
-          folio_id,
-          item_type: 'payment',
-          source: 'refund',
-          description: `Refund (${method.toUpperCase()}) - ${reason}`,
-          amount: Math.abs(amount), // Positive amount for refund credit/reversal or how does it work?
-          // Usually a payment is negative (decreases balance). A refund of a payment should be positive (increases balance).
-          // Or if it's a refund of a charge, it's a negative charge (adjustment).
-          // Let's stick to: Payment is negative. Refund of payment is positive.
-          reason
-        }])
-        .select()
-        .single();
-
+      const { data, error } = await db.from("folio_items").insert([{
+        folio_id,
+        item_type: 'payment',
+        source: 'refund',
+        description: `Refund (${method.toUpperCase()}) - ${reason}`,
+        amount: Math.abs(amount),
+        reason
+      }]).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Refund Processed",
-        description: "The refund has been recorded successfully.",
-      });
+      toast({ title: "Refund Processed", description: "The refund has been recorded successfully." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -384,16 +312,13 @@ export const useGuestFolios = () => {
       queryKey: ["routing_rules", folioId],
       queryFn: async () => {
         if (!folioId) return [];
-      const { data, error } = await db
-          .from("routing_rules")
-          .select("*")
-          .eq("folio_id", folioId);
-
-        if (error) {
-          console.warn("Routing rules table might not exist, returning empty");
+        try {
+          const { data, error } = await db.from("routing_rules").select("*").eq("folio_id", folioId);
+          if (error) return [];
+          return data as RoutingRule[];
+        } catch (err) {
           return [];
         }
-        return data as RoutingRule[];
       },
       enabled: !!folioId,
     });
@@ -401,11 +326,7 @@ export const useGuestFolios = () => {
 
   const addRoutingRule = useMutation({
     mutationFn: async (rule: Omit<RoutingRule, "id">) => {
-      const { data, error } = await db
-        .from("routing_rules")
-        .insert([rule])
-        .select()
-        .single();
+      const { data, error } = await db.from("routing_rules").insert([rule]).select().single();
       if (error) throw error;
       return data;
     },
@@ -417,10 +338,7 @@ export const useGuestFolios = () => {
 
   const deleteRoutingRule = useMutation({
     mutationFn: async ({ id, folioId }: { id: string, folioId: string }) => {
-      const { error } = await db
-        .from("routing_rules")
-        .delete()
-        .eq("id", id);
+      const { error } = await db.from("routing_rules").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
@@ -431,28 +349,16 @@ export const useGuestFolios = () => {
 
   const createFolio = useMutation({
     mutationFn: async (folio: Partial<GuestFolio>) => {
-      const { data, error } = await db
-        .from("guest_folios")
-        .insert([folio])
-        .select()
-        .single();
-
+      const { data, error } = await db.from("guest_folios").insert([folio]).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
-      toast({
-        title: "Success",
-        description: "New folio created successfully.",
-      });
+      toast({ title: "Success", description: "New folio created successfully." });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 

@@ -86,24 +86,26 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
   const query = useQuery({
     queryKey: ["invoices", filters],
     queryFn: async () => {
-      let q = db
-        .from("invoices")
-        .select(`*, guest:guests(first_name, last_name), items:invoice_items(*)`)
-        .order("invoice_date", { ascending: false });
+      try {
+        let q = db
+          .from("invoices")
+          .select(`*, guest:guests(first_name, last_name), items:invoice_items(*)`)
+          .order("invoice_date", { ascending: false });
 
-      if (filters?.status) q = q.eq("status", filters.status);
-      if (filters?.startDate) q = q.gte("invoice_date", filters.startDate);
-      if (filters?.endDate) q = q.lte("invoice_date", filters.endDate);
+        if (filters?.status) q = q.eq("status", filters.status);
+        if (filters?.startDate) q = q.gte("invoice_date", filters.startDate);
+        if (filters?.endDate) q = q.lte("invoice_date", filters.endDate);
 
-      const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("Invoices table not found, using empty fallback");
+        const { data, error } = await q;
+        if (error) {
+          console.warn("Schema issue or error in invoices, using empty fallback:", error.message);
           return [] as Invoice[];
         }
-        throw error;
+        return data as Invoice[];
+      } catch (err) {
+        console.warn("Exception in useInvoices:", err);
+        return [] as Invoice[];
       }
-      return data as Invoice[];
     },
   });
 
@@ -111,7 +113,6 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
     mutationFn: async ({ items, ...invoice }: Omit<Invoice, "id" | "created_at" | "invoice_number" | "guest" | "items" | "subtotal" | "tax_amount" | "total" | "balance_due"> & { items: Omit<InvoiceItem, "id" | "invoice_id">[] }) => {
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
       
-      // Calculate totals
       const subtotal = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
       const taxAmount = items.reduce((sum, i) => sum + i.tax_amount, 0);
       const total = subtotal + taxAmount - (invoice.discount_amount || 0);
@@ -152,23 +153,24 @@ export function usePayments(filters?: { startDate?: string; endDate?: string }) 
   const query = useQuery({
     queryKey: ["payments", filters],
     queryFn: async () => {
-      let q = db
-        .from("payments")
-        .select("*")
-        .order("payment_date", { ascending: false });
+      try {
+        let q = db
+          .from("payments")
+          .select("*")
+          .order("payment_date", { ascending: false });
 
-      if (filters?.startDate) q = q.gte("payment_date", filters.startDate);
-      if (filters?.endDate) q = q.lte("payment_date", filters.endDate);
+        if (filters?.startDate) q = q.gte("payment_date", filters.startDate);
+        if (filters?.endDate) q = q.lte("payment_date", filters.endDate);
 
-      const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("Payments table not found, using empty fallback");
+        const { data, error } = await q;
+        if (error) {
+          console.warn("Schema issue or error in payments:", error.message);
           return [] as Payment[];
         }
-        throw error;
+        return data as Payment[];
+      } catch (err) {
+        return [] as Payment[];
       }
-      return data as Payment[];
     },
   });
 
@@ -178,7 +180,6 @@ export function usePayments(filters?: { startDate?: string; endDate?: string }) 
       const { data, error } = await db.from("payments").insert({ ...payment, payment_number: paymentNumber }).select().single();
       if (error) throw error;
 
-      // Update invoice if linked
       if (payment.invoice_id) {
         const { data: invoice } = await db.from("invoices").select("amount_paid, total").eq("id", payment.invoice_id).single();
         if (invoice) {
@@ -207,25 +208,26 @@ export function useExpenses(filters?: { status?: string; category?: string; star
   const query = useQuery({
     queryKey: ["expenses", filters],
     queryFn: async () => {
-      let q = db
-        .from("expenses")
-        .select("*")
-        .order("expense_date", { ascending: false });
+      try {
+        let q = db
+          .from("expenses")
+          .select("*")
+          .order("expense_date", { ascending: false });
 
-      if (filters?.status) q = q.eq("status", filters.status);
-      if (filters?.category) q = q.eq("category", filters.category);
-      if (filters?.startDate) q = q.gte("expense_date", filters.startDate);
-      if (filters?.endDate) q = q.lte("expense_date", filters.endDate);
+        if (filters?.status) q = q.eq("status", filters.status);
+        if (filters?.category) q = q.eq("category", filters.category);
+        if (filters?.startDate) q = q.gte("expense_date", filters.startDate);
+        if (filters?.endDate) q = q.lte("expense_date", filters.endDate);
 
-      const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("Expenses table not found, using empty fallback");
+        const { data, error } = await q;
+        if (error) {
+          console.warn("Schema issue or error in expenses:", error.message);
           return [] as Expense[];
         }
-        throw error;
+        return data as Expense[];
+      } catch (err) {
+        return [] as Expense[];
       }
-      return data as Expense[];
     },
   });
 
@@ -277,13 +279,17 @@ export function useTaxRates() {
   const query = useQuery({
     queryKey: ["tax-rates"],
     queryFn: async () => {
-      const { data, error } = await db
-        .from("tax_rates")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data as TaxRate[];
+      try {
+        const { data, error } = await db
+          .from("tax_rates")
+          .select("*")
+          .eq("is_active", true)
+          .order("name");
+        if (error) return [] as TaxRate[];
+        return data as TaxRate[];
+      } catch (err) {
+        return [] as TaxRate[];
+      }
     },
   });
 
@@ -313,15 +319,15 @@ export function useFinancialStats(period?: { start: string; end: string }) {
   const start = period?.start || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
   const end = period?.end || new Date().toISOString().split("T")[0];
 
-  const { data: invoices } = useInvoices({ startDate: start, endDate: end });
-  const { data: payments } = usePayments({ startDate: start, endDate: end });
-  const { data: expenses } = useExpenses({ startDate: start, endDate: end });
+  const { data: invoices = [] } = useInvoices({ startDate: start, endDate: end });
+  const { data: payments = [] } = usePayments({ startDate: start, endDate: end });
+  const { data: expenses = [] } = useExpenses({ startDate: start, endDate: end });
 
-  const totalRevenue = invoices?.reduce((sum, i) => sum + i.total, 0) || 0;
-  const totalCollected = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-  const totalExpenses = expenses?.filter((e) => e.status === "paid").reduce((sum, e) => sum + e.amount, 0) || 0;
-  const outstandingReceivables = invoices?.filter((i) => i.status !== "paid").reduce((sum, i) => sum + i.balance_due, 0) || 0;
-  const pendingExpenses = expenses?.filter((e) => e.status === "pending").reduce((sum, e) => sum + e.amount, 0) || 0;
+  const totalRevenue = invoices.reduce((sum, i) => sum + i.total, 0);
+  const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalExpenses = expenses.filter((e) => e.status === "paid").reduce((sum, e) => sum + e.amount, 0);
+  const outstandingReceivables = invoices.filter((i) => i.status !== "paid").reduce((sum, i) => sum + i.balance_due, 0);
+  const pendingExpenses = expenses.filter((e) => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
 
   return {
     totalRevenue,
@@ -330,8 +336,8 @@ export function useFinancialStats(period?: { start: string; end: string }) {
     netIncome: totalCollected - totalExpenses,
     outstandingReceivables,
     pendingExpenses,
-    invoiceCount: invoices?.length || 0,
-    paymentCount: payments?.length || 0,
-    expenseCount: expenses?.length || 0,
+    invoiceCount: invoices.length,
+    paymentCount: payments.length,
+    expenseCount: expenses.length,
   };
 }

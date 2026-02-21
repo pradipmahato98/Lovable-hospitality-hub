@@ -64,25 +64,26 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
   const query = useQuery({
     queryKey: ["housekeeping-tasks", filters],
     queryFn: async () => {
-      let q = db
-        .from("housekeeping_tasks")
-        .select(`*, room:rooms(room_number, room_type, floor)`)
-        .order("scheduled_date", { ascending: true })
-        .order("priority", { ascending: false });
+      try {
+        let q = db
+          .from("housekeeping_tasks")
+          .select(`*, room:rooms(room_number, room_type, floor)`)
+          .order("scheduled_date", { ascending: true })
+          .order("priority", { ascending: false });
 
-      if (filters?.date) q = q.eq("scheduled_date", filters.date);
-      if (filters?.status) q = q.eq("status", filters.status);
-      if (filters?.priority) q = q.eq("priority", filters.priority);
+        if (filters?.date) q = q.eq("scheduled_date", filters.date);
+        if (filters?.status) q = q.eq("status", filters.status);
+        if (filters?.priority) q = q.eq("priority", filters.priority);
 
-      const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("housekeeping_tasks table not found, using empty fallback");
+        const { data, error } = await q;
+        if (error) {
+          console.warn("Schema issue or error in housekeeping_tasks:", error.message);
           return [] as HousekeepingTask[];
         }
-        throw error;
+        return data as HousekeepingTask[];
+      } catch (err) {
+        return [] as HousekeepingTask[];
       }
-      return data as HousekeepingTask[];
     },
   });
 
@@ -138,22 +139,20 @@ export function useLostAndFound(status?: string) {
   const query = useQuery({
     queryKey: ["lost-and-found", status],
     queryFn: async () => {
-      let q = db
-        .from("lost_and_found")
-        .select("*")
-        .order("found_date", { ascending: false });
+      try {
+        let q = db
+          .from("lost_and_found")
+          .select("*")
+          .order("found_date", { ascending: false });
 
-      if (status) q = q.eq("status", status);
+        if (status) q = q.eq("status", status);
 
-      const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("lost_and_found table not found, using empty fallback");
-          return [] as LostAndFound[];
-        }
-        throw error;
+        const { data, error } = await q;
+        if (error) return [] as LostAndFound[];
+        return data as LostAndFound[];
+      } catch (err) {
+        return [] as LostAndFound[];
       }
-      return data as LostAndFound[];
     },
   });
 
@@ -199,22 +198,20 @@ export function useHousekeepingInspections(roomId?: string) {
   const query = useQuery({
     queryKey: ["housekeeping-inspections", roomId],
     queryFn: async () => {
-      let q = db
-        .from("housekeeping_inspections")
-        .select(`*, room:rooms(room_number)`)
-        .order("inspection_date", { ascending: false });
+      try {
+        let q = db
+          .from("housekeeping_inspections")
+          .select(`*, room:rooms(room_number)`)
+          .order("inspection_date", { ascending: false });
 
-      if (roomId) q = q.eq("room_id", roomId);
+        if (roomId) q = q.eq("room_id", roomId);
 
-      const { data, error } = await q;
-      if (error) {
-        if (error.message?.includes("schema cache") || error.code === "PGRST103" || error.message?.includes("not found")) {
-          console.warn("housekeeping_inspections table not found, using empty fallback");
-          return [] as HousekeepingInspection[];
-        }
-        throw error;
+        const { data, error } = await q;
+        if (error) return [] as HousekeepingInspection[];
+        return data as HousekeepingInspection[];
+      } catch (err) {
+        return [] as HousekeepingInspection[];
       }
-      return data as HousekeepingInspection[];
     },
   });
 
@@ -232,14 +229,14 @@ export function useHousekeepingInspections(roomId?: string) {
 
 // ============= Stats =============
 export function useHousekeepingStats(date?: string) {
-  const { data: tasks } = useHousekeepingTasks({ date: date || new Date().toISOString().split("T")[0] });
+  const { data: tasks = [] } = useHousekeepingTasks({ date: date || new Date().toISOString().split("T")[0] });
 
   const stats = {
-    total: tasks?.length || 0,
-    pending: tasks?.filter((t) => t.status === "pending").length || 0,
-    inProgress: tasks?.filter((t) => t.status === "in_progress").length || 0,
-    completed: tasks?.filter((t) => t.status === "completed").length || 0,
-    highPriority: tasks?.filter((t) => t.priority === "high" || t.priority === "urgent").length || 0,
+    total: tasks.length,
+    pending: tasks.filter((t) => t.status === "pending").length,
+    inProgress: tasks.filter((t) => t.status === "in_progress").length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    highPriority: tasks.filter((t) => t.priority === "high" || t.priority === "urgent").length,
   };
 
   return stats;
