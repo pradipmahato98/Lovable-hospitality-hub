@@ -84,19 +84,6 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
       } catch (err) {
         return [] as HousekeepingTask[];
       }
-      let q = db
-        .from("housekeeping_tasks")
-        .select(`*, room:rooms(room_number, room_type, floor)`)
-        .order("scheduled_date", { ascending: true })
-        .order("priority", { ascending: false });
-
-      if (filters?.date) q = q.eq("scheduled_date", filters.date);
-      if (filters?.status) q = q.eq("status", filters.status);
-      if (filters?.priority) q = q.eq("priority", filters.priority);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as HousekeepingTask[];
     },
   });
 
@@ -166,16 +153,6 @@ export function useLostAndFound(status?: string) {
       } catch (err) {
         return [] as LostAndFound[];
       }
-      let q = db
-        .from("lost_and_found")
-        .select("*")
-        .order("found_date", { ascending: false });
-
-      if (status) q = q.eq("status", status);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as LostAndFound[];
     },
   });
 
@@ -235,16 +212,6 @@ export function useHousekeepingInspections(roomId?: string) {
       } catch (err) {
         return [] as HousekeepingInspection[];
       }
-      let q = db
-        .from("housekeeping_inspections")
-        .select(`*, room:rooms(room_number)`)
-        .order("inspection_date", { ascending: false });
-
-      if (roomId) q = q.eq("room_id", roomId);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as HousekeepingInspection[];
     },
   });
 

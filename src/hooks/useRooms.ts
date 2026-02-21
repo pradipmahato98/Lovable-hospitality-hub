@@ -9,8 +9,6 @@ export interface Room {
   capacity: number;
   price_per_night: number;
   status: string;
-  is_active?: boolean;
-  image_url: string | null;
   amenities: string[] | null;
   description: string | null;
   created_at: string;
@@ -32,66 +30,6 @@ export const useRooms = () => {
       return data as Room[];
     },
   });
-};
-
-export const useRoomMutations = () => {
-  const queryClient = useQueryClient();
-
-  const addRoom = useMutation({
-    mutationFn: async (room: Partial<Room>) => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .insert([{ ...room, status: room.status || 'available' }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-    },
-  });
-
-  const updateRoom = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Room>) => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-    },
-  });
-
-  const deleteRoom = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("rooms").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-    },
-  });
-
-  const toggleRoomActive = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string, is_active: boolean }) => {
-      const { error } = await supabase
-        .from("rooms")
-        .update({ is_active, updated_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-    },
-  });
-
-  return { addRoom, updateRoom, deleteRoom, toggleRoomActive };
 };
 
 export const useUpdateRoomStatus = () => {

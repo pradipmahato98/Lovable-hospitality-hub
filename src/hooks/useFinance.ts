@@ -475,7 +475,7 @@ export function useTrialBalance(asOfDate?: string) {
       const { data, error } = await q;
 
       if (error) {
-        console.error("Error fetching trial balance:", error);
+        console.warn("Error fetching trial balance, returning empty:", error.message);
         return [];
       }
 

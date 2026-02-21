@@ -216,20 +216,30 @@ const defaultAPIKeys: APIKeysSettings = {
   keys: [],
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 // Generic settings fetch hook
 export function useSettings<T>(key: string, defaultValue: T) {
   return useQuery({
     queryKey: ["settings", key],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", key)
-        .maybeSingle();
+      try {
+        const { data, error } = await db
+          .from("settings")
+          .select("value")
+          .eq("key", key)
+          .maybeSingle();
 
-      if (error) throw error;
-      if (!data) return defaultValue;
-      return data.value as unknown as T;
+        if (error) {
+          console.warn(`Settings table issue for ${key}, using default:`, error.message);
+          return defaultValue;
+        }
+        if (!data) return defaultValue;
+        return data.value as unknown as T;
+      } catch (err) {
+        return defaultValue;
+      }
     },
   });
 }
@@ -240,7 +250,7 @@ export function useUpdateSettings<T>(key: string) {
 
   return useMutation({
     mutationFn: async (settings: T) => {
-      const { data: existing } = await supabase
+      const { data: existing } = await db
         .from("settings")
         .select("id")
         .eq("key", key)
@@ -249,13 +259,13 @@ export function useUpdateSettings<T>(key: string) {
       const jsonValue: Json = settings as unknown as Json;
 
       if (existing) {
-        const { error } = await supabase
+        const { error } = await db
           .from("settings")
           .update({ value: jsonValue })
           .eq("key", key);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await db
           .from("settings")
           .insert([{ key, value: jsonValue }]);
         if (error) throw error;
