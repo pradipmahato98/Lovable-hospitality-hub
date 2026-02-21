@@ -18,6 +18,7 @@ export const ThreeDLineChart: React.FC<ThreeDLineChartProps> = ({
   height = 200,
   width = 600,
 }) => {
+  const id = React.useId();
   if (data.length === 0) return null;
 
   const maxValue = Math.max(...data.map((d) => d.value));
@@ -46,7 +47,6 @@ export const ThreeDLineChart: React.FC<ThreeDLineChartProps> = ({
 
   // Connect the two lines to form a ribbon
   const ribbonPath = `${linePath} L ${points[points.length - 1].x + extrusionDepth} ${points[points.length - 1].y - extrusionDepth} ${extrudedPath.replace("M", "L")} L ${points[0].x} ${points[0].y} Z`;
-  const id = React.useId();
   const gradientId = `ribbonGradient-${id.replace(/:/g, "")}`;
   const glowId = `glow-${id.replace(/:/g, "")}`;
 
