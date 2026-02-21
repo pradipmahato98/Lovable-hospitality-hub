@@ -17,3 +17,13 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-03-21 - PII Leakage in System Logs
+**Vulnerability:** Raw customer objects (containing names, emails, and phone numbers) were being logged to the console during payment processing in `usePaymentGateways.ts`.
+**Learning:** Even well-intentioned debugging logs can become a source of data leakage if they include entire objects from API responses or user inputs.
+**Prevention:** Always sanitize log outputs by using boolean presence checks (e.g., `hasData: !!data`) or explicitly selecting non-sensitive fields instead of logging raw objects.
+
+## 2026-03-21 - Insecure Randomness for API Keys
+**Vulnerability:** API keys were generated using `Math.random()`, which is a non-cryptographic PRNG and predictable, making keys vulnerable to brute-force or prediction attacks.
+**Learning:** Developers often reach for `Math.random()` due to its simplicity, but it must never be used for security-sensitive tokens.
+**Prevention:** Centralize secure random generation in a utility that wraps `crypto.getRandomValues()` and uses rejection sampling to eliminate modulo bias.

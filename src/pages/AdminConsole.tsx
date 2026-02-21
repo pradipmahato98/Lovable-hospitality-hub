@@ -53,6 +53,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import { generateSecureAPIKey } from "@/utils/security";
 import {
   useUsersWithRoles,
   useAdminAuditLogs,
@@ -214,7 +215,7 @@ const AdminConsole = () => {
   const handleAddAPIKey = () => {
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: generateSecureAPIKey(),
       is_secret: true,
       description: "Auto-generated system key"
     };
