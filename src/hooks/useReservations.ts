@@ -8,11 +8,13 @@ export interface Reservation {
   check_out_date: string;
   status: string;
   total_amount: number;
-  guest?: {
+  room_id?: string;
+  guest_id?: string;
+  guest: {
     first_name: string;
     last_name: string;
   } | null;
-  room?: {
+  room: {
     room_number: string;
     room_type: string;
   } | null;
@@ -22,7 +24,7 @@ export const useReservations = () => {
   const query = useQuery({
     queryKey: ["reservations"],
     queryFn: async () => {
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from("reservations")
         .select(`
           id,
@@ -38,10 +40,9 @@ export const useReservations = () => {
         `)
         .order("check_in_date", { ascending: false });
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
       return data as unknown as Reservation[];
     },
-    staleTime: 30 * 1000,
   });
 
   const filterReservations = (queryStr: string) => {

@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { memo } from "react";
 
 const data = [
   { month: "Jan", revenue: 42000 },
@@ -17,7 +16,7 @@ const data = [
   { month: "Dec", revenue: 95000 },
 ];
 
-export const RevenueChart = memo(function RevenueChart() {
+export function RevenueChart() {
   return (
     <Card variant="elevated" className="animate-slide-up xl:col-span-2" style={{ animationDelay: "100ms" }}>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -70,4 +69,4 @@ export const RevenueChart = memo(function RevenueChart() {
       </CardContent>
     </Card>
   );
-});
+}
