@@ -579,17 +579,26 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          company: string | null
           country: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           first_name: string
+          gender: string | null
           id: string
           id_number: string | null
           id_type: string | null
           is_vip: boolean | null
+          job_title: string | null
           last_name: string
+          nationality: string | null
           notes: string | null
           phone: string | null
+          region: string | null
+          state_province: string | null
+          subscribed_property: string | null
+          title: string | null
           total_spending: number | null
           total_visits: number | null
           updated_at: string
@@ -597,17 +606,26 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          company?: string | null
           country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name: string
+          gender?: string | null
           id?: string
           id_number?: string | null
           id_type?: string | null
           is_vip?: boolean | null
+          job_title?: string | null
           last_name: string
+          nationality?: string | null
           notes?: string | null
           phone?: string | null
+          region?: string | null
+          state_province?: string | null
+          subscribed_property?: string | null
+          title?: string | null
           total_spending?: number | null
           total_visits?: number | null
           updated_at?: string
@@ -615,17 +633,26 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          company?: string | null
           country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name?: string
+          gender?: string | null
           id?: string
           id_number?: string | null
           id_type?: string | null
           is_vip?: boolean | null
+          job_title?: string | null
           last_name?: string
+          nationality?: string | null
           notes?: string | null
           phone?: string | null
+          region?: string | null
+          state_province?: string | null
+          subscribed_property?: string | null
+          title?: string | null
           total_spending?: number | null
           total_visits?: number | null
           updated_at?: string
@@ -1243,11 +1270,15 @@ export type Database = {
           created_at: string
           guest_id: string
           id: string
+          inactive_date: string | null
           is_active: boolean
           join_date: string
+          journey_start_date: string | null
           lifetime_points: number
           member_number: string
           points_balance: number
+          property_name: string | null
+          referred_by: string | null
           tier: string
           tier_expiry: string | null
           updated_at: string
@@ -1256,11 +1287,15 @@ export type Database = {
           created_at?: string
           guest_id: string
           id?: string
+          inactive_date?: string | null
           is_active?: boolean
           join_date?: string
+          journey_start_date?: string | null
           lifetime_points?: number
           member_number: string
           points_balance?: number
+          property_name?: string | null
+          referred_by?: string | null
           tier?: string
           tier_expiry?: string | null
           updated_at?: string
@@ -1269,11 +1304,15 @@ export type Database = {
           created_at?: string
           guest_id?: string
           id?: string
+          inactive_date?: string | null
           is_active?: boolean
           join_date?: string
+          journey_start_date?: string | null
           lifetime_points?: number
           member_number?: string
           points_balance?: number
+          property_name?: string | null
+          referred_by?: string | null
           tier?: string
           tier_expiry?: string | null
           updated_at?: string

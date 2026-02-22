@@ -36,6 +36,7 @@ import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Troph
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate } from "react-router-dom";
+import { GuestDetailsDialog } from "@/components/guests/GuestDetailsDialog";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -79,6 +80,7 @@ const Guests = () => {
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
 
   const [newFeedback, setNewFeedback] = useState({
@@ -94,7 +96,10 @@ const Guests = () => {
       key: "first_name",
       header: "Guest",
       render: (guest) => (
-        <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors"
+          onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}
+        >
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
               {guest.first_name[0]}{guest.last_name[0]}
@@ -119,7 +124,7 @@ const Guests = () => {
       sortable: false,
       render: (guest) => {
         const status = getGuestStatus(guest);
-        return <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>;
+        return <Badge variant="outline" className={statusColors[status]}>{status?.toUpperCase() || ""}</Badge>;
       },
     },
     {
@@ -209,7 +214,13 @@ const Guests = () => {
                   const status = getGuestStatus(guest);
                   const isMember = loyaltyMemberIds.has(guest.id);
                   return (
-                    <Card key={guest.id} variant="elevated" className="animate-slide-up hover:shadow-glow transition-all cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
+                    <Card
+                      key={guest.id}
+                      variant="elevated"
+                      className="animate-slide-up hover:shadow-glow transition-all cursor-pointer"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                      onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}
+                    >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
@@ -223,7 +234,7 @@ const Guests = () => {
                                 {guest.first_name} {guest.last_name}
                                 {guest.is_vip && <Star className="h-4 w-4 text-primary fill-primary" />}
                               </h3>
-                              <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>
+                              <Badge variant="outline" className={statusColors[status]}>{status?.toUpperCase() || ""}</Badge>
                             </div>
                           </div>
                           {isMember && <Trophy className="h-5 w-5 text-primary" />}
@@ -251,7 +262,7 @@ const Guests = () => {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button variant="outline" size="sm" className="flex-1 min-w-[100px]" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
                             <Receipt className="h-4 w-4 mr-1" />
                             Folio
@@ -418,11 +429,11 @@ const Guests = () => {
                           <TableCell className="font-medium">{m.guest ? `${m.guest.first_name} ${m.guest.last_name}` : "-"}</TableCell>
                           <TableCell className="font-mono">{m.member_number}</TableCell>
                           <TableCell>
-                            <Badge className={tierColors[m.tier]}>{m.tier.toUpperCase()}</Badge>
+                            <Badge className={tierColors[m.tier] || ""}>{m.tier?.toUpperCase() || ""}</Badge>
                           </TableCell>
-                          <TableCell className="font-semibold">{m.points_balance.toLocaleString()}</TableCell>
-                          <TableCell>{m.lifetime_points.toLocaleString()}</TableCell>
-                          <TableCell>{format(new Date(m.join_date), "MMM d, yyyy")}</TableCell>
+                          <TableCell className="font-semibold">{(m.points_balance || 0).toLocaleString()}</TableCell>
+                          <TableCell>{(m.lifetime_points || 0).toLocaleString()}</TableCell>
+                          <TableCell>{m.join_date ? format(new Date(m.join_date), "MMM d, yyyy") : "-"}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -432,6 +443,13 @@ const Guests = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Guest Details Dialog */}
+        <GuestDetailsDialog
+          guest={selectedGuest}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+        />
 
         {/* Feedback Dialog */}
         <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
