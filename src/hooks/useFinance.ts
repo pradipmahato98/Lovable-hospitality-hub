@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { generateSecureNumericString } from "@/utils/security";
 
 // ============= Types =============
 export interface Account {
@@ -252,11 +253,7 @@ export function useCreateJournalEntry() {
       lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
     }) => {
       // Generate entry number
-      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
-        Math.random() * 10000
-      )
-        .toString()
-        .padStart(4, "0")}`;
+      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
 
       // Insert journal entry
       const { data: journalEntry, error: entryError } = await db

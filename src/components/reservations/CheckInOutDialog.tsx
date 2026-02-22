@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureNumericString } from "@/utils/security";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
@@ -136,7 +137,7 @@ export function CheckInOutDialog({
     }
 
     // Generate reservation code
-    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const reservationCode = 'RES-' + generateSecureNumericString(6);
     
     // Create reservation with checked-in status
     const { error: resError } = await supabase
