@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Wifi, Tv, Coffee, Bath, Star, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tables } from "@/integrations/supabase/types";
+import { useReservations } from "@/hooks/useReservations";
+import { useGuests } from "@/hooks/useGuests";
+import { useLoyaltyMembers } from "@/hooks/useGuestManagement";
 
 export type Room = Tables<"rooms">;
 
@@ -26,16 +29,22 @@ interface RoomCardProps {
   index: number;
   isSelected: boolean;
   onClick: (room: Room) => void;
-  guest?: { first_name: string; last_name: string; is_vip?: boolean } | null;
-  loyaltyTier?: string | null;
 }
 
-export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClick, guest, loyaltyTier }: RoomCardProps) {
+export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClick }: RoomCardProps) {
+  const { data: reservations = [] } = useReservations();
+  const { data: guests = [] } = useGuests();
+  const { data: loyaltyMembers = [] } = useLoyaltyMembers();
+
+  const activeRes = room.status === "occupied" ? reservations.find(r => r.room_id === room.id && r.status === "checked-in") : null;
+  const guest = activeRes ? guests.find(g => g.id === activeRes.guest_id) : null;
+  const loyalty = guest ? loyaltyMembers.find(m => m.guest_id === guest.id) : null;
+
   return (
     <Card
       variant="elevated"
       className={cn(
-        "animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group",
+        "animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group h-full",
         isSelected && "ring-2 ring-primary"
       )}
       style={{ animationDelay: `${index * 50}ms` }}
@@ -60,9 +69,9 @@ export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClic
               <Star className="h-3 w-3 mr-1 fill-white" /> VIP
             </Badge>
           )}
-          {loyaltyTier && (
+          {loyalty && (
             <Badge variant="outline" className="border-gold text-gold text-[10px] h-5 px-1 bg-background/50">
-              <ShieldCheck className="h-3 w-3 mr-1" /> {loyaltyTier}
+              <ShieldCheck className="h-3 w-3 mr-1" /> {loyalty.tier}
             </Badge>
           )}
         </div>
@@ -70,7 +79,7 @@ export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClic
 
       <CardContent className="p-4">
         <div className="mb-3">
-          <h3 className="font-semibold text-foreground">{room.room_type}</h3>
+          <h3 className="font-semibold text-foreground line-clamp-1">{room.room_type}</h3>
           <p className="text-sm text-muted-foreground">Floor {room.floor}</p>
         </div>
 

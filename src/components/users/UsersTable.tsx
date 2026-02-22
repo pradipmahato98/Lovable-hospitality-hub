@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -15,6 +16,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Search,
+  Users,
+  Eye,
+  ShieldAlert,
+  ShieldCheck,
+  Calendar,
+  Mail,
+  Fingerprint,
+  MoreVertical
+} from "lucide-react";
+import { UserWithRole, AppRole, roleConfig, useBlockUser } from "@/hooks/useUsersWithRoles";
+import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
+import { TableSkeleton } from "@/components/skeletons";
 import {
   Dialog,
   DialogContent,
@@ -22,15 +39,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Search, Users, Eye, Ban, ShieldCheck } from "lucide-react";
-import { UserWithRole, AppRole, roleConfig, useToggleUserBlock } from "@/hooks/useUsersWithRoles";
-import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
-import { TableSkeleton } from "@/components/skeletons";
 
 interface UsersTableProps {
   users: UserWithRole[] | undefined;
@@ -50,7 +67,7 @@ export const UsersTable = ({
   isUpdating,
 }: UsersTableProps) => {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const toggleBlock = useToggleUserBlock();
+  const blockUser = useBlockUser();
 
   const filteredUsers = users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
@@ -69,10 +86,10 @@ export const UsersTable = ({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                All Users
+                User Control Center
               </CardTitle>
               <CardDescription>
-                View and manage user roles across the system
+                Comprehensive management for user accounts and access
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
@@ -93,34 +110,33 @@ export const UsersTable = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <TableSkeleton columns={4} rows={5} />
+          <TableSkeleton columns={5} rows={5} />
         ) : (
           <div className="rounded-lg border border-border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Current Role</TableHead>
                   <TableHead>Change Role</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No users found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers?.map((userItem) => (
-                    <TableRow key={userItem.id}>
+                    <TableRow key={userItem.id} className={userItem.is_blocked ? "bg-destructive/5" : ""}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-primary">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${userItem.is_blocked ? 'bg-destructive/20' : 'bg-primary/20'}`}>
+                            <span className={`text-sm font-semibold ${userItem.is_blocked ? 'text-destructive' : 'text-primary'}`}>
                               {(userItem.first_name?.[0] || "") + (userItem.last_name?.[0] || "") || "U"}
                             </span>
                           </div>
@@ -130,20 +146,25 @@ export const UsersTable = ({
                               {!userItem.first_name && !userItem.last_name && "Unnamed User"}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              ID: {userItem.user_id.slice(0, 8)}...
+                              {userItem.email}
                             </p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {userItem.email || "No email"}
+                      <TableCell>
+                        {userItem.is_blocked ? (
+                          <Badge variant="destructive" className="gap-1">
+                            <ShieldAlert className="h-3 w-3" /> Blocked
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-success/20 text-success border-success/30 gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Active
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <RoleBadge role={userItem.role} />
-                          {userItem.hasMultipleRoles && (
-                            <MultiRoleBadge count={userItem.allRoles.length} />
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -154,7 +175,7 @@ export const UsersTable = ({
                           }
                           disabled={isUpdating}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-32 h-8">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -165,21 +186,31 @@ export const UsersTable = ({
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={!userItem.is_blocked}
-                            onCheckedChange={(checked) => toggleBlock.mutate({ userId: userItem.user_id, isBlocked: !checked })}
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            {userItem.is_blocked ? "Blocked" : "Active"}
-                          </span>
-                        </div>
-                      </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedUser(userItem)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setSelectedUser(userItem)}>
+                              <Eye className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className={userItem.is_blocked ? "text-success" : "text-destructive"}
+                              onClick={() => blockUser.mutate({ userId: userItem.user_id, is_blocked: !userItem.is_blocked })}
+                            >
+                              {userItem.is_blocked ? (
+                                <><ShieldCheck className="mr-2 h-4 w-4" /> Unblock User</>
+                              ) : (
+                                <><ShieldAlert className="mr-2 h-4 w-4" /> Block User</>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -191,67 +222,63 @@ export const UsersTable = ({
       </CardContent>
 
       <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
-              Detailed information about the user account.
-            </DialogDescription>
+            <DialogDescription>Full profile information for {selectedUser?.first_name} {selectedUser?.last_name}</DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-secondary/30">
-                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary">
-                  {(selectedUser.first_name?.[0] || "") + (selectedUser.last_name?.[0] || "") || "U"}
+            <div className="space-y-6 py-4">
+              <div className="flex items-center gap-6 p-4 rounded-xl bg-secondary/30">
+                <div className="h-20 w-20 rounded-full bg-primary/20 flex items-center justify-center text-3xl font-bold text-primary">
+                  {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">
-                    {selectedUser.first_name} {selectedUser.last_name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                  <h3 className="text-xl font-bold">{selectedUser.first_name} {selectedUser.last_name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <RoleBadge role={selectedUser.role} />
+                    {selectedUser.is_blocked && <Badge variant="destructive">Blocked</Badge>}
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">User ID</p>
-                  <p className="text-sm font-mono">{selectedUser.user_id}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Joined Date</p>
-                  <p className="text-sm">
-                    {format(new Date(selectedUser.created_at), "PPP")}
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> Email Address
                   </p>
+                  <p className="text-sm font-medium">{selectedUser.email}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Current Role</p>
-                  <Badge variant="outline" className="capitalize">
-                    {selectedUser.role}
-                  </Badge>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" /> Member Since
+                  </p>
+                  <p className="text-sm font-medium">{format(new Date(selectedUser.created_at), "PPP")}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Account Status</p>
-                  <Badge variant={selectedUser.is_blocked ? "destructive" : "success"}>
-                    {selectedUser.is_blocked ? "Blocked" : "Active"}
-                  </Badge>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                    <Fingerprint className="h-3 w-3" /> Internal ID
+                  </p>
+                  <p className="text-xs font-mono">{selectedUser.user_id}</p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t flex justify-end gap-2">
-                <Button
-                  variant={selectedUser.is_blocked ? "outline" : "destructive"}
-                  className="gap-2"
-                  onClick={() => {
-                    toggleBlock.mutate({ userId: selectedUser.user_id, isBlocked: !selectedUser.is_blocked });
-                    setSelectedUser(null);
-                  }}
-                >
-                  {selectedUser.is_blocked ? <ShieldCheck className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                  {selectedUser.is_blocked ? "Unblock User" : "Block User"}
-                </Button>
-                <Button variant="secondary" onClick={() => setSelectedUser(null)}>
-                  Close
-                </Button>
+              <div className="p-4 rounded-lg border border-border space-y-3">
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-warning" /> Security Context
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Account Status:</span>
+                    <span className={selectedUser.is_blocked ? "text-destructive font-bold" : "text-success font-bold"}>
+                      {selectedUser.is_blocked ? "Deactivated" : "Verified"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Multiple Roles:</span>
+                    <span>{selectedUser.hasMultipleRoles ? "Yes" : "No"}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

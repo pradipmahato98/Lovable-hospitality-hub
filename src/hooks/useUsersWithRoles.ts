@@ -58,7 +58,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
     queryFn: async () => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, user_id, email, first_name, last_name, created_at");
+        .select("id, user_id, email, first_name, last_name, is_blocked, created_at");
 
       if (profilesError) throw profilesError;
 
@@ -247,21 +247,21 @@ export const useUpdateOTAChannel = () => {
   });
 };
 
-export const useToggleUserBlock = () => {
+export const useBlockUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, isBlocked }: { userId: string; isBlocked: boolean }) => {
+    mutationFn: async ({ userId, is_blocked }: { userId: string; is_blocked: boolean }) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ is_blocked: isBlocked, updated_at: new Date().toISOString() })
+        .update({ is_blocked, updated_at: new Date().toISOString() })
         .eq("user_id", userId);
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
-      toast.success("User block status updated");
+      toast.success(variables.is_blocked ? "User blocked" : "User unblocked");
     },
     onError: (error) => {
       toast.error("Failed to update block status: " + error.message);

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCallback } from "react";
 
 export interface Reservation {
   id: string;
@@ -8,6 +9,8 @@ export interface Reservation {
   check_out_date: string;
   status: string;
   total_amount: number;
+  guest_id: string;
+  room_id: string;
   guest?: {
     first_name: string;
     last_name: string;
@@ -44,7 +47,7 @@ export const useReservations = () => {
     staleTime: 30 * 1000,
   });
 
-  const filterReservations = (queryStr: string) => {
+  const filterReservations = useCallback((queryStr: string) => {
     const reservations = query.data || [];
     if (!queryStr) return reservations;
     const searchLower = queryStr.toLowerCase();
@@ -53,7 +56,7 @@ export const useReservations = () => {
       `${res.guest?.first_name} ${res.guest?.last_name}`.toLowerCase().includes(searchLower) ||
       res.room?.room_number.toLowerCase().includes(searchLower)
     );
-  };
+  }, [query.data]);
 
   return {
     reservations: query.data || [],
@@ -61,7 +64,7 @@ export const useReservations = () => {
     error: query.error,
     refetch: query.refetch,
     filterReservations,
-    data: query.data || [], // Compatibility with FrontDesk.tsx
+    data: query.data || [], // Compatibility with components using .data
   };
 };
 

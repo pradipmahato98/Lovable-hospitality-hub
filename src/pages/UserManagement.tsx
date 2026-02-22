@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, History, ShieldAlert, Loader2, Layout } from "lucide-react";
+import { Users, History, ShieldAlert, Loader2 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { RoomManagement } from "@/components/admin/RoomManagement";
-import { Badge } from "@/components/ui/badge";
 import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
 import { UsersTable, AuditLogTable } from "@/components/users";
@@ -51,25 +49,16 @@ const UserManagement = () => {
 
         <Tabs defaultValue="users" className="space-y-6">
           <div className="overflow-x-auto pb-1 scrollbar-hide">
-            <div className="flex items-center justify-between mb-2">
-              <TabsList className="flex-nowrap justify-start bg-muted/50 p-1 h-auto inline-flex">
-                <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
-                  <Users className="h-4 w-4" />
-                  Users
-                </TabsTrigger>
-                <TabsTrigger value="rooms" className="gap-2 whitespace-nowrap">
-                  <Layout className="h-4 w-4" />
-                  Rooms
-                </TabsTrigger>
-                <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
-                  <History className="h-4 w-4" />
-                  Audit Log
-                </TabsTrigger>
-              </TabsList>
-              <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
-                User Control
-              </Badge>
-            </div>
+            <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
+              <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
+                <Users className="h-4 w-4" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
+                <History className="h-4 w-4" />
+                Audit Log
+              </TabsTrigger>
+            </TabsList>
           </div>
 
           <TabsContent value="users">
@@ -81,10 +70,6 @@ const UserManagement = () => {
               onRoleChange={handleRoleChange}
               isUpdating={updateRole.isPending}
             />
-          </TabsContent>
-
-          <TabsContent value="rooms">
-            <RoomManagement />
           </TabsContent>
 
           <TabsContent value="audit">

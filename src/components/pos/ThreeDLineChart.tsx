@@ -18,8 +18,10 @@ export const ThreeDLineChart: React.FC<ThreeDLineChartProps> = ({
   height = 200,
   width = 600,
 }) => {
+  // Call hooks at the top level
   const id = React.useId();
-  if (data.length === 0) return null;
+
+  if (!data || data.length === 0) return null;
 
   const maxValue = Math.max(...data.map((d) => d.value)) || 1;
   const padding = 40;

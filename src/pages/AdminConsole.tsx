@@ -25,7 +25,9 @@ import {
   Plus,
   Trash2,
   Layout,
+  Bed,
   BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -54,7 +56,6 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
-import { useDashboardStats } from "@/hooks/useDashboardStats";
 import {
   useUsersWithRoles,
   useAdminAuditLogs,
@@ -71,11 +72,13 @@ import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ThreeDLineChart } from "@/components/pos/ThreeDLineChart";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from "recharts";
+import { ThreeDLineChart } from "@/components/pos/ThreeDLineChart";
+import { RoomManagement } from "@/components/admin/RoomManagement";
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -99,14 +102,14 @@ const AdminConsole = () => {
   const [isProvisioning, setIsProvisioning] = useState(false);
 
   // Data hooks
-  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users" || activeTab === "overview");
-  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit" || activeTab === "overview");
-  const { data: stats, isLoading: loadingStats } = useDashboardStats();
+  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users");
+  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit");
   const { data: permissions, isLoading: loadingPerms } = useRolePermissions(activeTab === "permissions");
   const { data: otaChannels, isLoading: loadingChannels } = useOTAChannels(activeTab === "integrations");
   const { data: otaLogs, isLoading: loadingOTALogs } = useOTASyncLogs(activeTab === "integrations");
   const { data: apiKeysSettings, isLoading: loadingAPIKeys } = useAPIKeysSettings();
   const updateAPIKeys = useUpdateAPIKeysSettings();
+  const { data: stats, isLoading: loadingStats } = useDashboardStats();
 
   // State for RBAC
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -278,6 +281,10 @@ const AdminConsole = () => {
               <BarChart3 className="h-4 w-4" />
               Analytics
             </TabsTrigger>
+            <TabsTrigger value="rooms" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <Bed className="h-4 w-4" />
+              Room Management
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Account Management
@@ -326,7 +333,7 @@ const AdminConsole = () => {
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Layout className="h-4 w-4 text-success" />
+                  <Bed className="h-4 w-4 text-success" />
                   Total Rooms
                 </CardTitle>
               </CardHeader>
@@ -338,7 +345,7 @@ const AdminConsole = () => {
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-blue-500" />
+                  <FileText className="h-4 w-4 text-primary" />
                   Total Bookings
                 </CardTitle>
               </CardHeader>
@@ -350,7 +357,7 @@ const AdminConsole = () => {
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-amber-500" />
+                  <TrendingUp className="h-4 w-4 text-gold" />
                   Lifetime Revenue
                 </CardTitle>
               </CardHeader>
@@ -365,7 +372,7 @@ const AdminConsole = () => {
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-purple-500" />
+                  <TrendingUp className="h-4 w-4 text-primary" />
                   Monthly Revenue
                 </CardTitle>
               </CardHeader>
@@ -418,9 +425,9 @@ const AdminConsole = () => {
                 <Button
                   variant="gold"
                   className="justify-start gap-2"
-                  onClick={() => navigate("/reports")}
+                  onClick={() => navigate("/dashboard")}
                 >
-                  <Activity className="h-4 w-4" />
+                  <Layout className="h-4 w-4" />
                   Dashboard Overview
                 </Button>
                 <Button
@@ -477,22 +484,24 @@ const AdminConsole = () => {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            <Card variant="elevated" className="lg:col-span-2">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+            <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <TrendingUp className="h-5 w-5 text-primary" />
                   Detailed Revenue Trend (3D Ribbon)
                 </CardTitle>
                 <CardDescription>Last 6 months revenue trajectory</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center pt-6">
-                <ThreeDLineChart
-                  data={stats?.revenueTrends.map(t => ({ label: t.name, value: t.revenue })) || []}
-                  color="#d4af37"
-                  height={250}
-                  width={700}
-                />
+              <CardContent>
+                {loadingStats ? (
+                  <div className="h-[200px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : (
+                  <ThreeDLineChart
+                    data={stats?.revenueTrends?.map(t => ({ label: t.name, value: t.revenue })) || []}
+                    height={250}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -501,45 +510,49 @@ const AdminConsole = () => {
                 <CardTitle>Room Distribution</CardTitle>
                 <CardDescription>Inventory by category</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats?.roomTypeData || []}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {(stats?.roomTypeData || []).map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={['#d4af37', '#3b82f6', '#10b981', '#f59e0b'][index % 4]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="h-[250px]">
+                {loadingStats ? (
+                   <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats?.roomTypeData || []}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {stats?.roomTypeData?.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#d4af37', '#1a1a1a', '#4a4a4a', '#8e8e8e'][index % 4]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle>User Growth Analysis</CardTitle>
                 <CardDescription>New registrations per month</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats?.userGrowthData || []}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip />
-                    <Bar dataKey="users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats?.userGrowthData || []}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <Tooltip />
+                      <Bar dataKey="users" fill="#d4af37" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
               </CardContent>
             </Card>
 
@@ -550,13 +563,13 @@ const AdminConsole = () => {
               </CardHeader>
               <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={stats?.revenueTrends || []}>
+                  <LineChart data={stats?.bookingStatusData || []}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="value" name="revenue" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -621,47 +634,11 @@ const AdminConsole = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card variant="elevated">
-              <CardHeader>
-                <CardTitle>User Growth</CardTitle>
-                <CardDescription>New user registrations over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats?.userGrowthData || []}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} />
-                      <Tooltip />
-                      <Bar dataKey="users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card variant="elevated">
-              <CardHeader>
-                <CardTitle>Room Inventory by Type</CardTitle>
-                <CardDescription>Distribution of available room categories</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats?.roomTypeData || []} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.1} />
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="rooms">
+          <RoomManagement />
         </TabsContent>
 
         <TabsContent value="users">

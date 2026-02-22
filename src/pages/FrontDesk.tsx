@@ -77,6 +77,77 @@ const invoiceStatusColors = {
   overdue: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
+const columns: Column<Room>[] = [
+  {
+    key: "room_number",
+    header: "Room",
+    render: (room) => (
+      <span className="font-mono font-bold text-primary">{room.room_number}</span>
+    ),
+  },
+  {
+    key: "room_type",
+    header: "Type",
+    render: (room) => <span>{room.room_type}</span>,
+  },
+  {
+    key: "floor",
+    header: "Floor",
+    render: (room) => <span>Floor {room.floor}</span>,
+  },
+  {
+    key: "capacity",
+    header: "Capacity",
+    render: (room) => (
+      <div className="flex items-center gap-1">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span>{room.capacity}</span>
+      </div>
+    ),
+  },
+  {
+    key: "price_per_night",
+    header: "Price/Night",
+    render: (room) => (
+      <span className="font-semibold text-primary">${room.price_per_night}</span>
+    ),
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (room) => (
+      <Badge
+        variant="outline"
+          className={roomStatusStyles[room.status as keyof typeof roomStatusStyles] || roomStatusStyles.available}
+      >
+        {room.status}
+      </Badge>
+    ),
+  },
+  {
+    key: "amenities",
+    header: "Amenities",
+    sortable: false,
+    searchable: false,
+    render: (room) => (
+      <div className="flex gap-1">
+        {(room.amenities || []).slice(0, 4).map((amenity) => {
+          const Icon = amenityIcons[amenity.toLowerCase()];
+          return Icon ? (
+            <div
+              key={amenity}
+              className="h-6 w-6 rounded bg-secondary flex items-center justify-center"
+              title={amenity}
+            >
+              <Icon className="h-3 w-3 text-muted-foreground" />
+            </div>
+          ) : null;
+        })}
+      </div>
+    ),
+  },
+];
+
 const FrontDesk = () => {
   const { data: rooms = [], isLoading } = useRooms();
   const { data: reservations = [] } = useReservations();
@@ -467,8 +538,6 @@ const FrontDesk = () => {
                           index={index}
                           isSelected={selectedRoom?.id === room.id}
                           onClick={handleRoomClick}
-                          guest={guest}
-                          loyaltyTier={loyalty?.tier}
                         />
                       );
                     })}
