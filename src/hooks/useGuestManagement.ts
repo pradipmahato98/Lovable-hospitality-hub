@@ -39,6 +39,10 @@ export interface LoyaltyMember {
   join_date: string;
   tier_expiry: string | null;
   is_active: boolean;
+  inactive_date: string | null;
+  referred_by: string | null;
+  property_name: string | null;
+  journey_start_date: string | null;
   created_at: string;
   guest?: { first_name: string; last_name: string; email: string | null };
 }

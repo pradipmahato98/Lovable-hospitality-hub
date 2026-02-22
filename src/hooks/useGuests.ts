@@ -10,6 +10,20 @@ export interface Guest {
   total_visits: number | null;
   total_spending: number | null;
   is_vip: boolean | null;
+  title: string | null;
+  gender: string | null;
+  company: string | null;
+  nationality: string | null;
+  job_title: string | null;
+  date_of_birth: string | null;
+  region: string | null;
+  state_province: string | null;
+  subscribed_property: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  id_type: string | null;
+  id_number: string | null;
   created_at: string;
   updated_at: string;
 }
