@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, History, ShieldAlert, Loader2 } from "lucide-react";
+import { Users, History, ShieldAlert, Loader2, Bed } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
 import { UsersTable, AuditLogTable } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RoomManagement } from "@/components/admin/RoomManagement";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 const UserManagement = () => {
@@ -54,6 +55,10 @@ const UserManagement = () => {
                 <Users className="h-4 w-4" />
                 Users
               </TabsTrigger>
+              <TabsTrigger value="rooms" className="gap-2 whitespace-nowrap">
+                <Bed className="h-4 w-4" />
+                Room Management
+              </TabsTrigger>
               <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
                 <History className="h-4 w-4" />
                 Audit Log
@@ -70,6 +75,10 @@ const UserManagement = () => {
               onRoleChange={handleRoleChange}
               isUpdating={updateRole.isPending}
             />
+          </TabsContent>
+
+          <TabsContent value="rooms">
+            <RoomManagement />
           </TabsContent>
 
           <TabsContent value="audit">

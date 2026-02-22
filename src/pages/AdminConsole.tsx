@@ -578,6 +578,68 @@ const AdminConsole = () => {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">System Analytics</h2>
+              <p className="text-sm text-muted-foreground">High-level performance metrics and trends</p>
+            </div>
+            <Button
+              variant="gold"
+              className="gap-2"
+              onClick={() => navigate("/dashboard")}
+            >
+              <Layout className="h-4 w-4" />
+              Dashboard Overview
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card variant="elevated">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Total Users</p>
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">{stats?.totalUsers || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Total Rooms</p>
+                  <Bed className="h-4 w-4 text-success" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">{stats?.totalRooms || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Total Bookings</p>
+                  <FileText className="h-4 w-4 text-primary" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">{stats?.totalBookings || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Revenue Tracking</p>
+                  <TrendingUp className="h-4 w-4 text-gold" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">{stats?.lifetimeRevenue || "$0"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card variant="elevated">
               <CardHeader>

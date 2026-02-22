@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
+import { ReservationDetailsDialog } from "@/components/reservations/ReservationDetailsDialog";
 import { useReservations, useUpdateReservation } from "@/hooks/useReservations";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { TableSkeleton } from "@/components/skeletons";
@@ -38,6 +39,10 @@ const Reservations = () => {
     mode: "check-in" | "check-out";
     reservationId: string;
   }>({ open: false, mode: "check-in", reservationId: "" });
+  const [detailsDialog, setDetailsDialog] = useState<{ open: boolean; reservation: any }>({
+    open: false,
+    reservation: null
+  });
 
   const { isLoading, refetch, filterReservations } = useReservations();
   const updateReservation = useUpdateReservation();
@@ -81,7 +86,10 @@ const Reservations = () => {
           <TabsContent value="list">
             <Card variant="elevated" className="animate-fade-in overflow-hidden">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <CardTitle>All Reservations</CardTitle>
+                <div>
+                  <CardTitle>All Reservations</CardTitle>
+                  <Badge variant="outline" className="mt-2 text-[10px] font-bold uppercase tracking-wider">Status Management</Badge>
+                </div>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <div className="relative flex-1 sm:flex-initial">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -167,6 +175,9 @@ const Reservations = () => {
                                         <LogOut className="h-4 w-4 mr-2" />Check Out
                                       </DropdownMenuItem>
                                     )}
+                                    <DropdownMenuItem onClick={() => setDetailsDialog({ open: true, reservation })}>
+                                      <Search className="h-4 w-4 mr-2" />View Details
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => navigate(`/front-desk?reservationId=${reservation.id}`)}>
                                       <Receipt className="h-4 w-4 mr-2" />View Folio
                                     </DropdownMenuItem>
@@ -218,6 +229,11 @@ const Reservations = () => {
           open={walkInDialogOpen}
           onOpenChange={setWalkInDialogOpen}
           mode="walk-in"
+        />
+        <ReservationDetailsDialog
+          open={detailsDialog.open}
+          onOpenChange={(open) => setDetailsDialog({ ...detailsDialog, open })}
+          reservation={detailsDialog.reservation}
         />
       </ErrorBoundary>
     </MainLayout>

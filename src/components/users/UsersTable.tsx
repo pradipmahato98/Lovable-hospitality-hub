@@ -91,6 +91,7 @@ export const UsersTable = ({
               <CardDescription>
                 Comprehensive management for user accounts and access
               </CardDescription>
+              <Badge variant="outline" className="mt-2 text-[10px] font-bold uppercase tracking-wider">User Control</Badge>
             </div>
             <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
               <div className="w-1.5 h-1.5 bg-success rounded-full" />
