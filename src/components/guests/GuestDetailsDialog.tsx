@@ -23,12 +23,27 @@ import {
   CreditCard,
   BarChart3,
   Search,
+  Edit2,
+  Check,
+  X,
+  FileText,
+  Plus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Guest, useGuests } from "@/hooks/useGuests";
-import { useGuestLoyalty, useGuestCommunications, useGuestPreferences, useMergeGuests } from "@/hooks/useGuestManagement";
+import { Guest, useGuests, useUpdateGuest } from "@/hooks/useGuests";
+import {
+  useGuestLoyalty,
+  useGuestCommunications,
+  useGuestPreferences,
+  useMergeGuests,
+  useGuestAuditLogs,
+  useGuestDocuments,
+  useAddGuestDocument,
+} from "@/hooks/useGuestManagement";
 import { useGuestReservations } from "@/hooks/useReservations";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import {
   Table,
@@ -48,14 +63,24 @@ interface GuestDetailsDialogProps {
 export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("main-info");
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAddingDoc, setIsAddingDoc] = useState(false);
   const [mergeSearch, setMergeSearch] = useState("");
+  const [editData, setEditData] = useState<Partial<Guest>>({});
+  const [newDoc, setNewDoc] = useState({ type: "", number: "", image_url: "" });
+
   const { toast } = useToast();
   const { data: allGuests = [] } = useGuests();
   const { data: loyaltyMember = null } = useGuestLoyalty(guest?.id);
   const { data: communications = [] } = useGuestCommunications(guest?.id);
   const { data: preferences = [] } = useGuestPreferences(guest?.id);
   const { data: guestReservations = [] } = useGuestReservations(guest?.id);
+  const { data: auditLogs = [] } = useGuestAuditLogs(guest?.id);
+  const { data: documents = [] } = useGuestDocuments(guest?.id);
+
+  const updateGuest = useUpdateGuest();
   const mergeMutation = useMergeGuests();
+  const addDocument = useAddGuestDocument();
 
   const stayHistory = useMemo(() =>
     guestReservations.filter(r => r.status === "checked_out"),
@@ -109,6 +134,45 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
        g.email?.toLowerCase().includes(mergeSearch.toLowerCase()))
     );
   }, [allGuests, mergeSearch, guest]);
+
+  const handleEdit = () => {
+    setEditData({ ...guest });
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!guest) return;
+    updateGuest.mutate({ id: guest.id, updates: editData }, {
+      onSuccess: () => {
+        toast({ title: "Profile Updated", description: "Guest information has been successfully updated." });
+        setIsEditing(false);
+      },
+      onError: (err) => {
+        toast({ title: "Update Failed", description: err instanceof Error ? err.message : "An error occurred", variant: "destructive" });
+      }
+    });
+  };
+
+  const handleAddDoc = () => {
+    if (!guest) return;
+    addDocument.mutate({
+      guestId: guest.id,
+      doc: {
+        document_type: newDoc.type,
+        document_number: newDoc.number,
+        document_image_url: newDoc.image_url
+      }
+    }, {
+      onSuccess: () => {
+        toast({ title: "ID Card Added", description: "New identity document has been recorded." });
+        setIsAddingDoc(false);
+        setNewDoc({ type: "", number: "", image_url: "" });
+      },
+      onError: (err) => {
+        toast({ title: "Failed to add ID", description: err instanceof Error ? err.message : "An error occurred", variant: "destructive" });
+      }
+    });
+  };
 
   return (
     <>
@@ -223,23 +287,85 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
                   <TabsContent value="main-info" className="mt-0 space-y-6 md:space-y-8">
                     {/* Main Information */}
                     <section>
-                      <h4 className="text-xl font-medium mb-4 pb-2 border-b">Main Information</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                        <InfoItem label="Title" value={guest.title} />
-                        <InfoItem label="Date Of Birth" value={guest.date_of_birth ? format(new Date(guest.date_of_birth), "dd/MM/yyyy") : null} />
-                        <InfoItem label="First Name" value={guest.first_name} />
-                        <InfoItem label="Last Name" value={guest.last_name} />
-                        <InfoItem label="Gender" value={guest.gender} />
-                        <InfoItem label="Nationality" value={guest.nationality} />
-                        <InfoItem label="Company" value={guest.company} />
-                        <InfoItem label="Job Title" value={guest.job_title} />
-                        <InfoItem label="Document Type" value={guest.id_type} />
-                        <InfoItem label="Document ID" value={guest.id_number} />
-                        <InfoItem label="Region" value={guest.region} />
-                        <InfoItem label="Country" value={guest.country} />
-                        <InfoItem label="State/Province" value={guest.state_province} />
-                        <InfoItem label="Subscribed Property" value={guest.subscribed_property} />
+                      <div className="flex items-center justify-between mb-4 pb-2 border-b">
+                        <h4 className="text-xl font-medium">Main Information</h4>
+                        {!isEditing ? (
+                          <Button variant="outline" size="sm" onClick={handleEdit} className="gap-2">
+                            <Edit2 className="h-4 w-4" /> Edit Profile
+                          </Button>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="gap-2">
+                              <X className="h-4 w-4" /> Cancel
+                            </Button>
+                            <Button variant="success" size="sm" onClick={handleSaveEdit} className="gap-2" disabled={updateGuest.isPending}>
+                              <Check className="h-4 w-4" /> {updateGuest.isPending ? "Saving..." : "Save Changes"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
+
+                      {isEditing ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label>Title</Label>
+                            <Input value={editData.title || ""} onChange={(e) => setEditData({ ...editData, title: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Date of Birth</Label>
+                            <Input type="date" value={editData.date_of_birth || ""} onChange={(e) => setEditData({ ...editData, date_of_birth: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>First Name</Label>
+                            <Input value={editData.first_name || ""} onChange={(e) => setEditData({ ...editData, first_name: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Last Name</Label>
+                            <Input value={editData.last_name || ""} onChange={(e) => setEditData({ ...editData, last_name: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Nationality</Label>
+                            <Input value={editData.nationality || ""} onChange={(e) => setEditData({ ...editData, nationality: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Company</Label>
+                            <Input value={editData.company || ""} onChange={(e) => setEditData({ ...editData, company: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Job Title</Label>
+                            <Input value={editData.job_title || ""} onChange={(e) => setEditData({ ...editData, job_title: e.target.value })} />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label>Address</Label>
+                            <Textarea value={editData.address || ""} onChange={(e) => setEditData({ ...editData, address: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>City</Label>
+                            <Input value={editData.city || ""} onChange={(e) => setEditData({ ...editData, city: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Country</Label>
+                            <Input value={editData.country || ""} onChange={(e) => setEditData({ ...editData, country: e.target.value })} />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                          <InfoItem label="Title" value={guest.title} />
+                          <InfoItem label="Date Of Birth" value={guest.date_of_birth ? format(new Date(guest.date_of_birth), "dd/MM/yyyy") : null} />
+                          <InfoItem label="First Name" value={guest.first_name} />
+                          <InfoItem label="Last Name" value={guest.last_name} />
+                          <InfoItem label="Gender" value={guest.gender} />
+                          <InfoItem label="Nationality" value={guest.nationality} />
+                          <InfoItem label="Company" value={guest.company} />
+                          <InfoItem label="Job Title" value={guest.job_title} />
+                          <InfoItem label="Document Type" value={guest.id_type} />
+                          <InfoItem label="Document ID" value={guest.id_number} />
+                          <InfoItem label="Region" value={guest.region} />
+                          <InfoItem label="Country" value={guest.country} />
+                          <InfoItem label="State/Province" value={guest.state_province} />
+                          <InfoItem label="Subscribed Property" value={guest.subscribed_property} />
+                        </div>
+                      )}
                     </section>
 
                     {/* Membership Information */}
@@ -383,49 +509,137 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
                     </Card>
                   </TabsContent>
 
-                  <TabsContent value="preference" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {preferences.length === 0 ? (
-                        <p className="col-span-full text-center py-8 text-muted-foreground">No preferences recorded</p>
-                      ) : (
-                        preferences.map((p) => (
-                          <Card key={p.id}>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm font-medium text-muted-foreground uppercase">{p.category}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="font-semibold">{p.preference_key}</p>
-                              <p className="text-sm text-muted-foreground">{p.preference_value || "No details"}</p>
-                            </CardContent>
-                          </Card>
-                        ))
+                  <TabsContent value="preference" className="mt-0 space-y-8">
+                    <section>
+                      <h4 className="text-xl font-medium mb-4 pb-2 border-b">Guest Preferences</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {preferences.length === 0 ? (
+                          <p className="col-span-full text-center py-8 text-muted-foreground">No preferences recorded</p>
+                        ) : (
+                          preferences.map((p) => (
+                            <Card key={p.id}>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground uppercase">{p.category}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="font-semibold">{p.preference_key}</p>
+                                <p className="text-sm text-muted-foreground">{p.preference_value || "No details"}</p>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </section>
+
+                    <section>
+                      <div className="flex items-center justify-between mb-4 pb-2 border-b">
+                        <h4 className="text-xl font-medium">ID Card History</h4>
+                        <Button variant="outline" size="sm" onClick={() => setIsAddingDoc(true)} className="gap-2">
+                          <Plus className="h-4 w-4" /> Add New ID
+                        </Button>
+                      </div>
+
+                      {isAddingDoc && (
+                        <Card className="mb-6 border-primary/30 bg-primary/5">
+                          <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div className="space-y-2">
+                                <Label>ID Type</Label>
+                                <Input placeholder="Passport, DL, etc." value={newDoc.type} onChange={(e) => setNewDoc({ ...newDoc, type: e.target.value })} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>ID Number</Label>
+                                <Input placeholder="Number" value={newDoc.number} onChange={(e) => setNewDoc({ ...newDoc, number: e.target.value })} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Image URL</Label>
+                                <Input placeholder="URL" value={newDoc.image_url} onChange={(e) => setNewDoc({ ...newDoc, image_url: e.target.value })} />
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setIsAddingDoc(false)}>Cancel</Button>
+                              <Button variant="primary" size="sm" onClick={handleAddDoc} disabled={!newDoc.type || !newDoc.number || addDocument.isPending}>
+                                {addDocument.isPending ? "Adding..." : "Add ID Card"}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
                       )}
-                    </div>
+
+                      <div className="space-y-3">
+                        {documents.length === 0 ? (
+                          <p className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">No document history found</p>
+                        ) : (
+                          documents.map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-muted/30 transition-colors">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-primary/10 rounded-full text-primary">
+                                  <FileText className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold">{doc.document_type}: {doc.document_number}</p>
+                                    {doc.is_latest && <Badge variant="success" className="text-[10px] h-4">LATEST</Badge>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">Added on {format(new Date(doc.created_at), "MMM d, yyyy HH:mm")}</p>
+                                </div>
+                              </div>
+                              {doc.document_image_url && (
+                                <Button variant="link" size="sm" onClick={() => window.open(doc.document_image_url || "", "_blank")}>View Image</Button>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </section>
                   </TabsContent>
 
                   <TabsContent value="change-history" className="mt-0">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Profile Change History</CardTitle>
+                        <CardTitle>Timeline History</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex gap-4 p-4 border rounded-lg bg-muted/20">
-                            <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
-                            <div>
-                              <p className="font-medium">Profile Created</p>
-                              <p className="text-sm text-muted-foreground">System • {format(new Date(guest.created_at), "MMM d, yyyy HH:mm")}</p>
+                        <div className="space-y-6">
+                          {auditLogs.length === 0 ? (
+                            <div className="text-center py-12">
+                              <History className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                              <p className="text-muted-foreground">No detailed change history recorded yet.</p>
                             </div>
-                          </div>
-                          {guest.updated_at !== guest.created_at && (
-                            <div className="flex gap-4 p-4 border rounded-lg bg-muted/20">
-                              <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
-                              <div>
-                                <p className="font-medium">Profile Updated</p>
-                                <p className="text-sm text-muted-foreground">System • {format(new Date(guest.updated_at), "MMM d, yyyy HH:mm")}</p>
+                          ) : (
+                            auditLogs.map((log) => (
+                              <div key={log.id} className="relative pl-6 border-l-2 border-muted pb-6 last:pb-0">
+                                <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-background border-2 border-primary" />
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="font-semibold text-sm capitalize">{log.action.replace("_", " ")}</p>
+                                  <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), "MMM d, yyyy HH:mm")}</p>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">Performed by: <span className="text-foreground font-medium">{log.staff_name || "System"}</span></p>
+                                {log.details && (
+                                  <div className="p-3 bg-muted/50 rounded-md text-xs space-y-1">
+                                    {Object.entries(log.details).map(([key, val]: [string, any]) => (
+                                      <p key={key}>
+                                        <span className="font-medium capitalize">{key.replace("_", " ")}:</span>{" "}
+                                        <span className="text-muted-foreground line-through decoration-destructive/50">{String(val.old || "None")}</span>{" "}
+                                        <ChevronRight className="h-3 w-3 inline mx-1" />{" "}
+                                        <span className="text-success font-medium">{String(val.new || "None")}</span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            </div>
+                            ))
                           )}
+
+                          {/* Initial Creation Log (Legacy) */}
+                          <div className="relative pl-6 border-l-2 border-muted pb-0">
+                            <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-background border-2 border-muted-foreground/30" />
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="font-semibold text-sm">Profile Created</p>
+                              <p className="text-xs text-muted-foreground">{format(new Date(guest.created_at), "MMM d, yyyy HH:mm")}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Initial registration in system.</p>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

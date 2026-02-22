@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Guest {
@@ -41,6 +41,60 @@ export const useGuests = () => {
 
       if (error) throw error;
       return data as Guest[];
+    },
+  });
+};
+
+export const useUpdateGuest = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, updates, staffName }: { id: string; updates: Partial<Guest>; staffName?: string }) => {
+      // 1. Get old values for auditing
+      const { data: oldGuest } = await supabase
+        .from("guests")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      // 2. Perform update
+      const { data, error } = await supabase
+        .from("guests")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 3. Log audit if update was successful
+      if (oldGuest) {
+        const changes: Record<string, { old: any; new: any }> = {};
+        Object.keys(updates).forEach((key) => {
+          const k = key as keyof Guest;
+          if (oldGuest[k] !== updates[k]) {
+            changes[key] = { old: oldGuest[k], new: updates[k] };
+          }
+        });
+
+        if (Object.keys(changes).length > 0) {
+          const { data: userData } = await supabase.auth.getUser();
+          await supabase.from("guest_audit_logs").insert({
+            guest_id: id,
+            staff_id: userData.user?.id,
+            staff_name: staffName || userData.user?.email,
+            action: "update_profile",
+            details: changes,
+          });
+        }
+      }
+
+      return data as Guest;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guest", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["guest-audit-logs", data.id] });
     },
   });
 };
