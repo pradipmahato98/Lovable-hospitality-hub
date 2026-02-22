@@ -286,6 +286,29 @@ const FrontDesk = () => {
     });
   }, [rooms, filters]);
 
+  // Optimize lookups with Maps for RoomCard
+  const reservationsMap = useMemo(() => {
+    const map = new Map();
+    reservations.forEach(r => {
+      if (r.status === "checked_in" || r.status === "checked-in") {
+        map.set(r.room_id, r);
+      }
+    });
+    return map;
+  }, [reservations]);
+
+  const guestsMap = useMemo(() => {
+    const map = new Map();
+    guests.forEach(g => map.set(g.id, g));
+    return map;
+  }, [guests]);
+
+  const loyaltyMap = useMemo(() => {
+    const map = new Map();
+    loyaltyMembers.forEach(m => map.set(m.guest_id, m));
+    return map;
+  }, [loyaltyMembers]);
+
   const columns: Column<Room>[] = [
     {
       key: "room_number",
@@ -527,9 +550,9 @@ const FrontDesk = () => {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {filteredRooms.map((room, index) => {
-                      const activeRes = reservations.find(r => r.room_id === room.id && r.status === "checked_in");
-                      const guest = guests.find(g => g.id === activeRes?.guest_id);
-                      const loyalty = loyaltyMembers.find(m => m.guest_id === guest?.id);
+                      const activeRes = reservationsMap.get(room.id);
+                      const guest = activeRes ? guestsMap.get(activeRes.guest_id) : null;
+                      const loyalty = guest ? loyaltyMap.get(guest.id) : null;
 
                       return (
                         <RoomCard
@@ -538,6 +561,8 @@ const FrontDesk = () => {
                           index={index}
                           isSelected={selectedRoom?.id === room.id}
                           onClick={handleRoomClick}
+                          guest={guest}
+                          loyalty={loyalty}
                         />
                       );
                     })}

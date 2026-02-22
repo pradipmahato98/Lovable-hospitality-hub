@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt } from "lucide-react";
+import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt, CheckCircle, XCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
@@ -183,10 +183,18 @@ const Reservations = () => {
                                     </DropdownMenuItem>
                                     {reservation.status === "pending" && (
                                       <DropdownMenuItem
+                                        className="text-success"
+                                        onClick={() => updateReservation.mutate({ id: reservation.id, status: "confirmed" })}
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-2" />Confirm Booking
+                                      </DropdownMenuItem>
+                                    )}
+                                    {reservation.status === "pending" && (
+                                      <DropdownMenuItem
                                         className="text-destructive"
                                         onClick={() => updateReservation.mutate({ id: reservation.id, status: "rejected" })}
                                       >
-                                        <Filter className="h-4 w-4 mr-2" />Reject Booking
+                                        <XCircle className="h-4 w-4 mr-2" />Reject Booking
                                       </DropdownMenuItem>
                                     )}
                                     {(reservation.status === "confirmed" || reservation.status === "pending") && (
@@ -194,7 +202,7 @@ const Reservations = () => {
                                         className="text-destructive"
                                         onClick={() => updateReservation.mutate({ id: reservation.id, status: "cancelled" })}
                                       >
-                                        <Filter className="h-4 w-4 mr-2" />Cancel Booking
+                                        <XCircle className="h-4 w-4 mr-2" />Cancel Booking
                                       </DropdownMenuItem>
                                     )}
                                   </DropdownMenuContent>

@@ -37,6 +37,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureAPIKey } from "@/utils/security";
 import { useUpdateSettings, useSettings, useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
 import {
   Dialog,
@@ -225,9 +226,9 @@ const AdminConsole = () => {
   const handleAddAPIKey = () => {
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: generateSecureAPIKey(32),
       is_secret: true,
-      description: "Auto-generated system key"
+      description: "Auto-generated secure system key"
     };
     const currentKeys = apiKeysSettings?.keys || [];
     updateAPIKeys.mutate({ keys: [...currentKeys, newKey] });
@@ -425,7 +426,7 @@ const AdminConsole = () => {
                 <Button
                   variant="gold"
                   className="justify-start gap-2"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate("/")}
                 >
                   <Layout className="h-4 w-4" />
                   Dashboard Overview
@@ -586,7 +587,7 @@ const AdminConsole = () => {
             <Button
               variant="gold"
               className="gap-2"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/")}
             >
               <Layout className="h-4 w-4" />
               Dashboard Overview

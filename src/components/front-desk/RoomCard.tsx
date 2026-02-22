@@ -4,9 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Wifi, Tv, Coffee, Bath, Star, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tables } from "@/integrations/supabase/types";
-import { useReservations } from "@/hooks/useReservations";
-import { useGuests } from "@/hooks/useGuests";
-import { useLoyaltyMembers } from "@/hooks/useGuestManagement";
 
 export type Room = Tables<"rooms">;
 
@@ -29,17 +26,18 @@ interface RoomCardProps {
   index: number;
   isSelected: boolean;
   onClick: (room: Room) => void;
+  guest?: any;
+  loyalty?: any;
 }
 
-export const RoomCard = memo(function RoomCard({ room, index, isSelected, onClick }: RoomCardProps) {
-  const { data: reservations = [] } = useReservations();
-  const { data: guests = [] } = useGuests();
-  const { data: loyaltyMembers = [] } = useLoyaltyMembers();
-
-  const activeRes = room.status === "occupied" ? reservations.find(r => r.room_id === room.id && r.status === "checked-in") : null;
-  const guest = activeRes ? guests.find(g => g.id === activeRes.guest_id) : null;
-  const loyalty = guest ? loyaltyMembers.find(m => m.guest_id === guest.id) : null;
-
+export const RoomCard = memo(function RoomCard({
+  room,
+  index,
+  isSelected,
+  onClick,
+  guest,
+  loyalty
+}: RoomCardProps) {
   return (
     <Card
       variant="elevated"

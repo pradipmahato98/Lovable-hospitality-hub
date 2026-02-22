@@ -23,10 +23,7 @@ export const useDashboardStats = () => {
         { data: allReservations, error: allResError },
         { count: pendingBookings, error: pendingError },
         { count: securityAlerts, error: secError },
-        { count: totalUsers, error: usersError },
-        { count: totalBookings, error: bookingsError },
-        { data: monthlyRevData, error: monthlyRevError },
-        { data: lifetimeRevData, error: lifetimeRevError },
+        { data: aggregates, error: aggError },
         { data: userTrends, error: userTrendsError }
       ] = await Promise.all([
         supabase.from("rooms").select("status, room_type"),
@@ -37,10 +34,7 @@ export const useDashboardStats = () => {
         supabase.from("audit_log").select("*", { count: "exact", head: true })
           .or("action.ilike.%fail%,action.ilike.%unauthorized%")
           .gte("created_at", today),
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("reservations").select("*", { count: "exact", head: true }),
-        supabase.from("reservations").select("total_amount").gte("created_at", startOfMonthStr),
-        supabase.from("reservations").select("total_amount"),
+        supabase.rpc("get_dashboard_stats"),
         supabase.from("profiles").select("created_at").gte("created_at", sixMonthsAgoStr)
       ]);
 
@@ -50,18 +44,23 @@ export const useDashboardStats = () => {
       if (allResError) throw allResError;
       if (pendingError) throw pendingError;
       if (secError) throw secError;
-      if (usersError) throw usersError;
-      if (bookingsError) throw bookingsError;
-      if (monthlyRevError) throw monthlyRevError;
-      if (lifetimeRevError) throw lifetimeRevError;
+      if (aggError) throw aggError;
       if (userTrendsError) throw userTrendsError;
 
       const totalRooms = rooms?.length || 0;
       const occupiedRooms = rooms?.filter(r => r.status === 'occupied').length || 0;
       const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
       const todayRevenue = reservationsToday?.reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
-      const monthlyRevenue = monthlyRevData?.reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
-      const lifetimeRevenue = lifetimeRevData?.reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
+
+      const monthlyRevenue = allReservations?.filter(res => {
+        const resDate = new Date(res.created_at);
+        return resDate >= startOfMonth;
+      }).reduce((sum, res) => sum + Number(res.total_amount), 0) || 0;
+
+      // Use aggregates from RPC for lifetime and totals
+      const lifetimeRevenue = (aggregates as any)?.total_revenue || 0;
+      const totalUsers = (aggregates as any)?.total_users || 0;
+      const totalBookings = (aggregates as any)?.total_bookings || 0;
 
       // Process Revenue Trends (Last 6 months)
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
