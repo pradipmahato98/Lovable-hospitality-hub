@@ -2,40 +2,27 @@ import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  Mail,
-  Phone,
   Star,
-  ChevronLeft,
   ChevronRight,
   Send,
   GitMerge,
   ArrowLeft,
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  CreditCard,
   History,
-  MessageSquare,
+  CreditCard,
   BarChart3,
-  Settings,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Guest } from "@/hooks/useGuests";
-import { useLoyaltyMembers, useGuestCommunications, useGuestPreferences } from "@/hooks/useGuestManagement";
-import { useReservations } from "@/hooks/useReservations";
+import { useGuestLoyalty, useGuestCommunications, useGuestPreferences } from "@/hooks/useGuestManagement";
+import { useGuestReservations } from "@/hooks/useReservations";
 import { format } from "date-fns";
 import {
   Table,
@@ -54,20 +41,11 @@ interface GuestDetailsDialogProps {
 
 export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("main-info");
-  const { data: loyaltyMembers = [] } = useLoyaltyMembers();
-  const { data: communications = [] } = useGuestCommunications(guest?.id || "");
-  const { data: preferences = [] } = useGuestPreferences(guest?.id || "");
-  const { data: reservations = [] } = useReservations();
-
-  const loyaltyMember = useMemo(() =>
-    loyaltyMembers.find(m => m.guest_id === guest?.id),
-    [loyaltyMembers, guest]
-  );
-
-  const guestReservations = useMemo(() =>
-    reservations.filter(r => r.guest_id === guest?.id),
-    [reservations, guest]
-  );
+  const { toast } = useToast();
+  const { data: loyaltyMember = null } = useGuestLoyalty(guest?.id);
+  const { data: communications = [] } = useGuestCommunications(guest?.id);
+  const { data: preferences = [] } = useGuestPreferences(guest?.id);
+  const { data: guestReservations = [] } = useGuestReservations(guest?.id);
 
   const stayHistory = useMemo(() =>
     guestReservations.filter(r => r.status === "checked_out"),
@@ -81,116 +59,138 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
 
   if (!guest) return null;
 
+  const handleSendEmail = () => {
+    toast({
+      title: "Email Client Opened",
+      description: `Opening email composer for ${guest.first_name} ${guest.last_name}.`,
+    });
+    window.location.href = `mailto:${guest.email}`;
+  };
+
+  const handleMerge = () => {
+    toast({
+      title: "Merge Profile",
+      description: "Profile merge functionality will be available in the next update.",
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh] p-0 overflow-hidden flex flex-col bg-background">
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-muted/30">
-          <div className="flex items-center gap-4">
-            <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+      <DialogContent className="max-w-7xl w-[95vw] md:w-[90vw] h-[95vh] md:h-[90vh] p-0 overflow-hidden flex flex-col bg-background">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-6 py-4 border-b bg-muted/30 gap-4">
+          <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+            <h2 className="text-xs md:text-sm font-semibold tracking-wider text-muted-foreground uppercase truncate">
               Membership Account
             </h2>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="success" size="sm" className="gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            <Button variant="success" size="sm" className="gap-2 shrink-0" onClick={handleSendEmail}>
               <Send className="h-4 w-4" />
               SEND EMAIL
             </Button>
-            <Button variant="warning" size="sm" className="gap-2">
+            <Button variant="warning" size="sm" className="gap-2 shrink-0" onClick={handleMerge}>
               <GitMerge className="h-4 w-4" />
               MERGE
-            </Button>
-            <Button variant="secondary" size="sm" className="gap-2" onClick={() => onOpenChange(false)}>
-              <ArrowLeft className="h-4 w-4" />
-              BACK
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Sidebar */}
-          <div className="w-80 border-r bg-muted/10 p-6 flex flex-col items-center">
-            <Avatar className="h-48 w-48 rounded-sm mb-6 border-4 border-background shadow-lg">
-              <AvatarFallback className="text-4xl bg-gradient-gold text-primary-foreground rounded-none">
+          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r bg-muted/10 p-4 md:p-6 flex flex-col items-center overflow-y-auto max-h-[35vh] md:max-h-full shrink-0">
+            <div className="w-full flex justify-start mb-2 md:mb-6">
+              <Button variant="ghost" size="sm" className="gap-2" onClick={() => onOpenChange(false)}>
+                <ArrowLeft className="h-4 w-4" />
+                BACK
+              </Button>
+            </div>
+
+            <Avatar className="h-24 w-24 md:h-48 md:w-48 rounded-sm mb-3 md:mb-6 border-4 border-background shadow-lg">
+              <AvatarFallback className="text-2xl md:text-4xl bg-gradient-gold text-primary-foreground rounded-none">
                 {guest.first_name[0]}{guest.last_name[0]}
               </AvatarFallback>
             </Avatar>
 
-            <div className="w-full space-y-6">
+            <div className="w-full space-y-4 md:space-y-6">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-center flex items-center justify-center gap-2">
+                <h3 className="text-lg md:text-xl font-bold text-center flex items-center justify-center gap-2">
                   {guest.first_name} {guest.last_name}
                   {guest.is_vip && <Star className="h-5 w-5 text-primary fill-primary" />}
                 </h3>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
+                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
                   <div className="text-sm">
-                    <p className="text-muted-foreground">Guest Name</p>
+                    <p className="text-muted-foreground text-xs">Guest Name</p>
                     <p className="font-medium">{guest.first_name} {guest.last_name}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
+                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
                   <div className="text-sm">
-                    <p className="text-muted-foreground">Membership Number</p>
+                    <p className="text-muted-foreground text-xs">Membership Number</p>
                     <p className="font-medium font-mono">{loyaltyMember?.member_number || "None"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
+                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
                   <div className="text-sm">
-                    <p className="text-muted-foreground">Email</p>
+                    <p className="text-muted-foreground text-xs">Email</p>
                     <p className="font-medium break-all">{guest.email || "None"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
+                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
                   <div className="text-sm">
-                    <p className="text-muted-foreground">Phone</p>
+                    <p className="text-muted-foreground text-xs">Phone</p>
                     <p className="font-medium">{guest.phone || "None"}</p>
                   </div>
                 </div>
               </div>
 
-              <Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-6 text-lg">
-                M4B
-              </Button>
+              <div className="pt-2">
+                 <Button variant="outline" className="w-full gap-2" onClick={() => onOpenChange(false)}>
+                    <ArrowLeft className="h-4 w-4" />
+                    BACK
+                 </Button>
+              </div>
             </div>
           </div>
 
           {/* Right Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="p-4 bg-muted/30 border-b">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-transparent h-auto p-0 flex flex-wrap gap-1">
-                  {[
-                    "Main Info",
-                    "Statistics",
-                    "Communication",
-                    "Stay History",
-                    "Reservation",
-                    "Preference",
-                    "Change History",
-                  ].map((tab) => (
-                    <TabsTrigger
-                      key={tab}
-                      value={tab.toLowerCase().replace(" ", "-")}
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 border rounded-none text-sm transition-colors"
-                    >
-                      {tab}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-2 md:p-4 bg-muted/30 border-b">
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <TabsList className="bg-transparent h-auto p-0 flex gap-1 w-max">
+                    {[
+                      "Main Info",
+                      "Statistics",
+                      "Communication",
+                      "Stay History",
+                      "Reservation",
+                      "Preference",
+                      "Change History",
+                    ].map((tab) => (
+                      <TabsTrigger
+                        key={tab}
+                        value={tab.toLowerCase().replace(" ", "-")}
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 md:px-4 py-1.5 md:py-2 border rounded-none text-xs md:text-sm transition-colors shrink-0"
+                      >
+                        {tab}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </div>
 
-            <ScrollArea className="flex-1">
-              <div className="p-6">
-                <Tabs value={activeTab} className="w-full">
-                  <TabsContent value="main-info" className="mt-0 space-y-8">
+              <ScrollArea className="flex-1">
+                <div className="p-4 md:p-6">
+                  <TabsContent value="main-info" className="mt-0 space-y-6 md:space-y-8">
                     {/* Main Information */}
                     <section>
                       <h4 className="text-xl font-medium mb-4 pb-2 border-b">Main Information</h4>
@@ -400,9 +400,9 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
                       </CardContent>
                     </Card>
                   </TabsContent>
-                </Tabs>
-              </div>
-            </ScrollArea>
+                </div>
+              </ScrollArea>
+            </Tabs>
           </div>
         </div>
       </DialogContent>

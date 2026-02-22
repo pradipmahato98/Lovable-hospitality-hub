@@ -66,6 +66,35 @@ export const useReservations = () => {
   };
 };
 
+export const useGuestReservations = (guestId: string | undefined) => {
+  return useQuery({
+    queryKey: ["guest-reservations", guestId],
+    queryFn: async () => {
+      if (!guestId) return [];
+      const { data, error } = await supabase
+        .from("reservations")
+        .select(`
+          id,
+          reservation_code,
+          check_in_date,
+          check_out_date,
+          status,
+          total_amount,
+          guest_id,
+          room_id,
+          guest:guests(first_name, last_name),
+          room:rooms(room_number, room_type)
+        `)
+        .eq("guest_id", guestId)
+        .order("check_in_date", { ascending: false });
+
+      if (error) throw error;
+      return data as unknown as Reservation[];
+    },
+    enabled: !!guestId,
+  });
+};
+
 export const useUpdateReservation = () => {
   const queryClient = useQueryClient();
 
