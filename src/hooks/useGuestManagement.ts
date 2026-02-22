@@ -74,12 +74,13 @@ export interface GuestCommunication {
 const db = supabase as any;
 
 // ============= Guest Preferences =============
-export function useGuestPreferences(guestId: string) {
+export function useGuestPreferences(guestId: string | undefined) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["guest-preferences", guestId],
     queryFn: async () => {
+      if (!guestId) return [];
       const { data, error } = await db
         .from("guest_preferences")
         .select("*")
@@ -257,6 +258,23 @@ export function useLoyaltyMembers(tier?: string) {
   return { ...query, enrollMember, addPoints, redeemPoints };
 }
 
+export function useGuestLoyalty(guestId: string | undefined) {
+  return useQuery({
+    queryKey: ["guest-loyalty", guestId],
+    queryFn: async () => {
+      if (!guestId) return null;
+      const { data, error } = await db
+        .from("loyalty_members")
+        .select(`*, guest:guests(first_name, last_name, email)`)
+        .eq("guest_id", guestId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as LoyaltyMember | null;
+    },
+    enabled: !!guestId,
+  });
+}
+
 export function useLoyaltyTransactions(memberId: string) {
   return useQuery({
     queryKey: ["loyalty-transactions", memberId],
@@ -274,12 +292,13 @@ export function useLoyaltyTransactions(memberId: string) {
 }
 
 // ============= Guest Communications =============
-export function useGuestCommunications(guestId: string) {
+export function useGuestCommunications(guestId: string | undefined) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["guest-communications", guestId],
     queryFn: async () => {
+      if (!guestId) return [];
       const { data, error } = await db
         .from("guest_communications")
         .select("*")

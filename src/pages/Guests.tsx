@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -165,8 +166,9 @@ const Guests = () => {
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
         <Tabs defaultValue="guests" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="guests" className="gap-2">
+          <ScrollArea className="w-full whitespace-nowrap">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="guests" className="gap-2">
               <Users className="h-4 w-4" />
               Guests
             </TabsTrigger>
@@ -175,11 +177,13 @@ const Guests = () => {
               Feedback
               {stats.pendingFeedback > 0 && <Badge variant="destructive" className="ml-1">{stats.pendingFeedback}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="loyalty" className="gap-2">
-              <Award className="h-4 w-4" />
-              Loyalty Program
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="loyalty" className="gap-2">
+                <Award className="h-4 w-4" />
+                Loyalty Program
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
           <TabsContent value="guests" className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -191,7 +195,12 @@ const Guests = () => {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-              <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
+              <Button
+                variant="gold"
+                size="sm"
+                className="gap-2 w-full sm:w-auto"
+                onClick={() => toast.info("Add Guest functionality will be available soon.")}
+              >
                 <Plus className="h-4 w-4" />
                 Add Guest
               </Button>
