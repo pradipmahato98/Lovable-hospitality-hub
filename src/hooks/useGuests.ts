@@ -24,6 +24,8 @@ export interface Guest {
   country: string | null;
   id_type: string | null;
   id_number: string | null;
+  image_url: string | null;
+  id_image_url: string | null;
   created_at: string;
   updated_at: string;
 }

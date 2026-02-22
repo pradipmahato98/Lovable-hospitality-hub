@@ -2,10 +2,14 @@ import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -18,11 +22,13 @@ import {
   History,
   CreditCard,
   BarChart3,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Guest } from "@/hooks/useGuests";
-import { useGuestLoyalty, useGuestCommunications, useGuestPreferences } from "@/hooks/useGuestManagement";
+import { Guest, useGuests } from "@/hooks/useGuests";
+import { useGuestLoyalty, useGuestCommunications, useGuestPreferences, useMergeGuests } from "@/hooks/useGuestManagement";
 import { useGuestReservations } from "@/hooks/useReservations";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import {
   Table,
@@ -41,11 +47,15 @@ interface GuestDetailsDialogProps {
 
 export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("main-info");
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [mergeSearch, setMergeSearch] = useState("");
   const { toast } = useToast();
+  const { data: allGuests = [] } = useGuests();
   const { data: loyaltyMember = null } = useGuestLoyalty(guest?.id);
   const { data: communications = [] } = useGuestCommunications(guest?.id);
   const { data: preferences = [] } = useGuestPreferences(guest?.id);
   const { data: guestReservations = [] } = useGuestReservations(guest?.id);
+  const mergeMutation = useMergeGuests();
 
   const stayHistory = useMemo(() =>
     guestReservations.filter(r => r.status === "checked_out"),
@@ -67,18 +77,50 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
     window.location.href = `mailto:${guest.email}`;
   };
 
-  const handleMerge = () => {
-    toast({
-      title: "Merge Profile",
-      description: "Profile merge functionality will be available in the next update.",
+  const handleMerge = (targetGuest: Guest) => {
+    if (!guest) return;
+
+    mergeMutation.mutate({
+      sourceGuestId: targetGuest.id, // We merge target into current
+      targetGuestId: guest.id,
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Profiles Merged",
+          description: `Successfully merged ${targetGuest.first_name} ${targetGuest.last_name} into ${guest.first_name} ${guest.last_name}.`,
+        });
+        setIsMergeDialogOpen(false);
+      },
+      onError: (error) => {
+        toast({
+          title: "Merge Failed",
+          description: error instanceof Error ? error.message : "An unknown error occurred",
+          variant: "destructive",
+        });
+      }
     });
   };
 
+  const filteredMergeGuests = useMemo(() => {
+    if (!mergeSearch) return [];
+    return allGuests.filter(g =>
+      g.id !== guest?.id &&
+      (`${g.first_name} ${g.last_name}`.toLowerCase().includes(mergeSearch.toLowerCase()) ||
+       g.email?.toLowerCase().includes(mergeSearch.toLowerCase()))
+    );
+  }, [allGuests, mergeSearch, guest]);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[95vw] md:w-[90vw] h-[95vh] md:h-[90vh] p-0 overflow-hidden flex flex-col bg-background">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-6 py-4 border-b bg-muted/30 gap-4">
           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+            <Button variant="ghost" size="sm" className="gap-2 px-2" onClick={() => onOpenChange(false)}>
+              <ArrowLeft className="h-4 w-4" />
+              BACK
+            </Button>
+            <div className="h-4 w-px bg-border mx-1 hidden md:block" />
             <h2 className="text-xs md:text-sm font-semibold tracking-wider text-muted-foreground uppercase truncate">
               Membership Account
             </h2>
@@ -89,7 +131,7 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
               <Send className="h-4 w-4" />
               SEND EMAIL
             </Button>
-            <Button variant="warning" size="sm" className="gap-2 shrink-0" onClick={handleMerge}>
+            <Button variant="warning" size="sm" className="gap-2 shrink-0" onClick={() => setIsMergeDialogOpen(true)}>
               <GitMerge className="h-4 w-4" />
               MERGE
             </Button>
@@ -99,14 +141,8 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Sidebar */}
           <div className="w-full md:w-80 border-b md:border-b-0 md:border-r bg-muted/10 p-4 md:p-6 flex flex-col items-center overflow-y-auto max-h-[35vh] md:max-h-full shrink-0">
-            <div className="w-full flex justify-start mb-2 md:mb-6">
-              <Button variant="ghost" size="sm" className="gap-2" onClick={() => onOpenChange(false)}>
-                <ArrowLeft className="h-4 w-4" />
-                BACK
-              </Button>
-            </div>
-
             <Avatar className="h-24 w-24 md:h-48 md:w-48 rounded-sm mb-3 md:mb-6 border-4 border-background shadow-lg">
+              <AvatarImage src={guest.image_url || guest.id_image_url || ""} alt={`${guest.first_name} ${guest.last_name}`} className="object-cover" />
               <AvatarFallback className="text-2xl md:text-4xl bg-gradient-gold text-primary-foreground rounded-none">
                 {guest.first_name[0]}{guest.last_name[0]}
               </AvatarFallback>
@@ -151,12 +187,6 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
                 </div>
               </div>
 
-              <div className="pt-2">
-                 <Button variant="outline" className="w-full gap-2" onClick={() => onOpenChange(false)}>
-                    <ArrowLeft className="h-4 w-4" />
-                    BACK
-                 </Button>
-              </div>
             </div>
           </div>
 
@@ -407,6 +437,69 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Merge Dialog */}
+    <Dialog open={isMergeDialogOpen} onOpenChange={setIsMergeDialogOpen}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Merge Profiles</DialogTitle>
+          <DialogDescription>
+            Search for another guest profile to merge into <strong>{guest.first_name} {guest.last_name}</strong>.
+            All data from the source profile will be moved and the source profile will be deleted.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              className="pl-8"
+              value={mergeSearch}
+              onChange={(e) => setMergeSearch(e.target.value)}
+            />
+          </div>
+
+          <ScrollArea className="h-[300px] border rounded-md p-2">
+            {filteredMergeGuests.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                {mergeSearch ? "No guests found matching your search." : "Start typing to search for guests..."}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {filteredMergeGuests.map((g) => (
+                  <div key={g.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={g.image_url || g.id_image_url || ""} />
+                        <AvatarFallback>{g.first_name[0]}{g.last_name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{g.first_name} {g.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{g.email || g.phone || "No contact info"}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleMerge(g)}
+                      disabled={mergeMutation.isPending}
+                    >
+                      {mergeMutation.isPending && mergeMutation.variables?.sourceGuestId === g.id ? "Merging..." : "Merge"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setIsMergeDialogOpen(false)}>Cancel</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
