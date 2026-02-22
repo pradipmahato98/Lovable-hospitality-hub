@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,6 +102,7 @@ const Guests = () => {
           onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}
         >
           <Avatar className="h-8 w-8">
+            <AvatarImage src={guest.image_url || guest.id_image_url || ""} className="object-cover" />
             <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
               {guest.first_name[0]}{guest.last_name[0]}
             </AvatarFallback>
@@ -234,6 +235,7 @@ const Guests = () => {
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-12 w-12">
+                              <AvatarImage src={guest.image_url || guest.id_image_url || ""} className="object-cover" />
                               <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">
                                 {guest.first_name[0]}{guest.last_name[0]}
                               </AvatarFallback>

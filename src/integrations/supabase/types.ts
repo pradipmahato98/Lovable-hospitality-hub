@@ -587,8 +587,10 @@ export type Database = {
           first_name: string
           gender: string | null
           id: string
+          id_image_url: string | null
           id_number: string | null
           id_type: string | null
+          image_url: string | null
           is_vip: boolean | null
           job_title: string | null
           last_name: string
@@ -614,8 +616,10 @@ export type Database = {
           first_name: string
           gender?: string | null
           id?: string
+          id_image_url?: string | null
           id_number?: string | null
           id_type?: string | null
+          image_url?: string | null
           is_vip?: boolean | null
           job_title?: string | null
           last_name: string
@@ -641,8 +645,10 @@ export type Database = {
           first_name?: string
           gender?: string | null
           id?: string
+          id_image_url?: string | null
           id_number?: string | null
           id_type?: string | null
+          image_url?: string | null
           is_vip?: boolean | null
           job_title?: string | null
           last_name?: string

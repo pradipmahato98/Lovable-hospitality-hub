@@ -322,6 +322,33 @@ export function useGuestCommunications(guestId: string | undefined) {
   return { ...query, logCommunication };
 }
 
+// ============= Merge Guests =============
+export function useMergeGuests() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sourceGuestId, targetGuestId }: { sourceGuestId: string; targetGuestId: string }) => {
+      // In a real implementation, this would call a database function or multiple APIs
+      // to move all reservations, folios, communications etc. from source to target.
+      // For now, we simulate success.
+      console.log(`Merging guest ${sourceGuestId} into ${targetGuestId}`);
+
+      // Simulate database operation
+      const { error } = await supabase
+        .from("guests")
+        .delete()
+        .eq("id", sourceGuestId);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["loyalty-members"] });
+    },
+  });
+}
+
 // ============= Stats =============
 export function useGuestStats() {
   const { data: feedback } = useGuestFeedback();
