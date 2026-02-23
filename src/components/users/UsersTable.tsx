@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -67,6 +68,8 @@ export const UsersTable = ({
   isUpdating,
 }: UsersTableProps) => {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [blockingUser, setBlockingUser] = useState<{ userId: string, is_blocked: boolean } | null>(null);
+  const [blockReason, setBlockReason] = useState("");
   const blockUser = useBlockUser();
 
   const filteredUsers = users?.filter((user) => {
@@ -202,7 +205,13 @@ export const UsersTable = ({
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className={userItem.is_blocked ? "text-success" : "text-destructive"}
-                              onClick={() => blockUser.mutate({ userId: userItem.user_id, is_blocked: !userItem.is_blocked })}
+                              onClick={() => {
+                                if (!userItem.is_blocked) {
+                                  setBlockingUser({ userId: userItem.user_id, is_blocked: true });
+                                } else {
+                                  blockUser.mutate({ userId: userItem.user_id, is_blocked: false });
+                                }
+                              }}
                             >
                               {userItem.is_blocked ? (
                                 <><ShieldCheck className="mr-2 h-4 w-4" /> Unblock User</>
@@ -275,6 +284,12 @@ export const UsersTable = ({
                       {selectedUser.is_blocked ? "Deactivated" : "Verified"}
                     </span>
                   </div>
+                  {selectedUser.is_blocked && selectedUser.blocked_reason && (
+                    <div className="flex flex-col text-xs mt-2">
+                      <span className="text-muted-foreground">Reason for blocking:</span>
+                      <span className="text-destructive italic mt-1">{selectedUser.blocked_reason}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Multiple Roles:</span>
                     <span>{selectedUser.hasMultipleRoles ? "Yes" : "No"}</span>
@@ -283,6 +298,51 @@ export const UsersTable = ({
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!blockingUser} onOpenChange={(open) => !open && setBlockingUser(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Block User</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for blocking this user account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="reason" className="text-sm font-medium">Reason</label>
+              <Input
+                id="reason"
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                placeholder="e.g., Policy violation, Suspicious activity"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockingUser(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (blockingUser) {
+                  blockUser.mutate({
+                    userId: blockingUser.userId,
+                    is_blocked: true,
+                    reason: blockReason
+                  }, {
+                    onSuccess: () => {
+                      setBlockingUser(null);
+                      setBlockReason("");
+                    }
+                  });
+                }
+              }}
+              disabled={!blockReason || blockUser.isPending}
+            >
+              Block Account
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

@@ -21,6 +21,15 @@ export const ReservationDetailsDialog = ({ reservation, open, onOpenChange }: Re
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
+          {reservation.status === "rejected" && reservation.rejection_reason && (
+            <div className="flex items-start gap-4 p-4 rounded-lg bg-destructive/5 border border-destructive/10">
+              <div className="grid gap-1">
+                <span className="text-xs font-bold text-destructive uppercase tracking-wider">Rejection Reason</span>
+                <p className="text-sm italic">{reservation.rejection_reason}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-start gap-4">
             <div className="p-2 rounded-full bg-primary/10">
               <User className="h-5 w-5 text-primary" />

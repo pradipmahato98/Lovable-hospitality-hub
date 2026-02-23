@@ -8,6 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt, CheckCircle, XCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
@@ -43,6 +51,8 @@ const Reservations = () => {
     open: false,
     reservation: null
   });
+  const [rejectingReservationId, setRejectingReservationId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const { isLoading, refetch, filterReservations } = useReservations();
   const updateReservation = useUpdateReservation();
@@ -192,7 +202,7 @@ const Reservations = () => {
                                     {reservation.status === "pending" && (
                                       <DropdownMenuItem
                                         className="text-destructive"
-                                        onClick={() => updateReservation.mutate({ id: reservation.id, status: "rejected" })}
+                                        onClick={() => setRejectingReservationId(reservation.id)}
                                       >
                                         <XCircle className="h-4 w-4 mr-2" />Reject Booking
                                       </DropdownMenuItem>
@@ -243,6 +253,51 @@ const Reservations = () => {
           onOpenChange={(open) => setDetailsDialog({ ...detailsDialog, open })}
           reservation={detailsDialog.reservation}
         />
+
+        <Dialog open={!!rejectingReservationId} onOpenChange={(open) => !open && setRejectingReservationId(null)}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Reject Booking</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this reservation.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label htmlFor="reject-reason" className="text-sm font-medium">Reason</label>
+                <Input
+                  id="reject-reason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="e.g., No availability, Maintenance issue"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRejectingReservationId(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (rejectingReservationId) {
+                    updateReservation.mutate({
+                      id: rejectingReservationId,
+                      status: "rejected",
+                      rejection_reason: rejectionReason
+                    }, {
+                      onSuccess: () => {
+                        setRejectingReservationId(null);
+                        setRejectionReason("");
+                      }
+                    });
+                  }
+                }}
+                disabled={!rejectionReason || updateReservation.isPending}
+              >
+                Reject Booking
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </ErrorBoundary>
     </MainLayout>
   );

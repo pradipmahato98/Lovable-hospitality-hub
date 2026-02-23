@@ -30,6 +30,7 @@ export interface UserWithRole {
   allRoles: AppRole[];
   hasMultipleRoles: boolean;
   is_blocked: boolean;
+  blocked_reason?: string | null;
   created_at: string;
 }
 
@@ -58,7 +59,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
     queryFn: async () => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, user_id, email, first_name, last_name, is_blocked, created_at");
+        .select("id, user_id, email, first_name, last_name, is_blocked, blocked_reason, created_at");
 
       if (profilesError) throw profilesError;
 
@@ -84,6 +85,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
           allRoles,
           hasMultipleRoles,
           is_blocked: !!profile.is_blocked,
+          blocked_reason: profile.blocked_reason,
           created_at: profile.created_at,
         };
       });
@@ -251,10 +253,14 @@ export const useBlockUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, is_blocked }: { userId: string; is_blocked: boolean }) => {
+    mutationFn: async ({ userId, is_blocked, reason }: { userId: string; is_blocked: boolean; reason?: string }) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ is_blocked, updated_at: new Date().toISOString() })
+        .update({
+          is_blocked,
+          blocked_reason: reason || null,
+          updated_at: new Date().toISOString()
+        })
         .eq("user_id", userId);
 
       if (error) throw error;

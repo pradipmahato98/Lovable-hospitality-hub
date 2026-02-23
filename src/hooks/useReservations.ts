@@ -11,6 +11,7 @@ export interface Reservation {
   total_amount: number;
   guest_id: string;
   room_id: string;
+  rejection_reason?: string | null;
   guest?: {
     first_name: string;
     last_name: string;
@@ -36,6 +37,7 @@ export const useReservations = () => {
           total_amount,
           guest_id,
           room_id,
+          rejection_reason,
           guest:guests(first_name, last_name),
           room:rooms(room_number, room_type)
         `)
