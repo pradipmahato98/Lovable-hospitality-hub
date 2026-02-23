@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { usePOSTransactions, POSTransaction } from "@/hooks/usePOS";
 import { format, subDays, subHours, isValid } from "date-fns";
+import { generateSecureRandomString } from "@/utils/security";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
@@ -407,7 +408,7 @@ export default function POSHistory() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id || Math.random()} className="hover:bg-secondary/20 cursor-pointer" onClick={() => setSelectedTransaction(transaction)}>
+                      <TableRow key={transaction.id || generateSecureRandomString(8)} className="hover:bg-secondary/20 cursor-pointer" onClick={() => setSelectedTransaction(transaction)}>
                         <TableCell className="font-mono text-sm">
                           {transaction.transaction_number || "N/A"}
                         </TableCell>

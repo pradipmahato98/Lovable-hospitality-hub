@@ -7,6 +7,7 @@ export interface Reservation {
   check_in_date: string;
   check_out_date: string;
   status: string;
+  rejection_reason: string | null;
   total_amount: number;
   room_id?: string;
   guest_id?: string;
@@ -32,6 +33,7 @@ export const useReservations = () => {
           check_in_date,
           check_out_date,
           status,
+          rejection_reason,
           total_amount,
           guest_id,
           room_id,
@@ -79,6 +81,7 @@ export const useGuestReservations = (guestId: string | undefined) => {
           check_in_date,
           check_out_date,
           status,
+          rejection_reason,
           total_amount,
           guest_id,
           room_id,

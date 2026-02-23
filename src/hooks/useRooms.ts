@@ -11,6 +11,8 @@ export interface Room {
   status: string;
   amenities: string[] | null;
   description: string | null;
+  is_active: boolean | null;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +30,66 @@ export const useRooms = () => {
 
       if (error) throw error;
       return data as Room[];
+    },
+  });
+};
+
+export const useCreateRoom = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (room: Omit<Room, "id" | "created_at" | "updated_at">) => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .insert({ ...room, updated_at: new Date().toISOString() })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+    },
+  });
+};
+
+export const useUpdateRoom = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Room>) => {
+      const { data, error } = await supabase
+        .from("rooms")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["room"] });
+    },
+  });
+};
+
+export const useDeleteRoom = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("rooms")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
     },
   });
 };

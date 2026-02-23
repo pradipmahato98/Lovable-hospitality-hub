@@ -29,6 +29,8 @@ export interface UserWithRole {
   role: AppRole;
   allRoles: AppRole[];
   hasMultipleRoles: boolean;
+  is_blocked: boolean | null;
+  blocked_reason: string | null;
   created_at: string;
 }
 
@@ -57,7 +59,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
     queryFn: async () => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, user_id, email, first_name, last_name, created_at");
+        .select("id, user_id, email, first_name, last_name, is_blocked, blocked_reason, created_at");
 
       if (profilesError) throw profilesError;
 
@@ -82,6 +84,8 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
           role: highestRole,
           allRoles,
           hasMultipleRoles,
+          is_blocked: profile.is_blocked,
+          blocked_reason: profile.blocked_reason,
           created_at: profile.created_at,
         };
       });
@@ -241,6 +245,44 @@ export const useUpdateOTAChannel = () => {
     },
     onError: (error) => {
       toast.error("Failed to update channel: " + error.message);
+    },
+  });
+};
+
+export const useUpdateUserStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      is_blocked,
+      blocked_reason
+    }: {
+      userId: string;
+      is_blocked: boolean;
+      blocked_reason: string | null
+    }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_blocked, blocked_reason, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      // Also log to audit_log
+      await supabase.from("audit_log").insert({
+        action: is_blocked ? "block_user" : "unblock_user",
+        entity_type: "user",
+        entity_id: userId,
+        new_values: { is_blocked, blocked_reason },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast.success("User account status updated");
+    },
+    onError: (error) => {
+      toast.error("Failed to update status: " + error.message);
     },
   });
 };
