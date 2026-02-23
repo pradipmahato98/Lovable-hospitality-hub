@@ -36,13 +36,15 @@ import {
 import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { GuestDetailsDialog } from "@/components/guests/GuestDetailsDialog";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useEffect } from "react";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
@@ -72,10 +74,12 @@ const getGuestStatus = (guest: Guest): "vip" | "regular" | "new" => {
 
 const Guests = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: guests = [], isLoading } = useGuests();
   const { data: feedback = [], createFeedback, respondToFeedback, updateStatus } = useGuestFeedback();
   const { data: loyaltyMembers = [], enrollMember, addPoints } = useLoyaltyMembers();
   const stats = useGuestStats();
+  const { setNewGuestOpen } = useQuickActions();
 
   // Performance optimization: Use a Set for O(1) membership lookups instead of O(M) .some() calls in the list
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
@@ -84,6 +88,22 @@ const Guests = () => {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+
+  const guestIdFromUrl = searchParams.get("guestId");
+
+  useEffect(() => {
+    if (guestIdFromUrl && guests.length > 0) {
+      const guest = guests.find(g => g.id === guestIdFromUrl);
+      if (guest) {
+        setSelectedGuest(guest);
+        setDetailsDialogOpen(true);
+        // Clear param
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete("guestId");
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [guestIdFromUrl, guests, searchParams, setSearchParams]);
 
   const filteredGuests = useMemo(() => {
     if (!searchQuery.trim()) return guests;
@@ -222,7 +242,7 @@ const Guests = () => {
                 variant="gold"
                 size="sm"
                 className="gap-2 w-full sm:w-auto"
-                onClick={() => toast.info("Add Guest functionality will be available soon.")}
+                onClick={() => setNewGuestOpen(true)}
               >
                 <Plus className="h-4 w-4" />
                 Add Guest

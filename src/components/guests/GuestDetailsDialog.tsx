@@ -126,12 +126,31 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
     });
   };
 
+  const suggestedMerges = useMemo(() => {
+    if (!guest || !allGuests.length) return [];
+
+    return allGuests.filter(g => {
+      if (g.id === guest.id) return false;
+
+      const sameEmail = g.email && guest.email && g.email.toLowerCase() === guest.email.toLowerCase();
+      const samePhone = g.phone && guest.phone && g.phone.replace(/\D/g, "") === guest.phone.replace(/\D/g, "");
+      const sameLastName = g.last_name.toLowerCase() === guest.last_name.toLowerCase();
+      const similarFirstName = g.first_name.toLowerCase().includes(guest.first_name.toLowerCase()) ||
+                               guest.first_name.toLowerCase().includes(g.first_name.toLowerCase());
+
+      return sameEmail || samePhone || (sameLastName && similarFirstName);
+    }).slice(0, 5);
+  }, [allGuests, guest]);
+
   const filteredMergeGuests = useMemo(() => {
-    if (!mergeSearch) return [];
+    const search = mergeSearch.toLowerCase();
+    if (!search) return [];
     return allGuests.filter(g =>
       g.id !== guest?.id &&
-      (`${g.first_name} ${g.last_name}`.toLowerCase().includes(mergeSearch.toLowerCase()) ||
-       g.email?.toLowerCase().includes(mergeSearch.toLowerCase()))
+      (`${g.first_name} ${g.last_name}`.toLowerCase().includes(search) ||
+       g.email?.toLowerCase().includes(search) ||
+       g.phone?.includes(search) ||
+       g.id_number?.includes(search))
     );
   }, [allGuests, mergeSearch, guest]);
 
@@ -667,19 +686,60 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email, phone or ID..."
               className="pl-8"
               value={mergeSearch}
               onChange={(e) => setMergeSearch(e.target.value)}
             />
           </div>
 
-          <ScrollArea className="h-[300px] border rounded-md p-2">
-            {filteredMergeGuests.length === 0 ? (
+          <ScrollArea className="h-[350px] border rounded-md p-2">
+            {!mergeSearch && suggestedMerges.length > 0 && (
+              <div className="mb-4">
+                <h5 className="text-xs font-semibold text-muted-foreground uppercase px-2 mb-2">Suggested Profiles</h5>
+                <div className="space-y-2">
+                  {suggestedMerges.map((g) => (
+                    <div key={g.id} className="flex items-center justify-between p-3 border border-primary/20 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={g.image_url || g.id_image_url || ""} />
+                          <AvatarFallback>{g.first_name[0]}{g.last_name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{g.first_name} {g.last_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {g.email || g.phone || "No contact info"}
+                            {g.email && guest?.email && g.email.toLowerCase() === guest.email.toLowerCase() && <span className="text-primary ml-1 font-semibold">(Email Match)</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="gold"
+                        size="sm"
+                        onClick={() => handleMerge(g)}
+                        disabled={mergeMutation.isPending}
+                      >
+                        {mergeMutation.isPending && mergeMutation.variables?.sourceGuestId === g.id ? "Merging..." : "Merge"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {mergeSearch && filteredMergeGuests.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
-                {mergeSearch ? "No guests found matching your search." : "Start typing to search for guests..."}
+                No guests found matching your search.
               </p>
-            ) : (
+            )}
+
+            {!mergeSearch && suggestedMerges.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                Start typing to search for guests...
+              </p>
+            )}
+
+            {mergeSearch && (
               <div className="space-y-2">
                 {filteredMergeGuests.map((g) => (
                   <div key={g.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
