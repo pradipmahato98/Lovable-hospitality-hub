@@ -80,9 +80,20 @@ const Guests = () => {
   // Performance optimization: Use a Set for O(1) membership lookups instead of O(M) .some() calls in the list
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+
+  const filteredGuests = useMemo(() => {
+    if (!searchQuery.trim()) return guests;
+    const query = searchQuery.toLowerCase();
+    return guests.filter((g) =>
+      `${g.first_name} ${g.last_name}`.toLowerCase().includes(query) ||
+      g.email?.toLowerCase().includes(query) ||
+      g.phone?.toLowerCase().includes(query)
+    );
+  }, [guests, searchQuery]);
 
   const [newFeedback, setNewFeedback] = useState({
     feedback_type: "review",
@@ -188,13 +199,24 @@ const Guests = () => {
 
           <TabsContent value="guests" className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}>
-                  <List className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className="flex items-center gap-2">
+                  <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}>
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="relative flex-1 sm:w-64">
+                  <Plus className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hidden" />
+                  <Input
+                    placeholder="Search guests..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-4"
+                  />
+                </div>
               </div>
               <Button
                 variant="gold"
@@ -215,12 +237,19 @@ const Guests = () => {
                   <CardTitle>All Guests</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <DataTable data={guests} columns={columns} keyExtractor={(guest) => guest.id} searchPlaceholder="Search guests..." emptyMessage="No guests found." pageSize={10} />
+                  <DataTable
+                    data={filteredGuests}
+                    columns={columns}
+                    keyExtractor={(guest) => guest.id}
+                    showSearch={false}
+                    emptyMessage="No guests found."
+                    pageSize={10}
+                  />
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {guests.map((guest, index) => {
+                {filteredGuests.map((guest, index) => {
                   const status = getGuestStatus(guest);
                   const isMember = loyaltyMemberIds.has(guest.id);
                   return (

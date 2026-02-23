@@ -2906,6 +2906,85 @@ export type Database = {
           }
         ]
       }
+      guest_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          guest_id: string
+          id: string
+          staff_id: string | null
+          staff_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          guest_id: string
+          id?: string
+          staff_id?: string | null
+          staff_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          guest_id?: string
+          id?: string
+          staff_id?: string | null
+          staff_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_audit_logs_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      guest_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_image_url: string | null
+          document_number: string | null
+          document_type: string | null
+          guest_id: string
+          id: string
+          is_latest: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_image_url?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          guest_id: string
+          id?: string
+          is_latest?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_image_url?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          guest_id?: string
+          id?: string
+          is_latest?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_documents_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

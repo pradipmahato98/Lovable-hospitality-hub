@@ -70,6 +70,27 @@ export interface GuestCommunication {
   created_at: string;
 }
 
+export interface GuestAuditLog {
+  id: string;
+  guest_id: string;
+  staff_id: string | null;
+  staff_name: string | null;
+  action: string;
+  details: any;
+  created_at: string;
+}
+
+export interface GuestDocument {
+  id: string;
+  guest_id: string;
+  document_type: string | null;
+  document_number: string | null;
+  document_image_url: string | null;
+  is_latest: boolean;
+  created_at: string;
+  created_by: string | null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
@@ -320,6 +341,98 @@ export function useGuestCommunications(guestId: string | undefined) {
   });
 
   return { ...query, logCommunication };
+}
+
+// ============= Guest Audit Logs =============
+export function useGuestAuditLogs(guestId: string | undefined) {
+  return useQuery({
+    queryKey: ["guest-audit-logs", guestId],
+    queryFn: async () => {
+      if (!guestId) return [];
+      const { data, error } = await db
+        .from("guest_audit_logs")
+        .select("*")
+        .eq("guest_id", guestId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as GuestAuditLog[];
+    },
+    enabled: !!guestId,
+  });
+}
+
+// ============= Guest Documents =============
+export function useGuestDocuments(guestId: string | undefined) {
+  return useQuery({
+    queryKey: ["guest-documents", guestId],
+    queryFn: async () => {
+      if (!guestId) return [];
+      const { data, error } = await db
+        .from("guest_documents")
+        .select("*")
+        .eq("guest_id", guestId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as GuestDocument[];
+    },
+    enabled: !!guestId,
+  });
+}
+
+export function useAddGuestDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ guestId, doc, staffName }: { guestId: string; doc: Partial<GuestDocument>; staffName?: string }) => {
+      // 1. Mark existing as not latest
+      await db
+        .from("guest_documents")
+        .update({ is_latest: false })
+        .eq("guest_id", guestId);
+
+      // 2. Insert new document
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await db
+        .from("guest_documents")
+        .insert({
+          ...doc,
+          guest_id: guestId,
+          is_latest: true,
+          created_by: userData.user?.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 3. Update main guest table
+      await db
+        .from("guests")
+        .update({
+          id_type: doc.document_type,
+          id_number: doc.document_number,
+          id_image_url: doc.document_image_url,
+        })
+        .eq("id", guestId);
+
+      // 4. Log audit
+      await db.from("guest_audit_logs").insert({
+        guest_id: guestId,
+        staff_id: userData.user?.id,
+        staff_name: staffName || userData.user?.email,
+        action: "update_id_card",
+        details: { new_id: doc.document_number, type: doc.document_type },
+      });
+
+      return data as GuestDocument;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["guest-documents", data.guest_id] });
+      queryClient.invalidateQueries({ queryKey: ["guest", data.guest_id] });
+      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["guest-audit-logs", data.guest_id] });
+    },
+  });
 }
 
 // ============= Merge Guests =============
