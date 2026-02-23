@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { GlobalSearch } from "./GlobalSearch";
 import { format } from "date-fns";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
@@ -75,63 +75,6 @@ export function Header({ title, subtitle }: HeaderProps) {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
-  // Search functionality
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setSearching(true);
-    try {
-      // Search guests
-      const { data: guests } = await supabase
-        .from("guests")
-        .select("id, first_name, last_name, email, phone")
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
-        .limit(5);
-
-      // Search rooms
-      const { data: rooms } = await supabase
-        .from("rooms")
-        .select("id, room_number, room_type")
-        .ilike("room_number", `%${query}%`)
-        .limit(5);
-
-      // Search reservations
-      const { data: reservations } = await supabase
-        .from("reservations")
-        .select("id, reservation_code, status")
-        .ilike("reservation_code", `%${query}%`)
-        .limit(5);
-
-      setSearchResults([
-        ...(guests || []).map(g => ({ type: "guest", ...g })),
-        ...(rooms || []).map(r => ({ type: "room", ...r })),
-        ...(reservations || []).map(r => ({ type: "reservation", ...r })),
-      ]);
-    } catch (error) {
-      console.error("Search error:", error);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleResultClick = (result: any) => {
-    setSearchOpen(false);
-    setSearchQuery("");
-    setSearchResults([]);
-    
-    if (result.type === "guest") {
-      navigate("/guests");
-    } else if (result.type === "room") {
-      navigate("/rooms");
-    } else if (result.type === "reservation") {
-      navigate("/reservations");
-    }
-  };
-
   const getInitials = () => {
     const first = profile?.first_name || "";
     const last = profile?.last_name || "";
@@ -140,8 +83,8 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-4">
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
           {isMobile && (
             <Button
               variant="ghost"
@@ -153,22 +96,17 @@ export function Header({ title, subtitle }: HeaderProps) {
             </Button>
           )}
           
-          <div className="min-w-0">
+          <div className="min-w-0 hidden md:block">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate">{title}</h1>
             {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {/* Search Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setSearchOpen(true)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Search className="h-5 w-5" />
-          </Button>
+        <div className="flex-1 max-w-md mx-1 sm:mx-4 min-w-0">
+          <GlobalSearch />
+        </div>
+
+        <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
 
           {/* Theme Toggle */}
           <Button 
@@ -276,71 +214,6 @@ export function Header({ title, subtitle }: HeaderProps) {
           </DropdownMenu>
         </div>
       </header>
-
-      {/* Search Dialog */}
-      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Search</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search guests, rooms, reservations..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9"
-                autoFocus
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                  onClick={() => { setSearchQuery(""); setSearchResults([]); }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            
-            {searching && (
-              <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>
-            )}
-
-            {!searching && searchResults.length > 0 && (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {searchResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="p-3 rounded-lg bg-secondary/50 hover:bg-secondary cursor-pointer"
-                    onClick={() => handleResultClick(result)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs capitalize">{result.type}</Badge>
-                      <span className="font-medium">
-                        {result.type === "guest" && `${result.first_name} ${result.last_name}`}
-                        {result.type === "room" && `Room ${result.room_number}`}
-                        {result.type === "reservation" && result.reservation_code}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {result.type === "guest" && (result.email || result.phone)}
-                      {result.type === "room" && result.room_type}
-                      {result.type === "reservation" && `Status: ${result.status}`}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No results found</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

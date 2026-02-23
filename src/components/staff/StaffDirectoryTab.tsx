@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,30 +37,16 @@ import {
   Calendar,
   Edit,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useUserRole";
-
-interface StaffMember {
-  id: string;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  phone: string | null;
-  department: string;
-  position: string;
-  hire_date: string;
-  status: string;
-  salary: number | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  notes: string | null;
-  created_at: string;
-}
+import { useStaff, useUpdateStaff, StaffMember } from "@/hooks/useStaff";
+import { StaffDetailsDialog } from "./StaffDetailsDialog";
+import { useSearchParams } from "react-router-dom";
 
 const departments = [
   "Front Desk",
@@ -81,9 +67,14 @@ const statusColors: Record<string, string> = {
 };
 
 export const StaffDirectoryTab = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+
+  const staffIdFromUrl = searchParams.get("staffId");
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const { isAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
@@ -105,18 +96,22 @@ export const StaffDirectoryTab = () => {
   });
 
   // Fetch staff members
-  const { data: staffMembers = [], isLoading } = useQuery({
-    queryKey: ["staff-members"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff_members")
-        .select("*")
-        .order("last_name", { ascending: true });
+  const { data: staffMembers = [], isLoading } = useStaff();
 
-      if (error) throw error;
-      return data as StaffMember[];
-    },
-  });
+  // Handle staffId from URL
+  useEffect(() => {
+    if (staffIdFromUrl && staffMembers.length > 0) {
+      const staff = staffMembers.find(s => s.id === staffIdFromUrl);
+      if (staff) {
+        setSelectedStaff(staff);
+        setDetailsOpen(true);
+        // Clear the param after opening
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete("staffId");
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [staffIdFromUrl, staffMembers, searchParams, setSearchParams]);
 
   // Create staff member
   const createStaff = useMutation({
@@ -218,7 +213,8 @@ export const StaffDirectoryTab = () => {
     setEditingStaff(null);
   };
 
-  const handleEdit = (staff: StaffMember) => {
+  const handleEdit = (e: React.MouseEvent, staff: StaffMember) => {
+    e.stopPropagation();
     setEditingStaff(staff);
     setFormData({
       employee_id: staff.employee_id,
@@ -236,6 +232,11 @@ export const StaffDirectoryTab = () => {
       notes: staff.notes || "",
     });
     setDialogOpen(true);
+  };
+
+  const handleRowClick = (staff: StaffMember) => {
+    setSelectedStaff(staff);
+    setDetailsOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -490,7 +491,11 @@ export const StaffDirectoryTab = () => {
                   </TableRow>
                 ) : (
                   filteredStaff.map((staff) => (
-                    <TableRow key={staff.id}>
+                    <TableRow
+                      key={staff.id}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => handleRowClick(staff)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
@@ -541,23 +546,34 @@ export const StaffDirectoryTab = () => {
                           {format(new Date(staff.hire_date), "MMM d, yyyy")}
                         </div>
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(staff)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => deleteStaff.mutate(staff.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(staff);
+                          }}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={(e) => handleEdit(e, staff)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteStaff.mutate(staff.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -566,6 +582,12 @@ export const StaffDirectoryTab = () => {
           </div>
         )}
       </CardContent>
+
+      <StaffDetailsDialog
+        staff={selectedStaff}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
     </Card>
   );
 };

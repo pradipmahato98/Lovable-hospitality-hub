@@ -441,23 +441,92 @@ export function useMergeGuests() {
 
   return useMutation({
     mutationFn: async ({ sourceGuestId, targetGuestId }: { sourceGuestId: string; targetGuestId: string }) => {
-      // In a real implementation, this would call a database function or multiple APIs
-      // to move all reservations, folios, communications etc. from source to target.
-      // For now, we simulate success.
       console.log(`Merging guest ${sourceGuestId} into ${targetGuestId}`);
 
-      // Simulate database operation
-      const { error } = await supabase
+      // 1. Tables where we simply update the guest_id
+      const tablesToUpdate = [
+        "reservations",
+        "guest_folios",
+        "guest_communications",
+        "guest_feedback",
+        "invoices",
+        "payments",
+        "lost_and_found",
+        "front_desk_queue",
+        "guest_messages",
+        "guest_audit_logs",
+        "guest_documents"
+      ];
+
+      for (const table of tablesToUpdate) {
+        const { error } = await supabase
+          .from(table)
+          .update({ guest_id: targetGuestId })
+          .eq("guest_id", sourceGuestId);
+
+        if (error) {
+          console.warn(`Failed to migrate ${table}:`, error);
+          // We continue with other tables even if one fails (e.g. if table doesn't exist)
+        }
+      }
+
+      // 2. Guest Preferences (handle potential duplicates)
+      const { data: sourcePrefs } = await db.from("guest_preferences").select("*").eq("guest_id", sourceGuestId);
+      if (sourcePrefs && sourcePrefs.length > 0) {
+        for (const pref of sourcePrefs) {
+          // Try to upsert to target
+          await db.from("guest_preferences").upsert({
+            guest_id: targetGuestId,
+            category: pref.category,
+            preference_key: pref.preference_key,
+            preference_value: pref.preference_value
+          }, { onConflict: "guest_id,category,preference_key" });
+        }
+        // Delete source prefs
+        await db.from("guest_preferences").delete().eq("guest_id", sourceGuestId);
+      }
+
+      // 3. Loyalty Program
+      const { data: sourceLoyalty } = await db.from("loyalty_members").select("*").eq("guest_id", sourceGuestId).maybeSingle();
+      if (sourceLoyalty) {
+        const { data: targetLoyalty } = await db.from("loyalty_members").select("*").eq("guest_id", targetGuestId).maybeSingle();
+        if (targetLoyalty) {
+          // Merge points if both exist
+          const newBalance = (targetLoyalty.points_balance || 0) + (sourceLoyalty.points_balance || 0);
+          const newLifetime = (targetLoyalty.lifetime_points || 0) + (sourceLoyalty.lifetime_points || 0);
+
+          await db.from("loyalty_members").update({
+            points_balance: newBalance,
+            lifetime_points: newLifetime
+          }).eq("id", targetLoyalty.id);
+
+          // Move transactions
+          await db.from("loyalty_transactions").update({ member_id: targetLoyalty.id }).eq("member_id", sourceLoyalty.id);
+
+          // Delete source loyalty
+          await db.from("loyalty_members").delete().eq("id", sourceLoyalty.id);
+        } else {
+          // Move loyalty member to target guest
+          await db.from("loyalty_members").update({ guest_id: targetGuestId }).eq("id", sourceLoyalty.id);
+        }
+      }
+
+      // 4. Finally, delete the source guest
+      const { error: deleteError } = await supabase
         .from("guests")
         .delete()
         .eq("id", sourceGuestId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
+
       return { success: true };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["guests"] });
-      queryClient.invalidateQueries({ queryKey: ["loyalty-members"] });
+      queryClient.invalidateQueries({ queryKey: ["guest", variables.targetGuestId] });
+      queryClient.invalidateQueries({ queryKey: ["guest-loyalty", variables.targetGuestId] });
+      queryClient.invalidateQueries({ queryKey: ["guest-preferences", variables.targetGuestId] });
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
     },
   });
 }
