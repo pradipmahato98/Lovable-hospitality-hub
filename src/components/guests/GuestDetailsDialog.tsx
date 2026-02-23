@@ -204,7 +204,7 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
               BACK
             </Button>
             <div className="h-4 w-px bg-border mx-1 hidden md:block" />
-            <h2 className="text-xs md:text-sm font-semibold tracking-wider text-muted-foreground uppercase truncate">
+            <h2 className="text-[10px] md:text-sm font-semibold tracking-wider text-muted-foreground uppercase truncate">
               Membership Account
             </h2>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -232,8 +232,8 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
             </Avatar>
 
             <div className="w-full space-y-4 md:space-y-6">
-              <div className="space-y-1">
-                <h3 className="text-lg md:text-xl font-bold text-center flex items-center justify-center gap-2">
+            <div className="space-y-1 w-full">
+                <h3 className="text-lg md:text-xl font-bold text-center flex items-center justify-center gap-2 break-words">
                   {guest.first_name} {guest.last_name}
                   {guest.is_vip && <Star className="h-5 w-5 text-primary fill-primary" />}
                 </h3>
@@ -404,7 +404,7 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
                   </TabsContent>
 
                   <TabsContent value="statistics" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                       <StatCard title="Total Visits" value={guest.total_visits || 0} icon={<History className="h-5 w-5" />} />
                       <StatCard title="Total Spending" value={`$${(guest.total_spending || 0).toLocaleString()}`} icon={<CreditCard className="h-5 w-5" />} />
                       <StatCard title="Points Balance" value={loyaltyMember?.points_balance?.toLocaleString() || 0} icon={<Star className="h-5 w-5" />} />
@@ -779,24 +779,24 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
 
 function InfoItem({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div className="grid grid-cols-2 gap-4 py-1 border-b border-muted/50 last:border-0">
-      <span className="text-sm font-medium text-muted-foreground">{label}:</span>
-      <span className="text-sm font-semibold">{value || "-"}</span>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-muted/50 last:border-0 gap-1">
+      <span className="text-xs sm:text-sm font-medium text-muted-foreground">{label}:</span>
+      <span className="text-sm font-semibold text-right">{value || "-"}</span>
     </div>
   );
 }
 
 function StatCard({ title, value, icon }: { title: string; value: string | number; icon: React.ReactNode }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-full text-primary">
+    <Card className="overflow-hidden">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2 sm:p-3 bg-primary/10 rounded-full text-primary shrink-0">
             {icon}
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider truncate">{title}</p>
+            <p className="text-lg sm:text-2xl font-bold truncate">{value}</p>
           </div>
         </div>
       </CardContent>
