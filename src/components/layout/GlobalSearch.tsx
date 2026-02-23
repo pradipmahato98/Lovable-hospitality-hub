@@ -3,18 +3,14 @@ import { Search, User, Users, CheckCircle2, LogOut, ExternalLink, Loader2 } from
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGuests, Guest } from "@/hooks/useGuests";
-import { useStaff, StaffMember } from "@/hooks/useStaff";
+import { useStaff } from "@/hooks/useStaff";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GuestDetailsDialog } from "@/components/guests/GuestDetailsDialog";
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
-  const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -56,7 +52,9 @@ export function GlobalSearch() {
 
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
-    const parts = text.split(new RegExp(`(${highlight})`, "gi"));
+    // Escape special characters for regex
+    const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escapedHighlight})`, "gi"));
     return (
       <span>
         {parts.map((part, i) =>
@@ -200,11 +198,6 @@ export function GlobalSearch() {
         </div>
       )}
 
-      <GuestDetailsDialog
-        guest={selectedGuest}
-        open={guestDialogOpen}
-        onOpenChange={setGuestDialogOpen}
-      />
     </div>
   );
 }

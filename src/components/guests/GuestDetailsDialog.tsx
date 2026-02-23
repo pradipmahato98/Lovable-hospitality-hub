@@ -92,6 +92,34 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
     [guestReservations]
   );
 
+  const suggestedMerges = useMemo(() => {
+    if (!guest || !allGuests.length) return [];
+
+    return allGuests.filter(g => {
+      if (g.id === guest.id) return false;
+
+      const sameEmail = g.email && guest.email && g.email.toLowerCase() === guest.email.toLowerCase();
+      const samePhone = g.phone && guest.phone && g.phone.replace(/\D/g, "") === guest.phone.replace(/\D/g, "");
+      const sameLastName = g.last_name.toLowerCase() === guest.last_name.toLowerCase();
+      const similarFirstName = g.first_name.toLowerCase().includes(guest.first_name.toLowerCase()) ||
+                               guest.first_name.toLowerCase().includes(g.first_name.toLowerCase());
+
+      return sameEmail || samePhone || (sameLastName && similarFirstName);
+    }).slice(0, 5);
+  }, [allGuests, guest]);
+
+  const filteredMergeGuests = useMemo(() => {
+    const search = mergeSearch.toLowerCase();
+    if (!search) return [];
+    return allGuests.filter(g =>
+      g.id !== guest?.id &&
+      (`${g.first_name} ${g.last_name}`.toLowerCase().includes(search) ||
+       g.email?.toLowerCase().includes(search) ||
+       g.phone?.includes(search) ||
+       g.id_number?.includes(search))
+    );
+  }, [allGuests, mergeSearch, guest]);
+
   if (!guest) return null;
 
   const handleSendEmail = () => {
@@ -125,34 +153,6 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
       }
     });
   };
-
-  const suggestedMerges = useMemo(() => {
-    if (!guest || !allGuests.length) return [];
-
-    return allGuests.filter(g => {
-      if (g.id === guest.id) return false;
-
-      const sameEmail = g.email && guest.email && g.email.toLowerCase() === guest.email.toLowerCase();
-      const samePhone = g.phone && guest.phone && g.phone.replace(/\D/g, "") === guest.phone.replace(/\D/g, "");
-      const sameLastName = g.last_name.toLowerCase() === guest.last_name.toLowerCase();
-      const similarFirstName = g.first_name.toLowerCase().includes(guest.first_name.toLowerCase()) ||
-                               guest.first_name.toLowerCase().includes(g.first_name.toLowerCase());
-
-      return sameEmail || samePhone || (sameLastName && similarFirstName);
-    }).slice(0, 5);
-  }, [allGuests, guest]);
-
-  const filteredMergeGuests = useMemo(() => {
-    const search = mergeSearch.toLowerCase();
-    if (!search) return [];
-    return allGuests.filter(g =>
-      g.id !== guest?.id &&
-      (`${g.first_name} ${g.last_name}`.toLowerCase().includes(search) ||
-       g.email?.toLowerCase().includes(search) ||
-       g.phone?.includes(search) ||
-       g.id_number?.includes(search))
-    );
-  }, [allGuests, mergeSearch, guest]);
 
   const handleEdit = () => {
     setEditData({ ...guest });
