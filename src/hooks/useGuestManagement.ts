@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
+import { generateSecureNumericString } from "@/utils/security";
 
 // ============= Types =============
 export interface GuestPreference {
@@ -208,7 +209,7 @@ export function useLoyaltyMembers(tier?: string) {
 
   const enrollMember = useMutation({
     mutationFn: async (guestId: string) => {
-      const memberNumber = `LM${Date.now().toString(36).toUpperCase()}`;
+      const memberNumber = `LM${generateSecureNumericString(10)}`;
       const { data, error } = await db
         .from("loyalty_members")
         .insert({ guest_id: guestId, member_number: memberNumber })

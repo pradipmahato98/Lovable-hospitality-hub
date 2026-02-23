@@ -22,3 +22,8 @@
 **Vulnerability:** Use of `Math.random()` for generating API keys, reservation codes, and transaction numbers. `Math.random()` is a PRNG and not cryptographically secure, making these identifiers potentially guessable or prone to collisions.
 **Learning:** Developers often reach for `Math.random()` for quick ID generation without considering the security implications in finance or authentication contexts.
 **Prevention:** Centralize secure random generation using `window.crypto.getRandomValues()` in a utility and mandate its use for any identifier that needs to be unguessable or unique across the system.
+
+## 2026-02-12 - Predictable Identifiers via Date.now()
+**Vulnerability:** Use of `Date.now()` for generating transaction numbers, invoice IDs, and payment references. Timestamps are highly predictable and can lead to identifier enumeration or collisions in high-concurrency scenarios.
+**Learning:** Developers often substitute `Date.now()` for `Math.random()` thinking it's "unique enough," but it lacks the entropy required for security-sensitive business identifiers.
+**Prevention:** Always use cryptographically secure random numeric or alphanumeric strings for identifiers that are exposed to users or used for financial reconciliation. Ensure the same identifier is generated once and reused for linked records (e.g., payment gateway ref and local DB record).
