@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { generateSecureRandomString } from "@/utils/security";
 
 // ============= Types =============
 export interface InventoryCategory {
@@ -273,7 +274,7 @@ export function usePurchaseOrders(status?: string) {
 
   const createPurchaseOrder = useMutation({
     mutationFn: async ({ items, ...order }: Omit<PurchaseOrder, "id" | "created_at" | "order_number" | "supplier"> & { items: { item_id: string; quantity: number; unit_price: number }[] }) => {
-      const orderNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
+      const orderNumber = `PO-${generateSecureRandomString(8).toUpperCase()}`;
       const { data: po, error: poError } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber }).select().single();
       if (poError) throw poError;
 

@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import { generateSecureRandomString } from "@/utils/security";
 
 interface CartItem {
   id: string;
@@ -174,7 +175,7 @@ const POSTerminal = () => {
 
     try {
       if (paymentMethod === "wallet" && selectedGateway) {
-        const result = await processPayment(selectedGateway, total, "USD", `POS-${Date.now()}`);
+        const result = await processPayment(selectedGateway, total, "USD", `POS-${generateSecureRandomString(10)}`);
         if (!result.success) {
           toast.error(`Payment failed: ${result.error}`);
           return;
@@ -185,7 +186,7 @@ const POSTerminal = () => {
       const { data, error } = await supabase
         .from("pos_transactions")
         .insert({
-          transaction_number: `POS-${Date.now()}`,
+          transaction_number: `POS-${generateSecureRandomString(10)}`,
           table_number: "Counter", // Placeholder for walk-in
           customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
           subtotal: subtotal,
