@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-bridge";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Reservation {
@@ -25,8 +26,7 @@ export const useReservations = () => {
   const query = useQuery({
     queryKey: ["reservations"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
+      const { data, error } = await (await api.from("reservations"))
         .select(`
           id,
           reservation_code,
@@ -73,8 +73,7 @@ export const useGuestReservations = (guestId: string | undefined) => {
     queryKey: ["guest-reservations", guestId],
     queryFn: async () => {
       if (!guestId) return [];
-      const { data, error } = await supabase
-        .from("reservations")
+      const { data, error } = await (await api.from("reservations"))
         .select(`
           id,
           reservation_code,
@@ -103,8 +102,7 @@ export const useUpdateReservation = () => {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<Reservation>) => {
-      const { data, error } = await supabase
-        .from("reservations")
+      const { data, error } = await (await api.from("reservations"))
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", id)
         .select()
