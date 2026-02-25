@@ -41,7 +41,17 @@ export const useGuests = () => {
         .limit(100);
 
       if (error) throw error;
-      return data as Guest[];
+
+      // Decrypt sensitive fields
+      const decryptedData = await Promise.all((data || []).map(async (guest: any) => {
+        const decrypted: any = { ...guest };
+        if (guest.id_number && typeof guest.id_number === 'string' && guest.id_number.startsWith('enc:')) {
+          decrypted.id_number = await api.decryptSensitive(guest.id_number);
+        }
+        return decrypted;
+      }));
+
+      return decryptedData as Guest[];
     },
   });
 };
@@ -54,8 +64,7 @@ export const useUpdateGuest = () => {
       // Integrate E2EE for id_number if provided
       const finalUpdates = { ...updates };
       if (updates.id_number) {
-        const { encrypted, iv } = await api.encryptSensitive(updates.id_number);
-        finalUpdates.id_number = `e2ee:${iv}:${encrypted}`;
+        finalUpdates.id_number = await api.encryptSensitive(updates.id_number);
       }
 
       // 1. Get old values for auditing
@@ -118,7 +127,13 @@ export const useGuest = (guestId: string | null) => {
         .single();
 
       if (error) throw error;
-      return data as Guest;
+
+      const decrypted: any = { ...data };
+      if (data.id_number && typeof data.id_number === 'string' && data.id_number.startsWith('enc:')) {
+        decrypted.id_number = await api.decryptSensitive(data.id_number);
+      }
+
+      return decrypted as Guest;
     },
     enabled: !!guestId,
   });

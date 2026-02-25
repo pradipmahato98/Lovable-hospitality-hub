@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import databaseRoutes from './routes/database';
+import storageRoutes from './routes/storage';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/database', databaseRoutes);
+app.use('/api/storage', storageRoutes);
 
 // Real-time communication
 io.on('connection', (socket) => {

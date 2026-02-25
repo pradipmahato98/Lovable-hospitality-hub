@@ -9,6 +9,16 @@ export const getTables = async () => {
   return result.rows;
 };
 
+export const getTableColumns = async (tableName: string) => {
+  const result = await query(`
+    SELECT column_name, data_type, is_nullable
+    FROM information_schema.columns
+    WHERE table_name = $1 AND table_schema = 'public'
+    ORDER BY ordinal_position
+  `, [tableName]);
+  return result.rows;
+};
+
 export const getTableData = async (tableName: string, limit = 100) => {
   // Simple injection prevention: check if tableName is in the list of public tables
   const tables = await getTables();
