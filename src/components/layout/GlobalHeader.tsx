@@ -64,9 +64,6 @@ export function Header({ title, subtitle }: HeaderProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
 
   // Use the notifications hook with realtime
   const { notifications, unreadCount, markAsRead } = useNotifications();

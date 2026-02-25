@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Search, User, Users, CheckCircle2, LogOut, ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -32,35 +33,43 @@ export function GlobalSearch() {
     if (!query.trim()) return { guests: [], staff: [] };
     const q = query.toLowerCase();
 
-    // Deduplicate guests by ID
+    // Deduplicate guests by ID and signature to handle potential DB duplicates
     const guestMap = new Map<string, Guest>();
-    guests.forEach(g => {
-      if (!guestMap.has(g.id)) {
-        const matches =
-          `${g.first_name} ${g.last_name}`.toLowerCase().includes(q) ||
-          g.email?.toLowerCase().includes(q) ||
-          g.phone?.includes(q) ||
-          g.id_number?.includes(q);
+    const seenSignatures = new Set<string>();
 
-        if (matches) {
+    guests.forEach(g => {
+      const matches =
+        `${g.first_name} ${g.last_name}`.toLowerCase().includes(q) ||
+        g.email?.toLowerCase().includes(q) ||
+        g.phone?.includes(q) ||
+        g.id_number?.includes(q);
+
+      if (matches) {
+        const signature = `${g.first_name}|${g.last_name}|${g.email || ''}`.toLowerCase();
+        if (!guestMap.has(g.id) && !seenSignatures.has(signature)) {
           guestMap.set(g.id, g);
+          seenSignatures.add(signature);
         }
       }
     });
 
     const filteredGuests = Array.from(guestMap.values()).slice(0, 5);
 
-    // Deduplicate staff by ID
+    // Deduplicate staff by ID and signature
     const staffMap = new Map<string, any>();
-    staff.forEach(s => {
-      if (!staffMap.has(s.id)) {
-        const matches =
-          `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
-          s.employee_id.toLowerCase().includes(q) ||
-          s.email?.toLowerCase().includes(q);
+    const seenStaffSignatures = new Set<string>();
 
-        if (matches) {
+    staff.forEach(s => {
+      const matches =
+        `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+        s.employee_id.toLowerCase().includes(q) ||
+        s.email?.toLowerCase().includes(q);
+
+      if (matches) {
+        const signature = `${s.first_name}|${s.last_name}|${s.email || ''}`.toLowerCase();
+        if (!staffMap.has(s.id) && !seenStaffSignatures.has(signature)) {
           staffMap.set(s.id, s);
+          seenStaffSignatures.add(signature);
         }
       }
     });
@@ -90,7 +99,7 @@ export function GlobalSearch() {
     );
   };
 
-  const handleGuestAction = (e: React.MouseEvent | { stopPropagation: () => void }, guest: Guest, action: "check-in" | "check-out" | "profile") => {
+  const handleGuestAction = useCallback((e: React.MouseEvent | { stopPropagation: () => void }, guest: Guest, action: "check-in" | "check-out" | "profile") => {
     e.stopPropagation();
     setIsOpen(false);
     setQuery("");
@@ -100,7 +109,7 @@ export function GlobalSearch() {
       // Redirect to front desk or reservations with specific intent
       navigate(`/front-desk?guestId=${guest.id}&action=${action}`);
     }
-  };
+  }, [navigate]);
 
   // Auto-redirect logic
   useEffect(() => {
@@ -117,12 +126,17 @@ export function GlobalSearch() {
     );
 
     if (exactGuest && query.length >= 3) {
+      setIsRedirecting(true);
       const timer = setTimeout(() => {
+        setIsRedirecting(false);
         handleGuestAction({ stopPropagation: () => {} }, exactGuest, "profile");
-      }, 1000); // 1s delay to avoid jumping while typing
-      return () => clearTimeout(timer);
+      }, 1200);
+      return () => {
+        clearTimeout(timer);
+        setIsRedirecting(false);
+      };
     }
-  }, [query, results.guests, navigate]);
+  }, [query, results.guests, navigate, handleGuestAction]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -159,6 +173,12 @@ export function GlobalSearch() {
 
       {isOpen && query.trim() && (
         <div className="absolute top-full left-0 mt-2 w-full md:w-[450px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+          {isRedirecting && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+              <p className="text-sm font-medium animate-pulse">Redirecting to profile...</p>
+            </div>
+          )}
           <ScrollArea className="max-h-[400px]">
             <div className="p-2">
               {!hasResults && !loadingGuests && (
@@ -190,30 +210,30 @@ export function GlobalSearch() {
                           </div>
                           {g.is_vip && <Badge className="bg-gradient-gold text-primary-foreground border-transparent text-[10px] h-4">VIP</Badge>}
                         </div>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex flex-wrap gap-2 mt-2 lg:mt-0 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 px-2 text-[10px] gap-1"
+                            className="h-8 sm:h-7 px-3 sm:px-2 text-[11px] sm:text-[10px] gap-1 flex-1 lg:flex-initial"
                             onClick={(e) => handleGuestAction(e, g, "check-in")}
                           >
-                            <CheckCircle2 className="h-3 w-3 text-success" /> Check-in
+                            <CheckCircle2 className="h-3 w-3 text-success" /> <span className="lg:inline">Check-in</span>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 px-2 text-[10px] gap-1"
+                            className="h-8 sm:h-7 px-3 sm:px-2 text-[11px] sm:text-[10px] gap-1 flex-1 lg:flex-initial"
                             onClick={(e) => handleGuestAction(e, g, "check-out")}
                           >
-                            <LogOut className="h-3 w-3 text-destructive" /> Check-out
+                            <LogOut className="h-3 w-3 text-destructive" /> <span className="lg:inline">Check-out</span>
                           </Button>
                           <Button
                             variant="gold"
                             size="sm"
-                            className="h-7 px-2 text-[10px] gap-1"
+                            className="h-8 sm:h-7 px-3 sm:px-2 text-[11px] sm:text-[10px] gap-1 flex-1 lg:flex-initial"
                             onClick={(e) => handleGuestAction(e, g, "profile")}
                           >
-                            <ExternalLink className="h-3 w-3" /> Profile
+                            <ExternalLink className="h-3 w-3" /> <span className="lg:inline">Profile</span>
                           </Button>
                         </div>
                       </div>
