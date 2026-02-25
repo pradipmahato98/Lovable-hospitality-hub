@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureNumericString } from "@/utils/security";
 
 // ============= Types =============
 export interface Invoice {
@@ -111,7 +112,7 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
 
   const createInvoice = useMutation({
     mutationFn: async ({ items, ...invoice }: Omit<Invoice, "id" | "created_at" | "invoice_number" | "guest" | "items" | "subtotal" | "tax_amount" | "total" | "balance_due"> & { items: Omit<InvoiceItem, "id" | "invoice_id">[] }) => {
-      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+      const invoiceNumber = `INV-${generateSecureNumericString(10)}`;
       
       const subtotal = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
       const taxAmount = items.reduce((sum, i) => sum + i.tax_amount, 0);
@@ -176,7 +177,7 @@ export function usePayments(filters?: { startDate?: string; endDate?: string }) 
 
   const recordPayment = useMutation({
     mutationFn: async (payment: Omit<Payment, "id" | "created_at" | "payment_number">) => {
-      const paymentNumber = `PAY-${Date.now().toString(36).toUpperCase()}`;
+      const paymentNumber = `PAY-${generateSecureNumericString(10)}`;
       const { data, error } = await db.from("payments").insert({ ...payment, payment_number: paymentNumber }).select().single();
       if (error) throw error;
 
@@ -233,7 +234,7 @@ export function useExpenses(filters?: { status?: string; category?: string; star
 
   const createExpense = useMutation({
     mutationFn: async (expense: Omit<Expense, "id" | "created_at" | "expense_number">) => {
-      const expenseNumber = `EXP-${Date.now().toString(36).toUpperCase()}`;
+      const expenseNumber = `EXP-${generateSecureNumericString(10)}`;
       const { data, error } = await db.from("expenses").insert({ ...expense, expense_number: expenseNumber }).select().single();
       if (error) throw error;
       return data;
