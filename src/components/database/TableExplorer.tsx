@@ -28,7 +28,7 @@ export const TableExplorer = ({ searchQuery }: TableExplorerProps) => {
       try {
         const response = await fetch("http://localhost:3001/api/database/tables", {
           headers: {
-            'Authorization': \`Bearer \${localStorage.getItem('token')}\`
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
         if (response.ok) {

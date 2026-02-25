@@ -55,7 +55,7 @@ export const useUpdateGuest = () => {
       const finalUpdates = { ...updates };
       if (updates.id_number) {
         const { encrypted, iv } = await api.encryptSensitive(updates.id_number);
-        finalUpdates.id_number = \`e2ee:\${iv}:\${encrypted}\`;
+        finalUpdates.id_number = `e2ee:${iv}:${encrypted}`;
       }
 
       // 1. Get old values for auditing

@@ -1,11 +1,11 @@
 import { query } from './db';
 
 export const getTables = async () => {
-  const result = await query(\`
+  const result = await query(`
     SELECT table_name
     FROM information_schema.tables
     WHERE table_schema = 'public'
-  \`);
+  `);
   return result.rows;
 };
 
@@ -16,7 +16,7 @@ export const getTableData = async (tableName: string, limit = 100) => {
     throw new Error('Invalid table name');
   }
 
-  const result = await query(\`SELECT * FROM "\${tableName}" LIMIT $1\`, [limit]);
+  const result = await query(`SELECT * FROM "${tableName}" LIMIT $1`, [limit]);
   return result.rows;
 };
 
