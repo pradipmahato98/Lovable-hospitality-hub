@@ -196,6 +196,9 @@ const FrontDesk = () => {
 
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => {
+      // Only show active rooms at the front desk
+      if (room.is_active === false) return false;
+
       const matchesStatus = filters.status === "all" || room.status === filters.status;
       const matchesType = filters.type === "all" || room.room_type === filters.type;
       const matchesFloor = filters.floor === "all" || room.floor.toString() === filters.floor;

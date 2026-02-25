@@ -25,6 +25,7 @@ import {
   Plus,
   Trash2,
   Layout,
+  TrendingUp,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -82,6 +83,7 @@ const AdminConsole = () => {
 
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const [activeTab, setActiveTab] = useState("overview");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
@@ -95,8 +97,8 @@ const AdminConsole = () => {
   const [isProvisioning, setIsProvisioning] = useState(false);
 
   // Data hooks
-  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users");
-  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit");
+  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(true);
+  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit" || activeTab === "overview");
   const { data: permissions, isLoading: loadingPerms } = useRolePermissions(activeTab === "permissions");
   const { data: otaChannels, isLoading: loadingChannels } = useOTAChannels(activeTab === "integrations");
   const { data: otaLogs, isLoading: loadingOTALogs } = useOTASyncLogs(activeTab === "integrations");
@@ -431,8 +433,8 @@ const AdminConsole = () => {
                   <UsersTable
                     users={users}
                     isLoading={loadingUsers}
-                    searchQuery=""
-                    onSearchChange={() => {}}
+                    searchQuery={userSearchQuery}
+                    onSearchChange={setUserSearchQuery}
                     onRoleChange={(userId, oldRole, newRole) => updateUserRole.mutate({ userId, oldRole, newRole })}
                     isUpdating={updateUserRole.isPending}
                   />
