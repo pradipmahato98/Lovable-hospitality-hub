@@ -24,4 +24,13 @@ router.get('/me', authenticate, async (req: any, res) => {
   res.json(req.user);
 });
 
+router.get('/users', authenticate, async (req, res, next) => {
+  try {
+    const users = await authService.listUsers();
+    res.json(users);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
