@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +58,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   const queryClient = useQueryClient();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // Avoid hydration mismatch by only rendering theme-dependent UI after mount
   useEffect(() => {
@@ -102,11 +103,37 @@ export function Header({ title, subtitle }: HeaderProps) {
           </div>
         </div>
 
-        <div className="flex-1 max-w-md mx-1 sm:mx-4 min-w-0">
-          <GlobalSearch />
+        <div className={cn(
+          "flex-1 max-w-md mx-1 sm:mx-4 min-w-0",
+          isMobile && !mobileSearchOpen && "hidden",
+          isMobile && mobileSearchOpen && "absolute inset-0 bg-background z-50 flex items-center px-4 animate-in slide-in-from-top duration-200"
+        )}>
+          <div className="relative w-full flex items-center gap-2">
+            <GlobalSearch />
+            {isMobile && mobileSearchOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileSearchOpen(false)}
+                className="shrink-0"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+          {isMobile && !mobileSearchOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileSearchOpen(true)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
 
           {/* Theme Toggle */}
           <Button 

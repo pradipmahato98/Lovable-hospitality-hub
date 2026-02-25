@@ -32,18 +32,40 @@ export function GlobalSearch() {
     if (!query.trim()) return { guests: [], staff: [] };
     const q = query.toLowerCase();
 
-    const filteredGuests = guests.filter(g =>
-      `${g.first_name} ${g.last_name}`.toLowerCase().includes(q) ||
-      g.email?.toLowerCase().includes(q) ||
-      g.phone?.includes(q) ||
-      g.id_number?.includes(q)
-    ).slice(0, 5);
+    // Deduplicate guests by ID
+    const guestMap = new Map<string, Guest>();
+    guests.forEach(g => {
+      if (!guestMap.has(g.id)) {
+        const matches =
+          `${g.first_name} ${g.last_name}`.toLowerCase().includes(q) ||
+          g.email?.toLowerCase().includes(q) ||
+          g.phone?.includes(q) ||
+          g.id_number?.includes(q);
 
-    const filteredStaff = staff.filter(s =>
-      `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
-      s.employee_id.toLowerCase().includes(q) ||
-      s.email?.toLowerCase().includes(q)
-    ).slice(0, 3);
+        if (matches) {
+          guestMap.set(g.id, g);
+        }
+      }
+    });
+
+    const filteredGuests = Array.from(guestMap.values()).slice(0, 5);
+
+    // Deduplicate staff by ID
+    const staffMap = new Map<string, any>();
+    staff.forEach(s => {
+      if (!staffMap.has(s.id)) {
+        const matches =
+          `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+          s.employee_id.toLowerCase().includes(q) ||
+          s.email?.toLowerCase().includes(q);
+
+        if (matches) {
+          staffMap.set(s.id, s);
+        }
+      }
+    });
+
+    const filteredStaff = Array.from(staffMap.values()).slice(0, 3);
 
     return { guests: filteredGuests, staff: filteredStaff };
   }, [query, guests, staff]);
@@ -68,14 +90,49 @@ export function GlobalSearch() {
     );
   };
 
-  const handleGuestAction = (e: React.MouseEvent, guest: Guest, action: "check-in" | "check-out" | "profile") => {
+  const handleGuestAction = (e: React.MouseEvent | { stopPropagation: () => void }, guest: Guest, action: "check-in" | "check-out" | "profile") => {
     e.stopPropagation();
     setIsOpen(false);
+    setQuery("");
     if (action === "profile") {
       navigate(`/guests?guestId=${guest.id}`);
     } else {
       // Redirect to front desk or reservations with specific intent
       navigate(`/front-desk?guestId=${guest.id}&action=${action}`);
+    }
+  };
+
+  // Auto-redirect logic
+  useEffect(() => {
+    if (!query.trim()) return;
+
+    const q = query.toLowerCase();
+
+    // Check for exact matches in guests
+    const exactGuest = results.guests.find(g =>
+      g.email?.toLowerCase() === q ||
+      g.phone === query ||
+      g.id_number === query ||
+      `${g.first_name} ${g.last_name}`.toLowerCase() === q
+    );
+
+    if (exactGuest && query.length >= 3) {
+      const timer = setTimeout(() => {
+        handleGuestAction({ stopPropagation: () => {} }, exactGuest, "profile");
+      }, 1000); // 1s delay to avoid jumping while typing
+      return () => clearTimeout(timer);
+    }
+  }, [query, results.guests, navigate]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      if (results.guests.length > 0) {
+        handleGuestAction({ stopPropagation: () => {} }, results.guests[0], "profile");
+      } else if (results.staff.length > 0) {
+        setIsOpen(false);
+        setQuery("");
+        navigate(`/staff?staffId=${results.staff[0].id}`);
+      }
     }
   };
 
@@ -96,6 +153,7 @@ export function GlobalSearch() {
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
         />
       </div>
 

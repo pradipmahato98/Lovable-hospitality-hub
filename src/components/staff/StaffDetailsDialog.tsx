@@ -105,7 +105,7 @@ export function StaffDetailsDialog({ staff, open, onOpenChange }: StaffDetailsDi
               BACK
             </Button>
             <div className="h-4 w-px bg-border mx-1 hidden md:block" />
-            <h2 className="text-xs md:text-sm font-semibold tracking-wider text-muted-foreground uppercase truncate">
+            <h2 className="text-[10px] md:text-sm font-semibold tracking-wider text-muted-foreground uppercase truncate">
               Staff Profile
             </h2>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -128,8 +128,8 @@ export function StaffDetailsDialog({ staff, open, onOpenChange }: StaffDetailsDi
             </Avatar>
 
             <div className="w-full space-y-4 md:space-y-6">
-              <div className="space-y-1">
-                <h3 className="text-lg md:text-xl font-bold text-center">
+              <div className="space-y-1 w-full">
+                <h3 className="text-lg md:text-xl font-bold text-center break-words">
                   {staff.first_name} {staff.last_name}
                 </h3>
                 <p className="text-sm text-center text-muted-foreground font-medium">{staff.position}</p>
@@ -204,7 +204,7 @@ export function StaffDetailsDialog({ staff, open, onOpenChange }: StaffDetailsDi
                 <div className="p-4 md:p-6">
                   <TabsContent value="main-info" className="mt-0 space-y-6 md:space-y-8">
                     <section>
-                      <div className="flex items-center justify-between mb-4 pb-2 border-b">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-2 border-b gap-2">
                         <h4 className="text-xl font-medium">Personal Information</h4>
                         {!isEditing ? (
                           <Button variant="outline" size="sm" onClick={handleEdit} className="gap-2">
@@ -424,12 +424,12 @@ export function StaffDetailsDialog({ staff, open, onOpenChange }: StaffDetailsDi
 
 function InfoItem({ label, value, icon }: { label: string; value: string | null | undefined; icon?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-muted/50 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-muted/50 last:border-0 gap-1">
       <div className="flex items-center gap-2">
         {icon && <div className="text-muted-foreground">{icon}</div>}
-        <span className="text-sm font-medium text-muted-foreground">{label}:</span>
+        <span className="text-xs sm:text-sm font-medium text-muted-foreground">{label}:</span>
       </div>
-      <span className="text-sm font-semibold">{value || "-"}</span>
+      <span className="text-sm font-semibold text-right">{value || "-"}</span>
     </div>
   );
 }
