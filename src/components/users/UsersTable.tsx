@@ -16,10 +16,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Eye, ShieldAlert } from "lucide-react";
 import { UserWithRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
+import { Button } from "@/components/ui/button";
+import { UserProfileModal } from "./UserProfileModal";
+import { useState } from "react";
 
 interface UsersTableProps {
   users: UserWithRole[] | undefined;
@@ -38,6 +41,14 @@ export const UsersTable = ({
   onRoleChange,
   isUpdating,
 }: UsersTableProps) => {
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleViewUser = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setModalOpen(true);
+  };
+
   const filteredUsers = users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -88,7 +99,9 @@ export const UsersTable = ({
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Current Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Change Role</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -131,6 +144,15 @@ export const UsersTable = ({
                         </div>
                       </TableCell>
                       <TableCell>
+                        {userItem.is_blocked ? (
+                          <Badge variant="destructive" className="gap-1">
+                            <ShieldAlert className="h-3 w-3" /> Blocked
+                          </Badge>
+                        ) : (
+                          <Badge variant="success">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Select
                           value={userItem.role}
                           onValueChange={(value: AppRole) =>
@@ -149,6 +171,17 @@ export const UsersTable = ({
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => handleViewUser(userItem)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -157,6 +190,12 @@ export const UsersTable = ({
           </div>
         )}
       </CardContent>
+
+      <UserProfileModal
+        user={selectedUser}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </Card>
   );
 };

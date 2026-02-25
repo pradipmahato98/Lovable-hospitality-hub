@@ -1870,10 +1870,12 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          blocked_reason: string | null
           created_at: string
           email: string | null
           first_name: string | null
           id: string
+          is_blocked: boolean | null
           last_name: string | null
           phone: string | null
           updated_at: string
@@ -1881,10 +1883,12 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          blocked_reason?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -1892,10 +1896,12 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          blocked_reason?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -2113,6 +2119,7 @@ export type Database = {
           guest_id: string
           id: string
           payment_status: string | null
+          rejection_reason: string | null
           reservation_code: string
           room_id: string
           source: string | null
@@ -2134,6 +2141,7 @@ export type Database = {
           guest_id: string
           id?: string
           payment_status?: string | null
+          rejection_reason?: string | null
           reservation_code: string
           room_id: string
           source?: string | null
@@ -2155,6 +2163,7 @@ export type Database = {
           guest_id?: string
           id?: string
           payment_status?: string | null
+          rejection_reason?: string | null
           reservation_code?: string
           room_id?: string
           source?: string | null
@@ -2218,6 +2227,8 @@ export type Database = {
           description: string | null
           floor: number
           id: string
+          image_url: string | null
+          is_active: boolean | null
           price_per_night: number
           room_number: string
           room_type: string
@@ -2231,6 +2242,8 @@ export type Database = {
           description?: string | null
           floor: number
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           price_per_night: number
           room_number: string
           room_type: string
@@ -2244,6 +2257,8 @@ export type Database = {
           description?: string | null
           floor?: number
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           price_per_night?: number
           room_number?: string
           room_type?: string

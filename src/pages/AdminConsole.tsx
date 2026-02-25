@@ -69,6 +69,8 @@ import { UsersTable } from "@/components/users/UsersTable";
 import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
+import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
+import { RoomManagement } from "@/components/admin/RoomManagement";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AdminConsole = () => {
@@ -267,6 +269,10 @@ const AdminConsole = () => {
             <Activity className="h-4 w-4" />
             System Overview
           </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <TrendingUp className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Account Management
@@ -297,6 +303,10 @@ const AdminConsole = () => {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="analytics">
+          <AnalyticsTab />
+        </TabsContent>
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -409,14 +419,31 @@ const AdminConsole = () => {
         </TabsContent>
 
         <TabsContent value="users">
-          <UsersTable
-            users={users}
-            isLoading={loadingUsers}
-            searchQuery=""
-            onSearchChange={() => {}}
-            onRoleChange={(userId, oldRole, newRole) => updateUserRole.mutate({ userId, oldRole, newRole })}
-            isUpdating={updateUserRole.isPending}
-          />
+          <Card variant="elevated">
+            <CardHeader className="pb-0">
+              <Tabs defaultValue="user-list" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                  <TabsTrigger value="user-list">Staff & Users</TabsTrigger>
+                  <TabsTrigger value="room-mgmt">Room Inventory</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="user-list" className="mt-6 border-none p-0 shadow-none">
+                  <UsersTable
+                    users={users}
+                    isLoading={loadingUsers}
+                    searchQuery=""
+                    onSearchChange={() => {}}
+                    onRoleChange={(userId, oldRole, newRole) => updateUserRole.mutate({ userId, oldRole, newRole })}
+                    isUpdating={updateUserRole.isPending}
+                  />
+                </TabsContent>
+
+                <TabsContent value="room-mgmt" className="mt-6 border-none p-0 shadow-none">
+                  <RoomManagement />
+                </TabsContent>
+              </Tabs>
+            </CardHeader>
+          </Card>
         </TabsContent>
 
         <TabsContent value="security">
