@@ -41,7 +41,13 @@ export const useGuests = () => {
         .limit(100);
 
       if (error) throw error;
-      return data as Guest[];
+
+      // 🛡️ Sentinel: Decrypt E2EE id_numbers for UI display
+      const guests = data as Guest[];
+      return await Promise.all(guests.map(async (guest) => ({
+        ...guest,
+        id_number: await api.decryptGuestId(guest.id_number)
+      })));
     },
   });
 };
@@ -51,11 +57,10 @@ export const useUpdateGuest = () => {
 
   return useMutation({
     mutationFn: async ({ id, updates, staffName }: { id: string; updates: Partial<Guest>; staffName?: string }) => {
-      // Integrate E2EE for id_number if provided
+      // 🛡️ Sentinel: Use centralized E2EE for id_number if provided
       const finalUpdates = { ...updates };
       if (updates.id_number) {
-        const { encrypted, iv } = await api.encryptSensitive(updates.id_number);
-        finalUpdates.id_number = `e2ee:${iv}:${encrypted}`;
+        finalUpdates.id_number = await api.encryptGuestId(updates.id_number);
       }
 
       // 1. Get old values for auditing
@@ -118,7 +123,13 @@ export const useGuest = (guestId: string | null) => {
         .single();
 
       if (error) throw error;
-      return data as Guest;
+
+      // 🛡️ Sentinel: Decrypt E2EE id_number for UI display
+      const guest = data as Guest;
+      if (guest) {
+        guest.id_number = await api.decryptGuestId(guest.id_number);
+      }
+      return guest;
     },
     enabled: !!guestId,
   });

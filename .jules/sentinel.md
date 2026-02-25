@@ -27,3 +27,8 @@
 **Vulnerability:** Use of `Date.now()` for generating transaction numbers, invoice IDs, and payment references. Timestamps are highly predictable and can lead to identifier enumeration or collisions in high-concurrency scenarios.
 **Learning:** Developers often substitute `Date.now()` for `Math.random()` thinking it's "unique enough," but it lacks the entropy required for security-sensitive business identifiers.
 **Prevention:** Always use cryptographically secure random numeric or alphanumeric strings for identifiers that are exposed to users or used for financial reconciliation. Ensure the same identifier is generated once and reused for linked records (e.g., payment gateway ref and local DB record).
+
+## 2026-02-15 - Hardcoded E2EE Secrets & Broken Decryption
+**Vulnerability:** The E2EE module used hardcoded master password and salt in the source code, and guest PII (id_number) was being stored encrypted but displayed in its ciphertext form in the UI. Additionally, some entry points (useAddGuestDocument) bypassed encryption entirely.
+**Learning:** Security features like E2EE are only as strong as their key management. Hardcoding keys makes the encryption trivial to bypass. Furthermore, security features must be implemented consistently across all data entry/retrieval paths.
+**Prevention:** Always use environment variables for system-wide secrets. Centralize encryption/decryption logic in an API bridge or utility layer and ensure all data hooks automatically handle the transformation to keep the UI clean and secure.
