@@ -42,6 +42,7 @@ import StaffManagement from "./pages/StaffManagement";
 import Finance from "./pages/Finance";
 import Payments from "./pages/Payments";
 import Banquet from "./pages/Banquet";
+import Database from "./pages/Database";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
                 <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
                 <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
+                <Route path="/database" element={<ProtectedRoute><Database /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

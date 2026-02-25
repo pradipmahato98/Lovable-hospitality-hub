@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-bridge";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Guest {
@@ -34,8 +35,7 @@ export const useGuests = () => {
   return useQuery({
     queryKey: ["guests"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("guests")
+      const { data, error } = await (await api.from("guests"))
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
@@ -51,17 +51,22 @@ export const useUpdateGuest = () => {
 
   return useMutation({
     mutationFn: async ({ id, updates, staffName }: { id: string; updates: Partial<Guest>; staffName?: string }) => {
+      // Integrate E2EE for id_number if provided
+      const finalUpdates = { ...updates };
+      if (updates.id_number) {
+        const { encrypted, iv } = await api.encryptSensitive(updates.id_number);
+        finalUpdates.id_number = \`e2ee:\${iv}:\${encrypted}\`;
+      }
+
       // 1. Get old values for auditing
-      const { data: oldGuest } = await supabase
-        .from("guests")
+      const { data: oldGuest } = await (await api.from("guests"))
         .select("*")
         .eq("id", id)
         .single();
 
       // 2. Perform update
-      const { data, error } = await supabase
-        .from("guests")
-        .update({ ...updates, updated_at: new Date().toISOString() })
+      const { data, error } = await (await api.from("guests"))
+        .update({ ...finalUpdates, updated_at: new Date().toISOString() })
         .eq("id", id)
         .select()
         .single();
