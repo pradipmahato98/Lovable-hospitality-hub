@@ -74,6 +74,7 @@ import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTa
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
 import { RoomManagement } from "@/components/admin/RoomManagement";
+import { DatabaseControlCenter } from "@/components/database/DatabaseControlCenter";
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -298,6 +299,10 @@ const AdminConsole = () => {
             <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Globe className="h-4 w-4" />
               Integrations
+            </TabsTrigger>
+            <TabsTrigger value="database" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <Database className="h-4 w-4" />
+              Database Control
             </TabsTrigger>
             <TabsTrigger value="design_system" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Layout className="h-4 w-4" />
@@ -687,6 +692,10 @@ const AdminConsole = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="database">
+          <DatabaseControlCenter />
         </TabsContent>
 
         <TabsContent value="design_system">
