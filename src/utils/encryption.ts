@@ -21,6 +21,25 @@ export async function generateKey(): Promise<CryptoKey> {
 }
 
 /**
+ * High-level helper to encrypt a string with a key and return a prefixed string containing IV.
+ */
+export async function encryptWithKey(data: string, key: CryptoKey): Promise<string> {
+  const { encrypted, iv } = await encryptData(data, key);
+  return `enc:${iv}:${encrypted}`;
+}
+
+/**
+ * High-level helper to decrypt a prefixed string.
+ */
+export async function decryptWithKey(prefixedData: string, key: CryptoKey): Promise<string> {
+  if (!prefixedData.startsWith("enc:")) return prefixedData;
+  const parts = prefixedData.split(":");
+  if (parts.length !== 3) return prefixedData;
+  const [, iv, encrypted] = parts;
+  return await decryptData(encrypted, iv, key);
+}
+
+/**
  * Encrypts data using a CryptoKey.
  */
 export async function encryptData(data: string, key: CryptoKey): Promise<{ encrypted: string; iv: string }> {
