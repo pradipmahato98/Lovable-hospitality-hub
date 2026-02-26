@@ -17,15 +17,6 @@ router.get('/tables', async (req, res, next) => {
   }
 });
 
-router.get('/schema/:tableName/columns', async (req, res, next) => {
-  try {
-    const columns = await dbService.getTableColumns(req.params.tableName);
-    res.json(columns);
-  } catch (error) {
-    next(error);
-  }
-});
-
 router.get('/tables/:tableName', async (req, res, next) => {
   try {
     const data = await dbService.getTableData(req.params.tableName);

@@ -5,10 +5,7 @@ import {
   Settings2,
   Activity,
   Search,
-  Plus,
-  Users,
-  HardDrive,
-  Zap
+  Plus
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,9 +14,6 @@ import { useState } from "react";
 import { TableExplorer } from "./TableExplorer";
 import { SQLEditor } from "./SQLEditor";
 import { SchemaManager } from "./SchemaManager";
-import { AuthManager } from "./AuthManager";
-import { StorageManager } from "./StorageManager";
-import { RealtimeMonitor } from "./RealtimeMonitor";
 
 export const DatabaseControlCenter = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,19 +33,7 @@ export const DatabaseControlCenter = () => {
             </TabsTrigger>
             <TabsTrigger value="schema" className="gap-2">
               <Settings2 className="h-4 w-4" />
-              Schema
-            </TabsTrigger>
-            <TabsTrigger value="auth" className="gap-2">
-              <Users className="h-4 w-4" />
-              Auth
-            </TabsTrigger>
-            <TabsTrigger value="storage" className="gap-2">
-              <HardDrive className="h-4 w-4" />
-              Storage
-            </TabsTrigger>
-            <TabsTrigger value="realtime" className="gap-2">
-              <Zap className="h-4 w-4" />
-              Realtime
+              Schema Manager
             </TabsTrigger>
             <TabsTrigger value="health" className="gap-2">
               <Activity className="h-4 w-4" />
@@ -86,18 +68,6 @@ export const DatabaseControlCenter = () => {
 
         <TabsContent value="schema">
           <SchemaManager />
-        </TabsContent>
-
-        <TabsContent value="auth">
-          <AuthManager />
-        </TabsContent>
-
-        <TabsContent value="storage">
-          <StorageManager />
-        </TabsContent>
-
-        <TabsContent value="realtime">
-          <RealtimeMonitor />
         </TabsContent>
 
         <TabsContent value="health">

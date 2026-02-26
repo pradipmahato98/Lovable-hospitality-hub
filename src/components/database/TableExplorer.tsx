@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2, Eye, ChevronLeft } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { DataEditor } from "./DataEditor";
 
 interface TableExplorerProps {
   searchQuery: string;
@@ -23,7 +22,6 @@ const MOCK_TABLES = [
 
 export const TableExplorer = ({ searchQuery }: TableExplorerProps) => {
   const [tables, setTables] = useState(MOCK_TABLES);
-  const [viewingTable, setViewingTable] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -54,23 +52,6 @@ export const TableExplorer = ({ searchQuery }: TableExplorerProps) => {
   const filteredTables = tables.filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  if (viewingTable) {
-    return (
-      <div className="space-y-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setViewingTable(null)}
-          className="gap-2 mb-2"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to Tables
-        </Button>
-        <DataEditor tableName={viewingTable} />
-      </div>
-    );
-  }
 
   return (
     <Card variant="elevated">
@@ -110,10 +91,7 @@ export const TableExplorer = ({ searchQuery }: TableExplorerProps) => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="gap-2"
-                        onClick={() => setViewingTable(table.name)}
-                      >
+                      <DropdownMenuItem className="gap-2">
                         <Eye className="h-4 w-4" /> View Data
                       </DropdownMenuItem>
                       <DropdownMenuItem className="gap-2">

@@ -2,13 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { query } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET must be set in production');
-}
-
-const SECRET = JWT_SECRET || 'dev-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '24h';
 
 export const hashPassword = async (password: string): Promise<string> => {
@@ -21,24 +15,14 @@ export const comparePassword = async (password: string, hashed: string): Promise
 };
 
 export const generateToken = (userId: string, role: string): string => {
-  return jwt.sign({ userId, role }, SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 export const verifyToken = (token: string): any => {
-  return jwt.verify(token, SECRET);
+  return jwt.verify(token, JWT_SECRET);
 };
 
 export const findUserByEmail = async (email: string) => {
   const result = await query('SELECT * FROM profiles WHERE email = $1', [email]);
   return result.rows[0];
-};
-
-export const listUsers = async () => {
-  const result = await query(`
-    SELECT id, email, role, is_blocked as status, last_sign_in_at
-    FROM profiles
-    ORDER BY created_at DESC
-    LIMIT 50
-  `);
-  return result.rows;
 };

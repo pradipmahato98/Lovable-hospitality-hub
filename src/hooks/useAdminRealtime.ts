@@ -67,8 +67,8 @@ export function useAdminRealtime() {
       .subscribe();
 
     return () => {
-      if (channel) {
-        api.removeChannel(channel);
+      if (channel && 'unsubscribe' in channel) {
+        supabase.removeChannel(channel as any);
       }
     };
   }, [queryClient]);
