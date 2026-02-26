@@ -32,25 +32,30 @@ const INITIAL_EVENTS: RealtimeEvent[] = [
   { id: "4", type: "RLS", table: "profiles", details: "Blocked unauthorized access attempt to profile ID: 12", timestamp: "5 mins ago" },
 ];
 
+import { api } from "@/lib/api-bridge";
+
 export const RealtimeMonitor = () => {
   const [events, setEvents] = useState<RealtimeEvent[]>(INITIAL_EVENTS);
   const [activeConnections, setActiveConnections] = useState(12);
 
-  // Simulate incoming events
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newEvent: RealtimeEvent = {
-        id: Math.random().toString(),
-        type: Math.random() > 0.7 ? "UPDATE" : "INSERT",
-        table: ["reservations", "guests", "rooms"][Math.floor(Math.random() * 3)],
-        details: "Automated sync event",
-        timestamp: "Just now"
-      };
-      setEvents(prev => [newEvent, ...prev.slice(0, 9)]);
-      setActiveConnections(prev => prev + (Math.random() > 0.5 ? 1 : -1));
-    }, 5000);
+    // Connect to real-time channel via bridge
+    const channel = api.channel('system_events')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload: any) => {
+        const newEvent: RealtimeEvent = {
+          id: Math.random().toString(),
+          type: payload.eventType,
+          table: payload.table,
+          details: `${payload.eventType} on ${payload.table}: ${JSON.stringify(payload.new || payload.old).substring(0, 50)}...`,
+          timestamp: "Just now"
+        };
+        setEvents(prev => [newEvent, ...prev.slice(0, 14)]);
+      })
+      .subscribe();
 
-    return () => clearInterval(interval);
+    return () => {
+      api.removeChannel(channel);
+    };
   }, []);
 
   return (
