@@ -407,11 +407,16 @@ export function useAddGuestDocument() {
       if (error) throw error;
 
       // 3. Update main guest table
+      // 🛡️ Sentinel: Encrypting ID number for E2EE consistency
+      const encryptedId = doc.document_number
+        ? await api.encryptGuestId(doc.document_number)
+        : doc.document_number;
+
       await db
         .from("guests")
         .update({
           id_type: doc.document_type,
-          id_number: doc.document_number,
+          id_number: encryptedId,
           id_image_url: doc.document_image_url,
         })
         .eq("id", guestId);

@@ -21,8 +21,11 @@ export const api = {
    * Security & E2EE
    */
   async getEncryptionKey() {
-    // In a real app, this would be derived from the user's password or a stored secret
-    return await deriveKey("master-password-123", "system-salt");
+    // 🛡️ Sentinel: Using environment variables for master key and salt to avoid hardcoded secrets.
+    // In production, these should be unique, complex strings stored in a secure secret manager.
+    const secret = import.meta.env.VITE_E2EE_MASTER_KEY || "dev-master-password-do-not-use-in-prod";
+    const salt = import.meta.env.VITE_E2EE_SYSTEM_SALT || "system-salt-fallback";
+    return await deriveKey(secret, salt);
   },
 
   async encryptSensitive(data: string) {
@@ -33,6 +36,26 @@ export const api = {
   async decryptSensitive(prefixedData: string) {
     const key = await this.getEncryptionKey();
     return await decryptWithKey(prefixedData, key);
+  },
+
+  /**
+   * Centralized Guest ID Encryption/Decryption
+   */
+  async encryptGuestId(idNumber: string): Promise<string> {
+    if (!idNumber) return idNumber;
+    const { encrypted, iv } = await this.encryptSensitive(idNumber);
+    return `e2ee:${iv}:${encrypted}`;
+  },
+
+  async decryptGuestId(prefixedId: string | null): Promise<string | null> {
+    if (!prefixedId || !prefixedId.startsWith("e2ee:")) return prefixedId;
+    try {
+      const [_, iv, encrypted] = prefixedId.split(":");
+      return await this.decryptSensitive(encrypted, iv);
+    } catch (error) {
+      console.error("🛡️ Sentinel: Decryption failed for ID:", prefixedId, error);
+      return prefixedId; // Fallback to raw value if decryption fails
+    }
   },
 
   /**

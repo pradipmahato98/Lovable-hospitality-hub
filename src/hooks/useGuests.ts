@@ -42,16 +42,12 @@ export const useGuests = () => {
 
       if (error) throw error;
 
-      // Decrypt sensitive fields
-      const decryptedData = await Promise.all((data || []).map(async (guest: any) => {
-        const decrypted: any = { ...guest };
-        if (guest.id_number && typeof guest.id_number === 'string' && guest.id_number.startsWith('enc:')) {
-          decrypted.id_number = await api.decryptSensitive(guest.id_number);
-        }
-        return decrypted;
-      }));
-
-      return decryptedData as Guest[];
+      // 🛡️ Sentinel: Decrypt E2EE id_numbers for UI display
+      const guests = data as Guest[];
+      return await Promise.all(guests.map(async (guest) => ({
+        ...guest,
+        id_number: await api.decryptGuestId(guest.id_number)
+      })));
     },
   });
 };
@@ -61,10 +57,10 @@ export const useUpdateGuest = () => {
 
   return useMutation({
     mutationFn: async ({ id, updates, staffName }: { id: string; updates: Partial<Guest>; staffName?: string }) => {
-      // Integrate E2EE for id_number if provided
+      // 🛡️ Sentinel: Use centralized E2EE for id_number if provided
       const finalUpdates = { ...updates };
       if (updates.id_number) {
-        finalUpdates.id_number = await api.encryptSensitive(updates.id_number);
+        finalUpdates.id_number = await api.encryptGuestId(updates.id_number);
       }
 
       // 1. Get old values for auditing
@@ -128,12 +124,12 @@ export const useGuest = (guestId: string | null) => {
 
       if (error) throw error;
 
-      const decrypted: any = { ...data };
-      if (data.id_number && typeof data.id_number === 'string' && data.id_number.startsWith('enc:')) {
-        decrypted.id_number = await api.decryptSensitive(data.id_number);
+      // 🛡️ Sentinel: Decrypt E2EE id_number for UI display
+      const guest = data as Guest;
+      if (guest) {
+        guest.id_number = await api.decryptGuestId(guest.id_number);
       }
-
-      return decrypted as Guest;
+      return guest;
     },
     enabled: !!guestId,
   });
