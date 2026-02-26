@@ -44,4 +44,24 @@ router.post('/query', async (req, res, next) => {
   }
 });
 
+router.patch('/tables/:tableName', async (req, res, next) => {
+  try {
+    const { updates, filters } = req.body;
+    const result = await dbService.updateTableData(req.params.tableName, updates, filters);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/tables/:tableName', async (req, res, next) => {
+  try {
+    const { filters } = req.body;
+    const result = await dbService.deleteTableData(req.params.tableName, filters);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

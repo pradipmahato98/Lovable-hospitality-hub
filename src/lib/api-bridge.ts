@@ -91,6 +91,31 @@ export const api = {
             }
           };
         },
+        delete() {
+          return {
+            eq: (col: string, val: any) => {
+              this.query.filters.push({ type: 'eq', column: col, value: val });
+              return {
+                then: async (resolve: any, reject: any) => {
+                  try {
+                    const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}`, {
+                      method: 'DELETE',
+                      body: JSON.stringify({ filters: this.query.filters }),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                      }
+                    });
+                    const data = await response.json();
+                    resolve({ data, error: null });
+                  } catch (error) {
+                    resolve({ data: null, error });
+                  }
+                }
+              };
+            }
+          };
+        },
         insert(item: any) {
           return {
             select: () => {

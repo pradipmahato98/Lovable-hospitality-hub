@@ -35,3 +35,33 @@ export const executeRawQuery = async (sql: string) => {
   const result = await query(sql);
   return result.rows;
 };
+
+export const updateTableData = async (tableName: string, updates: any, filters: any[]) => {
+  const setClause = Object.keys(updates)
+    .map((key, i) => `"${key}" = $${i + 1}`)
+    .join(', ');
+  const values = Object.values(updates);
+
+  let whereClause = '';
+  if (filters && filters.length > 0) {
+    whereClause = 'WHERE ' + filters.map((f, i) => `"${f.column}" = $${values.length + i + 1}`).join(' AND ');
+    values.push(...filters.map(f => f.value));
+  }
+
+  const sql = `UPDATE "${tableName}" SET ${setClause} ${whereClause} RETURNING *`;
+  const result = await query(sql, values);
+  return result.rows[0];
+};
+
+export const deleteTableData = async (tableName: string, filters: any[]) => {
+  let whereClause = '';
+  const values: any[] = [];
+  if (filters && filters.length > 0) {
+    whereClause = 'WHERE ' + filters.map((f, i) => `"${f.column}" = $${i + 1}`).join(' AND ');
+    values.push(...filters.map(f => f.value));
+  }
+
+  const sql = `DELETE FROM "${tableName}" ${whereClause} RETURNING *`;
+  const result = await query(sql, values);
+  return result.rows;
+};
