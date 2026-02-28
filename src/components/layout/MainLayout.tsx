@@ -16,13 +16,13 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
 
   return (
     <div className={cn(
-      "min-h-screen bg-background transition-all duration-500"
+      "min-h-screen bg-background transition-all duration-500 relative flex overflow-x-hidden"
     )}>
       <Sidebar />
       <div 
         className={cn(
-          "transition-all duration-300 min-h-screen flex flex-col",
-          isMobile ? "ml-0" : collapsed ? "ml-20" : "ml-64"
+          "flex-1 transition-all duration-300 min-h-screen flex flex-col min-w-0",
+          !isMobile && (collapsed ? "pl-20" : "pl-64")
         )}
       >
         <Header title={title} subtitle={subtitle} />
