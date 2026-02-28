@@ -45,7 +45,7 @@ describe('salaryUtils', () => {
       const result = calculateSalary(details);
 
       expect(result.netSalary).toBe(0);
-      expect(result.netSalaryInWords).toBe('Only'); // numberToWords(0) is ''
+      expect(result.netSalaryInWords).toBe('Zero Only');
     });
   });
 
