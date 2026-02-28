@@ -37,9 +37,19 @@ import {
   Users,
   Calculator,
   Download,
+  Eye,
+  FileDown,
+  FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { SalarySlip } from "./SalarySlip";
+import {
+  downloadSalarySlipPDF,
+  downloadSalarySlipExcel,
+  EmployeeInfo,
+  SalaryDetails
+} from "@/utils/salaryUtils";
 
 interface PayrollRecord {
   id: string;
@@ -84,6 +94,8 @@ export function PayrollPanel() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockInDialogOpen, setClockInDialogOpen] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
+  const [previewSlipOpen, setPreviewSlipOpen] = useState(false);
+  const [selectedRecordForSlip, setSelectedRecordForSlip] = useState<PayrollRecord | null>(null);
 
   // Real-time clock update
   useEffect(() => {
@@ -146,6 +158,37 @@ export function PayrollPanel() {
       prev.map((r) => (r.id === id ? { ...r, status: "paid" as const } : r))
     );
     toast.success("Marked as paid");
+  };
+
+  const getSalaryDetailsFromRecord = (record: PayrollRecord): SalaryDetails => {
+    // Mapping mock record fields to detailed SalaryDetails
+    // Since mock record has simplified fields, we distribute them
+    return {
+      basicSalary: Math.round(record.baseSalary * 0.6),
+      houseRentAllowance: Math.round(record.baseSalary * 0.2),
+      conveyanceAllowance: 1600,
+      medicalAllowance: 1250,
+      specialAllowance: Math.round(record.baseSalary * 0.1),
+      otherEarnings: record.overtime * 25,
+      providentFund: Math.round(record.baseSalary * 0.08),
+      professionalTax: 200,
+      incomeTax: Math.max(0, record.deductions - 200 - Math.round(record.baseSalary * 0.08) - 500),
+      healthInsurance: 500,
+      otherDeductions: 0,
+    };
+  };
+
+  const getEmployeeInfoFromRecord = (record: PayrollRecord): EmployeeInfo => {
+    return {
+      employeeName: record.employeeName,
+      employeeId: record.employeeId,
+      designation: "Staff Member", // Mock designation
+      department: record.department,
+      payPeriod: record.payPeriod,
+      employeePan: "ABCDE1234F", // Mock PAN
+      bankAccountNo: "XXXX-XXXX-1234", // Mock Bank Acc
+      dateOfPayment: format(new Date(), "yyyy-MM-dd"),
+    };
   };
 
   const calculateDuration = (clockIn: Date, clockOut: Date | null) => {
@@ -340,26 +383,37 @@ export function PayrollPanel() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {record.status === "pending" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPayroll(record);
-                            setProcessDialogOpen(true);
-                          }}
-                        >
-                          Process
-                        </Button>
-                      )}
-                      {record.status === "processed" && (
-                        <Button variant="ghost" size="sm" onClick={() => handleMarkAsPaid(record.id)}>
-                          Mark Paid
-                        </Button>
-                      )}
-                      {record.status === "paid" && (
-                        <span className="text-xs text-muted-foreground">Completed</span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {record.status === "pending" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPayroll(record);
+                              setProcessDialogOpen(true);
+                            }}
+                          >
+                            Process
+                          </Button>
+                        )}
+                        {record.status === "processed" && (
+                          <Button variant="ghost" size="sm" onClick={() => handleMarkAsPaid(record.id)}>
+                            Mark Paid
+                          </Button>
+                        )}
+                        {record.status === "paid" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedRecordForSlip(record);
+                              setPreviewSlipOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -395,6 +449,54 @@ export function PayrollPanel() {
               Clock In Now
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Salary Slip Preview Dialog */}
+      <Dialog open={previewSlipOpen} onOpenChange={setPreviewSlipOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Salary Slip Preview</DialogTitle>
+            <DialogDescription>
+              Preview and download salary slip for {selectedRecordForSlip?.employeeName}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRecordForSlip && (
+            <div className="space-y-6">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => downloadSalarySlipPDF(
+                    getEmployeeInfoFromRecord(selectedRecordForSlip),
+                    getSalaryDetailsFromRecord(selectedRecordForSlip)
+                  )}
+                >
+                  <FileDown className="h-4 w-4" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => downloadSalarySlipExcel(
+                    getEmployeeInfoFromRecord(selectedRecordForSlip),
+                    getSalaryDetailsFromRecord(selectedRecordForSlip)
+                  )}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Excel
+                </Button>
+              </div>
+
+              <div className="border rounded-lg p-4 bg-slate-50">
+                <SalarySlip
+                  {...getEmployeeInfoFromRecord(selectedRecordForSlip)}
+                  details={getSalaryDetailsFromRecord(selectedRecordForSlip)}
+                />
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
