@@ -47,6 +47,7 @@ import { SalarySlip } from "./SalarySlip";
 import {
   downloadSalarySlipPDF,
   downloadSalarySlipExcel,
+  deriveSalaryDetails,
   EmployeeInfo,
   SalaryDetails
 } from "@/utils/salaryUtils";
@@ -161,33 +162,7 @@ export function PayrollPanel() {
   };
 
   const getSalaryDetailsFromRecord = (record: PayrollRecord): SalaryDetails => {
-    // Ensuring the breakdown matches the actual report amount (netPay and deductions)
-    // Gross = baseSalary + (overtime * 25)
-    // Basic = 50% of baseSalary
-    // HRA = 40% of Basic
-    const basic = Math.round(record.baseSalary * 0.5);
-    const hra = Math.round(basic * 0.4);
-    const special = record.baseSalary - basic - hra;
-    const otherEarnings = record.overtime * 25;
-
-    // Deductions distribution
-    const pt = Math.min(200, record.deductions);
-    const pf = Math.min(Math.round(basic * 0.12), record.deductions - pt);
-    const it = record.deductions - pt - pf;
-
-    return {
-      basicSalary: basic,
-      houseRentAllowance: hra,
-      conveyanceAllowance: 0, // Using percentage based breakdown to ensure exact totals
-      medicalAllowance: 0,
-      specialAllowance: Math.max(0, special),
-      otherEarnings: otherEarnings,
-      providentFund: pf,
-      professionalTax: pt,
-      incomeTax: Math.max(0, it),
-      healthInsurance: 0,
-      otherDeductions: 0,
-    };
+    return deriveSalaryDetails(record.netPay, record.deductions);
   };
 
   const getEmployeeInfoFromRecord = (record: PayrollRecord): EmployeeInfo => {
@@ -244,7 +219,7 @@ export function PayrollPanel() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Payroll</p>
-                <p className="text-2xl font-bold">${stats.totalPayroll.toLocaleString()}</p>
+              <p className="text-2xl font-bold">₹{stats.totalPayroll.toLocaleString()}</p>
               </div>
               <DollarSign className="h-8 w-8 text-success" />
             </div>
@@ -389,7 +364,7 @@ export function PayrollPanel() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="font-semibold">${record.netPay.toLocaleString()}</TableCell>
+                    <TableCell className="font-semibold">₹{record.netPay.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[record.status]}>
                         {record.status}
@@ -538,19 +513,19 @@ export function PayrollPanel() {
               <div className="p-4 rounded-lg bg-secondary/50 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Base Salary</span>
-                  <span>${selectedPayroll.baseSalary.toLocaleString()}</span>
+                  <span>₹{selectedPayroll.baseSalary.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Overtime ({selectedPayroll.overtime}h)</span>
-                  <span className="text-success">+${(selectedPayroll.overtime * 25).toLocaleString()}</span>
+                  <span className="text-success">+₹{(selectedPayroll.overtime * 25).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Deductions</span>
-                  <span className="text-destructive">-${selectedPayroll.deductions.toLocaleString()}</span>
+                  <span className="text-destructive">-₹{selectedPayroll.deductions.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-semibold border-t border-border pt-2">
                   <span>Net Pay</span>
-                  <span className="text-primary">${selectedPayroll.netPay.toLocaleString()}</span>
+                  <span className="text-primary">₹{selectedPayroll.netPay.toLocaleString()}</span>
                 </div>
               </div>
               <Button variant="gold" className="w-full" onClick={handleProcessPayroll}>

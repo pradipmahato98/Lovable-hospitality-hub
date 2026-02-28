@@ -23,7 +23,7 @@ import {
   Award,
   TrendingUp,
   FileText,
-  DollarSign,
+  IndianRupee,
   CalendarDays,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
@@ -105,7 +105,7 @@ const HR = () => {
             Employees
           </TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2">
-            <DollarSign className="h-4 w-4" />
+            <IndianRupee className="h-4 w-4" />
             Payroll & Slips
           </TabsTrigger>
           <TabsTrigger value="leave" className="gap-2">

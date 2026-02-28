@@ -12,17 +12,14 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  // 🛡️ Sentinel: Collapsed state defaults to true on small screens for the persistent sidebar.
-  const [collapsed, setCollapsed] = useState(window.innerWidth < 1024);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (mobile) {
-        setCollapsed(true);
+      setIsMobile(window.innerWidth < 1024);
+      if (window.innerWidth >= 1024) {
         setMobileOpen(false);
       }
     };
