@@ -8,6 +8,16 @@ if (!fs.existsSync(STORAGE_ROOT)) {
   fs.mkdirSync(STORAGE_ROOT);
 }
 
+// 🛡️ Sentinel: Ensure core buckets exist on startup to prevent "Bucket not found" errors
+const CORE_BUCKETS = ['avatars', 'property-images', 'lost-found-images'];
+CORE_BUCKETS.forEach(bucket => {
+  const bucketPath = path.join(STORAGE_ROOT, bucket);
+  if (!fs.existsSync(bucketPath)) {
+    console.log(`🛡️ Sentinel: Creating core bucket: ${bucket}`);
+    fs.mkdirSync(bucketPath);
+  }
+});
+
 export const listBuckets = async () => {
   const buckets = fs.readdirSync(STORAGE_ROOT, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
