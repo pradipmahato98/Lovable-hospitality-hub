@@ -136,7 +136,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
             break;
           case "o":
             e.preventDefault();
-            navigate("/rooms");
+            navigate("/front-desk");
             break;
           case "b":
             e.preventDefault();

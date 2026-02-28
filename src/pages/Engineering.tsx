@@ -173,7 +173,7 @@ const Engineering = () => {
   };
 
   const quickActions: QuickAction[] = [
-    { icon: Bed, label: "View Rooms", to: "/rooms", color: "text-blue-400" },
+    { icon: Bed, label: "View Rooms", to: "/front-desk", color: "text-blue-400" },
     { icon: DoorOpen, label: "Housekeeping", to: "/housekeeping", color: "text-cyan-400" },
     { icon: Users, label: "Assign Staff", to: "/staff", color: "text-purple-400" },
     { icon: FileText, label: "Generate Report", to: "/reports", color: "text-primary" },
