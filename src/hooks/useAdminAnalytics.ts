@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 export interface AnalyticsData {
@@ -21,42 +21,41 @@ export const useAdminAnalytics = () => {
         bookingDistResult
       ] = await Promise.all([
         // 1. Revenue Trends (last 6 months)
-        Promise.all(Array.from({ length: 6 }, (_, i) => {
+        Promise.all(Array.from({ length: 6 }, async (_, i) => {
           const date = subMonths(new Date(), 5 - i);
           const start = startOfMonth(date).toISOString();
           const end = endOfMonth(date).toISOString();
-          return supabase
-            .from("reservations")
+          const { data } = await api.from("reservations")
             .select("total_amount")
             .gte("created_at", start)
-            .lte("created_at", end)
-            .then(({ data }) => ({
-              label: format(date, "MMM"),
-              value: (data || []).reduce((sum, res) => sum + Number(res.total_amount || 0), 0)
-            }));
+            .lte("created_at", end);
+
+          return {
+            label: format(date, "MMM"),
+            value: (data || []).reduce((sum: number, res: any) => sum + Number(res.total_amount || 0), 0)
+          };
         })),
 
         // 2. Room Distribution
-        supabase.from("rooms").select("status, room_type"),
+        api.from("rooms").select("status, room_type"),
 
         // 3. User Growth (last 6 months)
-        Promise.all(Array.from({ length: 6 }, (_, i) => {
+        Promise.all(Array.from({ length: 6 }, async (_, i) => {
           const date = subMonths(new Date(), 5 - i);
           const start = startOfMonth(date).toISOString();
           const end = endOfMonth(date).toISOString();
-          return supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true })
+          const { data } = await api.from("profiles")
+            .select("*")
             .gte("created_at", start)
-            .lte("created_at", end)
-            .then(({ count }) => ({
-              label: format(date, "MMM"),
-              value: count || 0
-            }));
+            .lte("created_at", end);
+          return {
+            label: format(date, "MMM"),
+            value: (data as any[])?.length || 0
+          };
         })),
 
         // 4. Booking Status Distribution
-        supabase.from("reservations").select("status")
+        api.from("reservations").select("status")
       ]);
 
       // Process Room Distribution

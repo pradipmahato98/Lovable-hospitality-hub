@@ -31,7 +31,7 @@ import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { Database as DbTypes } from "@/integrations/supabase/types";
 import { DataSeeder } from "@/components/dev/DataSeeder";
 import { MCPConfigPanel } from "@/components/dev/MCPConfig";
@@ -203,7 +203,7 @@ const DevPanel = () => {
 
     try {
       // Simulate a real check by fetching schema info or a known table
-      const { error } = await supabase.from('settings').select('count');
+      const { error } = await api.from('settings').select('count');
       if (error) throw error;
 
       setTimeout(() => {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useToast } from "@/hooks/use-toast";
 import { addDays, format, parseISO } from "date-fns";
 
@@ -11,8 +11,7 @@ export const useNightAudit = () => {
   const { data: businessDate, isLoading: isDateLoading } = useQuery({
     queryKey: ["settings", "business_date"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("settings")
+      const { data, error } = await api.from("settings")
         .select("value")
         .eq("key", "business_date")
         .single();
@@ -26,8 +25,7 @@ export const useNightAudit = () => {
   const usePendingArrivals = (date: string) => useQuery({
     queryKey: ["reservations", "pending", date],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
+      const { data, error } = await api.from("reservations")
         .select(`
           *,
           guests (first_name, last_name)
@@ -45,8 +43,7 @@ export const useNightAudit = () => {
   const useStayOvers = (date: string) => useQuery({
     queryKey: ["reservations", "stayovers", date],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
+      const { data, error } = await api.from("reservations")
         .select(`
           *,
           guests (first_name, last_name),
@@ -65,7 +62,7 @@ export const useNightAudit = () => {
   // 4. Mutation: Post Daily Room Charges
   const postCharges = useMutation({
     mutationFn: async (date: string) => {
-      const { data, error } = await supabase.rpc('post_daily_room_charges', {
+      const { data, error } = await api.rpc('post_daily_room_charges', {
         v_business_date: date
       });
       if (error) throw error;
@@ -83,16 +80,14 @@ export const useNightAudit = () => {
       const nextDate = format(addDays(parseISO(currentDate), 1), "yyyy-MM-dd");
 
       // Update business date in settings
-      const { error: settingsError } = await supabase
-        .from("settings")
+      const { error: settingsError } = await api.from("settings")
         .update({ value: nextDate })
         .eq("key", "business_date");
 
       if (settingsError) throw settingsError;
 
       // Create Audit Log
-      const { error: logError } = await supabase
-        .from("night_audit_logs")
+      const { error: logError } = await api.from("night_audit_logs")
         .insert([{
           business_date: currentDate,
           ...log,

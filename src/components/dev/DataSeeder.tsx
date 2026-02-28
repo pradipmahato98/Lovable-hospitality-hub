@@ -15,7 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { generateSecureNumericString } from "@/utils/security";
 
 interface SeederModule {
@@ -126,7 +126,7 @@ export function DataSeeder() {
       // Seed Guests
       if (selectedModules.includes("guests")) {
         try {
-          const { data, error } = await supabase.from("guests").insert(sampleGuests).select();
+          const { data, error } = await api.from("guests").insert(sampleGuests).select();
           if (error) throw error;
           newResults.guests = { success: true, count: data?.length || 0 };
         } catch (err: unknown) {
@@ -139,7 +139,7 @@ export function DataSeeder() {
       if (selectedModules.includes("rooms")) {
         try {
           const rooms = generateRooms();
-          const { data, error } = await supabase.from("rooms").insert(rooms).select();
+          const { data, error } = await api.from("rooms").insert(rooms).select();
           if (error) throw error;
           newResults.rooms = { success: true, count: data?.length || 0 };
         } catch (err: unknown) {
@@ -151,7 +151,7 @@ export function DataSeeder() {
       // Seed POS Tables
       if (selectedModules.includes("pos")) {
         try {
-          const { data, error } = await supabase.from("pos_tables").insert(posTables).select();
+          const { data, error } = await api.from("pos_tables").insert(posTables).select();
           if (error) throw error;
           newResults.pos = { success: true, count: data?.length || 0 };
         } catch (err: unknown) {
@@ -164,8 +164,8 @@ export function DataSeeder() {
       if (selectedModules.includes("reservations")) {
         try {
           // Get existing guests and rooms
-          const { data: guests } = await supabase.from("guests").select("id").limit(20);
-          const { data: rooms } = await supabase.from("rooms").select("id").limit(15);
+          const { data: guests } = await api.from("guests").select("id").limit(20);
+          const { data: rooms } = await api.from("rooms").select("id").limit(15);
 
           if (!guests?.length || !rooms?.length) {
             throw new Error("Need guests and rooms to create reservations");
@@ -204,7 +204,7 @@ export function DataSeeder() {
             });
           }
 
-          const { data, error } = await supabase.from("reservations").insert(reservations).select();
+          const { data, error } = await api.from("reservations").insert(reservations).select();
           if (error) throw error;
           newResults.reservations = { success: true, count: data?.length || 0 };
         } catch (err: unknown) {

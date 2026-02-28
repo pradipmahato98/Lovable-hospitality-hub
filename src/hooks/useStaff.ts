@@ -10,7 +10,7 @@ export const useStaff = () => {
   return useQuery({
     queryKey: ["staff-members"],
     queryFn: async () => {
-      const { data, error } = await (await api.from("staff_members"))
+      const { data, error } = await api.from("staff_members")
         .select("*")
         .order("last_name", { ascending: true })
         .limit(100);
@@ -47,7 +47,7 @@ export const useUpdateStaff = () => {
         }
       }
 
-      const { data, error } = await (await api.from("staff_members"))
+      const { data, error } = await api.from("staff_members")
         .update(encryptedUpdates)
         .eq("id", id)
         .select()
@@ -67,8 +67,7 @@ export const useStaffTimeClock = (staffId?: string) => {
     queryKey: ["staff-time-clock", staffId],
     queryFn: async () => {
       if (!staffId) return [];
-      const { data, error } = await supabase
-        .from("staff_time_clock")
+      const { data, error } = await api.from("staff_time_clock")
         .select("*")
         .eq("staff_id", staffId)
         .order("clock_in", { ascending: false });
@@ -85,8 +84,7 @@ export const useStaffLeaveRequests = (staffId?: string) => {
     queryKey: ["staff-leave-requests", staffId],
     queryFn: async () => {
       if (!staffId) return [];
-      const { data, error } = await supabase
-        .from("leave_requests")
+      const { data, error } = await api.from("leave_requests")
         .select("*")
         .eq("staff_id", staffId)
         .order("start_date", { ascending: false });

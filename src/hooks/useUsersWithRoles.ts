@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,14 +57,12 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["users-with-roles"],
     queryFn: async () => {
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
+      const { data: profiles, error: profilesError } = await api.from("profiles")
         .select("id, user_id, email, first_name, last_name, is_blocked, blocked_reason, created_at");
 
       if (profilesError) throw profilesError;
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
+      const { data: roles, error: rolesError } = await api.from("user_roles")
         .select("user_id, role");
 
       if (rolesError) throw rolesError;
@@ -100,16 +98,14 @@ export const useRoleChangeAudit = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["role-change-audit"],
     queryFn: async () => {
-      const { data: audits, error: auditError } = await supabase
-        .from("role_change_audit")
+      const { data: audits, error: auditError } = await api.from("role_change_audit")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
 
       if (auditError) throw auditError;
 
-      const { data: profiles } = await supabase
-        .from("profiles")
+      const { data: profiles } = await api.from("profiles")
         .select("user_id, email");
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p.email]) || []);
@@ -128,8 +124,7 @@ export const useRolePermissions = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["role-permissions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("role_permissions")
+      const { data, error } = await api.from("role_permissions")
         .select("*");
 
       if (error) throw error;
@@ -143,8 +138,7 @@ export const useOTAChannels = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["ota-channels"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ota_channels")
+      const { data, error } = await api.from("ota_channels")
         .select("*");
 
       if (error) throw error;
@@ -158,8 +152,7 @@ export const useOTASyncLogs = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["ota-sync-logs"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ota_sync_logs")
+      const { data, error } = await api.from("ota_sync_logs")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(20);
@@ -175,16 +168,14 @@ export const useAdminAuditLogs = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["admin-audit-logs"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("audit_log")
+      const { data, error } = await api.from("audit_log")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
 
-      const { data: profiles } = await supabase
-        .from("profiles")
+      const { data: profiles } = await api.from("profiles")
         .select("user_id, email");
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p.email]) || []);
@@ -204,13 +195,11 @@ export const useUpdateRolePermission = () => {
   return useMutation({
     mutationFn: async ({ role, permission, action }: { role: AppRole; permission: string; action: 'add' | 'remove' }) => {
       if (action === 'add') {
-        const { error } = await supabase
-          .from("role_permissions")
+        const { error } = await api.from("role_permissions")
           .insert({ role, permission });
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("role_permissions")
+        const { error } = await api.from("role_permissions")
           .delete()
           .eq("role", role)
           .eq("permission", permission);
@@ -232,8 +221,7 @@ export const useUpdateOTAChannel = () => {
 
   return useMutation({
     mutationFn: async ({ id, is_active, sync_status }: { id: string; is_active?: boolean; sync_status?: string }) => {
-      const { error } = await supabase
-        .from("ota_channels")
+      const { error } = await api.from("ota_channels")
         .update({ is_active, sync_status, updated_at: new Date().toISOString() })
         .eq("id", id);
 
@@ -262,15 +250,14 @@ export const useUpdateUserStatus = () => {
       is_blocked: boolean;
       blocked_reason: string | null
     }) => {
-      const { error } = await supabase
-        .from("profiles")
+      const { error } = await api.from("profiles")
         .update({ is_blocked, blocked_reason, updated_at: new Date().toISOString() })
         .eq("user_id", userId);
 
       if (error) throw error;
 
       // Also log to audit_log
-      await supabase.from("audit_log").insert({
+      await api.from("audit_log").insert({
         action: is_blocked ? "block_user" : "unblock_user",
         entity_type: "user",
         entity_id: userId,
@@ -293,8 +280,7 @@ export const useUpdateUserRole = () => {
 
   return useMutation({
     mutationFn: async ({ userId, oldRole, newRole }: { userId: string; oldRole: AppRole; newRole: AppRole }) => {
-      const { data: existingRoles, error: rolesFetchError } = await supabase
-        .from("user_roles")
+      const { data: existingRoles, error: rolesFetchError } = await api.from("user_roles")
         .select("id, role")
         .eq("user_id", userId);
 
@@ -304,15 +290,13 @@ export const useUpdateUserRole = () => {
       const alreadyHasNewRole = roles.includes(newRole);
 
       if (!alreadyHasNewRole) {
-        const { error: insertError } = await supabase
-          .from("user_roles")
+        const { error: insertError } = await api.from("user_roles")
           .insert({ user_id: userId, role: newRole });
 
         if (insertError) throw insertError;
       }
 
-      const { error: cleanupError } = await supabase
-        .from("user_roles")
+      const { error: cleanupError } = await api.from("user_roles")
         .delete()
         .eq("user_id", userId)
         .neq("role", newRole);
@@ -320,8 +304,7 @@ export const useUpdateUserRole = () => {
       if (cleanupError) throw cleanupError;
 
       if (oldRole !== newRole) {
-        const { error: auditError } = await supabase
-          .from("role_change_audit")
+        const { error: auditError } = await api.from("role_change_audit")
           .insert({
             user_id: userId,
             changed_by_user_id: user?.id || "",
@@ -332,8 +315,7 @@ export const useUpdateUserRole = () => {
 
         if (auditError) throw auditError;
 
-        const { error: notifError } = await supabase
-          .from("notifications")
+        const { error: notifError } = await api.from("notifications")
           .insert({
             user_id: userId,
             title: "Role Updated",

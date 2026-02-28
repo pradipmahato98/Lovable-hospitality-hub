@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useMemo } from "react";
 import { generateSecureNumericString } from "@/utils/security";
 
@@ -92,8 +92,7 @@ export interface GuestDocument {
   created_by: string | null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 // ============= Guest Preferences =============
 export function useGuestPreferences(guestId: string | undefined) {
@@ -392,7 +391,7 @@ export function useAddGuestDocument() {
         .eq("guest_id", guestId);
 
       // 2. Insert new document
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await api.auth.getUser();
       const { data, error } = await db
         .from("guest_documents")
         .insert({
@@ -460,7 +459,7 @@ export function useMergeGuests() {
       ];
 
       for (const table of tablesToUpdate) {
-        const { error } = await supabase
+        const { error } = await db
           .from(table)
           .update({ guest_id: targetGuestId })
           .eq("guest_id", sourceGuestId);
@@ -513,7 +512,7 @@ export function useMergeGuests() {
       }
 
       // 4. Finally, delete the source guest
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await db
         .from("guests")
         .delete()
         .eq("id", sourceGuestId);

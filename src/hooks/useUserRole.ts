@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/integrations/supabase/types";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -17,8 +14,7 @@ export function useUserRole() {
       if (!user) return null;
 
       try {
-        const { data, error } = await db
-          .from("user_roles")
+        const { data, error } = await api.from("user_roles")
           .select("role")
           .eq("user_id", user.id);
 

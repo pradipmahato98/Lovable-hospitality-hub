@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/lib/api-bridge";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;

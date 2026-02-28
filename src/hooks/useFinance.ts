@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useEffect, useState } from "react";
 import { generateSecureNumericString } from "@/utils/security";
 
@@ -55,7 +55,7 @@ export interface LedgerEntry {
 
 // Helper to get supabase client with type bypass for new tables
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 // ============= Accounts =============
 export function useAccounts() {
@@ -98,7 +98,7 @@ export function useAccounts() {
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [queryClient]);
 
@@ -231,7 +231,7 @@ export function useJournalEntries(filters?: {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [queryClient]);
 

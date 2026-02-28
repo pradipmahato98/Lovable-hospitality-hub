@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { toast } from "sonner";
 
 export const RealtimeListener = () => {
@@ -8,7 +8,7 @@ export const RealtimeListener = () => {
 
   useEffect(() => {
     // Global channel for system settings
-    const settingsChannel = supabase
+    const settingsChannel = api
       .channel("global-settings")
       .on(
         "postgres_changes",
@@ -38,7 +38,7 @@ export const RealtimeListener = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(settingsChannel);
+      api.removeChannel(settingsChannel);
     };
   }, [queryClient]);
 

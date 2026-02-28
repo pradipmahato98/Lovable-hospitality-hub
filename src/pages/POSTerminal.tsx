@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/lib/api-bridge";
 import { generateSecureNumericString } from "@/utils/security";
 import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";

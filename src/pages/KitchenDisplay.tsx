@@ -15,7 +15,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { usePOSOrders, useUpdateOrderItemStatus } from "@/hooks/usePOS";
 import { POSHeader } from "@/components/pos";
 
@@ -119,7 +119,7 @@ export default function KitchenDisplay() {
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [refetch, soundEnabled]);
 

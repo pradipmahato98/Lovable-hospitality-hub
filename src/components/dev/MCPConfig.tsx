@@ -34,7 +34,6 @@ import {
 import { api } from "@/lib/api-bridge";
 import { toast } from "sonner";
 import { useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
-import { supabase } from "@/integrations/supabase/client";
 
 interface BucketStatus {
   id: string;
@@ -88,7 +87,7 @@ export const MCPConfigPanel = () => {
 
       // 2. Check Realtime (We can't directly check the publication easily,
       // so we check if we can subscribe to a common table)
-      const testChannel = supabase.channel('mcp-status-check');
+      const testChannel = api.channel('mcp-status-check');
       let realtimeOk = false;
 
       try {
@@ -100,7 +99,7 @@ export const MCPConfigPanel = () => {
 
         // Wait a bit for subscription
         await new Promise(resolve => setTimeout(resolve, 1000));
-        await supabase.removeChannel(testChannel);
+        await api.removeChannel(testChannel);
       } catch (e) {
         realtimeOk = false;
       }
@@ -297,7 +296,7 @@ export const MCPConfigPanel = () => {
             <div className="space-y-3 text-sm">
               <p className="font-medium">Setup Steps:</p>
               <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                <li>Go to <a href={`https://supabase.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer" className="text-primary hover:underline">Auth Providers</a></li>
+                <li>Go to <a href={`https://api.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer" className="text-primary hover:underline">Auth Providers</a></li>
                 <li>Find and expand the <span className="font-semibold text-foreground">Google</span> provider.</li>
                 <li>Ensure it is <span className="font-semibold text-foreground">Enabled</span>.</li>
                 <li>Enter your <span className="font-semibold text-foreground">Client ID</span> and <span className="font-semibold text-foreground">Client Secret</span>.</li>
@@ -307,7 +306,7 @@ export const MCPConfigPanel = () => {
 
             <div className="pt-2">
               <Button variant="gold" className="w-full gap-2" asChild>
-                <a href={`https://supabase.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer">
+                <a href={`https://api.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-4 w-4" />
                   Configure Google Provider
                 </a>
@@ -356,7 +355,7 @@ export const MCPConfigPanel = () => {
 
             <div className="pt-2">
               <Button variant="outline" className="w-full gap-2" asChild>
-                <a href={`https://supabase.com/dashboard/project/${status.projectId}/settings/api`} target="_blank" rel="noreferrer">
+                <a href={`https://api.com/dashboard/project/${status.projectId}/settings/api`} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-4 w-4" />
                   Supabase API Settings
                 </a>

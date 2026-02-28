@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useEffect } from "react";
 
 // ============= Types =============
@@ -31,7 +31,7 @@ export interface RateAvailability {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 // ============= OTA Channels =============
 export function useOTAChannels() {
@@ -58,7 +58,7 @@ export function useOTAChannels() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [queryClient]);
 

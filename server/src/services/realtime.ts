@@ -1,11 +1,19 @@
 import { io } from '../index';
 
-export const broadcastChange = (table: string, event: string, payload: any) => {
-  io.to(table).emit('change', { table, event, payload });
-  io.emit('all_changes', { table, event, payload });
-};
+export const broadcastChange = (table: string, event: 'INSERT' | 'UPDATE' | 'DELETE', data: any) => {
+  const payload = {
+    schema: 'public',
+    table,
+    event,
+    new: event === 'DELETE' ? null : data,
+    old: event === 'INSERT' ? null : data, // Simplified
+  };
 
-export const setupRealtimeListeners = () => {
-  // In a real Postgres environment, we would use LISTEN/NOTIFY
-  console.log('Realtime listeners established');
+  // Broadcast to global channel
+  io.emit('postgres_changes', payload);
+
+  // Also broadcast to table-specific channel
+  io.to(`table:${table}`).emit('postgres_changes', payload);
+
+  console.log(`Real-time broadcast: ${event} on ${table}`);
 };

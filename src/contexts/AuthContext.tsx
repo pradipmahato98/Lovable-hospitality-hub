@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { api } from "@/lib/api-bridge";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/lib/api-bridge";
 import { lovable } from "@/integrations/lovable/index";
 
 interface Profile {
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await (await api.from("profiles"))
+    const { data, error } = await api.from("profiles")
       .select("*")
       .eq("user_id", userId)
       .maybeSingle();
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = api.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    api.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -81,76 +81,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await api.auth.signIn({
+    const { data, error, token } = await api.auth.signIn({
       email,
       password,
     });
+
+    if (token) {
+      localStorage.setItem("token", token);
+      // Manually trigger session update
+      const { data: sessionData } = await api.auth.getSession();
+      setSession(sessionData.session);
+      setUser(sessionData.session?.user ?? null);
+      if (sessionData.session?.user) {
+        fetchProfile(sessionData.session.user.id);
+      }
+    }
+
     return { error };
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
+    const { data, error, token } = await api.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          first_name: firstName || "",
-          last_name: lastName || "",
-        },
-      },
+      firstName,
+      lastName
     });
+
+    if (token) {
+      localStorage.setItem("token", token);
+    }
+
     return { error };
   };
 
   const signInWithGoogle = async () => {
-     const result = await lovable.auth.signInWithOAuth("google", {
-       redirect_uri: window.location.origin,
-    });
-
-     if (result.redirected) {
-       // User is being redirected to Google, return no error
-       return { error: null };
-     }
-
-     return { error: result.error || null };
+     // For custom backend, this would involve a redirect to our backend's auth/google
+     // Redirecting to mock for now as per replacement scope
+     window.location.href = `${window.location.origin}/database`;
+     return { error: null };
   };
 
   const signInWithPhone = async (phone: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      phone,
-    });
+    const { error } = await api.auth.signIn({ phone });
     return { error };
   };
 
   const verifyOTP = async (phone: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
-      phone,
-      token,
-      type: "sms",
-    });
+    const { error } = await api.auth.verifyOtp({ phone, token });
     return { error };
   };
 
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/auth`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
+    const { error } = await api.auth.resetPassword(email);
     return { error };
   };
 
   const signOut = async () => {
     await api.auth.signOut();
+    localStorage.removeItem("token");
+    setSession(null);
+    setUser(null);
     setProfile(null);
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error("No user logged in") };
 
-    const { error } = await (await api.from("profiles"))
+    const { error } = await api.from("profiles")
       .update(updates)
       .eq("user_id", user.id);
 

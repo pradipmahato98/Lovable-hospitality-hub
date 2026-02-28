@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useEffect } from "react";
 import { generateSecureNumericString } from "@/utils/security";
 
@@ -88,16 +88,14 @@ export interface StockMovement {
   item?: InventoryItem;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 // ============= Categories =============
 export function useInventoryCategories() {
   return useQuery({
     queryKey: ["inventory-categories"],
     queryFn: async () => {
-      const { data, error } = await db
-        .from("inventory_categories")
+      const { data, error } = await (await db.from("inventory_categories"))
         .select("*")
         .order("name");
       if (error) throw error;
@@ -123,19 +121,19 @@ export function useSuppliers() {
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("suppliers-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "suppliers" }, () => {
         queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient]);
 
   const createSupplier = useMutation({
     mutationFn: async (supplier: Omit<Supplier, "id" | "created_at">) => {
-      const { data, error } = await db.from("suppliers").insert(supplier).select().single();
+      const { data, error } = await (await db.from("suppliers")).insert(supplier).select().single();
       if (error) throw error;
       return data;
     },
@@ -144,7 +142,7 @@ export function useSuppliers() {
 
   const updateSupplier = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
-      const { data, error } = await db.from("suppliers").update(updates).eq("id", id).select().single();
+      const { data, error } = await (await db.from("suppliers")).update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -161,14 +159,13 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   const query = useQuery({
     queryKey: ["inventory-items", filters],
     queryFn: async () => {
-      let q = db
-        .from("inventory_items")
+      const q = (await db.from("inventory_items"))
         .select(`*, category:inventory_categories(*), supplier:suppliers(*)`)
         .eq("is_active", true)
         .order("name");
 
       if (filters?.category) {
-        q = q.eq("category_id", filters.category);
+        q.eq("category_id", filters.category);
       }
 
       const { data, error } = await q;
@@ -183,19 +180,19 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("inventory-items-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items" }, () => {
         queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient]);
 
   const createItem = useMutation({
     mutationFn: async (item: Omit<InventoryItem, "id" | "created_at" | "category" | "supplier">) => {
-      const { data, error } = await db.from("inventory_items").insert(item).select().single();
+      const { data, error } = await (await db.from("inventory_items")).insert(item).select().single();
       if (error) throw error;
       return data;
     },
@@ -204,7 +201,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
 
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<InventoryItem> & { id: string }) => {
-      const { data, error } = await db.from("inventory_items").update(updates).eq("id", id).select().single();
+      const { data, error } = await (await db.from("inventory_items")).update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -214,17 +211,17 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   const adjustStock = useMutation({
     mutationFn: async ({ itemId, quantity, type, notes }: { itemId: string; quantity: number; type: "in" | "out" | "adjustment"; notes?: string }) => {
       // Get current stock
-      const { data: item, error: fetchError } = await db.from("inventory_items").select("current_stock").eq("id", itemId).single();
+      const { data: item, error: fetchError } = await (await db.from("inventory_items")).select("current_stock").eq("id", itemId).single();
       if (fetchError) throw fetchError;
 
       const newStock = type === "out" ? item.current_stock - quantity : item.current_stock + quantity;
 
       // Update stock
-      const { error: updateError } = await db.from("inventory_items").update({ current_stock: newStock, last_restocked_at: type === "in" ? new Date().toISOString() : undefined }).eq("id", itemId);
+      const { error: updateError } = await (await db.from("inventory_items")).update({ current_stock: newStock, last_restocked_at: type === "in" ? new Date().toISOString() : undefined }).eq("id", itemId);
       if (updateError) throw updateError;
 
       // Record movement
-      const { error: movementError } = await db.from("stock_movements").insert({
+      const { error: movementError } = await (await db.from("stock_movements")).insert({
         item_id: itemId,
         movement_type: type,
         quantity,
@@ -248,12 +245,11 @@ export function usePurchaseOrders(status?: string) {
   const query = useQuery({
     queryKey: ["purchase-orders", status],
     queryFn: async () => {
-      let q = db
-        .from("purchase_orders")
+      const q = (await db.from("purchase_orders"))
         .select(`*, supplier:suppliers(*), items:purchase_order_items(*, item:inventory_items(*))`)
         .order("created_at", { ascending: false });
 
-      if (status) q = q.eq("status", status);
+      if (status) q.eq("status", status);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -262,24 +258,24 @@ export function usePurchaseOrders(status?: string) {
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("purchase-orders-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, () => {
         queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient]);
 
   const createPurchaseOrder = useMutation({
     mutationFn: async ({ items, ...order }: Omit<PurchaseOrder, "id" | "created_at" | "order_number" | "supplier"> & { items: { item_id: string; quantity: number; unit_price: number }[] }) => {
       const orderNumber = `PO-${generateSecureNumericString(10)}`;
-      const { data: po, error: poError } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber }).select().single();
+      const { data: po, error: poError } = await (await db.from("purchase_orders")).insert({ ...order, order_number: orderNumber }).select().single();
       if (poError) throw poError;
 
       const poItems = items.map((i) => ({ ...i, purchase_order_id: po.id }));
-      const { error: itemsError } = await db.from("purchase_order_items").insert(poItems);
+      const { error: itemsError } = await (await db.from("purchase_order_items")).insert(poItems);
       if (itemsError) throw itemsError;
 
       return po;
@@ -292,7 +288,7 @@ export function usePurchaseOrders(status?: string) {
       const updates: Record<string, unknown> = { status };
       if (status === "received") updates.received_date = new Date().toISOString().split("T")[0];
 
-      const { data, error } = await db.from("purchase_orders").update(updates).eq("id", id).select().single();
+      const { data, error } = await (await db.from("purchase_orders")).update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -307,13 +303,12 @@ export function useStockMovements(itemId?: string) {
   return useQuery({
     queryKey: ["stock-movements", itemId],
     queryFn: async () => {
-      let q = db
-        .from("stock_movements")
+      const q = (await db.from("stock_movements"))
         .select(`*, item:inventory_items(name, sku)`)
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (itemId) q = q.eq("item_id", itemId);
+      if (itemId) q.eq("item_id", itemId);
 
       const { data, error } = await q;
       if (error) throw error;

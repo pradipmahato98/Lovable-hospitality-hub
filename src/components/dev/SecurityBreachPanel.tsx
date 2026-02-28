@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, AlertCircle, Loader2, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/lib/api-bridge";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 export const SecurityBreachPanel = () => {

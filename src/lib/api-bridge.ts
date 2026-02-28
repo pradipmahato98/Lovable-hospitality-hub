@@ -5,10 +5,11 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { io as socketIO } from "socket.io-client";
 import { encryptWithKey, decryptWithKey, deriveKey } from "@/utils/encryption";
 
 // Toggle between Supabase and Custom Backend
-const USE_CUSTOM_BACKEND = false; // Set to true to switch to the new architecture
+const USE_CUSTOM_BACKEND = true; // Set to true to switch to the new architecture
 const BACKEND_URL = "http://localhost:3001/api";
 
 export interface ApiResponse<T> {
@@ -21,8 +22,10 @@ export const api = {
    * Security & E2EE
    */
   async getEncryptionKey() {
-    // In a real app, this would be derived from the user's password or a stored secret
-    return await deriveKey("master-password-123", "system-salt");
+    // These should be set in environment variables
+    const secret = import.meta.env.VITE_ENCRYPTION_SECRET || "fallback-secret-for-dev";
+    const salt = import.meta.env.VITE_ENCRYPTION_SALT || "fallback-salt-for-dev";
+    return await deriveKey(secret, salt);
   },
 
   async encryptSensitive(data: string) {
@@ -38,7 +41,7 @@ export const api = {
   /**
    * Data Operations
    */
-  async from(tableName: string) {
+  from(tableName: string) {
     if (USE_CUSTOM_BACKEND) {
       // Logic for custom backend with chainable query builder
       const builder = {
@@ -55,6 +58,14 @@ export const api = {
         },
         eq(column: string, value: any) {
           this.query.filters.push({ type: 'eq', column, value });
+          return this;
+        },
+        gte(column: string, value: any) {
+          this.query.filters.push({ type: 'gte', column, value });
+          return this;
+        },
+        lte(column: string, value: any) {
+          this.query.filters.push({ type: 'lte', column, value });
           return this;
         },
         order(column: string, { ascending = true } = {}) {
@@ -117,21 +128,35 @@ export const api = {
           };
         },
         insert(item: any) {
-          return {
-            select: () => {
-              return {
-                single: async () => {
-                  const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}`, {
-                    method: 'POST',
-                    body: JSON.stringify(item),
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                  const data = await response.json();
-                  return { data, error: null };
-                }
-              };
-            }
+          const runInsert = async () => {
+            const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}`, {
+              method: 'POST',
+              body: JSON.stringify(item),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            const data = await response.json();
+            return { data, error: response.ok ? null : data.error };
           };
+          return {
+            select: () => ({
+              single: runInsert,
+              maybeSingle: runInsert,
+              then: (resolve: any) => runInsert().then(resolve)
+            }),
+            then: (resolve: any) => runInsert().then(resolve)
+          };
+        },
+        range(from: number, to: number) {
+          this.query.limit = to - from + 1;
+          // In a real app, you'd also send the offset
+          return this;
+        },
+        maybeSingle() {
+          this.query.single = true;
+          return this;
         },
         // Terminal then/awaitable
         then: async (resolve: any, reject: any) => {
@@ -144,8 +169,13 @@ export const api = {
               single: String(this.query.single)
             }).toString();
 
-            const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}?${queryString}`);
+            const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}?${queryString}`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
             const data = await response.json();
+            if (!response.ok) throw new Error(data.error?.message || data.error || 'Fetch failed');
             resolve({ data, error: null });
           } catch (error) {
             resolve({ data: null, error });
@@ -187,31 +217,130 @@ export const api = {
 
     async getUser() {
       if (USE_CUSTOM_BACKEND) {
-        const response = await fetch(`${BACKEND_URL}/auth/me`);
-        return await response.json();
+        const response = await fetch(`${BACKEND_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        return { data: { user: data }, error: response.ok ? null : data.error };
       } else {
         return await supabase.auth.getUser();
       }
+    },
+
+    async signUp(data: any) {
+      if (USE_CUSTOM_BACKEND) {
+        const response = await fetch(`${BACKEND_URL}/auth/signup`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        return await response.json();
+      } else {
+        return await supabase.auth.signUp(data);
+      }
+    },
+
+    async verifyOtp(data: any) {
+      if (USE_CUSTOM_BACKEND) {
+        const response = await fetch(`${BACKEND_URL}/auth/verify-otp`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        return await response.json();
+      } else {
+        return await supabase.auth.verifyOtp(data);
+      }
+    },
+
+    async resetPassword(email: string) {
+      if (USE_CUSTOM_BACKEND) {
+        const response = await fetch(`${BACKEND_URL}/auth/reset-password`, {
+          method: 'POST',
+          body: JSON.stringify({ email }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        return await response.json();
+      } else {
+        return await supabase.auth.resetPasswordForEmail(email);
+      }
+    },
+
+    async getSession() {
+      if (USE_CUSTOM_BACKEND) {
+        const token = localStorage.getItem('token');
+        if (!token) return { data: { session: null }, error: null };
+        const { data: user, error } = await this.getUser();
+        return { data: { session: user ? { user, access_token: token } : null }, error };
+      }
+      return await supabase.auth.getSession();
+    },
+
+    onAuthStateChange(callback: (event: string, session: any) => void) {
+      if (USE_CUSTOM_BACKEND) {
+        // Simple mock for now - in real app, use an event emitter
+        this.getSession().then(({ data }) => {
+          callback('INITIAL_SESSION', data.session);
+        });
+        return { data: { subscription: { unsubscribe: () => {} } } };
+      }
+      return supabase.auth.onAuthStateChange(callback);
+    },
+
+    async updateUser(attributes: any) {
+      if (USE_CUSTOM_BACKEND) {
+        const response = await fetch(`${BACKEND_URL}/auth/update`, {
+          method: 'POST',
+          body: JSON.stringify(attributes),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        const data = await response.json();
+        return { data, error: response.ok ? null : data.error };
+      }
+      return await supabase.auth.updateUser(attributes);
     }
   },
 
   /**
    * Real-time Subscriptions
    */
+  _socket: null as any,
+  getSocket() {
+    if (!this._socket && USE_CUSTOM_BACKEND) {
+      this._socket = socketIO("http://localhost:3001");
+      this._socket.on('connect', () => console.log('Connected to real-time service'));
+    }
+    return this._socket;
+  },
+
   channel(name: string) {
     if (USE_CUSTOM_BACKEND) {
-      // Logic for Socket.io (skeleton)
-      const mockChannel = {
+      const socket = this.getSocket();
+      socket.emit('subscribe', name);
+
+      const channel = {
         on: function(event: string, filter: any, callback: Function) {
-          console.log(`Subscribed to custom channel ${name} for event ${event}`);
+          socket.on('postgres_changes', (payload: any) => {
+             // Basic implementation: check if the table name matches the channel name or if payload has table info
+             if (payload.table === name || name.includes(payload.table)) {
+                callback(payload);
+             }
+          });
           return this;
         },
-        subscribe: () => {
-          console.log(`Channel ${name} subscribed`);
-          return { unsubscribe: () => console.log(`Channel ${name} unsubscribed`) };
+        subscribe: (cb?: (status: string) => void) => {
+          if (cb) cb('SUBSCRIBED');
+          return {
+            unsubscribe: () => {
+              socket.emit('unsubscribe', name);
+            }
+          };
         }
       };
-      return mockChannel;
+      return channel;
     } else {
       return supabase.channel(name);
     }
@@ -219,7 +348,9 @@ export const api = {
 
   removeChannel(channel: any) {
     if (USE_CUSTOM_BACKEND) {
-      console.log(`Removed custom channel`);
+      if (channel && typeof channel.unsubscribe === 'function') {
+        channel.unsubscribe();
+      }
       return;
     } else {
       return supabase.removeChannel(channel);
@@ -229,6 +360,23 @@ export const api = {
   /**
    * Storage Operations
    */
+  async rpc(fnName: string, params: any = {}) {
+    if (USE_CUSTOM_BACKEND) {
+      const response = await fetch(`${BACKEND_URL}/database/rpc/${fnName}`, {
+        method: 'POST',
+        body: JSON.stringify(params),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      return { data, error: response.ok ? null : data.error };
+    } else {
+      return await (supabase as any).rpc(fnName, params);
+    }
+  },
+
   storage: {
     async listBuckets() {
       if (USE_CUSTOM_BACKEND) {

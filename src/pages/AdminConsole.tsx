@@ -35,7 +35,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/lib/api-bridge";
 import { useUpdateSettings, useSettings, useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
 import {
   Dialog,

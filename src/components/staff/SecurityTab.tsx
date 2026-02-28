@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Shield, Lock, Smartphone, Eye, EyeOff, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { Progress } from "@/components/ui/progress";
 import { trackActivity } from "@/utils/auditLogger";
 
@@ -52,7 +52,7 @@ export const SecurityTab = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await api.auth.updateUser({
         password: passwords.new
       });
 

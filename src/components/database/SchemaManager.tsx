@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,39 +17,69 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api-bridge";
+import { Loader2 } from "lucide-react";
 
-const MOCK_SCHEMA = [
-  {
-    name: "reservations",
-    columns: [
-      { name: "id", type: "uuid", pk: true },
-      { name: "guest_id", type: "uuid", fk: "guests.id" },
-      { name: "room_id", type: "uuid", fk: "rooms.id" },
-      { name: "check_in", type: "timestamp" },
-      { name: "status", type: "text" },
-    ]
-  },
-  {
-    name: "guests",
-    columns: [
-      { name: "id", type: "uuid", pk: true },
-      { name: "full_name", type: "text" },
-      { name: "email", type: "text", encrypted: true },
-      { name: "loyalty_id", type: "uuid" },
-    ]
-  },
-  {
-    name: "rooms",
-    columns: [
-      { name: "id", type: "uuid", pk: true },
-      { name: "room_number", type: "text" },
-      { name: "type", type: "text" },
-      { name: "status", type: "text" },
-    ]
-  }
-];
+interface DBTable {
+  name: string;
+  columns: {
+    name: string;
+    type: string;
+    pk?: boolean;
+    fk?: string;
+    encrypted?: boolean;
+  }[];
+}
 
 export const SchemaManager = () => {
+  const [schema, setSchema] = useState<DBTable[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSchema = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/database/tables', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const tables = await response.json();
+
+        const fullSchema = await Promise.all(tables.map(async (t: any) => {
+          const colRes = await fetch(`http://localhost:3001/api/database/schema/${t.table_name}/columns`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          const columns = await colRes.json();
+          return {
+            name: t.table_name,
+            columns: columns.map((c: any) => ({
+              name: c.column_name,
+              type: c.data_type,
+              pk: c.column_name === 'id',
+              encrypted: ['email', 'phone', 'salary', 'id_number'].includes(c.column_name)
+            }))
+          };
+        }));
+
+        setSchema(fullSchema);
+      } catch (error) {
+        console.error("Failed to fetch schema:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSchema();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[400px] gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Discovering database schema...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="visualizer" className="w-full">
@@ -69,7 +99,7 @@ export const SchemaManager = () => {
             </div>
 
             <div className="absolute inset-0 p-8 flex flex-wrap gap-8 items-start justify-center overflow-auto custom-scrollbar">
-              {MOCK_SCHEMA.map((table) => (
+              {schema.map((table) => (
                 <Card key={table.name} className="w-64 shrink-0 shadow-lg border-primary/20 bg-card/80 backdrop-blur-sm">
                   <div className="p-3 bg-primary/10 border-b border-primary/20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -114,10 +144,10 @@ export const SchemaManager = () => {
 
             <div className="absolute bottom-4 right-4 flex gap-2">
               <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm border-sidebar-border">
-                3 Tables
+                {schema.length} Tables
               </Badge>
               <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm border-sidebar-border">
-                2 Relationships
+                Dynamic Schema
               </Badge>
             </div>
           </div>

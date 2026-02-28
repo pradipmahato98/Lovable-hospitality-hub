@@ -40,7 +40,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useUserRole";
@@ -116,7 +116,7 @@ export const StaffDirectoryTab = () => {
   // Create staff member
   const createStaff = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase.from("staff_members").insert({
+      const { error } = await api.from("staff_members").insert({
         employee_id: data.employee_id,
         first_name: data.first_name,
         last_name: data.last_name,
@@ -147,8 +147,7 @@ export const StaffDirectoryTab = () => {
   // Update staff member
   const updateStaff = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
-      const { error } = await supabase
-        .from("staff_members")
+      const { error } = await api.from("staff_members")
         .update({
           employee_id: data.employee_id,
           first_name: data.first_name,
@@ -182,7 +181,7 @@ export const StaffDirectoryTab = () => {
   // Delete staff member
   const deleteStaff = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("staff_members").delete().eq("id", id);
+      const { error } = await api.from("staff_members").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

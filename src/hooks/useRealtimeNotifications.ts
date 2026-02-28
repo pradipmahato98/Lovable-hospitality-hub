@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -11,7 +11,7 @@ export function useRealtimeNotifications() {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
+    const channel = api
       .channel("notifications-realtime")
       .on(
         "postgres_changes",
@@ -43,7 +43,7 @@ export function useRealtimeNotifications() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [user, queryClient]);
 }

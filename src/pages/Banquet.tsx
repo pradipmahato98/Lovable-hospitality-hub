@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { 
   DraggableBanquetCalendar,
@@ -77,7 +77,7 @@ interface BanquetEvent {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 const eventTypeColors: Record<string, string> = {
   wedding: "bg-pink-500/20 text-pink-400 border-pink-500/30",
@@ -159,7 +159,7 @@ export default function Banquet() {
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [queryClient]);
 

@@ -43,11 +43,20 @@ export const createBucket = async (name: string) => {
 
 export const uploadFile = async (bucketName: string, filePath: string, file: Express.Multer.File) => {
   const bucketPath = path.join(STORAGE_ROOT, bucketName);
+
+  // Create bucket if it doesn't exist
   if (!fs.existsSync(bucketPath)) {
-    fs.mkdirSync(bucketPath);
+    fs.mkdirSync(bucketPath, { recursive: true });
   }
 
   const destination = path.join(bucketPath, filePath);
+
+  // Ensure subdirectories in filePath exist
+  const destDir = path.dirname(destination);
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+
   fs.copyFileSync(file.path, destination);
   fs.unlinkSync(file.path);
 

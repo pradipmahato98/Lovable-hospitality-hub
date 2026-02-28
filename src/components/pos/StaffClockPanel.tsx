@@ -30,7 +30,7 @@
  } from "lucide-react";
  import { toast } from "sonner";
  import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
- import { supabase } from "@/integrations/supabase/client";
+ import { api as supabase } from "@/lib/api-bridge";
  import { useAuth } from "@/contexts/AuthContext";
  import { format, differenceInMinutes, differenceInHours, startOfDay, endOfDay } from "date-fns";
  

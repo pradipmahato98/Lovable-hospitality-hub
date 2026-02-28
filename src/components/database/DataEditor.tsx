@@ -41,7 +41,7 @@ export const DataEditor = ({ tableName }: DataEditorProps) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: rows, error } = await (await api.from(tableName))
+      const { data: rows, error } = await api.from(tableName)
         .select("*")
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -80,7 +80,7 @@ export const DataEditor = ({ tableName }: DataEditorProps) => {
   const handleSaveEdit = async (index: number) => {
     try {
       const id = data[index].id;
-      const { error } = await (await api.from(tableName))
+      const { error } = await api.from(tableName)
         .update(editValues)
         .eq("id", id);
 
@@ -100,7 +100,7 @@ export const DataEditor = ({ tableName }: DataEditorProps) => {
     if (!confirm("Are you sure you want to delete this row?")) return;
 
     try {
-      const { error } = await (await api.from(tableName))
+      const { error } = await api.from(tableName)
         .delete()
         .eq("id", id);
 

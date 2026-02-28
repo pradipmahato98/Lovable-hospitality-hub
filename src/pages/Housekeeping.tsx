@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useHousekeepingTasks, useLostAndFound, useHousekeepingStats } from "@/hooks/useHousekeeping";
 import { format } from "date-fns";
 
@@ -68,7 +68,7 @@ const Housekeeping = () => {
   const { data: rooms, isLoading: loadingRooms, refetch } = useQuery({
     queryKey: ["housekeeping-rooms"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").order("room_number");
+      const { data, error } = await api.from("rooms").select("*").order("room_number");
       if (error) throw error;
       return data.map((room, index) => ({
         ...room,

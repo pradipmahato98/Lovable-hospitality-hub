@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useEffect } from "react";
 
 // ============= Types =============
@@ -55,7 +55,7 @@ export interface HousekeepingInspection {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 // ============= Housekeeping Tasks =============
 export function useHousekeepingTasks(filters?: { date?: string; status?: string; priority?: string }) {
@@ -88,14 +88,14 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("housekeeping-tasks-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "housekeeping_tasks" }, () => {
         queryClient.invalidateQueries({ queryKey: ["housekeeping-tasks"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient]);
 
   const createTask = useMutation({

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useEffect } from "react";
 
 // ============= Types =============
@@ -76,7 +76,7 @@ export interface TimeClockEntry {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api;
 
 // ============= Staff Schedules =============
 export function useStaffSchedules(filters?: { date?: string; staffId?: string; department?: string }) {
@@ -102,14 +102,14 @@ export function useStaffSchedules(filters?: { date?: string; staffId?: string; d
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("staff-schedules-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_schedules" }, () => {
         queryClient.invalidateQueries({ queryKey: ["staff-schedules"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient]);
 
   const createSchedule = useMutation({
@@ -163,14 +163,14 @@ export function useLeaveRequests(filters?: { status?: string; staffId?: string }
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("leave-requests-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, () => {
         queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient]);
 
   const createLeaveRequest = useMutation({
@@ -374,14 +374,14 @@ export function useTimeClock(date?: string) {
   });
 
   useEffect(() => {
-    const channel = supabase
+    const channel = api
       .channel("time-clock-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_time_clock" }, () => {
         queryClient.invalidateQueries({ queryKey: ["time-clock"] });
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { api.removeChannel(channel); };
   }, [queryClient, targetDate]);
 
   const clockIn = useMutation({

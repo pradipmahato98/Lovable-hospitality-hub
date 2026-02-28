@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-bridge";
-import { supabase } from "@/integrations/supabase/client";
+import { api as supabase } from "@/lib/api-bridge";
 
 export interface Guest {
   id: string;
@@ -35,7 +35,7 @@ export const useGuests = () => {
   return useQuery({
     queryKey: ["guests"],
     queryFn: async () => {
-      const { data, error } = await (await api.from("guests"))
+      const { data, error } = await api.from("guests")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
@@ -68,13 +68,13 @@ export const useUpdateGuest = () => {
       }
 
       // 1. Get old values for auditing
-      const { data: oldGuest } = await (await api.from("guests"))
+      const { data: oldGuest } = await api.from("guests")
         .select("*")
         .eq("id", id)
         .single();
 
       // 2. Perform update
-      const { data, error } = await (await api.from("guests"))
+      const { data, error } = await api.from("guests")
         .update({ ...finalUpdates, updated_at: new Date().toISOString() })
         .eq("id", id)
         .select()
@@ -93,11 +93,11 @@ export const useUpdateGuest = () => {
         });
 
         if (Object.keys(changes).length > 0) {
-          const { data: userData } = await supabase.auth.getUser();
-          await supabase.from("guest_audit_logs").insert({
+          const { data: authData } = await api.auth.getUser();
+          await api.from("guest_audit_logs").insert({
             guest_id: id,
-            staff_id: userData.user?.id,
-            staff_name: staffName || userData.user?.email,
+            staff_id: (authData?.user as any)?.id,
+            staff_name: staffName || (authData?.user as any)?.email,
             action: "update_profile",
             details: changes,
           });
@@ -120,8 +120,7 @@ export const useGuest = (guestId: string | null) => {
     queryFn: async () => {
       if (!guestId) return null;
       
-      const { data, error } = await supabase
-        .from("guests")
+      const { data, error } = await api.from("guests")
         .select("*")
         .eq("id", guestId)
         .single();

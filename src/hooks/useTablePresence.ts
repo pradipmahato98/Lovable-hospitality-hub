@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface TablePresence {
@@ -22,7 +22,7 @@ export function useTablePresence(tableId?: string) {
       if (!user) return;
 
       const channelName = "pos-table-presence";
-      const channel = supabase.channel(channelName);
+      const channel = api.channel(channelName);
 
       const userPresence = {
         id: user.id,
@@ -77,7 +77,7 @@ export function useTablePresence(tableId?: string) {
 
       return () => {
         channel.untrack();
-        supabase.removeChannel(channel);
+        api.removeChannel(channel);
       };
     },
     [user, profile]

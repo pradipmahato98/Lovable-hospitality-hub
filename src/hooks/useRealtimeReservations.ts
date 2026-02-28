@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -17,7 +17,7 @@ export function useRealtimeReservations(options: UseRealtimeReservationsOptions 
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
+    const channel = api
       .channel("reservations-realtime")
       .on(
         "postgres_changes",
@@ -72,7 +72,7 @@ export function useRealtimeReservations(options: UseRealtimeReservationsOptions 
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [user, onInsert, onUpdate, onDelete, showToasts]);
 }
