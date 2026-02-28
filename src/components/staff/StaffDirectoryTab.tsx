@@ -12,13 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -46,6 +39,7 @@ import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useStaff, useUpdateStaff, StaffMember } from "@/hooks/useStaff";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
+import { StaffAddEditDialog } from "./StaffAddEditDialog";
 import { useSearchParams } from "react-router-dom";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 
@@ -71,7 +65,7 @@ export const StaffDirectoryTab = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
-  const { newStaffOpen: dialogOpen, setNewStaffOpen: setDialogOpen } = useQuickActions();
+  const { setNewStaffOpen } = useQuickActions();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 
@@ -79,22 +73,6 @@ export const StaffDirectoryTab = () => {
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const { isAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
-
-  const [formData, setFormData] = useState({
-    employee_id: "",
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    department: "",
-    position: "",
-    hire_date: new Date().toISOString().split("T")[0],
-    status: "active",
-    salary: "",
-    emergency_contact_name: "",
-    emergency_contact_phone: "",
-    notes: "",
-  });
 
   // Fetch staff members
   const { data: staffMembers = [], isLoading } = useStaff();
@@ -114,72 +92,6 @@ export const StaffDirectoryTab = () => {
     }
   }, [staffIdFromUrl, staffMembers, searchParams, setSearchParams]);
 
-  // Create staff member
-  const createStaff = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase.from("staff_members").insert({
-        employee_id: data.employee_id,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email || null,
-        phone: data.phone || null,
-        department: data.department,
-        position: data.position,
-        hire_date: data.hire_date,
-        status: data.status,
-        salary: data.salary ? parseFloat(data.salary) : null,
-        emergency_contact_name: data.emergency_contact_name || null,
-        emergency_contact_phone: data.emergency_contact_phone || null,
-        notes: data.notes || null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["staff-members"] });
-      toast.success("Staff member added successfully");
-      resetForm();
-      setDialogOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Failed to add staff: " + error.message);
-    },
-  });
-
-  // Update staff member
-  const updateStaff = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
-      const { error } = await supabase
-        .from("staff_members")
-        .update({
-          employee_id: data.employee_id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email || null,
-          phone: data.phone || null,
-          department: data.department,
-          position: data.position,
-          hire_date: data.hire_date,
-          status: data.status,
-          salary: data.salary ? parseFloat(data.salary) : null,
-          emergency_contact_name: data.emergency_contact_name || null,
-          emergency_contact_phone: data.emergency_contact_phone || null,
-          notes: data.notes || null,
-        })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["staff-members"] });
-      toast.success("Staff member updated successfully");
-      resetForm();
-      setDialogOpen(false);
-      setEditingStaff(null);
-    },
-    onError: (error) => {
-      toast.error("Failed to update staff: " + error.message);
-    },
-  });
-
   // Delete staff member
   const deleteStaff = useMutation({
     mutationFn: async (id: string) => {
@@ -195,58 +107,15 @@ export const StaffDirectoryTab = () => {
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      employee_id: "",
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      department: "",
-      position: "",
-      hire_date: new Date().toISOString().split("T")[0],
-      status: "active",
-      salary: "",
-      emergency_contact_name: "",
-      emergency_contact_phone: "",
-      notes: "",
-    });
-    setEditingStaff(null);
-  };
-
   const handleEdit = (e: React.MouseEvent, staff: StaffMember) => {
     e.stopPropagation();
     setEditingStaff(staff);
-    setFormData({
-      employee_id: staff.employee_id,
-      first_name: staff.first_name,
-      last_name: staff.last_name,
-      email: staff.email || "",
-      phone: staff.phone || "",
-      department: staff.department,
-      position: staff.position,
-      hire_date: staff.hire_date,
-      status: staff.status,
-      salary: staff.salary?.toString() || "",
-      emergency_contact_name: staff.emergency_contact_name || "",
-      emergency_contact_phone: staff.emergency_contact_phone || "",
-      notes: staff.notes || "",
-    });
-    setDialogOpen(true);
+    setNewStaffOpen(true);
   };
 
   const handleRowClick = (staff: StaffMember) => {
     setSelectedStaff(staff);
     setDetailsOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingStaff) {
-      updateStaff.mutate({ id: editingStaff.id, data: formData });
-    } else {
-      createStaff.mutate(formData);
-    }
   };
 
   // Filter staff
@@ -300,166 +169,13 @@ export const StaffDirectoryTab = () => {
               </SelectContent>
             </Select>
             {isAdmin && (
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
+              <Button variant="gold" className="gap-2" onClick={() => {
+                setEditingStaff(null);
+                setNewStaffOpen(true);
               }}>
-                <DialogTrigger asChild>
-                  <Button variant="gold" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Staff
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="employee_id">Employee ID *</Label>
-                        <Input
-                          id="employee_id"
-                          value={formData.employee_id}
-                          onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="status">Status *</Label>
-                        <Select
-                          value={formData.status}
-                          onValueChange={(v) => setFormData({ ...formData, status: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="on_leave">On Leave</SelectItem>
-                            <SelectItem value="terminated">Terminated</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="first_name">First Name *</Label>
-                        <Input
-                          id="first_name"
-                          value={formData.first_name}
-                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="last_name">Last Name *</Label>
-                        <Input
-                          id="last_name"
-                          value={formData.last_name}
-                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="department">Department *</Label>
-                        <Select
-                          value={formData.department}
-                          onValueChange={(v) => setFormData({ ...formData, department: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept} value={dept}>
-                                {dept}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="position">Position *</Label>
-                        <Input
-                          id="position"
-                          value={formData.position}
-                          onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="hire_date">Hire Date *</Label>
-                        <Input
-                          id="hire_date"
-                          type="date"
-                          value={formData.hire_date}
-                          onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="salary">Salary</Label>
-                        <Input
-                          id="salary"
-                          type="number"
-                          value={formData.salary}
-                          onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="emergency_contact_name">Emergency Contact Name</Label>
-                        <Input
-                          id="emergency_contact_name"
-                          value={formData.emergency_contact_name}
-                          onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="emergency_contact_phone">Emergency Contact Phone</Label>
-                        <Input
-                          id="emergency_contact_phone"
-                          value={formData.emergency_contact_phone}
-                          onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        variant="gold"
-                        disabled={createStaff.isPending || updateStaff.isPending}
-                      >
-                        {createStaff.isPending || updateStaff.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        {editingStaff ? "Update" : "Add"} Staff
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                <Plus className="h-4 w-4" />
+                Add Staff
+              </Button>
             )}
           </div>
         </div>
@@ -588,6 +304,11 @@ export const StaffDirectoryTab = () => {
         staff={selectedStaff}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
+      />
+
+      <StaffAddEditDialog
+        editingStaff={editingStaff}
+        onClose={() => setEditingStaff(null)}
       />
     </Card>
   );
