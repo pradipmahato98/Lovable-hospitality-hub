@@ -19,6 +19,7 @@ import {
   Calendar,
   Users,
   DoorOpen,
+  LogIn,
   CreditCard,
   FileText,
   Settings,
@@ -90,7 +91,7 @@ export function CommandPalette() {
             <span>Guests</span>
             <CommandShortcut>⌥G</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={() => handleSelect(() => navigate("/rooms"))}>
+          <CommandItem onSelect={() => handleSelect(() => navigate("/front-desk"))}>
             <DoorOpen className="mr-2 h-4 w-4" />
             <span>Rooms</span>
             <CommandShortcut>⌥O</CommandShortcut>
@@ -117,9 +118,13 @@ export function CommandPalette() {
             <ShoppingCart className="mr-2 h-4 w-4" />
             <span>Point of Sale</span>
           </CommandItem>
-          <CommandItem onSelect={() => handleSelect(() => navigate("/channels"))}>
+          <CommandItem onSelect={() => handleSelect(() => navigate("/channel-manager"))}>
             <Building2 className="mr-2 h-4 w-4" />
             <span>Channel Manager</span>
+          </CommandItem>
+          <CommandItem onSelect={() => handleSelect(() => navigate("/calendar"))}>
+            <LogIn className="mr-2 h-4 w-4 text-lime-400" />
+            <span>Walk-in Check-in</span>
           </CommandItem>
           <CommandItem onSelect={() => handleSelect(() => navigate("/reports"))}>
             <FileText className="mr-2 h-4 w-4" />
