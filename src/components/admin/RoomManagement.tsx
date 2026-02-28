@@ -29,7 +29,7 @@ import {
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, Room } from "@/hooks/useRooms";
 import { Plus, Edit2, Trash2, Eye, EyeOff, Upload, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { generateSecureRandomString } from "@/utils/security";
 
 export const RoomManagement = () => {
@@ -120,13 +120,13 @@ export const RoomManagement = () => {
       const fileName = `${generateSecureRandomString(8)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from('rooms')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = api.storage
         .from('rooms')
         .getPublicUrl(filePath);
 
