@@ -355,6 +355,7 @@ export function PayrollPanel() {
                   <TableHead>Overtime</TableHead>
                   <TableHead>Net Pay</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Salary Slip</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -383,6 +384,24 @@ export function PayrollPanel() {
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      {(record.status === "paid" || record.status === "processed") ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => {
+                            setSelectedRecordForSlip(record);
+                            setPreviewSlipOpen(true);
+                          }}
+                        >
+                          <FileText className="h-4 w-4" />
+                          View Slip
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-xs italic">Pending process</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-1">
                         {record.status === "pending" && (
                           <Button
@@ -402,16 +421,9 @@ export function PayrollPanel() {
                           </Button>
                         )}
                         {record.status === "paid" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedRecordForSlip(record);
-                              setPreviewSlipOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <Badge variant="outline" className="bg-success/20 text-success border-success/30 px-3 py-1">
+                            Completed
+                          </Badge>
                         )}
                       </div>
                     </TableCell>

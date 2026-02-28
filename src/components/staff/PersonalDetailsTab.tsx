@@ -4,11 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Mail, Phone, MapPin, Loader2, Camera } from "lucide-react";
+import { User, Mail, Phone, MapPin, Loader2, Camera, FileText, FileDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api-bridge";
 import { trackActivity } from "@/utils/auditLogger";
 import { generateSecureRandomString } from "@/utils/security";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { SalarySlip } from "@/components/hr/SalarySlip";
+import {
+  downloadSalarySlipPDF,
+  downloadSalarySlipExcel,
+  EmployeeInfo,
+  SalaryDetails
+} from "@/utils/salaryUtils";
+import { format } from "date-fns";
 
 export const PersonalDetailsTab = () => {
   const { profile, updateProfile } = useAuth();
@@ -21,6 +36,38 @@ export const PersonalDetailsTab = () => {
     last_name: profile?.last_name || "",
     phone: profile?.phone || "",
   });
+
+  const [previewSlipOpen, setPreviewSlipOpen] = useState(false);
+
+  const getMockEmployeeInfo = (): EmployeeInfo => {
+    return {
+      employeeName: `${profile?.first_name} ${profile?.last_name}`,
+      employeeId: profile?.id?.substring(0, 8).toUpperCase() || "EMP-001",
+      designation: profile?.role === 'admin' ? "Administrator" : "Staff Member",
+      department: "Management",
+      payPeriod: "Jan 2024",
+      employeePan: "ABCDE1234F",
+      bankAccountNo: "XXXX-XXXX-1234",
+      dateOfPayment: format(new Date(), "yyyy-MM-dd"),
+    };
+  };
+
+  const getMockSalaryDetails = (): SalaryDetails => {
+    const base = 4000;
+    return {
+      basicSalary: Math.round(base * 0.6),
+      houseRentAllowance: Math.round(base * 0.2),
+      conveyanceAllowance: 1600,
+      medicalAllowance: 1250,
+      specialAllowance: Math.round(base * 0.1),
+      otherEarnings: 0,
+      providentFund: Math.round(base * 0.08),
+      professionalTax: 200,
+      incomeTax: 300,
+      healthInsurance: 500,
+      otherDeductions: 0,
+    };
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -115,6 +162,17 @@ export const PersonalDetailsTab = () => {
             {uploading ? "Uploading..." : "Change Avatar"}
           </Button>
           <p className="text-[10px] text-muted-foreground">JPG, GIF or PNG. Max size 2MB</p>
+
+          <div className="w-full pt-4 border-t mt-4">
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-primary/20 hover:bg-primary/5"
+              onClick={() => setPreviewSlipOpen(true)}
+            >
+              <FileText className="h-4 w-4 text-primary" />
+              My Latest Salary Slip
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -168,6 +226,47 @@ export const PersonalDetailsTab = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={previewSlipOpen} onOpenChange={setPreviewSlipOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>My Salary Slip</DialogTitle>
+            <DialogDescription>
+              Preview and download your latest salary slip
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => downloadSalarySlipPDF(getMockEmployeeInfo(), getMockSalaryDetails())}
+              >
+                <FileDown className="h-4 w-4" />
+                Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => downloadSalarySlipExcel(getMockEmployeeInfo(), getMockSalaryDetails())}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Download Excel
+              </Button>
+            </div>
+
+            <div className="border rounded-lg p-4 bg-slate-50">
+              <SalarySlip
+                {...getMockEmployeeInfo()}
+                details={getMockSalaryDetails()}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

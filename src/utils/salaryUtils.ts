@@ -35,6 +35,13 @@ export interface EmployeeInfo {
   dateOfPayment: string;
 }
 
+/**
+ * Calculates net salary and generates words representation.
+ * All financial calculations are guarded against negative values.
+ *
+ * @param details Salary breakdown components (Basic, HRA, etc.)
+ * @returns Calculated earnings, deductions, and net salary with words
+ */
 export function calculateSalary(details: SalaryDetails): CalculatedSalary {
   const grossEarnings =
     details.basicSalary +
