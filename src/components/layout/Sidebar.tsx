@@ -90,11 +90,11 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           isActive
             ? "bg-sidebar-accent text-primary shadow-glow"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-          collapsed && !isMobile && "justify-center px-2"
+          collapsed && "justify-center px-2"
         )}
       >
         <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-        {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+        {!collapsed && <span className="truncate">{item.label}</span>}
       </Link>
     );
   };
@@ -107,7 +107,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
             <Hotel className="h-5 w-5 text-primary-foreground" />
           </div>
-          {(!collapsed || isMobile) && (
+          {!collapsed && (
             <span className="font-display text-xl font-semibold text-gradient-gold truncate">
               LuxeStay
             </span>
@@ -130,7 +130,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {navItems.map(renderNavItem)}
 
         {/* Operations Section */}
-        {(!collapsed || isMobile) && (
+        {!collapsed && (
           <div className="mt-4 mb-2 px-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Operations
@@ -149,11 +149,11 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 isActive
                   ? "bg-sidebar-accent text-primary shadow-glow"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-                collapsed && !isMobile && "justify-center px-2"
+                collapsed && "justify-center px-2"
               )}
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
@@ -161,7 +161,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {/* Admin Section */}
         {isAdmin && (
           <>
-            {(!collapsed || isMobile) && (
+            {!collapsed && (
               <div className="mt-4 mb-2 px-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Admin
@@ -175,7 +175,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
       {/* User Section */}
       <div className="mt-auto border-t border-sidebar-border flex-shrink-0 bg-sidebar-background/50 backdrop-blur-sm">
-        {(!collapsed || isMobile) ? (
+        {!collapsed ? (
           <div className="p-4">
             <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
               <Avatar className="h-10 w-10 border-2 border-primary/20 shadow-glow shrink-0">
@@ -227,25 +227,14 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 }
 
 export function Sidebar() {
-  const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
+  const { collapsed } = useSidebar();
 
-  // Mobile: Sheet overlay
-  if (isMobile) {
-    return (
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-72 p-0 border-sidebar-border bg-gradient-sidebar h-full overflow-hidden">
-          <SidebarContent onNavClick={() => setMobileOpen(false)} />
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
-  // Desktop: Fixed sidebar
+  // Always visible fixed sidebar
   return (
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300 bg-gradient-sidebar overflow-hidden",
-        collapsed ? "w-20" : "w-64"
+        collapsed ? "w-16 sm:w-20" : "w-64"
       )}
     >
       <SidebarContent />
