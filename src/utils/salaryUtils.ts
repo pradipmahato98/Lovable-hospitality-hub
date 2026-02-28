@@ -68,60 +68,23 @@ export function calculateSalary(details: SalaryDetails): CalculatedSalary {
   };
 }
 
-/**
- * Derives a detailed SalaryDetails object from a target net pay and deductions.
- * This ensures the slip preview exactly matches the summary report.
- */
-export function deriveSalaryDetails(targetNetPay: number, targetDeductions: number): SalaryDetails {
-  const gross = targetNetPay + targetDeductions;
-
-  // Basic = 50% of (Gross - other earnings/allowances)
-  // For simplicity and matching, we work backwards from gross
-  const basic = Math.round(gross * 0.45);
-  const hra = Math.round(basic * 0.4);
-  const special = gross - basic - hra; // Balance amount
-
-  // Deductions
-  const pt = Math.min(200, targetDeductions);
-  const pf = Math.min(Math.round(basic * 0.12), Math.max(0, targetDeductions - pt));
-  const it = Math.max(0, targetDeductions - pt - pf);
-
-  return {
-    basicSalary: basic,
-    houseRentAllowance: hra,
-    conveyanceAllowance: 0,
-    medicalAllowance: 0,
-    specialAllowance: special,
-    otherEarnings: 0,
-    providentFund: pf,
-    professionalTax: pt,
-    incomeTax: it,
-    healthInsurance: 0,
-    otherDeductions: 0,
-  };
-}
-
 export function numberToWords(num: number): string {
-  if (num === 0) return 'Zero';
-
   const a = [
     '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
   ];
   const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
-  const numStr = num.toString();
-  if (numStr.length > 9) return 'overflow';
-
-  const n = numStr.padStart(9, '0').match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if ((num = num.toString()).length > 9) return 'overflow';
+  const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
   if (!n) return '';
 
   let str = '';
-  str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[parseInt(n[1][0])] + ' ' + a[parseInt(n[1][1])]) + ' Crore ' : '';
-  str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[parseInt(n[2][0])] + ' ' + a[parseInt(n[2][1])]) + ' Lakh ' : '';
-  str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[parseInt(n[3][0])] + ' ' + a[parseInt(n[3][1])]) + ' Thousand ' : '';
-  str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[parseInt(n[4][0])] + ' ' + a[parseInt(n[4][1])]) + ' Hundred ' : '';
-  str += (Number(n[5]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[parseInt(n[5][0])] + ' ' + a[parseInt(n[5][1])]) : '';
+  str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + ' Crore ' : '';
+  str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + ' Lakh ' : '';
+  str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + ' Thousand ' : '';
+  str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + ' Hundred ' : '';
+  str += (Number(n[5]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
 
   return str.trim();
 }

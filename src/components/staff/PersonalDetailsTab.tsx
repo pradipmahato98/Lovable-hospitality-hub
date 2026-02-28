@@ -20,7 +20,6 @@ import { SalarySlip } from "@/components/hr/SalarySlip";
 import {
   downloadSalarySlipPDF,
   downloadSalarySlipExcel,
-  deriveSalaryDetails,
   EmployeeInfo,
   SalaryDetails
 } from "@/utils/salaryUtils";
@@ -54,8 +53,20 @@ export const PersonalDetailsTab = () => {
   };
 
   const getMockSalaryDetails = (): SalaryDetails => {
-    // Standardizing mock data for consistency with HR reports
-    return deriveSalaryDetails(3500, 500);
+    const base = 4000;
+    return {
+      basicSalary: Math.round(base * 0.6),
+      houseRentAllowance: Math.round(base * 0.2),
+      conveyanceAllowance: 1600,
+      medicalAllowance: 1250,
+      specialAllowance: Math.round(base * 0.1),
+      otherEarnings: 0,
+      providentFund: Math.round(base * 0.08),
+      professionalTax: 200,
+      incomeTax: 300,
+      healthInsurance: 500,
+      otherDeductions: 0,
+    };
   };
 
   const handleSave = async () => {

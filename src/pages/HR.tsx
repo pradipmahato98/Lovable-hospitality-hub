@@ -23,7 +23,7 @@ import {
   Award,
   TrendingUp,
   FileText,
-  IndianRupee,
+  DollarSign,
   CalendarDays,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
@@ -31,11 +31,10 @@ import { Navigate } from "react-router-dom";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { PayrollPanel } from "@/components/hr/PayrollPanel";
 import { LeaveManagement } from "@/components/hr/LeaveManagement";
-import { ShiftScheduling } from "@/components/hr/ShiftScheduling";
-import { PerformanceReviews } from "@/components/hr/PerformanceReviews";
 import { StaffDirectoryTab } from "@/components/staff/StaffDirectoryTab";
 import { StaffRecordsTab } from "@/components/hr/StaffRecordsTab";
 import { StaffAddEditDialog } from "@/components/staff/StaffAddEditDialog";
+import { toast } from "sonner";
 
 const mockEmployees = [
   { id: "1", name: "John Smith", department: "Front Desk", position: "Receptionist", status: "Active", hireDate: "2023-01-15" },
@@ -111,20 +110,12 @@ const HR = () => {
             Employees
           </TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2">
-            <IndianRupee className="h-4 w-4" />
+            <DollarSign className="h-4 w-4" />
             Payroll & Slips
           </TabsTrigger>
           <TabsTrigger value="leave" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             Leave
-          </TabsTrigger>
-          <TabsTrigger value="schedules" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Schedules
-          </TabsTrigger>
-          <TabsTrigger value="performance" className="gap-2">
-            <Award className="h-4 w-4" />
-            Performance
           </TabsTrigger>
         </TabsList>
 
@@ -143,7 +134,7 @@ const HR = () => {
                 <Button
                   variant="outline"
                   className="w-full justify-start gap-2"
-                  onClick={() => setActiveTab("schedules")}
+                  onClick={() => toast.info("Shift scheduling module coming soon")}
                 >
                   <Calendar className="h-4 w-4" />
                   Schedule Shifts
@@ -159,7 +150,7 @@ const HR = () => {
                 <Button
                   variant="outline"
                   className="w-full justify-start gap-2"
-                  onClick={() => setActiveTab("performance")}
+                  onClick={() => toast.info("Performance reviews module coming soon")}
                 >
                   <Award className="h-4 w-4" />
                   Performance Reviews
@@ -203,14 +194,6 @@ const HR = () => {
 
         <TabsContent value="leave">
           <LeaveManagement />
-        </TabsContent>
-
-        <TabsContent value="schedules">
-          <ShiftScheduling />
-        </TabsContent>
-
-        <TabsContent value="performance">
-          <PerformanceReviews />
         </TabsContent>
       </Tabs>
 

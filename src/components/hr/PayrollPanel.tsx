@@ -47,7 +47,6 @@ import { SalarySlip } from "./SalarySlip";
 import {
   downloadSalarySlipPDF,
   downloadSalarySlipExcel,
-  deriveSalaryDetails,
   EmployeeInfo,
   SalaryDetails
 } from "@/utils/salaryUtils";
@@ -162,7 +161,21 @@ export function PayrollPanel() {
   };
 
   const getSalaryDetailsFromRecord = (record: PayrollRecord): SalaryDetails => {
-    return deriveSalaryDetails(record.netPay, record.deductions);
+    // Mapping mock record fields to detailed SalaryDetails
+    // Since mock record has simplified fields, we distribute them
+    return {
+      basicSalary: Math.round(record.baseSalary * 0.6),
+      houseRentAllowance: Math.round(record.baseSalary * 0.2),
+      conveyanceAllowance: 1600,
+      medicalAllowance: 1250,
+      specialAllowance: Math.round(record.baseSalary * 0.1),
+      otherEarnings: record.overtime * 25,
+      providentFund: Math.round(record.baseSalary * 0.08),
+      professionalTax: 200,
+      incomeTax: Math.max(0, record.deductions - 200 - Math.round(record.baseSalary * 0.08) - 500),
+      healthInsurance: 500,
+      otherDeductions: 0,
+    };
   };
 
   const getEmployeeInfoFromRecord = (record: PayrollRecord): EmployeeInfo => {
@@ -219,7 +232,7 @@ export function PayrollPanel() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Payroll</p>
-              <p className="text-2xl font-bold">₹{stats.totalPayroll.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${stats.totalPayroll.toLocaleString()}</p>
               </div>
               <DollarSign className="h-8 w-8 text-success" />
             </div>
@@ -364,7 +377,7 @@ export function PayrollPanel() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="font-semibold">₹{record.netPay.toLocaleString()}</TableCell>
+                    <TableCell className="font-semibold">${record.netPay.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[record.status]}>
                         {record.status}
@@ -513,19 +526,19 @@ export function PayrollPanel() {
               <div className="p-4 rounded-lg bg-secondary/50 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Base Salary</span>
-                  <span>₹{selectedPayroll.baseSalary.toLocaleString()}</span>
+                  <span>${selectedPayroll.baseSalary.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Overtime ({selectedPayroll.overtime}h)</span>
-                  <span className="text-success">+₹{(selectedPayroll.overtime * 25).toLocaleString()}</span>
+                  <span className="text-success">+${(selectedPayroll.overtime * 25).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Deductions</span>
-                  <span className="text-destructive">-₹{selectedPayroll.deductions.toLocaleString()}</span>
+                  <span className="text-destructive">-${selectedPayroll.deductions.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-semibold border-t border-border pt-2">
                   <span>Net Pay</span>
-                  <span className="text-primary">₹{selectedPayroll.netPay.toLocaleString()}</span>
+                  <span className="text-primary">${selectedPayroll.netPay.toLocaleString()}</span>
                 </div>
               </div>
               <Button variant="gold" className="w-full" onClick={handleProcessPayroll}>
