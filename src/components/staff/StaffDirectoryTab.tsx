@@ -47,6 +47,7 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { useStaff, useUpdateStaff, StaffMember } from "@/hooks/useStaff";
 import { StaffDetailsDialog } from "./StaffDetailsDialog";
 import { useSearchParams } from "react-router-dom";
+import { useQuickActions } from "@/contexts/QuickActionsContext";
 
 const departments = [
   "Front Desk",
@@ -70,7 +71,7 @@ export const StaffDirectoryTab = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { newStaffOpen: dialogOpen, setNewStaffOpen: setDialogOpen } = useQuickActions();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 

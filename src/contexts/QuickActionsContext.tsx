@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 interface QuickActionsState {
   newBookingOpen: boolean;
   newGuestOpen: boolean;
+  newStaffOpen: boolean;
   newRoomOpen: boolean;
   newMaintenanceOpen: boolean;
   commandPaletteOpen: boolean;
@@ -13,6 +14,7 @@ interface QuickActionsState {
 interface QuickActionsContextType extends QuickActionsState {
   setNewBookingOpen: (open: boolean) => void;
   setNewGuestOpen: (open: boolean) => void;
+  setNewStaffOpen: (open: boolean) => void;
   setNewRoomOpen: (open: boolean) => void;
   setNewMaintenanceOpen: (open: boolean) => void;
   setCommandPaletteOpen: (open: boolean) => void;
@@ -26,6 +28,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   const [state, setState] = useState<QuickActionsState>({
     newBookingOpen: false,
     newGuestOpen: false,
+    newStaffOpen: false,
     newRoomOpen: false,
     newMaintenanceOpen: false,
     commandPaletteOpen: false,
@@ -40,6 +43,10 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
 
   const setNewGuestOpen = useCallback((open: boolean) => {
     setState((prev) => ({ ...prev, newGuestOpen: open }));
+  }, []);
+
+  const setNewStaffOpen = useCallback((open: boolean) => {
+    setState((prev) => ({ ...prev, newStaffOpen: open }));
   }, []);
 
   const setNewRoomOpen = useCallback((open: boolean) => {
@@ -62,6 +69,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     setState({
       newBookingOpen: false,
       newGuestOpen: false,
+      newStaffOpen: false,
       newRoomOpen: false,
       newMaintenanceOpen: false,
       commandPaletteOpen: false,
@@ -172,6 +180,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         ...state,
         setNewBookingOpen,
         setNewGuestOpen,
+        setNewStaffOpen,
         setNewRoomOpen,
         setNewMaintenanceOpen,
         setCommandPaletteOpen,
