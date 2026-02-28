@@ -247,5 +247,70 @@ export const api = {
     } else {
       return supabase.removeChannel(channel);
     }
+  },
+
+  /**
+   * Storage Operations
+   */
+  storage: {
+    async listBuckets() {
+      if (USE_CUSTOM_BACKEND) {
+        const response = await fetch(`${BACKEND_URL}/storage/buckets`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        return { data, error: response.ok ? null : data.error };
+      } else {
+        return await supabase.storage.listBuckets();
+      }
+    },
+
+    async createBucket(name: string, options?: any) {
+      if (USE_CUSTOM_BACKEND) {
+        const response = await fetch(`${BACKEND_URL}/storage/buckets`, {
+          method: 'POST',
+          body: JSON.stringify({ name, ...options }),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        const data = await response.json();
+        return { data, error: response.ok ? null : data.error };
+      } else {
+        return await supabase.storage.createBucket(name, options);
+      }
+    },
+
+    from(bucketName: string) {
+      if (USE_CUSTOM_BACKEND) {
+        return {
+          upload: async (path: string, file: File) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('path', path);
+
+            const response = await fetch(`${BACKEND_URL}/storage/buckets/${bucketName}/upload`, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            const data = await response.json();
+            return { data, error: response.ok ? null : data.error };
+          },
+          getPublicUrl: (path: string) => {
+            return {
+              data: {
+                publicUrl: `${BACKEND_URL}/storage/buckets/${bucketName}/files/${path}`
+              }
+            };
+          }
+        };
+      } else {
+        return supabase.storage.from(bucketName);
+      }
+    }
   }
 };

@@ -40,3 +40,24 @@ export const createBucket = async (name: string) => {
   }
   return { name, public: true };
 };
+
+export const uploadFile = async (bucketName: string, filePath: string, file: Express.Multer.File) => {
+  const bucketPath = path.join(STORAGE_ROOT, bucketName);
+  if (!fs.existsSync(bucketPath)) {
+    fs.mkdirSync(bucketPath);
+  }
+
+  const destination = path.join(bucketPath, filePath);
+  fs.copyFileSync(file.path, destination);
+  fs.unlinkSync(file.path);
+
+  return { path: filePath, bucket: bucketName };
+};
+
+export const getFilePath = async (bucketName: string, fileName: string) => {
+  const filePath = path.join(STORAGE_ROOT, bucketName, fileName);
+  if (!fs.existsSync(filePath)) {
+    throw new Error('File not found');
+  }
+  return filePath;
+};

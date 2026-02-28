@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Mail, Phone, MapPin, Loader2, Camera } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { trackActivity } from "@/utils/auditLogger";
 import { generateSecureRandomString } from "@/utils/security";
 
@@ -55,13 +55,13 @@ export const PersonalDetailsTab = () => {
       const fileName = `${profile?.id}-${generateSecureRandomString(8)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from('avatars')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = api.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
