@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -90,24 +89,24 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           isActive
             ? "bg-sidebar-accent text-primary shadow-glow"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-          collapsed && "justify-center px-2"
+          collapsed && !isMobile && "justify-center px-2"
         )}
       >
         <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
       </Link>
     );
   };
 
   return (
-    <div className="flex flex-col h-full w-full min-h-0">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border flex-shrink-0">
         <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
             <Hotel className="h-5 w-5 text-primary-foreground" />
           </div>
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <span className="font-display text-xl font-semibold text-gradient-gold truncate">
               LuxeStay
             </span>
@@ -130,7 +129,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {navItems.map(renderNavItem)}
 
         {/* Operations Section */}
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div className="mt-4 mb-2 px-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Operations
@@ -149,11 +148,11 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 isActive
                   ? "bg-sidebar-accent text-primary shadow-glow"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-                collapsed && "justify-center px-2"
+                collapsed && !isMobile && "justify-center px-2"
               )}
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
@@ -161,7 +160,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {/* Admin Section */}
         {isAdmin && (
           <>
-            {!collapsed && (
+            {(!collapsed || isMobile) && (
               <div className="mt-4 mb-2 px-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Admin
@@ -175,15 +174,12 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
       {/* User Section */}
       <div className="mt-auto border-t border-sidebar-border flex-shrink-0 bg-sidebar-background/50 backdrop-blur-sm">
-        {!collapsed ? (
+        {(!collapsed || isMobile) ? (
           <div className="p-4">
             <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
-              <Avatar className="h-10 w-10 border-2 border-primary/20 shadow-glow shrink-0">
-                <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
-                <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0 shadow-glow">
+                <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
                   {profile?.first_name || "User"} {profile?.last_name || ""}
@@ -203,13 +199,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           </div>
         ) : (
           <div className="p-3 flex flex-col items-center gap-2">
-            <Link to="/profile" onClick={onNavClick} className="hover:opacity-80">
-              <Avatar className="h-10 w-10 border-2 border-primary/20 shadow-glow">
-                <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
-                <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
+            <Link to="/profile" className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80 shadow-glow">
+              <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
             </Link>
             <Button
               variant="ghost"
@@ -227,14 +218,25 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 }
 
 export function Sidebar() {
-  const { collapsed } = useSidebar();
+  const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
 
-  // Always visible fixed sidebar
+  // Mobile: Sheet overlay
+  if (isMobile) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-72 p-0 border-sidebar-border">
+          <SidebarContent onNavClick={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Fixed sidebar
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300 bg-gradient-sidebar overflow-hidden",
-        collapsed ? "w-16 sm:w-20" : "w-64"
+        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300",
+        collapsed ? "w-20" : "w-64"
       )}
     >
       <SidebarContent />

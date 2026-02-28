@@ -52,7 +52,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const { isMobile } = useSidebar();
+  const { isMobile, setMobileOpen } = useSidebar();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -81,9 +81,20 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-2 shrink-0">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-2">
         <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-          <div className="min-w-0">
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileOpen(true)}
+              className="flex-shrink-0 text-foreground hover:bg-secondary"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+
+          <div className="min-w-0 hidden md:block">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate">{title}</h1>
             {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
           </div>
