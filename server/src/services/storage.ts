@@ -1,12 +1,38 @@
 import fs from 'fs';
 import path from 'path';
 
-const STORAGE_ROOT = path.join(process.cwd(), 'storage');
+const STORAGE_ROOT = path.resolve(process.cwd(), 'storage');
 
 // Ensure storage root exists
 if (!fs.existsSync(STORAGE_ROOT)) {
-  fs.mkdirSync(STORAGE_ROOT);
+  fs.mkdirSync(STORAGE_ROOT, { recursive: true });
 }
+
+/**
+ * 🛡️ Sentinel: Helper to validate that a path is within the STORAGE_ROOT
+ * to prevent path traversal attacks.
+ */
+const validatePath = (targetPath: string) => {
+  const resolvedPath = path.resolve(targetPath);
+  const relative = path.relative(STORAGE_ROOT, resolvedPath);
+  const isOutside = relative.startsWith('..') || path.isAbsolute(relative);
+
+  if (isOutside) {
+    throw new Error('🛡️ Sentinel: Security Exception - Invalid path traversal detected');
+  }
+  return resolvedPath;
+};
+
+/**
+ * 🛡️ Sentinel: Helper to validate bucket names to prevent directory traversal
+ * via bucket names.
+ */
+const validateBucketName = (name: string) => {
+  if (!/^[a-zA-Z0-9._-]+$/.test(name) || name === '.' || name === '..') {
+    throw new Error('🛡️ Sentinel: Security Exception - Invalid bucket name');
+  }
+  return name;
+};
 
 export const listBuckets = async () => {
   const buckets = fs.readdirSync(STORAGE_ROOT, { withFileTypes: true })
@@ -34,20 +60,31 @@ export const listBuckets = async () => {
 };
 
 export const createBucket = async (name: string) => {
-  const bucketPath = path.join(STORAGE_ROOT, name);
+  validateBucketName(name);
+  const bucketPath = validatePath(path.join(STORAGE_ROOT, name));
+
   if (!fs.existsSync(bucketPath)) {
-    fs.mkdirSync(bucketPath);
+    fs.mkdirSync(bucketPath, { recursive: true });
   }
   return { name, public: true };
 };
 
 export const uploadFile = async (bucketName: string, filePath: string, file: Express.Multer.File) => {
-  const bucketPath = path.join(STORAGE_ROOT, bucketName);
+  validateBucketName(bucketName);
+  const bucketPath = validatePath(path.join(STORAGE_ROOT, bucketName));
+
   if (!fs.existsSync(bucketPath)) {
-    fs.mkdirSync(bucketPath);
+    fs.mkdirSync(bucketPath, { recursive: true });
   }
 
-  const destination = path.join(bucketPath, filePath);
+  const destination = validatePath(path.join(bucketPath, filePath));
+
+  // Ensure the destination directory exists if filePath contains subdirectories
+  const destDir = path.dirname(destination);
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+
   fs.copyFileSync(file.path, destination);
   fs.unlinkSync(file.path);
 
@@ -55,7 +92,9 @@ export const uploadFile = async (bucketName: string, filePath: string, file: Exp
 };
 
 export const getFilePath = async (bucketName: string, fileName: string) => {
-  const filePath = path.join(STORAGE_ROOT, bucketName, fileName);
+  validateBucketName(bucketName);
+  const filePath = validatePath(path.join(STORAGE_ROOT, bucketName, fileName));
+
   if (!fs.existsSync(filePath)) {
     throw new Error('File not found');
   }

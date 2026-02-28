@@ -32,3 +32,8 @@
 **Vulnerability:** The E2EE module used hardcoded master password and salt in the source code, and guest PII (id_number) was being stored encrypted but displayed in its ciphertext form in the UI. Additionally, some entry points (useAddGuestDocument) bypassed encryption entirely.
 **Learning:** Security features like E2EE are only as strong as their key management. Hardcoding keys makes the encryption trivial to bypass. Furthermore, security features must be implemented consistently across all data entry/retrieval paths.
 **Prevention:** Always use environment variables for system-wide secrets. Centralize encryption/decryption logic in an API bridge or utility layer and ensure all data hooks automatically handle the transformation to keep the UI clean and secure.
+
+## 2026-02-28 - Path Traversal in Custom Storage Service
+**Vulnerability:** The custom storage backend lacked path sanitization, allowing attackers to read or write files outside the intended storage root via `..` sequences in bucket names or file paths.
+**Learning:** When implementing local file storage, `path.join` is insufficient to prevent traversal. Attackers can provide relative paths that, when joined, resolve to locations outside the sandbox.
+**Prevention:** Always use `path.resolve` on the final path and verify that it starts with the expected base directory. Additionally, strictly validate bucket names using a whitelist regex to prevent directory-level traversal.
