@@ -161,19 +161,31 @@ export function PayrollPanel() {
   };
 
   const getSalaryDetailsFromRecord = (record: PayrollRecord): SalaryDetails => {
-    // Mapping mock record fields to detailed SalaryDetails
-    // Since mock record has simplified fields, we distribute them
+    // Ensuring the breakdown matches the actual report amount (netPay and deductions)
+    // Gross = baseSalary + (overtime * 25)
+    // Basic = 50% of baseSalary
+    // HRA = 40% of Basic
+    const basic = Math.round(record.baseSalary * 0.5);
+    const hra = Math.round(basic * 0.4);
+    const special = record.baseSalary - basic - hra;
+    const otherEarnings = record.overtime * 25;
+
+    // Deductions distribution
+    const pt = Math.min(200, record.deductions);
+    const pf = Math.min(Math.round(basic * 0.12), record.deductions - pt);
+    const it = record.deductions - pt - pf;
+
     return {
-      basicSalary: Math.round(record.baseSalary * 0.6),
-      houseRentAllowance: Math.round(record.baseSalary * 0.2),
-      conveyanceAllowance: 1600,
-      medicalAllowance: 1250,
-      specialAllowance: Math.round(record.baseSalary * 0.1),
-      otherEarnings: record.overtime * 25,
-      providentFund: Math.round(record.baseSalary * 0.08),
-      professionalTax: 200,
-      incomeTax: Math.max(0, record.deductions - 200 - Math.round(record.baseSalary * 0.08) - 500),
-      healthInsurance: 500,
+      basicSalary: basic,
+      houseRentAllowance: hra,
+      conveyanceAllowance: 0, // Using percentage based breakdown to ensure exact totals
+      medicalAllowance: 0,
+      specialAllowance: Math.max(0, special),
+      otherEarnings: otherEarnings,
+      providentFund: pf,
+      professionalTax: pt,
+      incomeTax: Math.max(0, it),
+      healthInsurance: 0,
       otherDeductions: 0,
     };
   };
