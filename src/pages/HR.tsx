@@ -31,9 +31,11 @@ import { Navigate } from "react-router-dom";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { PayrollPanel } from "@/components/hr/PayrollPanel";
 import { LeaveManagement } from "@/components/hr/LeaveManagement";
+import { ShiftScheduling } from "@/components/hr/ShiftScheduling";
+import { PerformanceReviews } from "@/components/hr/PerformanceReviews";
 import { StaffDirectoryTab } from "@/components/staff/StaffDirectoryTab";
 import { StaffRecordsTab } from "@/components/hr/StaffRecordsTab";
-import { toast } from "sonner";
+import { StaffAddEditDialog } from "@/components/staff/StaffAddEditDialog";
 
 const mockEmployees = [
   { id: "1", name: "John Smith", department: "Front Desk", position: "Receptionist", status: "Active", hireDate: "2023-01-15" },
@@ -106,7 +108,7 @@ const HR = () => {
         <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
           <TabsTrigger value="employees" className="gap-2">
             <Users className="h-4 w-4" />
-            Staff Directory
+            Employees
           </TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2">
             <IndianRupee className="h-4 w-4" />
@@ -115,6 +117,14 @@ const HR = () => {
           <TabsTrigger value="leave" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             Leave
+          </TabsTrigger>
+          <TabsTrigger value="schedules" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Schedules
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-2">
+            <Award className="h-4 w-4" />
+            Performance
           </TabsTrigger>
         </TabsList>
 
@@ -133,7 +143,7 @@ const HR = () => {
                 <Button
                   variant="outline"
                   className="w-full justify-start gap-2"
-                  onClick={() => toast.info("Shift scheduling module coming soon")}
+                  onClick={() => setActiveTab("schedules")}
                 >
                   <Calendar className="h-4 w-4" />
                   Schedule Shifts
@@ -149,7 +159,7 @@ const HR = () => {
                 <Button
                   variant="outline"
                   className="w-full justify-start gap-2"
-                  onClick={() => toast.info("Performance reviews module coming soon")}
+                  onClick={() => setActiveTab("performance")}
                 >
                   <Award className="h-4 w-4" />
                   Performance Reviews
@@ -167,11 +177,11 @@ const HR = () => {
                 <TabsList className="bg-muted/50 p-1 h-auto inline-flex mb-4">
                   <TabsTrigger value="directory" className="gap-2 px-4 py-2">
                     <Users className="h-4 w-4" />
-                    Directory
+                    Staff Directory
                   </TabsTrigger>
                   <TabsTrigger value="records" className="gap-2 px-4 py-2">
                     <FileText className="h-4 w-4" />
-                    Staff Records
+                    Employee Records
                   </TabsTrigger>
                 </TabsList>
 
@@ -194,7 +204,17 @@ const HR = () => {
         <TabsContent value="leave">
           <LeaveManagement />
         </TabsContent>
+
+        <TabsContent value="schedules">
+          <ShiftScheduling />
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <PerformanceReviews />
+        </TabsContent>
       </Tabs>
+
+      <StaffAddEditDialog />
     </MainLayout>
   );
 };
