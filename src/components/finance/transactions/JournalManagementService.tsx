@@ -224,27 +224,62 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Entry #</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Voucher Type</TableHead>
+                  <TableHead>Voucher No.</TableHead>
+                  <TableHead>Transaction Date</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="text-right">Credit</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead>Entry By</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {journalEntries.map((entry) => {
                   const totalDebit = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
-                  const totalCredit = entry.lines?.reduce((sum: number, l: any) => sum + (l.credit || 0), 0) || 0;
+                  const creatorName = entry.created_by_profile
+                    ? `${entry.created_by_profile.first_name || ""} ${entry.created_by_profile.last_name || ""}`.trim()
+                    : "System";
+                  const createdDate = new Date(entry.created_at).toLocaleString([], {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
 
                   return (
                     <TableRow key={entry.id}>
+                      <TableCell>
+                        {!entry.is_posted && !isReadOnly && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePostEntry(entry.id)}
+                            disabled={postJournalEntry.isPending}
+                            className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Post
+                          </Button>
+                        )}
+                        {entry.is_posted && (
+                          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                            Completed
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-mono">
+                          {entry.voucher_type || "JV"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-mono text-primary">{entry.entry_number}</TableCell>
                       <TableCell>{entry.date}</TableCell>
-                      <TableCell>{entry.description}</TableCell>
-                      <TableCell className="text-right font-mono">${totalDebit.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono">${totalCredit.toFixed(2)}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
+                      <TableCell className="text-right font-mono font-bold">
+                        ${totalDebit.toFixed(2)}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
@@ -254,17 +289,10 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {!entry.is_posted && !isReadOnly && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePostEntry(entry.id)}
-                            disabled={postJournalEntry.isPending}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Post
-                          </Button>
-                        )}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{creatorName}</span>
+                          <span className="text-xs text-muted-foreground">{createdDate}</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
