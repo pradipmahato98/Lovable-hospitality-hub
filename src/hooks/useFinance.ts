@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { generateSecureNumericString } from "@/utils/security";
-import { useAuth } from "@/contexts/AuthContext";
 
 // ============= Types =============
 export interface Account {
@@ -255,7 +254,6 @@ export function useJournalEntries(filters?: {
 
 export function useCreateJournalEntry() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (entry: {
@@ -276,7 +274,6 @@ export function useCreateJournalEntry() {
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
-          created_by: user?.id,
         })
         .select()
         .single();

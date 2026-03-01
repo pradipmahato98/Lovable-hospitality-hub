@@ -27,15 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Plus, Check, Send, ShieldCheck, Activity, MoreHorizontal, Eye, Edit, Printer, Trash2, Search, ArrowUpDown } from "lucide-react";
+import { Plus, Check, Send, ShieldCheck, Activity } from "lucide-react";
 import {
   useJournalEntries,
   useCreateJournalEntry,
@@ -45,7 +37,6 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { useBusinessDate } from "@/hooks/useSettings";
-import { useMemo } from "react";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
@@ -54,14 +45,6 @@ interface JournalManagementServiceProps {
 export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
   const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [filters, setFilters] = useState({
-    voucherType: "",
-    voucherNo: "",
-    date: "",
-  });
-  const [activeSearch, setActiveSearch] = useState<string | null>(null);
-
   const [newJournalEntry, setNewJournalEntry] = useState({
     date: new Date().toISOString().slice(0, 10),
     description: "",
@@ -79,62 +62,11 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     description: "",
   });
 
-  const { data: journalEntriesRaw, isLoading } = useJournalEntries();
+  const { data: journalEntries, isLoading } = useJournalEntries();
   const { data: accounts } = useAccounts();
   const createJournalEntry = useCreateJournalEntry();
   const postJournalEntry = usePostJournalEntry();
   const { data: businessDate } = useBusinessDate();
-
-  const filteredAndSortedEntries = useMemo(() => {
-    if (!journalEntriesRaw) return [];
-
-    let result = [...journalEntriesRaw];
-
-    // Apply filters
-    if (filters.voucherType) {
-      result = result.filter(e => (e.voucher_type || "JV").toLowerCase().includes(filters.voucherType.toLowerCase()));
-    }
-    if (filters.voucherNo) {
-      result = result.filter(e => e.entry_number.toLowerCase().includes(filters.voucherNo.toLowerCase()));
-    }
-    if (filters.date) {
-      result = result.filter(e => e.date.includes(filters.date));
-    }
-
-    // Apply sorting
-    if (sortConfig) {
-      result.sort((a, b) => {
-        let aValue = a[sortConfig.key as keyof JournalEntry];
-        let bValue = b[sortConfig.key as keyof JournalEntry];
-
-        if (sortConfig.key === 'voucher_type') {
-          aValue = a.voucher_type || "JV";
-          bValue = b.voucher_type || "JV";
-        }
-
-        if (aValue === bValue) return 0;
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        if (sortConfig.direction === 'asc') {
-          return aValue < bValue ? -1 : 1;
-        } else {
-          return aValue > bValue ? -1 : 1;
-        }
-      });
-    }
-
-    return result;
-  }, [journalEntriesRaw, filters, sortConfig]);
-
-  const toggleSort = (key: string) => {
-    setSortConfig(prev => {
-      if (prev?.key === key) {
-        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  };
 
   const handleCreateJournalEntry = async () => {
     if (!newJournalEntry.description) {
@@ -286,69 +218,16 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading journal entries...</div>
-          ) : filteredAndSortedEntries.length === 0 ? (
+          ) : journalEntries.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">No journal entries yet</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Action</TableHead>
-                  <TableHead>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 cursor-pointer group" onClick={() => toggleSort('voucher_type')}>
-                        Voucher Type
-                        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <Search className="h-3 w-3 cursor-pointer ml-auto" onClick={(e) => { e.stopPropagation(); setActiveSearch(activeSearch === 'type' ? null : 'type'); }} />
-                      </div>
-                      {activeSearch === 'type' && (
-                        <Input
-                          size={1}
-                          className="h-7 text-xs"
-                          placeholder="Search..."
-                          value={filters.voucherType}
-                          onChange={(e) => setFilters({ ...filters, voucherType: e.target.value })}
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 cursor-pointer group" onClick={() => toggleSort('entry_number')}>
-                        Voucher No.
-                        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <Search className="h-3 w-3 cursor-pointer ml-auto" onClick={(e) => { e.stopPropagation(); setActiveSearch(activeSearch === 'no' ? null : 'no'); }} />
-                      </div>
-                      {activeSearch === 'no' && (
-                        <Input
-                          size={1}
-                          className="h-7 text-xs"
-                          placeholder="Search..."
-                          value={filters.voucherNo}
-                          onChange={(e) => setFilters({ ...filters, voucherNo: e.target.value })}
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 cursor-pointer group" onClick={() => toggleSort('date')}>
-                        Transaction Date
-                        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <Search className="h-3 w-3 cursor-pointer ml-auto" onClick={(e) => { e.stopPropagation(); setActiveSearch(activeSearch === 'date' ? null : 'date'); }} />
-                      </div>
-                      {activeSearch === 'date' && (
-                        <Input
-                          type="date"
-                          className="h-7 text-xs"
-                          value={filters.date}
-                          onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                  </TableHead>
+                  <TableHead>Voucher Type</TableHead>
+                  <TableHead>Voucher No.</TableHead>
+                  <TableHead>Transaction Date</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -356,7 +235,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedEntries.map((entry) => {
+                {journalEntries.map((entry) => {
                   const totalDebit = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
                   const creatorName = entry.created_by_profile
                     ? `${entry.created_by_profile.first_name || ""} ${entry.created_by_profile.last_name || ""}`.trim()
@@ -372,38 +251,23 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                   return (
                     <TableRow key={entry.id}>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem className="gap-2">
-                              <Eye className="h-4 w-4" /> View
-                            </DropdownMenuItem>
-                            {!entry.is_posted && !isReadOnly && (
-                              <>
-                                <DropdownMenuItem className="gap-2">
-                                  <Edit className="h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-2 text-success" onClick={() => handlePostEntry(entry.id)}>
-                                  <Check className="h-4 w-4" /> Post
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem className="gap-2">
-                              <Printer className="h-4 w-4" /> Print
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {!entry.is_posted && !isReadOnly && (
-                              <DropdownMenuItem className="gap-2 text-destructive">
-                                <Trash2 className="h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {!entry.is_posted && !isReadOnly && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePostEntry(entry.id)}
+                            disabled={postJournalEntry.isPending}
+                            className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Post
+                          </Button>
+                        )}
+                        {entry.is_posted && (
+                          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                            Completed
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="font-mono">

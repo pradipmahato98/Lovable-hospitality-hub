@@ -75,6 +75,7 @@ const PAGES_DATA = [
   { icon: ShieldCheck, label: "Admin Console", path: "/admin-console", keywords: ["system admin", "dashboard"], isAdmin: true },
   { icon: Code2, label: "Dev Panel", path: "/dev", keywords: ["developer", "debug", "logs"], isAdmin: true },
   { icon: User, label: "My Profile", path: "/profile", keywords: ["account", "me", "avatar"] },
+  { icon: Hotel, label: "LuxeStay Home", path: "/", keywords: ["home", "main", "start"] },
 ];
 
 export function GlobalSearch() {
@@ -90,20 +91,27 @@ export function GlobalSearch() {
   const { data: guests = [], isLoading: loadingGuests } = useGuests();
   const { data: staff = [], isLoading: loadingStaff } = useStaff();
 
-  // Keyboard shortcut (Cmd+K or Ctrl+K)
+  // Keyboard shortcut (Cmd+K or Ctrl+K) - only focus if it's already visible
+  // or use an alternative shortcut if needed to avoid conflict with CommandPalette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-        setIsOpen(true);
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (ctrlKey && e.key === "k") {
+        // Only focus the search input if it exists in the DOM
+        if (inputRef.current) {
+          e.preventDefault();
+          inputRef.current.focus();
+          setIsOpen(true);
+        }
       }
       if (e.key === "Escape") {
         setIsOpen(false);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true); // Use capture to prioritize
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, []);
 
   // Close dropdown when clicking outside
