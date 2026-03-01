@@ -185,10 +185,6 @@ export function useJournalEntries(filters?: {
         .from("journal_entries")
         .select(`
           *,
-          created_by_profile:profiles!journal_entries_created_by_fkey (
-            first_name,
-            last_name
-          ),
           journal_lines (
             *,
             account:accounts (*)
@@ -213,9 +209,25 @@ export function useJournalEntries(filters?: {
         return [];
       }
 
+      // Fetch profiles separately to avoid join issues
+      const userIds = Array.from(new Set((data || []).map((e: any) => e.created_by).filter(Boolean)));
+      let profileMap: Record<string, any> = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await db
+          .from("profiles")
+          .select("user_id, first_name, last_name")
+          .in("user_id", userIds);
+
+        if (profiles) {
+          profileMap = profiles.reduce((acc: any, p: any) => ({ ...acc, [p.user_id]: p }), {});
+        }
+      }
+
       return (data || []).map((entry: any) => ({
         ...entry,
         voucher_type: "JV", // Default to Journal Voucher
+        created_by_profile: profileMap[entry.created_by || ""],
         lines: entry.journal_lines || [],
       })) as JournalEntry[];
     },
