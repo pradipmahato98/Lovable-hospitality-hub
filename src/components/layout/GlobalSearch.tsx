@@ -1,5 +1,40 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, User, Users, CheckCircle2, LogOut, ExternalLink, Loader2 } from "lucide-react";
+import {
+  Search,
+  User,
+  Users,
+  CheckCircle2,
+  LogOut,
+  ExternalLink,
+  Loader2,
+  LayoutDashboard,
+  CalendarDays,
+  Calendar,
+  BedDouble,
+  Receipt,
+  Package,
+  BarChart3,
+  Settings,
+  Hotel,
+  UserCog,
+  Code2,
+  ShoppingCart,
+  UserCheck,
+  Globe,
+  Sparkles,
+  Wrench,
+  DollarSign,
+  PartyPopper,
+  ShieldCheck,
+  Terminal,
+  Moon,
+  Lock,
+  Database,
+  History,
+  Layout,
+  UtensilsCrossed,
+  CreditCard
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGuests, Guest } from "@/hooks/useGuests";
@@ -7,16 +42,77 @@ import { useStaff } from "@/hooks/useStaff";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsAdmin } from "@/hooks/useUserRole";
+import { cn } from "@/lib/utils";
+
+const PAGES_DATA = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", keywords: ["home", "main", "overview"] },
+  { icon: CalendarDays, label: "Reservations", path: "/reservations", keywords: ["booking", "stays", "calendar"] },
+  { icon: Calendar, label: "Reservation Calendar", path: "/calendar", keywords: ["bookings", "schedule", "occupancy"] },
+  { icon: Users, label: "Guests", path: "/guests", keywords: ["customers", "profiles", "visitors"] },
+  { icon: BedDouble, label: "Front Desk", path: "/front-desk", keywords: ["reception", "checkin", "checkout", "arrivals", "departures"] },
+  { icon: Receipt, label: "Billing", path: "/billing", keywords: ["invoice", "payment", "folio", "checkout"] },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping", keywords: ["cleaning", "rooms", "maintenance"] },
+  { icon: Wrench, label: "Engineering", path: "/engineering", keywords: ["maintenance", "repairs", "work orders"] },
+  { icon: ShoppingCart, label: "POS", path: "/pos", keywords: ["point of sale", "restaurant", "bar", "dining"] },
+  { icon: Terminal, label: "POS Terminal", path: "/pos/terminal", keywords: ["order", "sale", "cashier"] },
+  { icon: History, label: "POS History", path: "/pos/history", keywords: ["transactions", "orders", "past sales"] },
+  { icon: BarChart3, label: "POS Reports", path: "/pos/reports", keywords: ["analytics", "sales data"] },
+  { icon: UtensilsCrossed, label: "Kitchen Display", path: "/pos/kitchen", keywords: ["orders", "chef", "cooking"] },
+  { icon: Package, label: "Inventory", path: "/inventory", keywords: ["stock", "supplies", "items"] },
+  { icon: Globe, label: "Channel Manager", path: "/channel-manager", keywords: ["ota", "booking.com", "expedia", "sync"] },
+  { icon: Moon, label: "Night Audit", path: "/night-audit", keywords: ["day close", "reconciliation", "rollover"] },
+  { icon: Lock, label: "Day Close", path: "/day-close", keywords: ["end of day", "settlement"] },
+  { icon: BarChart3, label: "Reports", path: "/reports", keywords: ["analytics", "statistics", "business intelligence"] },
+  { icon: Settings, label: "Settings", path: "/settings", keywords: ["configuration", "preferences", "system"] },
+  { icon: UserCog, label: "User Management", path: "/users", keywords: ["accounts", "permissions", "access"], isAdmin: true },
+  { icon: Users, label: "Staff Management", path: "/staff", keywords: ["employees", "profiles"], isAdmin: true },
+  { icon: UserCheck, label: "HR", path: "/hr", keywords: ["human resources", "recruitment", "payroll"], isAdmin: true },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "journal", "expenses"] },
+  { icon: CreditCard, label: "Payments", path: "/payments", keywords: ["transactions", "gateway", "eSewa", "Khalti"] },
+  { icon: PartyPopper, label: "Banquet", path: "/banquet", keywords: ["events", "functions", "meetings"] },
+  { icon: Database, label: "Database", path: "/database", keywords: ["sql", "tables", "data"], isAdmin: true },
+  { icon: ShieldCheck, label: "Admin Console", path: "/admin-console", keywords: ["system admin", "dashboard"], isAdmin: true },
+  { icon: Code2, label: "Dev Panel", path: "/dev", keywords: ["developer", "debug", "logs"], isAdmin: true },
+  { icon: User, label: "My Profile", path: "/profile", keywords: ["account", "me", "avatar"] },
+  { icon: Hotel, label: "LuxeStay Home", path: "/", keywords: ["home", "main", "start"] },
+];
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
 
   const { data: guests = [], isLoading: loadingGuests } = useGuests();
   const { data: staff = [], isLoading: loadingStaff } = useStaff();
+
+  // Keyboard shortcut (Cmd+K or Ctrl+K) - only focus if it's already visible
+  // or use an alternative shortcut if needed to avoid conflict with CommandPalette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (ctrlKey && e.key === "k") {
+        // Only focus the search input if it exists in the DOM
+        if (inputRef.current) {
+          e.preventDefault();
+          inputRef.current.focus();
+          setIsOpen(true);
+        }
+      }
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown, true); // Use capture to prioritize
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -30,8 +126,19 @@ export function GlobalSearch() {
   }, []);
 
   const results = useMemo(() => {
-    if (!query.trim()) return { guests: [], staff: [] };
+    if (!query.trim()) {
+      return { guests: [], staff: [], pages: [], all: [] };
+    }
     const q = query.toLowerCase();
+
+    // Filter pages
+    const filteredPages = PAGES_DATA.filter(page => {
+      if (page.isAdmin && !isAdmin) return false;
+      return (
+        page.label.toLowerCase().includes(q) ||
+        page.keywords.some(k => k.toLowerCase().includes(q))
+      );
+    }).slice(0, 8);
 
     // Deduplicate guests by ID and signature to handle potential DB duplicates
     const guestMap = new Map<string, Guest>();
@@ -76,10 +183,21 @@ export function GlobalSearch() {
 
     const filteredStaff = Array.from(staffMap.values()).slice(0, 3);
 
-    return { guests: filteredGuests, staff: filteredStaff };
-  }, [query, guests, staff]);
+    const all = [
+      ...filteredPages.map(p => ({ type: 'page' as const, data: p })),
+      ...filteredGuests.map(g => ({ type: 'guest' as const, data: g })),
+      ...filteredStaff.map(s => ({ type: 'staff' as const, data: s }))
+    ];
 
-  const hasResults = results.guests.length > 0 || results.staff.length > 0;
+    return { guests: filteredGuests, staff: filteredStaff, pages: filteredPages, all };
+  }, [query, guests, staff, isAdmin]);
+
+  const hasResults = results.all.length > 0;
+
+  // Reset selection when query changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
 
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
@@ -139,14 +257,31 @@ export function GlobalSearch() {
   }, [query, results.guests, navigate, handleGuestAction]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      if (results.guests.length > 0) {
-        handleGuestAction({ stopPropagation: () => {} }, results.guests[0], "profile");
-      } else if (results.staff.length > 0) {
-        setIsOpen(false);
-        setQuery("");
-        navigate(`/staff?staffId=${results.staff[0].id}`);
+    if (results.all.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % results.all.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev - 1 + results.all.length) % results.all.length);
+    } else if (e.key === "Enter") {
+      const selected = results.all[selectedIndex];
+      if (selected) {
+        if (selected.type === 'page') {
+          setIsOpen(false);
+          setQuery("");
+          navigate(selected.data.path);
+        } else if (selected.type === 'guest') {
+          handleGuestAction({ stopPropagation: () => {} }, selected.data, "profile");
+        } else if (selected.type === 'staff') {
+          setIsOpen(false);
+          setQuery("");
+          navigate(`/staff?staffId=${selected.data.id}`);
+        }
       }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
     }
   };
 
@@ -159,7 +294,8 @@ export function GlobalSearch() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         )}
         <Input
-          placeholder="Search..."
+          ref={inputRef}
+          placeholder="Search modules, guests, or staff..."
           className="w-full sm:w-48 xl:w-64 pl-9 bg-secondary/50 border-border focus-visible:ring-primary transition-all duration-300 sm:focus:w-64 xl:focus:w-80"
           value={query}
           onChange={(e) => {
@@ -169,6 +305,11 @@ export function GlobalSearch() {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
         />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none opacity-50">
+          <kbd className="h-5 min-w-[20px] items-center justify-center rounded border bg-muted px-1.5 font-sans text-[10px] font-medium flex gap-0.5">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </div>
       </div>
 
       {isOpen && query.trim() && (
@@ -187,19 +328,63 @@ export function GlobalSearch() {
                 </div>
               )}
 
-              {results.guests.length > 0 && (
+              {results.pages.length > 0 && (
                 <div className="mb-4">
                   <h5 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <Layout className="h-3 w-3" /> Pages & Modules
+                  </h5>
+                  <div className="space-y-1">
+                    {results.pages.map((page, idx) => (
+                      <div
+                        key={page.path}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors group",
+                          selectedIndex === idx ? "bg-muted" : "hover:bg-muted/50"
+                        )}
+                        onClick={() => {
+                          setIsOpen(false);
+                          setQuery("");
+                          navigate(page.path);
+                        }}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                      >
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                          <page.icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            {highlightText(page.label, query)}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Navigate to {page.label}
+                          </p>
+                        </div>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results.guests.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-t mt-2 pt-4">
                     <Users className="h-3 w-3" /> Guests
                   </h5>
                   <div className="space-y-1">
-                    {results.guests.map((g) => (
-                      <div
-                        key={g.id}
-                        className="group flex flex-col p-3 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => handleGuestAction({ stopPropagation: () => {} } as any, g, "profile")}
-                      >
-                        <div className="flex items-center justify-between mb-2">
+                    {results.guests.map((g, idx) => {
+                      const absoluteIndex = results.pages.length + idx;
+                      return (
+                        <div
+                          key={g.id}
+                          className={cn(
+                            "group flex flex-col p-3 rounded-md cursor-pointer transition-colors",
+                            selectedIndex === absoluteIndex ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          onClick={() => handleGuestAction({ stopPropagation: () => {} } as any, g, "profile")}
+                          onMouseEnter={() => setSelectedIndex(absoluteIndex)}
+                        >
+                          <div className="flex items-center justify-between mb-2">
                           <div>
                             <p className="text-sm font-medium">
                               {highlightText(`${g.first_name} ${g.last_name}`, query)}
@@ -237,7 +422,8 @@ export function GlobalSearch() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               )}
@@ -248,26 +434,34 @@ export function GlobalSearch() {
                     <User className="h-3 w-3" /> Staff
                   </h5>
                   <div className="space-y-1">
-                    {results.staff.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => {
-                          setIsOpen(false);
-                          navigate(`/staff?staffId=${s.id}`);
-                        }}
-                      >
-                        <div>
-                          <p className="text-sm font-medium">
-                            {highlightText(`${s.first_name} ${s.last_name}`, query)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {s.position} • {highlightText(s.employee_id, query)}
-                          </p>
+                    {results.staff.map((s, idx) => {
+                      const absoluteIndex = results.pages.length + results.guests.length + idx;
+                      return (
+                        <div
+                          key={s.id}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors",
+                            selectedIndex === absoluteIndex ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          onClick={() => {
+                            setIsOpen(false);
+                            setQuery("");
+                            navigate(`/staff?staffId=${s.id}`);
+                          }}
+                          onMouseEnter={() => setSelectedIndex(absoluteIndex)}
+                        >
+                          <div>
+                            <p className="text-sm font-medium">
+                              {highlightText(`${s.first_name} ${s.last_name}`, query)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {s.position} • {highlightText(s.employee_id, query)}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">{s.department}</Badge>
                         </div>
-                        <Badge variant="outline" className="text-[10px]">{s.department}</Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
