@@ -151,12 +151,12 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full max-w-md" ref={containerRef}>
-      <div className="relative">
+    <div className="relative w-full max-w-3xl" ref={containerRef}>
+      <div className="relative w-full sm:w-72 lg:w-96 transition-all duration-300 sm:focus-within:w-96 lg:focus-within:w-[550px] group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
         )}
         <Input
           placeholder="Search..."
@@ -172,7 +172,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-2 w-full md:w-[450px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full lg:w-[550px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {isRedirecting && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
