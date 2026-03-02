@@ -11,7 +11,7 @@ import { DynamicIslandProvider } from "@/components/ui/ios/DynamicIslandProvider
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
-import { Database, Loader2 } from "lucide-react";
+import { Database as DatabaseIcon, Loader2 } from "lucide-react";
 import { Suspense, lazy } from "react";
 import { RealtimeListener } from "@/components/layout/RealtimeListener";
 import Index from "./pages/Index";

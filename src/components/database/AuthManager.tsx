@@ -122,7 +122,7 @@ export const AuthManager = () => {
             <CardTitle>Users</CardTitle>
             <CardDescription>Manage your application users and their roles</CardDescription>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => toast.info("User Invitation feature is coming soon.")}>
             <UserPlus className="h-4 w-4" /> Invite User
           </Button>
         </CardHeader>
