@@ -275,18 +275,18 @@ export default function JournalEntryEditor() {
           type === "Quick" && "max-h-0 opacity-0 overflow-hidden py-0 my-0 border-0"
         )}>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Row 1: Fiscal Year, AD Date, BS Miti, Voucher Type */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              {/* Row 1: Fiscal Year, AD Date, BS Miti, Voucher Type, Voucher No */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Fiscal Year <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={formData.fiscal_year}
                   onValueChange={(v) => setFormData(p => ({...p, fiscal_year: v}))}
                 >
-                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
-                    <SelectValue placeholder="Select Year" />
+                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm">
+                    <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="2080/81">2080/81</SelectItem>
@@ -296,10 +296,10 @@ export default function JournalEntryEditor() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Transaction Date (AD) <span className="text-destructive">*</span>
+                <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Date (AD) <span className="text-destructive">*</span>
                 </Label>
-                <div className="flex gap-1">
+                <div className="relative">
                   <Input
                     placeholder="DD/MM/YYYY"
                     value={adDisplay}
@@ -313,13 +313,13 @@ export default function JournalEntryEditor() {
                         setBsDisplay(bs);
                       }
                     }}
-                    className="bg-background/50 border-muted-foreground/20 h-11 font-mono flex-1"
+                    className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm"
                   />
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-11 w-11 shrink-0 border-muted-foreground/20 bg-background/50">
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
+                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                      </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
                       <Calendar
@@ -342,37 +342,62 @@ export default function JournalEntryEditor() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Miti (BS) <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  placeholder="YYYY/MM/DD"
-                  value={bsDisplay}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setBsDisplay(val);
-                    const ad = bsToAd(val);
-                    if (ad) {
-                      setFormData(p => ({ ...p, miti: val, posting_date: ad }));
-                      setAdDisplay(formatAdDate(ad));
-                    } else {
-                      setFormData(p => ({ ...p, miti: val }));
-                    }
-                  }}
-                  className="bg-background/50 border-muted-foreground/20 h-11 font-mono"
-                />
+                <div className="relative">
+                  <Input
+                    placeholder="YYYY/MM/DD"
+                    value={bsDisplay}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setBsDisplay(val);
+                      const ad = bsToAd(val);
+                      if (ad) {
+                        setFormData(p => ({ ...p, miti: val, posting_date: ad }));
+                        setAdDisplay(formatAdDate(ad));
+                      } else {
+                        setFormData(p => ({ ...p, miti: val }));
+                      }
+                    }}
+                    className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm"
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(formData.posting_date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            const ad = date.toISOString().split('T')[0];
+                            const bs = adToBs(ad);
+                            setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
+                            setAdDisplay(formatAdDate(ad));
+                            setBsDisplay(bs);
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Voucher Type <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={formData.entry_type}
                   onValueChange={(v) => setFormData(p => ({...p, entry_type: v}))}
                 >
-                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
-                    <SelectValue placeholder="Select type" />
+                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm">
+                    <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Journal Voucher">Journal Voucher</SelectItem>
@@ -382,15 +407,22 @@ export default function JournalEntryEditor() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="mt-4 pt-4 border-t border-muted-foreground/10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Voucher No:</span>
-                <span className="text-sm font-mono font-bold text-primary">{formData.voucher_no}</span>
-              </div>
-              <div className="text-[10px] text-muted-foreground italic">
-                * Voucher number will be assigned automatically upon saving
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Voucher No.
+                </Label>
+                <div className="space-y-1">
+                  <Input
+                    readOnly
+                    value={formData.voucher_no}
+                    className="bg-muted/50 border-muted-foreground/20 h-10 font-mono font-bold text-primary text-sm"
+                    placeholder="Auto"
+                  />
+                  <p className="text-[9px] text-muted-foreground italic leading-tight">
+                    * Assigned automatically
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
