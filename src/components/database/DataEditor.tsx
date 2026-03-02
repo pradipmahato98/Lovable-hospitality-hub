@@ -52,16 +52,11 @@ export const DataEditor = ({ tableName }: DataEditorProps) => {
         setData(rows);
       } else {
         // If no data, we might need to fetch column info from schema
-        const { data: colData } = await api.post('/sql', {
-          query: `
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = '${tableName}'
-            AND table_schema = 'public'
-            ORDER BY ordinal_position;
-          `
+        const response = await fetch(`http://localhost:3001/api/database/schema/${tableName}/columns`, {
+           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
-        if (colData) {
+        if (response.ok) {
+          const colData = await response.json();
           setColumns(colData.map((c: any) => c.column_name));
         }
         setData([]);
