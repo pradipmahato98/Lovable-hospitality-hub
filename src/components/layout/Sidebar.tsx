@@ -27,6 +27,7 @@ import {
   Terminal,
   Moon,
   Lock,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -58,6 +59,7 @@ const adminNavItems = [
   { icon: UserCog, label: "User Management", path: "/users" },
   { icon: Users, label: "Staff Management", path: "/staff" },
   { icon: UserCheck, label: "HR", path: "/hr" },
+  { icon: Database, label: "Database", path: "/database" },
   { icon: Settings, label: "Settings", path: "/settings" },
   { icon: ShieldCheck, label: "Admin Console", path: "/admin-console" },
   { icon: Code2, label: "Dev Panel", path: "/dev" },
@@ -91,21 +93,21 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         )}
       >
         <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-        {(!collapsed || isMobile) && <span>{item.label}</span>}
+        {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
       </Link>
     );
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border flex-shrink-0">
         <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
             <Hotel className="h-5 w-5 text-primary-foreground" />
           </div>
           {(!collapsed || isMobile) && (
-            <span className="font-display text-xl font-semibold text-gradient-gold">
+            <span className="font-display text-xl font-semibold text-gradient-gold truncate">
               LuxeStay
             </span>
           )}
@@ -115,7 +117,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            className="h-8 w-8 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent flex-shrink-0"
+            className="h-8 w-8 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent flex-shrink-0 ml-auto"
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
@@ -123,7 +125,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
+      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-hide">
         {navItems.map(renderNavItem)}
 
         {/* Operations Section */}
@@ -150,7 +152,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
               )}
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              {(!collapsed || isMobile) && <span>{item.label}</span>}
+              {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
@@ -171,37 +173,46 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </nav>
 
       {/* User Section */}
-      {(!collapsed || isMobile) && (
-        <div className="p-4 border-t border-sidebar-border mt-auto">
-          <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
-            <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0">
+      <div className="mt-auto border-t border-sidebar-border flex-shrink-0 bg-sidebar-background/50 backdrop-blur-sm">
+        {(!collapsed || isMobile) ? (
+          <div className="p-4">
+            <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
+              <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0 shadow-glow">
+                <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {profile?.first_name || "User"} {profile?.last_name || ""}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">Staff Member</p>
+              </div>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="p-3 flex flex-col items-center gap-2">
+            <Link to="/profile" className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80 shadow-glow">
               <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {profile?.first_name || "User"} {profile?.last_name || ""}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">Staff Member</p>
-            </div>
-          </Link>
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
-        </div>
-      )}
-
-      {/* Collapsed User Avatar */}
-      {collapsed && !isMobile && (
-        <div className="p-3 border-t border-sidebar-border mt-auto flex flex-col items-center gap-2">
-          <Link to="/profile" className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80">
-            <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
-          </Link>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -213,7 +224,7 @@ export function Sidebar() {
   if (isMobile) {
     return (
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-72 p-0 bg-gradient-sidebar border-sidebar-border">
+        <SheetContent side="left" className="w-72 p-0 border-sidebar-border">
           <SidebarContent onNavClick={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
@@ -224,7 +235,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300",
         collapsed ? "w-20" : "w-64"
       )}
     >

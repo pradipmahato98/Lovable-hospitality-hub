@@ -579,17 +579,28 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          company: string | null
           country: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           first_name: string
+          gender: string | null
           id: string
+          id_image_url: string | null
           id_number: string | null
           id_type: string | null
+          image_url: string | null
           is_vip: boolean | null
+          job_title: string | null
           last_name: string
+          nationality: string | null
           notes: string | null
           phone: string | null
+          region: string | null
+          state_province: string | null
+          subscribed_property: string | null
+          title: string | null
           total_spending: number | null
           total_visits: number | null
           updated_at: string
@@ -597,17 +608,28 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          company?: string | null
           country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name: string
+          gender?: string | null
           id?: string
+          id_image_url?: string | null
           id_number?: string | null
           id_type?: string | null
+          image_url?: string | null
           is_vip?: boolean | null
+          job_title?: string | null
           last_name: string
+          nationality?: string | null
           notes?: string | null
           phone?: string | null
+          region?: string | null
+          state_province?: string | null
+          subscribed_property?: string | null
+          title?: string | null
           total_spending?: number | null
           total_visits?: number | null
           updated_at?: string
@@ -615,17 +637,28 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          company?: string | null
           country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name?: string
+          gender?: string | null
           id?: string
+          id_image_url?: string | null
           id_number?: string | null
           id_type?: string | null
+          image_url?: string | null
           is_vip?: boolean | null
+          job_title?: string | null
           last_name?: string
+          nationality?: string | null
           notes?: string | null
           phone?: string | null
+          region?: string | null
+          state_province?: string | null
+          subscribed_property?: string | null
+          title?: string | null
           total_spending?: number | null
           total_visits?: number | null
           updated_at?: string
@@ -1243,11 +1276,15 @@ export type Database = {
           created_at: string
           guest_id: string
           id: string
+          inactive_date: string | null
           is_active: boolean
           join_date: string
+          journey_start_date: string | null
           lifetime_points: number
           member_number: string
           points_balance: number
+          property_name: string | null
+          referred_by: string | null
           tier: string
           tier_expiry: string | null
           updated_at: string
@@ -1256,11 +1293,15 @@ export type Database = {
           created_at?: string
           guest_id: string
           id?: string
+          inactive_date?: string | null
           is_active?: boolean
           join_date?: string
+          journey_start_date?: string | null
           lifetime_points?: number
           member_number: string
           points_balance?: number
+          property_name?: string | null
+          referred_by?: string | null
           tier?: string
           tier_expiry?: string | null
           updated_at?: string
@@ -1269,11 +1310,15 @@ export type Database = {
           created_at?: string
           guest_id?: string
           id?: string
+          inactive_date?: string | null
           is_active?: boolean
           join_date?: string
+          journey_start_date?: string | null
           lifetime_points?: number
           member_number?: string
           points_balance?: number
+          property_name?: string | null
+          referred_by?: string | null
           tier?: string
           tier_expiry?: string | null
           updated_at?: string
@@ -1825,10 +1870,12 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          blocked_reason: string | null
           created_at: string
           email: string | null
           first_name: string | null
           id: string
+          is_blocked: boolean | null
           last_name: string | null
           phone: string | null
           updated_at: string
@@ -1836,10 +1883,12 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          blocked_reason?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -1847,10 +1896,12 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          blocked_reason?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -2068,6 +2119,7 @@ export type Database = {
           guest_id: string
           id: string
           payment_status: string | null
+          rejection_reason: string | null
           reservation_code: string
           room_id: string
           source: string | null
@@ -2089,6 +2141,7 @@ export type Database = {
           guest_id: string
           id?: string
           payment_status?: string | null
+          rejection_reason?: string | null
           reservation_code: string
           room_id: string
           source?: string | null
@@ -2110,6 +2163,7 @@ export type Database = {
           guest_id?: string
           id?: string
           payment_status?: string | null
+          rejection_reason?: string | null
           reservation_code?: string
           room_id?: string
           source?: string | null
@@ -2173,6 +2227,8 @@ export type Database = {
           description: string | null
           floor: number
           id: string
+          image_url: string | null
+          is_active: boolean | null
           price_per_night: number
           room_number: string
           room_type: string
@@ -2186,6 +2242,8 @@ export type Database = {
           description?: string | null
           floor: number
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           price_per_night: number
           room_number: string
           room_type: string
@@ -2199,6 +2257,8 @@ export type Database = {
           description?: string | null
           floor?: number
           id?: string
+          image_url?: string | null
+          is_active?: boolean | null
           price_per_night?: number
           room_number?: string
           room_type?: string
@@ -2857,6 +2917,85 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      guest_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          guest_id: string
+          id: string
+          staff_id: string | null
+          staff_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          guest_id: string
+          id?: string
+          staff_id?: string | null
+          staff_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          guest_id?: string
+          id?: string
+          staff_id?: string | null
+          staff_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_audit_logs_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      guest_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_image_url: string | null
+          document_number: string | null
+          document_type: string | null
+          guest_id: string
+          id: string
+          is_latest: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_image_url?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          guest_id: string
+          id?: string
+          is_latest?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_image_url?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          guest_id?: string
+          id?: string
+          is_latest?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_documents_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
             referencedColumns: ["id"]
           }
         ]

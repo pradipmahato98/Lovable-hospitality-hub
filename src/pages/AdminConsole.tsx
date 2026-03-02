@@ -24,13 +24,15 @@ import {
   RefreshCw,
   Plus,
   Trash2,
+  Layout,
+  TrendingUp,
+  LayoutDashboard,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { format } from "date-fns";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +55,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import { generateSecureAPIKey } from "@/utils/security";
 import {
   useUsersWithRoles,
   useAdminAuditLogs,
@@ -67,7 +70,11 @@ import {
 import { UsersTable } from "@/components/users/UsersTable";
 import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
+import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
+import { RoomManagement } from "@/components/admin/RoomManagement";
+import { DatabaseControlCenter } from "@/components/database/DatabaseControlCenter";
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -213,7 +220,7 @@ const AdminConsole = () => {
   const handleAddAPIKey = () => {
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: generateSecureAPIKey(),
       is_secret: true,
       description: "Auto-generated system key"
     };
@@ -262,9 +269,17 @@ const AdminConsole = () => {
         <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
             <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">
-            <Activity className="h-4 w-4" />
-            System Overview
-          </TabsTrigger>
+              <Activity className="h-4 w-4" />
+              System Overview
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <TrendingUp className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="rooms" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <LayoutDashboard className="h-4 w-4" />
+              Room Management
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Account Management
@@ -284,6 +299,14 @@ const AdminConsole = () => {
             <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Globe className="h-4 w-4" />
               Integrations
+            </TabsTrigger>
+            <TabsTrigger value="database" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <Database className="h-4 w-4" />
+              Database Control
+            </TabsTrigger>
+            <TabsTrigger value="design_system" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <Layout className="h-4 w-4" />
+              Design System
             </TabsTrigger>
             <TabsTrigger value="security_breach" className="gap-2 text-destructive whitespace-nowrap flex-shrink-0">
               <ShieldAlert className="h-4 w-4" />
@@ -400,6 +423,14 @@ const AdminConsole = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsTab />
+        </TabsContent>
+
+        <TabsContent value="rooms">
+          <RoomManagement />
         </TabsContent>
 
         <TabsContent value="users">
@@ -661,6 +692,14 @@ const AdminConsole = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="database">
+          <DatabaseControlCenter />
+        </TabsContent>
+
+        <TabsContent value="design_system">
+          <DesignSystemTab />
         </TabsContent>
 
         <TabsContent value="security_breach">

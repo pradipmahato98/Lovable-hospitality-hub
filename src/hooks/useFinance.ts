@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { generateSecureNumericString } from "@/utils/security";
 
 // ============= Types =============
 export interface Account {
@@ -203,6 +204,21 @@ export function useJournalEntries(filters?: {
         return [];
       }
 
+      // Fetch profiles separately to avoid join issues
+      const userIds = Array.from(new Set((data || []).map((e: any) => e.created_by).filter(Boolean)));
+      let profileMap: Record<string, any> = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await db
+          .from("profiles")
+          .select("user_id, first_name, last_name")
+          .in("user_id", userIds);
+
+        if (profiles) {
+          profileMap = profiles.reduce((acc: any, p: any) => ({ ...acc, [p.user_id]: p }), {});
+        }
+      }
+
       return (data || []).map((entry: any) => ({
         ...entry,
         lines: entry.journal_lines || [],
@@ -218,6 +234,7 @@ export function useJournalEntries(filters?: {
         { event: "*", schema: "public", table: "journal_entries" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+          queryClient.invalidateQueries({ queryKey: ["journal-entry"] });
         }
       )
       .on(
@@ -225,6 +242,7 @@ export function useJournalEntries(filters?: {
         { event: "*", schema: "public", table: "journal_lines" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+          queryClient.invalidateQueries({ queryKey: ["journal-entry"] });
         }
       )
       .subscribe();
@@ -241,6 +259,44 @@ export function useJournalEntries(filters?: {
   };
 }
 
+export function useJournalEntry(id: string | null) {
+  const query = useQuery({
+    queryKey: ["journal-entry", id],
+    queryFn: async () => {
+      if (!id) return null;
+
+      const { data, error } = await db
+        .from("journal_entries")
+        .select(`
+          *,
+          journal_lines (
+            *,
+            account:accounts (*)
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching journal entry:", error);
+        throw error;
+      }
+
+      return {
+        ...data,
+        lines: data.journal_lines || [],
+      } as JournalEntry;
+    },
+    enabled: !!id,
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+}
+
 export function useCreateJournalEntry() {
   const queryClient = useQueryClient();
 
@@ -252,11 +308,7 @@ export function useCreateJournalEntry() {
       lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
     }) => {
       // Generate entry number
-      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
-        Math.random() * 10000
-      )
-        .toString()
-        .padStart(4, "0")}`;
+      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
 
       // Insert journal entry
       const { data: journalEntry, error: entryError } = await db
@@ -301,6 +353,77 @@ export function useCreateJournalEntry() {
   });
 }
 
+export function useUpdateJournalEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (entry: {
+      id: string;
+      date: string;
+      description: string;
+      reference?: string | null;
+      lines: { id?: string; account_id: string; debit: number; credit: number; description?: string | null }[];
+    }) => {
+      // 1. Update journal entry
+      const { data: journalEntry, error: entryError } = await db
+        .from("journal_entries")
+        .update({
+          date: entry.date,
+          description: entry.description,
+          reference: entry.reference ?? null,
+        })
+        .eq("id", entry.id)
+        .select()
+        .single();
+
+      if (entryError) {
+        console.error("Error updating journal entry:", entryError);
+        throw entryError;
+      }
+
+      // 2. Handle lines: delete removed, update existing, insert new
+      // First, get current lines
+      const { data: currentLines } = await db
+        .from("journal_lines")
+        .select("id")
+        .eq("journal_entry_id", entry.id);
+
+      const currentLineIds = (currentLines || []).map((l: any) => l.id);
+      const newLineIds = entry.lines.map((l) => l.id).filter(Boolean);
+
+      // Delete lines not in the update
+      const toDelete = currentLineIds.filter((id) => !newLineIds.includes(id));
+      if (toDelete.length > 0) {
+        await db.from("journal_lines").delete().in("id", toDelete);
+      }
+
+      // Prepare upsert for all lines
+      const linesToUpsert = entry.lines.map((line) => ({
+        ...(line.id ? { id: line.id } : {}),
+        journal_entry_id: entry.id,
+        account_id: line.account_id,
+        debit: line.debit,
+        credit: line.credit,
+        description: line.description ?? null,
+      }));
+
+      const { error: linesError } = await db.from("journal_lines").upsert(linesToUpsert);
+
+      if (linesError) {
+        console.error("Error upserting journal lines:", linesError);
+        throw linesError;
+      }
+
+      return journalEntry as JournalEntry;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entry", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["ledger"] });
+    },
+  });
+}
+
 export function usePostJournalEntry() {
   const queryClient = useQueryClient();
 
@@ -320,8 +443,9 @@ export function usePostJournalEntry() {
 
       return data as JournalEntry;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entry", data.id] });
       queryClient.invalidateQueries({ queryKey: ["ledger"] });
     },
   });
@@ -475,7 +599,7 @@ export function useTrialBalance(asOfDate?: string) {
       const { data, error } = await q;
 
       if (error) {
-        console.error("Error fetching trial balance:", error);
+        console.warn("Error fetching trial balance, returning empty:", error.message);
         return [];
       }
 

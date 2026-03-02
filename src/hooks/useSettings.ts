@@ -69,6 +69,37 @@ export interface UIPreferences {
   glass_intensity: "low" | "medium" | "high";
   animations_enabled: boolean;
   disable_on_mobile: boolean;
+  // Typography
+  font_family_sans: string;
+  font_family_display: string;
+  base_font_size: number;
+  // Spacing & Shape
+  base_radius: number;
+  base_spacing: number;
+  // Colors
+  primary_color: string;
+  accent_color: string;
+  // Material Advanced
+  blur_amount: number;
+  background_opacity: number;
+  saturation: number;
+  // Animations
+  animation_preset: "linear" | "smooth" | "spring" | "none";
+  // Release Management
+  is_staged: boolean;
+  last_published_at?: string;
+}
+
+export interface UITemplate {
+  id: string;
+  name: string;
+  description?: string;
+  preferences: UIPreferences;
+  is_system: boolean;
+}
+
+export interface UITemplatesSettings {
+  templates: UITemplate[];
 }
 
 export interface APIKey {
@@ -143,26 +174,72 @@ const defaultUIPreferences: UIPreferences = {
   glass_intensity: "medium",
   animations_enabled: true,
   disable_on_mobile: false,
+  font_family_sans: "Inter",
+  font_family_display: "Playfair Display",
+  base_font_size: 16,
+  base_radius: 12,
+  base_spacing: 4,
+  primary_color: "38 92% 55%", // HSL format
+  accent_color: "222 47% 6%",
+  blur_amount: 12,
+  background_opacity: 0.6,
+  saturation: 1.2,
+  animation_preset: "spring",
+  is_staged: false,
+};
+
+const defaultUITemplates: UITemplatesSettings = {
+  templates: [
+    {
+      id: "ios-classic",
+      name: "iOS Classic",
+      description: "Original iOS 17 inspired glassmorphism",
+      preferences: defaultUIPreferences,
+      is_system: true
+    },
+    {
+      id: "minimalist",
+      name: "Clean Minimalist",
+      description: "Reduced blur and higher contrast",
+      preferences: {
+        ...defaultUIPreferences,
+        blur_amount: 4,
+        background_opacity: 0.9,
+        base_radius: 8,
+      },
+      is_system: true
+    }
+  ]
 };
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 // Generic settings fetch hook
 export function useSettings<T>(key: string, defaultValue: T) {
   return useQuery({
     queryKey: ["settings", key],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", key)
-        .maybeSingle();
+      try {
+        const { data, error } = await db
+          .from("settings")
+          .select("value")
+          .eq("key", key)
+          .maybeSingle();
 
-      if (error) throw error;
-      if (!data) return defaultValue;
-      return data.value as unknown as T;
+        if (error) {
+          console.warn(`Settings table issue for ${key}, using default:`, error.message);
+          return defaultValue;
+        }
+        if (!data) return defaultValue;
+        return data.value as unknown as T;
+      } catch (err) {
+        return defaultValue;
+      }
     },
   });
 }
@@ -173,7 +250,7 @@ export function useUpdateSettings<T>(key: string) {
 
   return useMutation({
     mutationFn: async (settings: T) => {
-      const { data: existing } = await supabase
+      const { data: existing } = await db
         .from("settings")
         .select("id")
         .eq("key", key)
@@ -182,13 +259,13 @@ export function useUpdateSettings<T>(key: string) {
       const jsonValue: Json = settings as unknown as Json;
 
       if (existing) {
-        const { error } = await supabase
+        const { error } = await db
           .from("settings")
           .update({ value: jsonValue })
           .eq("key", key);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await db
           .from("settings")
           .insert([{ key, value: jsonValue }]);
         if (error) throw error;
@@ -267,6 +344,22 @@ export function useUIPreferences() {
 
 export function useUpdateUIPreferences() {
   return useUpdateSettings<UIPreferences>("ui_preferences");
+}
+
+export function useStagedUIPreferences() {
+  return useSettings<UIPreferences>("ui_preferences_staged", defaultUIPreferences);
+}
+
+export function useUpdateStagedUIPreferences() {
+  return useUpdateSettings<UIPreferences>("ui_preferences_staged");
+}
+
+export function useUITemplates() {
+  return useSettings<UITemplatesSettings>("ui_templates", defaultUITemplates);
+}
+
+export function useUpdateUITemplates() {
+  return useUpdateSettings<UITemplatesSettings>("ui_templates");
 }
 
 export function useAPIKeysSettings() {

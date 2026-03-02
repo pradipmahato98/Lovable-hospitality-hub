@@ -1,14 +1,16 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-bridge";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureRandomString } from "@/utils/security";
 
 export function useAdminRealtime() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     // Unique channel name for each component instance to avoid conflicts
-    const channelId = `admin-changes-${Math.random().toString(36).substr(2, 9)}`;
-    const channel = supabase
+    const channelId = `admin-changes-${generateSecureRandomString(9)}`;
+    const channel = api
       .channel(channelId)
       .on(
         "postgres_changes",
@@ -65,7 +67,9 @@ export function useAdminRealtime() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        api.removeChannel(channel);
+      }
     };
   }, [queryClient]);
 }

@@ -13,6 +13,7 @@ import {
   ArrowRightLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generateSecureRandomString, generateSecureNumericString } from "@/utils/security";
 
 interface FinancialEvent {
   id: string;
@@ -69,10 +70,10 @@ export function IntegrationOrchestratorService({ isReadOnly }: { isReadOnly?: bo
     const interval = setInterval(() => {
       const sources: FinancialEvent['source'][] = ['PMS', 'POS', 'Inventory', 'HRM'];
       const newEvent: FinancialEvent = {
-        id: Math.random().toString(36).substr(2, 9),
-        source: sources[Math.floor(Math.random() * sources.length)],
+        id: generateSecureRandomString(9),
+        source: sources[parseInt(generateSecureNumericString(1)) % sources.length],
         type: 'Auto-Post Event',
-        amount: Math.floor(Math.random() * 500) + 10,
+        amount: (parseInt(generateSecureNumericString(3)) % 500) + 10,
         timestamp: new Date().toISOString(),
         status: 'synced',
         details: 'Automated background synchronization'

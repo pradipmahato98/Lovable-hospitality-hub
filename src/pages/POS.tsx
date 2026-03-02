@@ -1,9 +1,10 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { POSDashboard } from "@/components/pos/POSDashboard";
+import { POSDashboard, POSHeader } from "@/components/pos";
 
 const POS = () => {
   return (
-    <MainLayout title="POS Dashboard" subtitle="Restaurant and bar management overview">
+    <MainLayout title="Point of Sale" subtitle="Manage your restaurant and bar operations">
+      <POSHeader />
       <POSDashboard />
     </MainLayout>
   );

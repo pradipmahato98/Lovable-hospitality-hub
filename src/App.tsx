@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/hooks/use-sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DesignSystemProvider } from "@/components/theme/DesignSystemProvider";
+import { DynamicIslandProvider } from "@/components/ui/ios/DynamicIslandProvider";
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
@@ -38,8 +40,10 @@ import Housekeeping from "./pages/Housekeeping";
 import Engineering from "./pages/Engineering";
 import StaffManagement from "./pages/StaffManagement";
 import Finance from "./pages/Finance";
+import JournalEntryEditor from "./pages/JournalEntryEditor";
 import Payments from "./pages/Payments";
 import Banquet from "./pages/Banquet";
+import Database from "./pages/Database";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -56,6 +60,8 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <SidebarProvider>
+            <DesignSystemProvider>
+            <DynamicIslandProvider>
             <QuickActionsProvider>
               <RealtimeListener />
               <GlobalQuickActions />
@@ -65,6 +71,8 @@ const App = () => (
                 <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
                 <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
                 <Route path="/front-desk" element={<ProtectedRoute><FrontDesk /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
+                <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
                 <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
                 <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
                 <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
@@ -82,14 +90,19 @@ const App = () => (
                 <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
                 <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
                 <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
+                <Route path="/finance/journal/new" element={<ProtectedRoute><JournalEntryEditor /></ProtectedRoute>} />
+                <Route path="/finance/journal/:id" element={<ProtectedRoute><JournalEntryEditor /></ProtectedRoute>} />
                 <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                 <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
                 <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
                 <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
+                <Route path="/database" element={<ProtectedRoute><Database /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </QuickActionsProvider>
+            </DynamicIslandProvider>
+            </DesignSystemProvider>
             </SidebarProvider>
           </AuthProvider>
         </BrowserRouter>

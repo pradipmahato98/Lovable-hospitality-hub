@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -40,17 +34,14 @@ import {
   X,
   Grid3X3,
   ClipboardList,
-  ChefHat,
-  BarChart3,
-  History,
+  Clock,
 } from "lucide-react";
- import { Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { POSTableSystem } from "@/components/pos/POSTableSystem";
+import { generateSecureNumericString } from "@/utils/security";
+import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
- import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 interface CartItem {
@@ -77,6 +68,7 @@ const menuItems = [
 ];
 
 const POSTerminal = () => {
+  const navigate = useNavigate();
   useAdminRealtime();
   const [activeTab, setActiveTab] = useState("tables");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -181,9 +173,11 @@ const POSTerminal = () => {
       return;
     }
 
+    const transactionNumber = `POS-${generateSecureNumericString(12)}`;
+
     try {
       if (paymentMethod === "wallet" && selectedGateway) {
-        const result = await processPayment(selectedGateway, total, "USD", `POS-${Date.now()}`);
+        const result = await processPayment(selectedGateway, total, "USD", transactionNumber);
         if (!result.success) {
           toast.error(`Payment failed: ${result.error}`);
           return;
@@ -194,7 +188,7 @@ const POSTerminal = () => {
       const { data, error } = await supabase
         .from("pos_transactions")
         .insert({
-          transaction_number: `POS-${Date.now()}`,
+          transaction_number: transactionNumber,
           table_number: "Counter", // Placeholder for walk-in
           customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
           subtotal: subtotal,
@@ -231,16 +225,13 @@ const POSTerminal = () => {
   };
 
   return (
-    <MainLayout title="POS Terminal" subtitle="Live restaurant and bar transactions">
-      <Button variant="ghost" size="sm" onClick={() => window.location.href = "/pos"} className="mb-4 gap-2">
-        <ArrowRight className="h-4 w-4 rotate-180" />
-        Back to Dashboard
-      </Button>
+    <MainLayout title="POS Terminal" subtitle="Process orders and handle table service">
+      <POSHeader />
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="tables" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
               Tables
@@ -253,25 +244,11 @@ const POSTerminal = () => {
               <Receipt className="h-4 w-4" />
               Billing
             </TabsTrigger>
-             <TabsTrigger value="clock" className="gap-2">
-               <Clock className="h-4 w-4" />
-               Clock In/Out
-             </TabsTrigger>
+            <TabsTrigger value="clock" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Clock In/Out
+            </TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/kitchen"} className="gap-2">
-              <ChefHat className="h-4 w-4" />
-              Kitchen
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/reports"} className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Reports
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pos/history"} className="gap-2">
-              <History className="h-4 w-4" />
-              History
-            </Button>
-          </div>
         </div>
 
         {/* Tables Tab - Table Selection System */}

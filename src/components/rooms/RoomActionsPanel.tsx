@@ -32,10 +32,15 @@ import {
   ArrowRightLeft,
   Users,
   Calendar,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
 import { useHousekeepingTasks } from "@/hooks/useHousekeeping";
+import { useReservations } from "@/hooks/useReservations";
+import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
 
 type Room = Tables<"rooms">;
 
@@ -52,6 +57,14 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
   const [priority, setPriority] = useState("normal");
   const [assignTo, setAssignTo] = useState("");
   const [priceAdjustment, setPriceAdjustment] = useState("");
+
+  // Check-in/out Dialog state
+  const [checkInOutOpen, setCheckInOutOpen] = useState(false);
+  const [checkInOutMode, setCheckInOutMode] = useState<"check-in" | "check-out">("check-in");
+  const [activeReservationId, setActiveReservationId] = useState<string>("");
+
+  const { reservations = [] } = useReservations();
+  const { folios = [] } = useGuestFolios();
 
   const room = selectedRoom;
 
@@ -74,6 +87,35 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
   }
 
   const handleAction = (action: string) => {
+    if (action === "check-in" || action === "check-out") {
+      const activeRes = reservations.find(r =>
+        r.room_id === room?.id &&
+        (action === "check-in" ? (r.status === "confirmed" || r.status === "pending") : r.status === "checked-in")
+      );
+
+      if (!activeRes) {
+        if (action === "check-in") {
+          toast.error("No confirmed reservation found for this room today");
+        } else {
+          toast.error("No active check-in found for this room");
+        }
+        return;
+      }
+
+      // Check folio balance for check-out
+      if (action === "check-out") {
+        const folio = folios.find(f => f.reservation_id === activeRes.id);
+        if (folio && folio.balance > 0) {
+          toast.warning(`Warning: Folio balance is $${folio.balance}. Please settle before check-out.`);
+        }
+      }
+
+      setActiveReservationId(activeRes.id);
+      setCheckInOutMode(action as "check-in" | "check-out");
+      setCheckInOutOpen(true);
+      return;
+    }
+
     setCurrentAction(action);
     setActionDialogOpen(true);
   };
@@ -189,6 +231,20 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
       label: "Transfer Guest",
       icon: ArrowRightLeft,
       color: "text-purple-400",
+      show: room.status === "occupied",
+    },
+    {
+      id: "check-in",
+      label: "Check In",
+      icon: LogIn,
+      color: "text-success",
+      show: room.status === "available",
+    },
+    {
+      id: "check-out",
+      label: "Check Out",
+      icon: LogOut,
+      color: "text-destructive",
       show: room.status === "occupied",
     },
   ];
@@ -359,6 +415,14 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
 
   return (
     <>
+      <CheckInOutDialog
+        open={checkInOutOpen}
+        onOpenChange={setCheckInOutOpen}
+        mode={checkInOutMode}
+        reservationId={activeReservationId}
+        onSuccess={onClearSelection}
+      />
+
       <Card variant="elevated">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
