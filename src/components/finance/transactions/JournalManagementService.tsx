@@ -27,8 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Check, Send, ShieldCheck, Activity, Eye, Trash2, Printer, MoreVertical, Edit2 } from "lucide-react";
+import { Plus, Check, Send, ShieldCheck, Activity, Eye, Trash2, Printer, MoreVertical, Edit2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   useJournalEntries,
   useCreateJournalEntry,
@@ -225,11 +236,53 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Voucher Type</TableHead>
-                  <TableHead>Voucher No.</TableHead>
-                  <TableHead>Transaction Date</TableHead>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-16">Action</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      Voucher Type
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-4 w-4 p-0 opacity-50 hover:opacity-100">
+                            <Search className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 p-2">
+                          <Input placeholder="Search Type..." className="h-8 text-xs" />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      Voucher No.
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-4 w-4 p-0 opacity-50 hover:opacity-100">
+                            <Search className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 p-2">
+                          <Input placeholder="Search No..." className="h-8 text-xs" />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      Transaction Date
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-4 w-4 p-0 opacity-50 hover:opacity-100">
+                            <Search className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 p-2">
+                          <Input type="date" className="h-8 text-xs" />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -253,59 +306,63 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                   return (
                     <TableRow key={entry.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/finance/journal/${entry.id}`)}>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => navigate(`/finance/journal/${entry.id}`)}
-                          >
-                            {entry.is_posted ? <Eye className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
-                          </Button>
-                          {!entry.is_posted && !isReadOnly && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handlePostEntry(entry.id)}
-                              disabled={postJournalEntry.isPending}
-                              className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
-                            >
-                              <Check className="h-4 w-4" />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-32">
+                            <DropdownMenuItem onClick={() => navigate(`/finance/journal/${entry.id}`)}>
+                              <Eye className="h-4 w-4 mr-2" /> View
+                            </DropdownMenuItem>
+                            {!entry.is_posted && (
+                              <DropdownMenuItem onClick={() => navigate(`/finance/journal/${entry.id}`)}>
+                                <Edit2 className="h-4 w-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem>
+                              <Printer className="h-4 w-4 mr-2" /> Print
+                            </DropdownMenuItem>
+                            {!entry.is_posted && (
+                              <DropdownMenuItem
+                                className="text-success focus:text-success"
+                                onClick={() => handlePostEntry(entry.id)}
+                              >
+                                <Check className="h-4 w-4 mr-2" /> Post
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="font-mono">
+                        <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0 h-5">
                           {entry.voucher_type || "JV"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-primary">{entry.entry_number}</TableCell>
-                      <TableCell>{entry.date}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
-                      <TableCell className="text-right font-mono font-bold">
+                      <TableCell className="font-mono text-primary font-bold">{entry.entry_number}</TableCell>
+                      <TableCell className="text-sm">{entry.date}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">{entry.description}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-sm">
                         ${totalDebit.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400"}
+                          className={cn(
+                            "text-[10px] px-1.5 py-0 h-5",
+                            entry.is_posted ? "bg-success/20 text-success border-success/30" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                          )}
                         >
                           {entry.is_posted ? "Posted" : "Draft"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{creatorName}</span>
-                          <span className="text-xs text-muted-foreground">{createdDate}</span>
-                        </div>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        <span className="font-medium">{creatorName}</span>
+                        <span className="text-muted-foreground ml-1">({createdDate})</span>
                       </TableCell>
                     </TableRow>
                   );
