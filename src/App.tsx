@@ -11,8 +11,6 @@ import { DynamicIslandProvider } from "@/components/ui/ios/DynamicIslandProvider
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
-import { Database, Loader2 } from "lucide-react";
-import { Suspense, lazy } from "react";
 import { RealtimeListener } from "@/components/layout/RealtimeListener";
 import Index from "./pages/Index";
 import Reservations from "./pages/Reservations";
@@ -47,12 +45,6 @@ import Payments from "./pages/Payments";
 import Banquet from "./pages/Banquet";
 import Database from "./pages/Database";
 const queryClient = new QueryClient();
-
-const LoadingScreen = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

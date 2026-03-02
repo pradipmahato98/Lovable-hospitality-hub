@@ -3,6 +3,11 @@ import {
   Search,
   User,
   Users,
+  CheckCircle2,
+  LogOut,
+  X,
+  ExternalLink,
+  Loader2,
   LayoutDashboard,
   CalendarDays,
   Calendar,
@@ -104,70 +109,203 @@ export function GlobalSearch() {
   }, []);
 
   return (
-    <>
-      <Button
-        variant="outline"
-        className="relative h-9 w-full justify-start rounded-[0.5rem] bg-background text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
-        onClick={() => setOpen(true)}
-      >
-        <span className="hidden lg:inline-flex">Search modules...</span>
-        <span className="inline-flex lg:hidden">Search...</span>
-        <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-          <span className="text-xs">⌘</span>K
-        </kbd>
-      </Button>
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Pages & Modules">
-            {PAGES_DATA.filter(p => !p.isAdmin || isAdmin).map((page) => (
-              <CommandItem
-                key={page.path}
-                value={`${page.label} ${page.keywords.join(" ")}`}
-                onSelect={() => {
-                  runCommand(() => navigate(page.path));
-                }}
-              >
-                <page.icon className="mr-2 h-4 w-4" />
-                <span>{page.label}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Guests">
-            {guests.slice(0, 10).map((guest) => (
-              <CommandItem
-                key={guest.id}
-                value={`${guest.first_name} ${guest.last_name}`}
-                onSelect={() => {
-                  runCommand(() => navigate(`/guests?guestId=${guest.id}`));
-                }}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                <span>{guest.first_name} {guest.last_name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{guest.email}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Staff">
-            {staff.slice(0, 10).map((member) => (
-              <CommandItem
-                key={member.id}
-                value={`${member.first_name} ${member.last_name}`}
-                onSelect={() => {
-                  runCommand(() => navigate(`/staff?staffId=${member.id}`));
-                }}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span>{member.first_name} {member.last_name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{member.position}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </CommandDialog>
-    </>
+    <div className="relative w-full max-w-4xl" ref={containerRef}>
+      <div className="relative w-full sm:w-72 lg:w-96 transition-all duration-300 sm:focus-within:w-96 lg:focus-within:w-[700px] group/search">
+        {(loadingGuests || loadingStaff) ? (
+          <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+        ) : (
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
+        )}
+        <Input
+          ref={inputRef}
+          placeholder="Search modules, guests, or staff..."
+          className="w-full pl-10 pr-16 bg-secondary/40 border-border focus-visible:ring-primary shadow-sm group-focus-within/search:shadow-glow group-focus-within/search:bg-background transition-all"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+        />
+        {query ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setQuery("");
+              inputRef.current?.focus();
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none transition-opacity">
+            <kbd className="h-6 min-w-[36px] items-center justify-center rounded-md border border-primary/30 bg-background px-2 font-sans text-[12px] font-bold flex gap-1 shadow-glow text-primary transition-all group-focus-within/search:scale-110">
+              <span className="text-sm">⌘</span>K
+            </kbd>
+          </div>
+        )}
+      </div>
+
+      {isOpen && query.trim() && (
+        <div className="absolute top-full left-0 mt-2 w-full lg:w-[700px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+          {isRedirecting && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+              <p className="text-sm font-medium animate-pulse">Redirecting to profile...</p>
+            </div>
+          )}
+          <ScrollArea className="max-h-[400px]">
+            <div className="p-2">
+              {!hasResults && !loadingGuests && (
+                <div className="py-8 text-center text-muted-foreground">
+                  No results found for "{query}"
+                </div>
+              )}
+
+              {results.pages.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <Layout className="h-3 w-3" /> Pages & Modules
+                  </h5>
+                  <div className="space-y-1">
+                    {results.pages.map((page, idx) => (
+                      <div
+                        key={page.path}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors group",
+                          selectedIndex === idx ? "bg-muted" : "hover:bg-muted/50"
+                        )}
+                        onClick={() => {
+                          setIsOpen(false);
+                          setQuery("");
+                          navigate(page.path);
+                        }}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                      >
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                          <page.icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            {highlightText(page.label, query)}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Navigate to {page.label}
+                          </p>
+                        </div>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results.guests.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-t mt-2 pt-4">
+                    <Users className="h-3 w-3" /> Guests
+                  </h5>
+                  <div className="space-y-1">
+                    {results.guests.map((g, idx) => {
+                      const absoluteIndex = results.pages.length + idx;
+                      return (
+                        <div
+                          key={g.id}
+                          className={cn(
+                            "group flex flex-col p-3 rounded-md cursor-pointer transition-colors",
+                            selectedIndex === absoluteIndex ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          onClick={() => handleGuestAction({ stopPropagation: () => {} } as any, g, "profile")}
+                          onMouseEnter={() => setSelectedIndex(absoluteIndex)}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {highlightText(`${g.first_name} ${g.last_name}`, query)}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                              {g.email ? highlightText(g.email, query) : "No email"} • {g.phone ? highlightText(g.phone, query) : "No phone"}
+                            </p>
+                          </div>
+                          {g.is_vip && <Badge className="bg-gradient-gold text-primary-foreground border-transparent text-[10px] h-4">VIP</Badge>}
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-2 lg:mt-0 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 sm:h-7 px-3 sm:px-2 text-[11px] sm:text-[10px] gap-1 flex-1 lg:flex-initial"
+                            onClick={(e) => handleGuestAction(e, g, "check-in")}
+                          >
+                            <CheckCircle2 className="h-3 w-3 text-success" /> <span className="lg:inline">Check-in</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 sm:h-7 px-3 sm:px-2 text-[11px] sm:text-[10px] gap-1 flex-1 lg:flex-initial"
+                            onClick={(e) => handleGuestAction(e, g, "check-out")}
+                          >
+                            <LogOut className="h-3 w-3 text-destructive" /> <span className="lg:inline">Check-out</span>
+                          </Button>
+                          <Button
+                            variant="gold"
+                            size="sm"
+                            className="h-8 sm:h-7 px-3 sm:px-2 text-[11px] sm:text-[10px] gap-1 flex-1 lg:flex-initial"
+                            onClick={(e) => handleGuestAction(e, g, "profile")}
+                          >
+                            <ExternalLink className="h-3 w-3" /> <span className="lg:inline">Profile</span>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  </div>
+                </div>
+              )}
+
+              {results.staff.length > 0 && (
+                <div>
+                  <h5 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-t mt-2 pt-4">
+                    <User className="h-3 w-3" /> Staff
+                  </h5>
+                  <div className="space-y-1">
+                    {results.staff.map((s, idx) => {
+                      const absoluteIndex = results.pages.length + results.guests.length + idx;
+                      return (
+                        <div
+                          key={s.id}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors",
+                            selectedIndex === absoluteIndex ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          onClick={() => {
+                            setIsOpen(false);
+                            setQuery("");
+                            navigate(`/staff?staffId=${s.id}`);
+                          }}
+                          onMouseEnter={() => setSelectedIndex(absoluteIndex)}
+                        >
+                          <div>
+                            <p className="text-sm font-medium">
+                              {highlightText(`${s.first_name} ${s.last_name}`, query)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {s.position} • {highlightText(s.employee_id, query)}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">{s.department}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+
+    </div>
   );
 }

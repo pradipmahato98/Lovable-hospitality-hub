@@ -80,8 +80,7 @@ import {
 import { useMemo } from "react";
 
 export default function Finance() {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("transactions");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedService, setSelectedService] = useState<string | null>(null);
 
   const {
