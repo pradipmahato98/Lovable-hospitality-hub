@@ -24,10 +24,12 @@ export function MetricCard({
 }: MetricCardProps) {
   const content = (
     <Card
+      variant="elevated"
       className={cn(
-        "transition-all duration-300",
-        link && "cursor-pointer hover:shadow-md border-primary/20"
+        "animate-slide-up hover:scale-[1.02] transition-transform",
+        link && "cursor-pointer hover:shadow-glow border-primary/20"
       )}
+      style={{ animationDelay: `${delay}ms` }}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between">

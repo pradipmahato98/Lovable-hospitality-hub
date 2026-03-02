@@ -1,6 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const data = [
   { month: "Jan", revenue: 42000 },
@@ -17,71 +16,56 @@ const data = [
   { month: "Dec", revenue: 95000 },
 ];
 
-const chartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "hsl(var(--primary))",
-  },
-} satisfies ChartConfig;
-
 export function RevenueChart() {
   return (
-    <Card className="xl:col-span-2">
-      <CardHeader>
+    <Card variant="elevated" className="animate-slide-up xl:col-span-2" style={{ animationDelay: "100ms" }}>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Revenue Overview</CardTitle>
-        <CardDescription>Monthly revenue performance for the current year.</CardDescription>
+        <div className="flex gap-2">
+          <span className="text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground">Monthly</span>
+        </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <AreaChart
-            data={data}
-            margin={{
-              left: 12,
-              right: 12,
-            }}
-          >
-            <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => value.slice(0, 3)}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => `$${value / 1000}k`}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <defs>
-              <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-revenue)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-revenue)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <Area
-              dataKey="revenue"
-              type="natural"
-              fill="url(#fillRevenue)"
-              fillOpacity={0.4}
-              stroke="var(--color-revenue)"
-              stackId="a"
-            />
-          </AreaChart>
-        </ChartContainer>
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(38, 92%, 55%)" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="hsl(38, 92%, 55%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "hsl(222, 15%, 55%)", fontSize: 12 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "hsl(222, 15%, 55%)", fontSize: 12 }}
+                tickFormatter={(value) => `$${value / 1000}k`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(222, 40%, 10%)",
+                  border: "1px solid hsl(222, 25%, 18%)",
+                  borderRadius: "8px",
+                  color: "hsl(45, 20%, 95%)",
+                }}
+                formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="hsl(38, 92%, 55%)"
+                strokeWidth={2}
+                fill="url(#revenueGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
