@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,10 +38,17 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { useBusinessDate } from "@/hooks/useSettings";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
 }
+
+type SortConfig = {
+  key: keyof JournalEntry | 'voucher_type';
+  direction: 'asc' | 'desc' | null;
+};
 
 export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
   const navigate = useNavigate();
@@ -62,6 +69,17 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     amount: 0,
     type: "debit" as "debit" | "credit",
     description: "",
+  });
+
+  // Filtering & Sorting State
+  const [filters, setFilters] = useState({
+    voucherType: "",
+    voucherNo: "",
+    date: ""
+  });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: 'date',
+    direction: 'desc'
   });
 
   const { data: journalEntries, isLoading } = useJournalEntries();
@@ -184,6 +202,47 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     }));
   };
 
+  const handleSort = (key: SortConfig['key']) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const filteredAndSortedEntries = useMemo(() => {
+    let result = [...journalEntries];
+
+    // Filter
+    if (filters.voucherType) {
+      result = result.filter(e => "JV".toLowerCase().includes(filters.voucherType.toLowerCase()));
+    }
+    if (filters.voucherNo) {
+      result = result.filter(e => e.entry_number.toLowerCase().includes(filters.voucherNo.toLowerCase()));
+    }
+    if (filters.date) {
+      result = result.filter(e => e.date.includes(filters.date));
+    }
+
+    // Sort
+    if (sortConfig.direction) {
+      result.sort((a, b) => {
+        let valA: any = sortConfig.key === 'voucher_type' ? "JV" : a[sortConfig.key as keyof JournalEntry];
+        let valB: any = sortConfig.key === 'voucher_type' ? "JV" : b[sortConfig.key as keyof JournalEntry];
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [journalEntries, filters, sortConfig]);
+
+  const SortIcon = ({ column }: { column: SortConfig['key'] }) => {
+    if (sortConfig.key !== column) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -298,20 +357,121 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                           variant="outline"
                           className={entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400"}
                         >
-                          {entry.is_posted ? "Posted" : "Draft"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{creatorName}</span>
-                          <span className="text-xs text-muted-foreground">{createdDate}</span>
+                          <span className="font-bold text-xs">Voucher No.</span>
+                          <SortIcon column="entry_number" />
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                          <Input
+                            placeholder="Search..."
+                            className="h-7 pl-7 text-[10px] bg-muted/30 focus-visible:bg-background"
+                            value={filters.voucherNo}
+                            onChange={(e) => setFilters(f => ({ ...f, voucherNo: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </TableHead>
+                    <TableHead>
+                      <div className="flex flex-col gap-1.5 py-2">
+                        <div
+                          className="flex items-center gap-1 cursor-pointer select-none hover:text-primary transition-colors"
+                          onClick={() => handleSort('date')}
+                        >
+                          <span className="font-bold text-xs">Transaction Date</span>
+                          <SortIcon column="date" />
+                        </div>
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                          <Input
+                            type="date"
+                            className="h-7 pl-7 text-[10px] bg-muted/30 focus-visible:bg-background"
+                            value={filters.date}
+                            onChange={(e) => setFilters(f => ({ ...f, date: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Entry By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedEntries.map((entry) => {
+                    const totalDebit = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
+                    const staffName = entry.created_by_profile
+                      ? `${entry.created_by_profile.first_name} ${entry.created_by_profile.last_name}`
+                      : "System";
+
+                    return (
+                      <TableRow key={entry.id}>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Actions">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem className="gap-2">
+                                <Eye className="h-4 w-4" /> View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2">
+                                <Edit className="h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2">
+                                <Printer className="h-4 w-4" /> Print
+                              </DropdownMenuItem>
+                              {!entry.is_posted && !isReadOnly && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="gap-2 text-success focus:text-success"
+                                    onClick={() => handlePostEntry(entry.id)}
+                                  >
+                                    <Check className="h-4 w-4" /> Post to Ledger
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {!isReadOnly && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+                                    <Trash className="h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                        <TableCell>JV</TableCell>
+                        <TableCell className="font-mono text-primary">{entry.entry_number}</TableCell>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.description}</TableCell>
+                        <TableCell className="text-right font-mono">${totalDebit.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400"}
+                          >
+                            {entry.is_posted ? "Posted" : "Draft"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-xs">{staffName}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(entry.created_at), "dd/MM/yyyy HH:mm")}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
