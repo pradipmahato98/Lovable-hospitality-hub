@@ -270,7 +270,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                   </TableHead>
                   <TableHead>
                     <div className="flex items-center gap-1">
-                      Transaction Date
+                      Transaction Date (AD)
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-4 w-4 p-0 opacity-50 hover:opacity-100">
@@ -283,6 +283,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                       </Popover>
                     </div>
                   </TableHead>
+                  <TableHead>Miti (BS)</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -345,6 +346,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                       </TableCell>
                       <TableCell className="font-mono text-primary font-bold">{entry.entry_number}</TableCell>
                       <TableCell className="text-sm">{entry.date}</TableCell>
+                      <TableCell className="text-sm font-mono">{entry.miti || "-"}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-sm">{entry.description}</TableCell>
                       <TableCell className="text-right font-mono font-bold text-sm">
                         ${totalDebit.toFixed(2)}

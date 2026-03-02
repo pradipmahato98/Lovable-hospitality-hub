@@ -38,6 +38,7 @@ import {
   ArrowDown,
   Printer,
   Eye,
+  MoreVertical,
 } from "lucide-react";
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry, useCreateAccount, Account } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
@@ -138,16 +139,16 @@ export default function JournalEntryEditor() {
         series: entryData.series || "ACC-JV-.YYYY.-",
         company: "Unico Plastics Inc.", // Mocked for now
         posting_date: entryData.date,
-        miti: bs,
-        fiscal_year: "2080/81",
+        miti: entryData.miti || bs,
+        fiscal_year: entryData.fiscal_year || "2080/81",
         voucher_no: entryData.entry_number,
         finance_book: entryData.finance_book || "",
         from_template: entryData.from_template || "",
         reference_number: entryData.reference || "",
         lines: entryData.lines?.map(l => ({
           account_id: l.account_id,
-          party_type: l.party_type || "",
-          party: l.party_id || "",
+          party_type: l.sub_ledger || l.party_type || "",
+          party: l.description || l.party_id || "",
           debit: l.debit,
           credit: l.credit
         })) || [
@@ -313,9 +314,10 @@ export default function JournalEntryEditor() {
           account_id: l.account_id,
           debit: l.debit,
           credit: l.credit,
-          description: null,
-          party_type: l.party_type,
-          party_id: l.party
+          description: l.party || null,
+          party_type: l.party_type || null,
+          sub_ledger: l.party_type || null,
+          party_id: null
         }))
     };
 
