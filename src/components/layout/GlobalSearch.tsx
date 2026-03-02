@@ -5,6 +5,7 @@ import {
   Users,
   CheckCircle2,
   LogOut,
+  X,
   ExternalLink,
   Loader2,
   LayoutDashboard,
@@ -286,8 +287,8 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full max-w-3xl" ref={containerRef}>
-      <div className="relative w-full sm:w-72 lg:w-96 transition-all duration-300 sm:focus-within:w-96 lg:focus-within:w-[550px] group/search">
+    <div className="relative w-full max-w-4xl" ref={containerRef}>
+      <div className="relative w-full sm:w-72 lg:w-96 transition-all duration-300 sm:focus-within:w-96 lg:focus-within:w-[700px] group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
@@ -305,7 +306,18 @@ export function GlobalSearch() {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
         />
-        {!query && (
+        {query ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setQuery("");
+              inputRef.current?.focus();
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none transition-opacity">
             <kbd className="h-6 min-w-[36px] items-center justify-center rounded-md border border-primary/30 bg-background px-2 font-sans text-[12px] font-bold flex gap-1 shadow-glow text-primary transition-all group-focus-within/search:scale-110">
               <span className="text-sm">⌘</span>K
@@ -315,7 +327,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-2 w-full lg:w-[550px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full lg:w-[700px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {isRedirecting && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
