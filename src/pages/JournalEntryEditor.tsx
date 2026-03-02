@@ -36,6 +36,8 @@ import {
   Calendar as CalendarIcon,
   ArrowUp,
   ArrowDown,
+  Printer,
+  Eye,
 } from "lucide-react";
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry, useCreateAccount, Account } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
@@ -52,6 +54,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Reorder } from "framer-motion";
 import { format } from "date-fns";
 
 interface JournalLineItem {
@@ -70,6 +79,7 @@ export default function JournalEntryEditor() {
 
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: entryData, isLoading: isLoadingEntry } = useJournalEntry(id);
+  const isReadOnly = entryData?.is_posted || false;
   const createJournalEntry = useCreateJournalEntry();
   const updateJournalEntry = useUpdateJournalEntry();
   const createAccount = useCreateAccount();
@@ -162,6 +172,13 @@ export default function JournalEntryEditor() {
 
   const isBalanced = Math.abs(totals.debit - totals.credit) < 0.01 && totals.debit > 0;
 
+  const allowFutureDates = useMemo(() => {
+    return formData.lines.some(l => {
+      const acc = accounts?.find(a => a.id === l.account_id);
+      return acc?.name.toLowerCase().match(/prepaid|rent|salary|recurring/);
+    });
+  }, [formData.lines, accounts]);
+
   const handleAddRow = (count: number = 1) => {
     const newRows = Array(count).fill(null).map(() => ({
       account_id: "",
@@ -186,6 +203,11 @@ export default function JournalEntryEditor() {
     const newLines = [...formData.lines];
     newLines.splice(index, 1);
     setFormData((prev) => ({ ...prev, lines: newLines }));
+    setIsDirty(true);
+  };
+
+  const reorderLines = (newLines: JournalLineItem[]) => {
+    setFormData(prev => ({ ...prev, lines: newLines }));
     setIsDirty(true);
   };
 
@@ -326,21 +348,35 @@ export default function JournalEntryEditor() {
       }
       actions={
         <div className="flex items-center gap-3">
-          {isDirty && (
+          {isDirty && !isReadOnly && (
             <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-3 py-1">
               <AlertCircle className="h-3 w-3" /> Not Saved
             </Badge>
           )}
+          {isReadOnly && (
+            <Badge variant="outline" className="bg-success/10 text-success border-success/20 gap-1 px-3 py-1">
+              <ShieldCheck className="h-3 w-3" /> Posted Entry
+            </Badge>
+          )}
           <Button variant="outline" onClick={() => navigate("/finance")}>
-            Cancel
+            {isReadOnly ? "Back" : "Cancel"}
           </Button>
-          <Button variant="secondary" onClick={() => navigate(`/finance/journal/new?type=${type === 'Quick' ? 'Standard' : 'Quick'}`)}>
-            {type === 'Quick' ? 'Standard Mode' : 'Quick Entry'}
-          </Button>
-          <Button onClick={handleSave} disabled={createJournalEntry.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Save className="h-4 w-4 mr-2" />
-            {createJournalEntry.isPending ? "Saving..." : "Save"}
-          </Button>
+          {!id && (
+            <Button variant="secondary" onClick={() => navigate(`/finance/journal/new?type=${type === 'Quick' ? 'Standard' : 'Quick'}`)}>
+              {type === 'Quick' ? 'Standard Mode' : 'Quick Entry'}
+            </Button>
+          )}
+          {!isReadOnly && (
+            <Button onClick={handleSave} disabled={createJournalEntry.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Save className="h-4 w-4 mr-2" />
+              {createJournalEntry.isPending ? "Saving..." : "Save"}
+            </Button>
+          )}
+          {isReadOnly && (
+            <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" /> Print
+            </Button>
+          )}
         </div>
       }
     >
@@ -357,6 +393,7 @@ export default function JournalEntryEditor() {
                   Fiscal Year <span className="text-destructive">*</span>
                 </Label>
                 <Select
+                  disabled={isReadOnly}
                   value={formData.fiscal_year}
                   onValueChange={(v) => setFormData(p => ({...p, fiscal_year: v}))}
                 >
@@ -376,6 +413,7 @@ export default function JournalEntryEditor() {
                 </Label>
                 <div className="relative">
                   <Input
+                    readOnly={isReadOnly}
                     placeholder="DD/MM/YYYY"
                     value={adDisplay}
                     onChange={(e) => {
@@ -391,22 +429,26 @@ export default function JournalEntryEditor() {
                     className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm"
                   />
                   <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                    <PopoverTrigger asChild disabled={isReadOnly}>
+                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
                         <CalendarIcon className="h-3.5 w-3.5" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
-                      <NepaliCalendar
-                        selected={formData.miti}
-                        onSelect={(bs) => {
-                          const ad = bsToAd(bs);
-                          if (ad) {
-                            setFormData(p => ({ ...p, miti: bs, posting_date: ad }));
+                      <Calendar
+                        mode="single"
+                        selected={new Date(formData.posting_date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            const ad = date.toISOString().split('T')[0];
+                            const bs = adToBs(ad);
+                            setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
                             setAdDisplay(formatAdDate(ad));
                             setBsDisplay(bs);
                           }
                         }}
+                        disabled={(date) => !allowFutureDates && date > new Date()}
+                        initialFocus
                       />
                     </PopoverContent>
                   </Popover>
@@ -419,6 +461,7 @@ export default function JournalEntryEditor() {
                 </Label>
                 <div className="relative">
                   <Input
+                    readOnly={isReadOnly}
                     placeholder="YYYY/MM/DD"
                     value={bsDisplay}
                     onChange={(e) => {
@@ -435,14 +478,15 @@ export default function JournalEntryEditor() {
                     className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm"
                   />
                   <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                    <PopoverTrigger asChild disabled={isReadOnly}>
+                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
                         <CalendarIcon className="h-3.5 w-3.5" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
                       <NepaliCalendar
                         selected={formData.miti}
+                        disableFuture={!allowFutureDates}
                         onSelect={(bs) => {
                           const ad = bsToAd(bs);
                           if (ad) {
@@ -462,6 +506,7 @@ export default function JournalEntryEditor() {
                   Voucher Type <span className="text-destructive">*</span>
                 </Label>
                 <Select
+                  disabled={isReadOnly}
                   value={formData.entry_type}
                   onValueChange={(v) => setFormData(p => ({...p, entry_type: v}))}
                 >
@@ -502,43 +547,45 @@ export default function JournalEntryEditor() {
             <CardTitle className="text-base font-semibold">Accounting Entries</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader className="bg-muted/20">
-                <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="w-12 text-center">
-                    <input type="checkbox" className="rounded border-muted-foreground/30" />
-                  </TableHead>
-                  <TableHead className="w-16">No.</TableHead>
-                  <TableHead className="min-w-[250px]">Account</TableHead>
-                  <TableHead>Sub Ledger</TableHead>
-                  <TableHead className="text-right w-40">Debit</TableHead>
-                  <TableHead className="text-right w-40">Credit</TableHead>
-                  <TableHead className="min-w-[200px]">Remarks</TableHead>
-                  <TableHead className="w-20"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {formData.lines.map((line, index) => (
-                  <TableRow key={index} className="group border-muted-foreground/10 hover:bg-muted/10 transition-colors">
-                    <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-0.5 skip-nav">
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {/* Move Up */}}>
-                          <ArrowUp className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {/* Move Down */}}>
-                          <ArrowDown className="h-3 w-3" />
-                        </Button>
+            <div className="overflow-x-auto">
+              <div className="min-w-[1100px]">
+                <div className="grid grid-cols-[50px_60px_2.5fr_1.5fr_120px_120px_2fr_80px] bg-muted/20 border-b items-center h-10 px-4">
+                  <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">#</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">No.</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Account</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
+                  <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</div>
+                  <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-4">Remarks</div>
+                  <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pr-4">Action</div>
+                </div>
+
+                <Reorder.Group axis="y" values={formData.lines} onReorder={reorderLines} className="divide-y divide-muted-foreground/10">
+                  {formData.lines.map((line, index) => (
+                    <Reorder.Item
+                      key={index}
+                      value={line}
+                      dragListener={!isReadOnly}
+                      className={cn(
+                        "grid grid-cols-[50px_60px_2.5fr_1.5fr_120px_120px_2fr_80px] items-center h-14 px-4 bg-background/40 transition-colors group",
+                        !isReadOnly && "hover:bg-muted/10"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex justify-center text-muted-foreground transition-colors skip-nav",
+                        !isReadOnly ? "cursor-grab active:cursor-grabbing hover:text-primary" : "opacity-30"
+                      )}>
+                        <MoreVertical className="h-4 w-4" />
                       </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="font-mono text-muted-foreground text-sm pl-2">{index + 1}</div>
+                      <div className="flex items-center gap-2 pr-4">
                         <div className="flex-1 min-w-0">
                           <Select
+                            disabled={isReadOnly}
                             value={line.account_id}
                             onValueChange={(v) => updateLine(index, "account_id", v)}
                           >
-                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-semibold w-full">
+                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-semibold w-full text-sm disabled:opacity-100">
                               <SelectValue placeholder="Select Account" />
                             </SelectTrigger>
                             <SelectContent>
@@ -550,75 +597,126 @@ export default function JournalEntryEditor() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 skip-nav"
-                          tabIndex={-1}
-                          onClick={() => {
-                            setCurrentRowIndex(index);
-                            setLedgerDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="h-3 w-3 text-primary" />
-                        </Button>
+                        {!isReadOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 skip-nav"
+                            tabIndex={-1}
+                            onClick={() => {
+                              setCurrentRowIndex(index);
+                              setLedgerDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="h-3 w-3 text-primary" />
+                          </Button>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Sub Ledger"
-                        value={line.party_type}
-                        onChange={(e) => updateLine(index, "party_type", e.target.value)}
-                        className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={line.debit || ""}
-                        onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
-                        className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={line.credit || ""}
-                        onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
-                        className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Remarks"
-                        value={line.party}
-                        onChange={(e) => updateLine(index, "party", e.target.value)}
-                        className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity skip-nav">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveRow(index)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
+                      <div className="px-2">
+                        <Input
+                          readOnly={isReadOnly}
+                          placeholder="Sub Ledger"
+                          value={line.party_type}
+                          onChange={(e) => updateLine(index, "party_type", e.target.value)}
+                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm"
+                        />
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="p-4 bg-muted/5 flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleAddRow(1)} className="h-8 text-xs font-semibold">
-                <Plus className="h-3 w-3 mr-1" /> Add Row
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleAddRow(5)} className="h-8 text-xs font-semibold">
-                <Plus className="h-3 w-3 mr-1" /> Add Multiple (5)
-              </Button>
+                      <div className="pr-4">
+                        <Input
+                          readOnly={isReadOnly}
+                          type="number"
+                          placeholder="0.00"
+                          value={line.debit || ""}
+                          onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
+                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold text-sm"
+                        />
+                      </div>
+                      <div className="pr-4">
+                        <Input
+                          readOnly={isReadOnly}
+                          type="number"
+                          placeholder="0.00"
+                          value={line.credit || ""}
+                          onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
+                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold text-sm"
+                        />
+                      </div>
+                      <div className="px-4">
+                        <Input
+                          readOnly={isReadOnly}
+                          placeholder="Remarks"
+                          value={line.party}
+                          onChange={(e) => updateLine(index, "party", e.target.value)}
+                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm"
+                        />
+                      </div>
+                      <div className="text-right pr-4 skip-nav">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="gap-2">
+                              <Eye className="h-4 w-4" /> View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2">
+                              <Edit2 className="h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2">
+                              <Printer className="h-4 w-4" /> Print
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleRemoveRow(index)}>
+                              <Trash2 className="h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
+              </div>
+            </div>
+            <div className="p-4 bg-muted/5 flex items-center justify-between border-t">
+              <div className="flex gap-2">
+                {!isReadOnly && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => handleAddRow(1)} className="h-8 text-xs font-semibold">
+                      <Plus className="h-3 w-3 mr-1" /> Add Row
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAddRow(5)} className="h-8 text-xs font-semibold">
+                      <Plus className="h-3 w-3 mr-1" /> Add Multiple (5)
+                    </Button>
+                  </>
+                )}
+                {isReadOnly && (
+                   <div className="text-xs text-muted-foreground italic flex items-center h-8">
+                     * This entry has been posted and cannot be modified.
+                   </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-[120px_120px_2fr_80px] items-center gap-0 w-[520px]">
+                <div className="text-right pr-4">
+                  <div className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Total Debit</div>
+                  <div className="font-mono font-bold text-sm">${totals.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div className="text-right pr-4">
+                  <div className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Total Credit</div>
+                  <div className="font-mono font-bold text-sm">${totals.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div className="px-4">
+                  <div className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Difference</div>
+                  <div className={cn(
+                    "font-mono font-bold text-sm",
+                    Math.abs(totals.debit - totals.credit) < 0.01 ? "text-success" : "text-destructive"
+                  )}>
+                    ${Math.abs(totals.debit - totals.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="w-20"></div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -633,13 +731,15 @@ export default function JournalEntryEditor() {
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               <div className="space-y-4">
-                <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group">
-                  <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Upload className="h-6 w-6 text-primary" />
+                {!isReadOnly && (
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group">
+                    <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 10MB</p>
                   </div>
-                  <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 10MB</p>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attached Files</p>
@@ -662,6 +762,7 @@ export default function JournalEntryEditor() {
                     Reference Number
                   </Label>
                   <Input
+                    readOnly={isReadOnly}
                     placeholder="Invoice #, etc."
                     className="bg-background/50 border-muted-foreground/20 h-11"
                     value={formData.reference_number}
@@ -670,25 +771,6 @@ export default function JournalEntryEditor() {
                 </div>
               </div>
 
-              <div className="flex flex-col justify-end space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-muted-foreground/10">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Debit</span>
-                  <span className="text-xl font-mono font-bold">${totals.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-muted-foreground/10">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Credit</span>
-                  <span className="text-xl font-mono font-bold">${totals.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Difference</span>
-                  <span className={cn(
-                    "text-xl font-mono font-bold",
-                    Math.abs(totals.debit - totals.credit) < 0.01 ? "text-success" : "text-destructive"
-                  )}>
-                    ${Math.abs(totals.debit - totals.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>

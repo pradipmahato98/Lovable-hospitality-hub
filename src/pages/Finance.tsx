@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +74,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Zap,
-  Database
+  Database,
+  Plus
 } from "lucide-react";
 import { useMemo } from "react";
 
