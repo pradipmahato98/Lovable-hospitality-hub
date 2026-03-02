@@ -34,8 +34,10 @@ import {
   Upload,
   FileIcon,
   Calendar as CalendarIcon,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
-import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry } from "@/hooks/useFinance";
+import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry, useCreateAccount, Account } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
 import { toast } from "sonner";
 import { adToBs, bsToAd, formatAdDate, parseAdDate } from "@/utils/nepaliDate";
@@ -43,6 +45,13 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { NepaliCalendar } from "@/components/ui/nepali-calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 
 interface JournalLineItem {
@@ -63,9 +72,19 @@ export default function JournalEntryEditor() {
   const { data: entryData, isLoading: isLoadingEntry } = useJournalEntry(id);
   const createJournalEntry = useCreateJournalEntry();
   const updateJournalEntry = useUpdateJournalEntry();
+  const createAccount = useCreateAccount();
   const { data: businessDate } = useBusinessDate();
 
   const [isDirty, setIsDirty] = useState(false);
+  const [ledgerDialogOpen, setLedgerDialogOpen] = useState(false);
+  const [newLedger, setNewLedger] = useState({
+    code: "",
+    name: "",
+    type: "asset" as Account["type"],
+    description: "",
+  });
+  const [currentRowIndex, setCurrentRowIndex] = useState<number | null>(null);
+
   const [formData, setFormData] = useState({
     entry_type: "Journal Voucher",
     series: "ACC-JV-.YYYY.-",
@@ -184,12 +203,20 @@ export default function JournalEntryEditor() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      const form = (e.target as HTMLElement).closest("form") || document.querySelector("main");
+      const target = e.target as HTMLElement;
+      // Skip buttons like plus, edit, delete
+      if (target.tagName === "BUTTON" || target.closest(".skip-nav")) return;
+
+      const form = document.querySelector("main");
       if (form) {
-        const focusableElements = form.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const index = Array.prototype.indexOf.call(focusableElements, e.target);
+        const focusableElements = Array.from(form.querySelectorAll(
+          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"]'
+        )).filter(el => {
+          const style = window.getComputedStyle(el);
+          return style.display !== 'none' && style.visibility !== 'hidden' && (el as HTMLElement).tabIndex !== -1;
+        });
+
+        const index = focusableElements.indexOf(target);
         if (index > -1 && index < focusableElements.length - 1) {
           (focusableElements[index + 1] as HTMLElement).focus();
           e.preventDefault();
@@ -198,9 +225,56 @@ export default function JournalEntryEditor() {
     }
   };
 
+  const handleCreateLedger = async () => {
+    if (!newLedger.code || !newLedger.name) {
+      toast.error("Please fill in ledger code and name");
+      return;
+    }
+
+    try {
+      const result = await createAccount.mutateAsync({
+        code: newLedger.code,
+        name: newLedger.name,
+        type: newLedger.type,
+        description: newLedger.description || null,
+        parent_id: null,
+        is_active: true,
+      });
+      toast.success("Ledger created successfully");
+      setLedgerDialogOpen(false);
+
+      // If we were creating this for a specific row, select it
+      if (currentRowIndex !== null) {
+        updateLine(currentRowIndex, "account_id", result.id);
+      }
+
+      setNewLedger({ code: "", name: "", type: "asset", description: "" });
+      setCurrentRowIndex(null);
+    } catch (error) {
+      toast.error("Failed to create ledger");
+    }
+  };
+
   const handleSave = async () => {
     if (!isBalanced) {
       toast.error("Debit and Credit totals must be equal and greater than zero");
+      return;
+    }
+
+    // Validation for future dates
+    const today = new Date().toISOString().split('T')[0];
+    const isFutureDate = formData.posting_date > today;
+
+    // Check for monthly posting exceptions
+    const isMonthlyPosting = formData.lines.some(line => {
+      const account = accounts?.find(a => a.id === line.account_id);
+      if (!account) return false;
+      const name = account.name.toLowerCase();
+      return name.includes("prepaid") || name.includes("rent") || name.includes("salary") || name.includes("recurring");
+    });
+
+    if (isFutureDate && !isMonthlyPosting) {
+      toast.error("Future dates are only allowed for monthly postings (Prepaid, Rent, Salary, Recurring)");
       return;
     }
 
@@ -323,19 +397,16 @@ export default function JournalEntryEditor() {
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={new Date(formData.posting_date)}
-                        onSelect={(date) => {
-                          if (date) {
-                            const ad = date.toISOString().split('T')[0];
-                            const bs = adToBs(ad);
-                            setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
+                      <NepaliCalendar
+                        selected={formData.miti}
+                        onSelect={(bs) => {
+                          const ad = bsToAd(bs);
+                          if (ad) {
+                            setFormData(p => ({ ...p, miti: bs, posting_date: ad }));
                             setAdDisplay(formatAdDate(ad));
                             setBsDisplay(bs);
                           }
                         }}
-                        initialFocus
                       />
                     </PopoverContent>
                   </Popover>
@@ -439,10 +510,10 @@ export default function JournalEntryEditor() {
                   </TableHead>
                   <TableHead className="w-16">No.</TableHead>
                   <TableHead className="min-w-[250px]">Account</TableHead>
-                  <TableHead>Party Type</TableHead>
-                  <TableHead>Party</TableHead>
+                  <TableHead>Sub Ledger</TableHead>
                   <TableHead className="text-right w-40">Debit</TableHead>
                   <TableHead className="text-right w-40">Credit</TableHead>
+                  <TableHead className="min-w-[200px]">Remarks</TableHead>
                   <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -450,39 +521,54 @@ export default function JournalEntryEditor() {
                 {formData.lines.map((line, index) => (
                   <TableRow key={index} className="group border-muted-foreground/10 hover:bg-muted/10 transition-colors">
                     <TableCell className="text-center">
-                      <input type="checkbox" className="rounded border-muted-foreground/30" />
+                      <div className="flex flex-col items-center gap-0.5 skip-nav">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {/* Move Up */}}>
+                          <ArrowUp className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {/* Move Down */}}>
+                          <ArrowDown className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="font-mono text-muted-foreground">{index + 1}</TableCell>
                     <TableCell>
-                      <Select
-                        value={line.account_id}
-                        onValueChange={(v) => updateLine(index, "account_id", v)}
-                      >
-                        <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-semibold">
-                          <SelectValue placeholder="Select Account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts?.map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.name} - {acc.code}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <Select
+                            value={line.account_id}
+                            onValueChange={(v) => updateLine(index, "account_id", v)}
+                          >
+                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-semibold w-full">
+                              <SelectValue placeholder="Select Account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts?.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.name} - {acc.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 skip-nav"
+                          tabIndex={-1}
+                          onClick={() => {
+                            setCurrentRowIndex(index);
+                            setLedgerDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 text-primary" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Input
-                        placeholder="Party Type"
+                        placeholder="Sub Ledger"
                         value={line.party_type}
                         onChange={(e) => updateLine(index, "party_type", e.target.value)}
-                        className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Party"
-                        value={line.party}
-                        onChange={(e) => updateLine(index, "party", e.target.value)}
                         className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30"
                       />
                     </TableCell>
@@ -504,8 +590,16 @@ export default function JournalEntryEditor() {
                         className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold"
                       />
                     </TableCell>
+                    <TableCell>
+                      <Input
+                        placeholder="Remarks"
+                        value={line.party}
+                        onChange={(e) => updateLine(index, "party", e.target.value)}
+                        className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full"
+                      />
+                    </TableCell>
                     <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity skip-nav">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveRow(index)}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
@@ -599,6 +693,71 @@ export default function JournalEntryEditor() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={ledgerDialogOpen} onOpenChange={setLedgerDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Ledger</DialogTitle>
+            <DialogDescription>Add a new ledger to the chart of accounts</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ledger Code</Label>
+                <Input
+                  placeholder="e.g., 1000"
+                  value={newLedger.code}
+                  onChange={(e) => setNewLedger((p) => ({ ...p, code: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ledger Type</Label>
+                <Select
+                  value={newLedger.type}
+                  onValueChange={(v: Account["type"]) =>
+                    setNewLedger((p) => ({ ...p, type: v }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asset">Asset</SelectItem>
+                    <SelectItem value="liability">Liability</SelectItem>
+                    <SelectItem value="equity">Equity</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="expense">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Ledger Name</Label>
+              <Input
+                placeholder="e.g., Cash on Hand"
+                value={newLedger.name}
+                onChange={(e) => setNewLedger((p) => ({ ...p, name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description (Optional)</Label>
+              <Input
+                placeholder="Brief description..."
+                value={newLedger.description}
+                onChange={(e) => setNewLedger((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setLedgerDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateLedger} disabled={createAccount.isPending}>
+                {createAccount.isPending ? "Creating..." : "Create Ledger"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
