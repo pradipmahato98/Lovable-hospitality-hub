@@ -30,6 +30,9 @@ import {
   MoreHorizontal,
   Edit2,
   AlertCircle,
+  Paperclip,
+  Upload,
+  FileIcon,
 } from "lucide-react";
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
@@ -201,9 +204,9 @@ export default function JournalEntryEditor() {
       title={id ? "Edit Journal Entry" : "New Journal Entry"}
       subtitle={
         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-          <span>Accounting</span>
+          <button onClick={() => navigate("/finance")} className="hover:text-primary transition-colors">Accounting</button>
           <ChevronRight className="h-3 w-3" />
-          <span>Journal Entry</span>
+          <button onClick={() => navigate("/finance")} className="hover:text-primary transition-colors">Journal Entry</button>
           <ChevronRight className="h-3 w-3" />
           <span className="text-foreground">{id || "new-journal-entry-3"}</span>
         </div>
@@ -438,8 +441,38 @@ export default function JournalEntryEditor() {
         </Card>
 
         <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
+          <CardHeader className="border-b bg-muted/30 px-6 py-4">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Paperclip className="h-4 w-4" />
+              Attachments
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="space-y-4">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group">
+                  <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Upload className="h-6 w-6 text-primary" />
+                  </div>
+                  <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 10MB</p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attached Files</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-muted-foreground/10 group">
+                      <div className="flex items-center gap-3">
+                        <FileIcon className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm">invoice_vendor_293.pdf</span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

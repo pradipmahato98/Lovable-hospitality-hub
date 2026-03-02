@@ -36,10 +36,6 @@ export interface JournalEntry {
   created_at: string;
   updated_at: string;
   lines?: JournalLine[];
-  created_by_profile?: {
-    first_name: string;
-    last_name: string;
-  } | null;
 }
 
 export interface JournalLine {
@@ -195,7 +191,10 @@ export function useJournalEntries(filters?: {
         .from("journal_entries")
         .select(`
           *,
-          created_by_profile:profiles(first_name, last_name),
+          created_by_profile:profiles!journal_entries_created_by_fkey (
+            first_name,
+            last_name
+          ),
           journal_lines (
             *,
             account:accounts (*)
@@ -222,6 +221,7 @@ export function useJournalEntries(filters?: {
 
       return (data || []).map((entry: any) => ({
         ...entry,
+        voucher_type: "JV", // Default to Journal Voucher
         lines: entry.journal_lines || [],
       })) as JournalEntry[];
     },
