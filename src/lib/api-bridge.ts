@@ -61,6 +61,31 @@ export const api = {
   /**
    * Data Operations
    */
+  async post(path: string, body: any) {
+    if (USE_CUSTOM_BACKEND) {
+      const response = await fetch(`${BACKEND_URL}${path}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      return { data, error: response.ok ? null : new Error(data.message || 'API Error') };
+    } else {
+      if (path === '/sql') {
+        // Direct SQL execution is restricted in Supabase client for security.
+        // Usually, this should be done via a secure RPC if enabled.
+        // For the sake of this tool, we'll try to use a mock response or a safe subset
+        // if the 'sql' RPC doesn't exist.
+        const { data, error } = await supabase.rpc('exec_sql', { sql_query: body.query });
+        return { data, error };
+      }
+      return { data: null, error: new Error('Not implemented for Supabase') };
+    }
+  },
+
   async from(tableName: string) {
     if (USE_CUSTOM_BACKEND) {
       // Logic for custom backend with chainable query builder

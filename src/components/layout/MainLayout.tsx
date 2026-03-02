@@ -16,17 +16,17 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
 
   return (
     <div className={cn(
-      "h-screen w-screen bg-background transition-all duration-500 relative flex overflow-hidden fixed inset-0"
+      "min-h-screen bg-background transition-all duration-500 relative flex overflow-x-hidden"
     )}>
       <Sidebar />
-      <div 
+      <div
         className={cn(
-          "flex-1 transition-all duration-300 h-full flex flex-col min-w-0 overflow-hidden",
+          "flex-1 transition-all duration-300 min-h-screen flex flex-col min-w-0",
           !isMobile && (collapsed ? "pl-20" : "pl-64")
         )}
       >
         <Header title={title} subtitle={subtitle} />
-        <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden bg-background/50">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         setMobileOpen(false);
       }
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -32,13 +32,13 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const toggleCollapsed = () => setCollapsed(prev => !prev);
 
   return (
-    <SidebarContext.Provider value={{ 
-      collapsed, 
-      setCollapsed, 
-      toggleCollapsed, 
-      isMobile, 
-      mobileOpen, 
-      setMobileOpen 
+    <SidebarContext.Provider value={{
+      collapsed,
+      setCollapsed,
+      toggleCollapsed,
+      isMobile,
+      mobileOpen,
+      setMobileOpen
     }}>
       {children}
     </SidebarContext.Provider>

@@ -74,14 +74,6 @@
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "core-js",
-      "esbuild",
-      "msw"
-    ]
-  },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@tailwindcss/typography": "^0.5.19",
