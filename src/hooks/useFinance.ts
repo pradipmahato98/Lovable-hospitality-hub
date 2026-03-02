@@ -254,6 +254,7 @@ export function useJournalEntries(filters?: {
 
 export function useCreateJournalEntry() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (entry: {

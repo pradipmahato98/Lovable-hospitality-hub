@@ -437,8 +437,8 @@ const AdminConsole = () => {
           <UsersTable
             users={users}
             isLoading={loadingUsers}
-            searchQuery=""
-            onSearchChange={() => {}}
+            searchQuery={newUserData.email} // Use email state for search if needed, or better, separate state
+            onSearchChange={(q) => setNewUserData(prev => ({ ...prev, email: q }))}
             onRoleChange={(userId, oldRole, newRole) => updateUserRole.mutate({ userId, oldRole, newRole })}
             isUpdating={updateUserRole.isPending}
           />
