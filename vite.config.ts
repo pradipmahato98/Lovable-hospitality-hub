@@ -16,6 +16,25 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("lucide-react")) return "ui-vendor";
+            if (id.includes("recharts") || id.includes("d3")) return "charts";
+            if (id.includes("framer-motion")) return "ui-vendor";
+            if (id.includes("@supabase") || id.includes("supabase")) return "supabase";
+            if (id.includes("jspdf") || id.includes("xlsx")) return "export-libs";
+
+            // Group everything that might have circular dependencies into a single framework chunk
+            return "framework";
+          }
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",
