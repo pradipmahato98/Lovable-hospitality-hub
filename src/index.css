@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+@import url('https://fonts.cdnfonts.com/css/google-sans');
 
 @tailwind base;
 @tailwind components;
@@ -59,8 +59,8 @@
     --shadow-card: 0 4px 24px hsl(222 47% 10% / 0.05);
     --shadow-elevated: 0 8px 32px hsl(222 47% 10% / 0.1);
 
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'Inter', sans-serif;
+    --font-display: 'Google Sans', sans-serif;
+    --font-body: 'Google Sans', sans-serif;
   }
 
   .dark {
@@ -190,56 +190,6 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
-  .ios-material {
-    background-color: hsla(var(--background) / var(--ios-bg-opacity));
-    backdrop-filter: blur(var(--ios-blur)) saturate(var(--ios-saturation));
-    border: 1px solid hsla(var(--foreground) / 0.1);
-  }
-
-  .ios-material-elevated {
-    background-color: hsla(var(--background) / calc(var(--ios-bg-opacity) + 0.15));
-    backdrop-filter: blur(calc(var(--ios-blur) * 1.5)) saturate(calc(var(--ios-saturation) * 1.2));
-    border: 1px solid hsla(var(--foreground) / 0.15);
-    box-shadow: var(--shadow-elevated);
-  }
-
-  .ios-blur {
-    backdrop-filter: blur(var(--ios-blur));
-  }
-
-  .ios-enabled .bg-card,
-  .ios-enabled .bg-background {
-    background-color: hsla(var(--background) / var(--ios-bg-opacity));
-    backdrop-filter: blur(var(--ios-blur)) saturate(var(--ios-saturation));
-  }
-
-  .ios-enabled .bg-popover,
-  .ios-enabled [role="dialog"] {
-    background-color: hsla(var(--background) / calc(var(--ios-bg-opacity) + 0.1));
-    backdrop-filter: blur(calc(var(--ios-blur) * 1.2)) saturate(var(--ios-saturation));
-    border: 1px solid hsla(var(--foreground) / 0.1);
-  }
-
-  .ios-enabled .sidebar {
-    background-color: hsla(var(--background) / calc(var(--ios-bg-opacity) - 0.2));
-    backdrop-filter: blur(calc(var(--ios-blur) * 1.5)) saturate(var(--ios-saturation));
-    border-right: 1px solid hsla(var(--foreground) / 0.05);
-  }
-
-  .ios-enabled .border {
-    border-color: hsla(var(--foreground) / 0.08);
-  }
-
-  /* Non-bulky improvements */
-  .ios-enabled .rounded-lg { border-radius: var(--ios-radius); }
-  .ios-enabled .rounded-xl { border-radius: calc(var(--ios-radius) * 1.5); }
-  .ios-enabled .rounded-2xl { border-radius: calc(var(--ios-radius) * 2); }
-
-  .ios-enabled .p-4 { padding: calc(var(--ios-spacing) * 4); }
-  .ios-enabled .p-6 { padding: calc(var(--ios-spacing) * 6); }
-  .ios-enabled .gap-4 { gap: calc(var(--ios-spacing) * 4); }
-  .ios-enabled .gap-6 { gap: calc(var(--ios-spacing) * 6); }
 }
 
 @keyframes fadeIn {
