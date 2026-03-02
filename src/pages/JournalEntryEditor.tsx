@@ -42,6 +42,7 @@ import { adToBs, bsToAd, formatAdDate, parseAdDate } from "@/utils/nepaliDate";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { NepaliCalendar } from "@/components/ui/nepali-calendar";
 import { format } from "date-fns";
 
 interface JournalLineItem {
@@ -369,19 +370,16 @@ export default function JournalEntryEditor() {
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={new Date(formData.posting_date)}
-                        onSelect={(date) => {
-                          if (date) {
-                            const ad = date.toISOString().split('T')[0];
-                            const bs = adToBs(ad);
-                            setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
+                      <NepaliCalendar
+                        selected={formData.miti}
+                        onSelect={(bs) => {
+                          const ad = bsToAd(bs);
+                          if (ad) {
+                            setFormData(p => ({ ...p, miti: bs, posting_date: ad }));
                             setAdDisplay(formatAdDate(ad));
                             setBsDisplay(bs);
                           }
                         }}
-                        initialFocus
                       />
                     </PopoverContent>
                   </Popover>
