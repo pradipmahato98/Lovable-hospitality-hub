@@ -33,13 +33,16 @@ import {
   Paperclip,
   Upload,
   FileIcon,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
 import { toast } from "sonner";
 import { adToBs, bsToAd, formatAdDate, parseAdDate } from "@/utils/nepaliDate";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface JournalLineItem {
   account_id: string;
@@ -203,12 +206,10 @@ export default function JournalEntryEditor() {
     const payload = {
       date: formData.posting_date,
       miti: formData.miti,
+      fiscal_year: formData.fiscal_year,
+      voucher_type: formData.entry_type,
       description: `Journal Entry - ${formData.reference_number || 'No Ref'}`,
       reference: formData.reference_number,
-      voucher_type: formData.entry_type,
-      series: formData.series,
-      finance_book: formData.finance_book,
-      from_template: formData.from_template,
       lines: formData.lines
         .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
         .map(l => ({
@@ -274,8 +275,8 @@ export default function JournalEntryEditor() {
           type === "Quick" && "max-h-0 opacity-0 overflow-hidden py-0 my-0 border-0"
         )}>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              {/* Row 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Row 1: Fiscal Year, AD Date, BS Miti, Voucher Type */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Fiscal Year <span className="text-destructive">*</span>
@@ -298,7 +299,7 @@ export default function JournalEntryEditor() {
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Transaction Date (AD) <span className="text-destructive">*</span>
                 </Label>
-                <div className="relative group">
+                <div className="flex gap-1">
                   <Input
                     placeholder="DD/MM/YYYY"
                     value={adDisplay}
@@ -312,23 +313,31 @@ export default function JournalEntryEditor() {
                         setBsDisplay(bs);
                       }
                     }}
-                    className="bg-background/50 border-muted-foreground/20 h-11 font-mono"
+                    className="bg-background/50 border-muted-foreground/20 h-11 font-mono flex-1"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground group-hover:text-primary transition-colors">
-                    <Edit2 className="h-4 w-4" />
-                  </div>
-                  <Input
-                    type="date"
-                    value={formData.posting_date}
-                    onChange={(e) => {
-                      const ad = e.target.value;
-                      const bs = adToBs(ad);
-                      setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
-                      setAdDisplay(formatAdDate(ad));
-                      setBsDisplay(bs);
-                    }}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-11 w-11 shrink-0 border-muted-foreground/20 bg-background/50">
+                        <CalendarIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(formData.posting_date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            const ad = date.toISOString().split('T')[0];
+                            const bs = adToBs(ad);
+                            setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
+                            setAdDisplay(formatAdDate(ad));
+                            setBsDisplay(bs);
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -353,10 +362,7 @@ export default function JournalEntryEditor() {
                   className="bg-background/50 border-muted-foreground/20 h-11 font-mono"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Row 2 */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Voucher Type <span className="text-destructive">*</span>
@@ -376,86 +382,15 @@ export default function JournalEntryEditor() {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Voucher No.
-                </Label>
-                <Input
-                  readOnly
-                  value={formData.voucher_no}
-                  className="bg-muted border-muted-foreground/20 h-11 font-mono font-bold"
-                  placeholder="Generated Automatically"
-                />
-              </div>
             </div>
 
-            <Separator className="my-6 opacity-20" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-              {/* Left Column (Additional) */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Series <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.series}
-                    onValueChange={(v) => setFormData(p => ({...p, series: v}))}
-                  >
-                    <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
-                      <SelectValue placeholder="Select series" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ACC-JV-.YYYY.-">ACC-JV-.YYYY.-</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Finance Book
-                  </Label>
-                  <Input
-                    placeholder=""
-                    className="bg-background/50 border-muted-foreground/20 h-11"
-                    value={formData.finance_book}
-                    onChange={(e) => setFormData(p => ({...p, finance_book: e.target.value}))}
-                  />
-                </div>
+            <div className="mt-4 pt-4 border-t border-muted-foreground/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Voucher No:</span>
+                <span className="text-sm font-mono font-bold text-primary">{formData.voucher_no}</span>
               </div>
-
-              {/* Right Column (Additional) */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    From Template
-                  </Label>
-                  <Input
-                    placeholder=""
-                    className="bg-background/50 border-muted-foreground/20 h-11"
-                    value={formData.from_template}
-                    onChange={(e) => setFormData(p => ({...p, from_template: e.target.value}))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Company <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.company}
-                    onValueChange={(v) => setFormData(p => ({...p, company: v}))}
-                  >
-                    <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
-                      <SelectValue placeholder="Select company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Unico Plastics Inc.">Unico Plastics Inc.</SelectItem>
-                      <SelectItem value="Global Hospitality Group">Global Hospitality Group</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="text-[10px] text-muted-foreground italic">
+                * Voucher number will be assigned automatically upon saving
               </div>
             </div>
           </CardContent>
