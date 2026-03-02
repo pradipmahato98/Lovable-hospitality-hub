@@ -27,7 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Check, Send, ShieldCheck, Activity } from "lucide-react";
+import { Plus, Check, Send, ShieldCheck, Activity, Eye, Trash2, Printer, MoreVertical, Edit2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   useJournalEntries,
   useCreateJournalEntry,
@@ -43,6 +44,7 @@ interface JournalManagementServiceProps {
 }
 
 export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
+  const navigate = useNavigate();
   const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
   const [newJournalEntry, setNewJournalEntry] = useState({
@@ -195,7 +197,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Send className="h-4 w-4" />
               Quick Post
             </Button>
-            <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
+            <Button onClick={() => navigate("/finance/journal/new")} className="gap-2">
               <Plus className="h-4 w-4" />
               New Journal Entry
             </Button>
@@ -249,25 +251,36 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                   });
 
                   return (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        {!entry.is_posted && !isReadOnly && (
+                    <TableRow key={entry.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/finance/journal/${entry.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => handlePostEntry(entry.id)}
-                            disabled={postJournalEntry.isPending}
-                            className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => navigate(`/finance/journal/${entry.id}`)}
                           >
-                            <Check className="h-4 w-4 mr-1" />
-                            Post
+                            {entry.is_posted ? <Eye className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
                           </Button>
-                        )}
-                        {entry.is_posted && (
-                          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                            Completed
-                          </Badge>
-                        )}
+                          {!entry.is_posted && !isReadOnly && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handlePostEntry(entry.id)}
+                              disabled={postJournalEntry.isPending}
+                              className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="font-mono">
