@@ -13,6 +13,7 @@ export function GlobalSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const { data: guests = [], isLoading: loadingGuests } = useGuests();
