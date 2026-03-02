@@ -260,6 +260,7 @@ export function useJournalEntries(filters?: {
 
 export function useCreateJournalEntry() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (entry: {
@@ -293,6 +294,7 @@ export function useCreateJournalEntry() {
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
+          created_by: user?.id,
           voucher_type: entry.voucher_type || "JV",
           series: entry.series,
           company_id: entry.company_id,
