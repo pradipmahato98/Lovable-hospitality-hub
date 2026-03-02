@@ -88,7 +88,10 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   };
 
   const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = location.pathname === item.path;
+    const isActive = item.path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(item.path);
+
     return (
       <Link
         key={item.path}
@@ -148,7 +151,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           </div>
         )}
         {operationsNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}
