@@ -37,6 +37,7 @@ import {
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
 import { toast } from "sonner";
+import { adToBs, bsToAd, formatAdDate, parseAdDate } from "@/utils/nepaliDate";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
@@ -62,10 +63,13 @@ export default function JournalEntryEditor() {
 
   const [isDirty, setIsDirty] = useState(false);
   const [formData, setFormData] = useState({
-    entry_type: "Journal Entry",
+    entry_type: "Journal Voucher",
     series: "ACC-JV-.YYYY.-",
     company: "Unico Plastics Inc.",
     posting_date: new Date().toISOString().split("T")[0],
+    miti: adToBs(new Date()),
+    fiscal_year: "2080/81",
+    voucher_no: "Generated Automatically",
     finance_book: "",
     from_template: "",
     reference_number: "",
@@ -75,21 +79,35 @@ export default function JournalEntryEditor() {
     ] as JournalLineItem[],
   });
 
+  const [adDisplay, setAdDisplay] = useState(formatAdDate(formData.posting_date));
+  const [bsDisplay, setBsDisplay] = useState(formData.miti);
+
   // Sync posting date with business date
   useEffect(() => {
     if (businessDate && !id && !isDirty) {
-      setFormData(prev => ({ ...prev, posting_date: businessDate }));
+      const bs = adToBs(businessDate);
+      setFormData(prev => ({
+        ...prev,
+        posting_date: businessDate,
+        miti: bs
+      }));
+      setAdDisplay(formatAdDate(businessDate));
+      setBsDisplay(bs);
     }
   }, [businessDate, id, isDirty]);
 
   // Load existing entry if editing
   useEffect(() => {
     if (id && entryData) {
+      const bs = entryData.series === "BS" ? "TODO" : adToBs(entryData.date); // Fallback
       setFormData({
-        entry_type: entryData.voucher_type || "Journal Entry",
+        entry_type: entryData.voucher_type || "Journal Voucher",
         series: entryData.series || "ACC-JV-.YYYY.-",
         company: "Unico Plastics Inc.", // Mocked for now
         posting_date: entryData.date,
+        miti: bs,
+        fiscal_year: "2080/81",
+        voucher_no: entryData.entry_number,
         finance_book: entryData.finance_book || "",
         from_template: entryData.from_template || "",
         reference_number: entryData.reference || "",
@@ -104,6 +122,8 @@ export default function JournalEntryEditor() {
           { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
         ],
       });
+      setAdDisplay(formatAdDate(entryData.date));
+      setBsDisplay(bs);
     }
   }, [id, entryData]);
 
@@ -158,6 +178,22 @@ export default function JournalEntryEditor() {
     setIsDirty(true);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const form = (e.target as HTMLElement).closest("form") || document.querySelector("main");
+      if (form) {
+        const focusableElements = form.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const index = Array.prototype.indexOf.call(focusableElements, e.target);
+        if (index > -1 && index < focusableElements.length - 1) {
+          (focusableElements[index + 1] as HTMLElement).focus();
+          e.preventDefault();
+        }
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!isBalanced) {
       toast.error("Debit and Credit totals must be equal and greater than zero");
@@ -166,6 +202,7 @@ export default function JournalEntryEditor() {
 
     const payload = {
       date: formData.posting_date,
+      miti: formData.miti,
       description: `Journal Entry - ${formData.reference_number || 'No Ref'}`,
       reference: formData.reference_number,
       voucher_type: formData.entry_type,
@@ -231,34 +268,133 @@ export default function JournalEntryEditor() {
         </div>
       }
     >
-      <div className="max-w-7xl mx-auto space-y-6 pb-20">
+      <div className="max-w-7xl mx-auto space-y-6 pb-20" onKeyDown={handleKeyDown}>
         <Card className={cn(
           "border-none shadow-sm bg-card/50 backdrop-blur-sm transition-all duration-300",
           type === "Quick" && "max-h-0 opacity-0 overflow-hidden py-0 my-0 border-0"
         )}>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-              {/* Left Column */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Entry Type <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.entry_type}
-                    onValueChange={(v) => setFormData(p => ({...p, entry_type: v}))}
-                  >
-                    <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Journal Entry">Journal Entry</SelectItem>
-                      <SelectItem value="Contra Entry">Contra Entry</SelectItem>
-                      <SelectItem value="Excise Entry">Excise Entry</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              {/* Row 1 */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Fiscal Year <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.fiscal_year}
+                  onValueChange={(v) => setFormData(p => ({...p, fiscal_year: v}))}
+                >
+                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
+                    <SelectValue placeholder="Select Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2080/81">2080/81</SelectItem>
+                    <SelectItem value="2079/80">2079/80</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Transaction Date (AD) <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative group">
+                  <Input
+                    placeholder="DD/MM/YYYY"
+                    value={adDisplay}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdDisplay(val);
+                      const parsed = parseAdDate(val);
+                      if (parsed) {
+                        const bs = adToBs(parsed);
+                        setFormData(p => ({ ...p, posting_date: parsed, miti: bs }));
+                        setBsDisplay(bs);
+                      }
+                    }}
+                    className="bg-background/50 border-muted-foreground/20 h-11 font-mono"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground group-hover:text-primary transition-colors">
+                    <Edit2 className="h-4 w-4" />
+                  </div>
+                  <Input
+                    type="date"
+                    value={formData.posting_date}
+                    onChange={(e) => {
+                      const ad = e.target.value;
+                      const bs = adToBs(ad);
+                      setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
+                      setAdDisplay(formatAdDate(ad));
+                      setBsDisplay(bs);
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Miti (BS) <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  placeholder="YYYY/MM/DD"
+                  value={bsDisplay}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBsDisplay(val);
+                    const ad = bsToAd(val);
+                    if (ad) {
+                      setFormData(p => ({ ...p, miti: val, posting_date: ad }));
+                      setAdDisplay(formatAdDate(ad));
+                    } else {
+                      setFormData(p => ({ ...p, miti: val }));
+                    }
+                  }}
+                  className="bg-background/50 border-muted-foreground/20 h-11 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Row 2 */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Voucher Type <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.entry_type}
+                  onValueChange={(v) => setFormData(p => ({...p, entry_type: v}))}
+                >
+                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-11">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Journal Voucher">Journal Voucher</SelectItem>
+                    <SelectItem value="Payment Voucher">Payment Voucher</SelectItem>
+                    <SelectItem value="Receipt Voucher">Receipt Voucher</SelectItem>
+                    <SelectItem value="Contra Voucher">Contra Voucher</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Voucher No.
+                </Label>
+                <Input
+                  readOnly
+                  value={formData.voucher_no}
+                  className="bg-muted border-muted-foreground/20 h-11 font-mono font-bold"
+                  placeholder="Generated Automatically"
+                />
+              </div>
+            </div>
+
+            <Separator className="my-6 opacity-20" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+              {/* Left Column (Additional) */}
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Series <span className="text-destructive">*</span>
@@ -289,7 +425,7 @@ export default function JournalEntryEditor() {
                 </div>
               </div>
 
-              {/* Right Column */}
+              {/* Right Column (Additional) */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -319,18 +455,6 @@ export default function JournalEntryEditor() {
                       <SelectItem value="Global Hospitality Group">Global Hospitality Group</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Posting Date <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="date"
-                    value={formData.posting_date}
-                    onChange={(e) => setFormData(p => ({...p, posting_date: e.target.value}))}
-                    className="bg-background/50 border-muted-foreground/20 h-11 font-mono"
-                  />
                 </div>
               </div>
             </div>
