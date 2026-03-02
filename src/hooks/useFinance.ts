@@ -204,6 +204,21 @@ export function useJournalEntries(filters?: {
         return [];
       }
 
+      // Fetch profiles separately to avoid join issues
+      const userIds = Array.from(new Set((data || []).map((e: any) => e.created_by).filter(Boolean)));
+      let profileMap: Record<string, any> = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await db
+          .from("profiles")
+          .select("user_id, first_name, last_name")
+          .in("user_id", userIds);
+
+        if (profiles) {
+          profileMap = profiles.reduce((acc: any, p: any) => ({ ...acc, [p.user_id]: p }), {});
+        }
+      }
+
       return (data || []).map((entry: any) => ({
         ...entry,
         lines: entry.journal_lines || [],
