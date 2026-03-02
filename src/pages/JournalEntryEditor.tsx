@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, ArrowLeft, Save, Send, AlertCircle, History, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Save, Send, AlertCircle, History, CheckCircle2, MoreVertical, Calculator } from "lucide-react";
 import {
   useAccounts,
   useJournalEntry,
@@ -29,6 +28,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { SpringTransition } from "@/components/ui/ios/SpringTransition";
+import { SegmentedControl } from "@/components/ui/ios/SegmentedControl";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface JournalLineItem {
   id?: string;
@@ -42,7 +44,8 @@ export default function JournalEntryEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const isQuickPost = new URLSearchParams(location.search).get("type") === "quick";
+  const queryParams = new URLSearchParams(location.search);
+  const initialType = queryParams.get("type") === "quick" ? "quick" : "standard";
 
   const { data: accounts } = useAccounts();
   const { data: existingEntry, isLoading: isLoadingEntry } = useJournalEntry(id || null);
@@ -52,6 +55,7 @@ export default function JournalEntryEditor() {
   const updateMutation = useUpdateJournalEntry();
   const postMutation = usePostJournalEntry();
 
+  const [entryType, setEntryType] = useState<"standard" | "quick">(initialType);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [reference, setReference] = useState("");
@@ -81,12 +85,10 @@ export default function JournalEntryEditor() {
       ]);
       setIsDirty(false);
     } else if (!id) {
-      // Set business date for new entry
       if (businessDate) setDate(businessDate);
 
-      // Load from localStorage if available
       const saved = localStorage.getItem("journal_entry_draft");
-      if (saved && !isQuickPost) {
+      if (saved && entryType === "standard") {
         try {
           const draft = JSON.parse(saved);
           setDate(draft.date || businessDate || new Date().toISOString().slice(0, 10));
@@ -101,35 +103,22 @@ export default function JournalEntryEditor() {
         }
       }
     }
-  }, [existingEntry, id, businessDate, isQuickPost]);
+  }, [existingEntry, id, businessDate, entryType]);
 
-  // Handle Quick Post initialization
   useEffect(() => {
-    if (isQuickPost && !id) {
+    if (entryType === "quick" && !id && !description) {
       setDescription("Quick Transaction");
     }
-  }, [isQuickPost, id]);
+  }, [entryType, id, description]);
 
   // Auto-save to localStorage
   useEffect(() => {
-    if (!id && !isQuickPost && isDirty) {
+    if (!id && entryType === "standard" && isDirty) {
       const draft = { date, description, reference, lines };
       localStorage.setItem("journal_entry_draft", JSON.stringify(draft));
       setLastSaved(new Date());
     }
-  }, [date, description, reference, lines, id, isQuickPost, isDirty]);
-
-  // Prevent accidental closure
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
+  }, [date, description, reference, lines, id, entryType, isDirty]);
 
   const addLine = () => {
     setLines([...lines, { account_id: "", debit: 0, credit: 0, description: "" }]);
@@ -151,10 +140,11 @@ export default function JournalEntryEditor() {
     const newLines = [...lines];
     newLines[index] = { ...newLines[index], [field]: value };
 
-    // Auto-balance if it's the second line and first line has a value
-    if (isQuickPost && lines.length === 2 && index === 0) {
-       if (field === 'debit') newLines[1].credit = value;
-       if (field === 'credit') newLines[1].debit = value;
+    // Auto-balance if it's quick mode and we have exactly 2 lines
+    if (entryType === "quick" && lines.length === 2) {
+       const otherIndex = index === 0 ? 1 : 0;
+       if (field === 'debit') newLines[otherIndex].credit = value;
+       if (field === 'credit') newLines[otherIndex].debit = value;
     }
 
     setLines(newLines);
@@ -174,7 +164,7 @@ export default function JournalEntryEditor() {
 
     const validLines = lines.filter(l => l.account_id && (l.debit > 0 || l.credit > 0));
     if (validLines.length < 2) {
-      toast.error("Please add at least two valid lines (account and amount)");
+      toast.error("Please add at least two valid lines");
       return;
     }
 
@@ -213,7 +203,6 @@ export default function JournalEntryEditor() {
         toast.success("Journal entry posted to ledger");
         navigate("/finance?tab=transactions&service=journal-mgmt");
       } else if (!id) {
-        // If it was a new entry and we just saved as draft, navigate to the edit page for it
         navigate(`/finance/journal/${entryId}`, { replace: true });
       }
     } catch (error) {
@@ -241,240 +230,302 @@ export default function JournalEntryEditor() {
 
   return (
     <MainLayout
-      title={id ? `Edit Journal Entry: ${existingEntry?.entry_number}` : (isQuickPost ? "Quick Post" : "New Journal Entry")}
-      subtitle={id ? "Modify existing draft entry" : "Create a new accounting transaction"}
+      title={id ? `Journal Entry ${existingEntry?.entry_number}` : "Modern Journal Registry"}
+      subtitle={id ? "Review and finalize transaction" : "Dynamic entry creation with auto-balance"}
       actions={
         <div className="flex items-center gap-2">
           {lastSaved && !isDirty && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1 mr-2">
+            <span className="text-xs text-muted-foreground flex items-center gap-1 mr-2 bg-success/5 px-2 py-1 rounded-full border border-success/10">
               <CheckCircle2 className="h-3 w-3 text-success" />
-              Saved {lastSaved.toLocaleTimeString()}
+              Synced {lastSaved.toLocaleTimeString()}
             </span>
           )}
-          {isDirty && (
-            <span className="text-xs text-amber-500 flex items-center gap-1 mr-2">
-              <History className="h-3 w-3" />
-              Unsaved changes
-            </span>
-          )}
-          <Button variant="outline" onClick={handleBack}>
+          <Button variant="outline" className="ios-material h-9" onClick={handleBack}>
             Cancel
           </Button>
           {!existingEntry?.is_posted && (
             <>
-              <Button variant="outline" onClick={() => handleSave(false)} disabled={updateMutation.isPending || createMutation.isPending}>
+              <Button variant="outline" className="ios-material h-9" onClick={() => handleSave(false)} disabled={updateMutation.isPending || createMutation.isPending}>
                 <Save className="h-4 w-4 mr-2" />
-                Save Draft
+                Draft
               </Button>
-              <Button onClick={() => handleSave(true)} disabled={updateMutation.isPending || createMutation.isPending || postMutation.isPending || !isBalanced}>
+              <Button className="h-9 shadow-glow" onClick={() => handleSave(true)} disabled={updateMutation.isPending || createMutation.isPending || postMutation.isPending || !isBalanced}>
                 <Send className="h-4 w-4 mr-2" />
-                Post Entry
+                Post
               </Button>
             </>
           )}
         </div>
       }
     >
-      <div className="max-w-5xl mx-auto space-y-6 pb-20">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <Button variant="link" className="p-0 h-auto text-muted-foreground hover:text-primary" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Journal Register
+      <SpringTransition type="slide" className="max-w-6xl mx-auto space-y-8 pb-32">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <Button variant="link" className="p-0 h-auto text-muted-foreground hover:text-primary transition-colors flex items-center" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Return to Ledger
           </Button>
+
+          {!id && (
+            <SegmentedControl
+              options={[
+                { label: "Standard Entry", value: "standard" },
+                { label: "Quick Balance", value: "quick" }
+              ]}
+              value={entryType}
+              onChange={(v) => setEntryType(v as any)}
+              className="w-full md:w-80"
+            />
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Transaction Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-3 space-y-8">
+            {/* Header Card */}
+            <Card className="ios-material border-none overflow-hidden">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Transaction Date</Label>
+                    <Input
+                      type="date"
+                      value={date}
+                      onChange={(e) => { setDate(e.target.value); setIsDirty(true); }}
+                      disabled={existingEntry?.is_posted}
+                      className="bg-background/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Reference ID</Label>
+                    <Input
+                      placeholder="e.g. INV-2024-001"
+                      value={reference}
+                      onChange={(e) => { setReference(e.target.value); setIsDirty(true); }}
+                      disabled={existingEntry?.is_posted}
+                      className="bg-background/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Category</Label>
+                    <Badge variant="outline" className="w-full h-11 justify-center text-sm font-normal bg-background/30 border-dashed border-muted-foreground/30">
+                      Accounting / {entryType === 'quick' ? 'Direct Entry' : 'Standard Journal'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-2">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Narration / Description</Label>
                   <Input
-                    id="date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => { setDate(e.target.value); setIsDirty(true); }}
+                    placeholder="Provide a detailed description of the transaction..."
+                    value={description}
+                    onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
                     disabled={existingEntry?.is_posted}
+                    className="bg-background/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-12 text-lg"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Reference (Optional)</Label>
-                  <Input
-                    id="reference"
-                    placeholder="Invoice #, Receipt #, etc."
-                    value={reference}
-                    onChange={(e) => { setReference(e.target.value); setIsDirty(true); }}
-                    disabled={existingEntry?.is_posted}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  placeholder="What is this transaction for?"
-                  value={description}
-                  onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
-                  disabled={existingEntry?.is_posted}
-                />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Status & Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Status</span>
-                <Badge variant={existingEntry?.is_posted ? "default" : "secondary"}>
-                  {existingEntry?.is_posted ? "Posted" : "Draft"}
-                </Badge>
+            {/* Line Items - Modern List Style */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-xl">Journal Entries</h3>
+                  <Badge className="bg-primary/10 text-primary border-none">{lines.length} lines</Badge>
+                </div>
+                {!existingEntry?.is_posted && (
+                  <Button variant="outline" size="sm" onClick={addLine} className="ios-material rounded-full h-8 px-4 border-dashed hover:border-solid hover:bg-primary/5">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Entry
+                  </Button>
+                )}
               </div>
-              <div className="pt-4 border-t space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Total Debit</span>
-                  <span className="font-mono font-bold">${totalDebit.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Total Credit</span>
-                  <span className="font-mono font-bold">${totalCredit.toFixed(2)}</span>
-                </div>
-                <div className={cn(
-                  "flex justify-between text-sm pt-2 border-t font-bold",
-                  isBalanced ? "text-success" : "text-destructive"
-                )}>
-                  <span>Difference</span>
-                  <span className="font-mono">${difference.toFixed(2)}</span>
-                </div>
-              </div>
-              {!isBalanced && totalDebit > 0 && totalCredit > 0 && (
-                <div className="p-3 bg-destructive/10 text-destructive rounded-md text-xs flex gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>Entry must be balanced (Debit = Credit) before it can be posted.</span>
-                </div>
-              )}
-              {isBalanced && (
-                <div className="p-3 bg-success/10 text-success rounded-md text-xs flex gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  <span>Entry is balanced and ready to be saved or posted.</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Journal Lines</CardTitle>
-              <CardDescription>Enter the debit and credit accounts for this transaction</CardDescription>
+              <AnimatePresence mode="popLayout">
+                <div className="space-y-3">
+                  {lines.map((line, index) => (
+                    <motion.div
+                      key={index}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className={cn(
+                        "ios-material rounded-2xl p-4 transition-all border-l-4",
+                        line.debit > 0 ? "border-l-success/50" : (line.credit > 0 ? "border-l-primary/50" : "border-l-muted")
+                      )}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                        <div className="md:col-span-4 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Ledger Account</Label>
+                          <Select
+                            value={line.account_id}
+                            onValueChange={(v) => updateLine(index, "account_id", v)}
+                            disabled={existingEntry?.is_posted}
+                          >
+                            <SelectTrigger className="bg-background/40 border-none h-10">
+                              <SelectValue placeholder="Select account..." />
+                            </SelectTrigger>
+                            <SelectContent className="ios-material-elevated border-none">
+                              {accounts?.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id} className="focus:bg-primary/10 focus:text-primary">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{acc.name}</span>
+                                    <span className="text-[10px] text-muted-foreground">{acc.code} • {acc.type}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-3 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Line Note</Label>
+                          <Input
+                            placeholder="Line details..."
+                            value={line.description}
+                            onChange={(e) => updateLine(index, "description", e.target.value)}
+                            disabled={existingEntry?.is_posted}
+                            className="bg-background/40 border-none h-10"
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground uppercase font-bold text-right block">Debit</Label>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              className="bg-background/40 border-none h-10 text-right pr-7 font-mono font-bold"
+                              placeholder="0.00"
+                              value={line.debit || ""}
+                              onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
+                              disabled={existingEntry?.is_posted}
+                            />
+                            <span className="absolute right-2 top-2.5 text-[10px] text-muted-foreground">$</span>
+                          </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground uppercase font-bold text-right block">Credit</Label>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              className="bg-background/40 border-none h-10 text-right pr-7 font-mono font-bold"
+                              placeholder="0.00"
+                              value={line.credit || ""}
+                              onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
+                              disabled={existingEntry?.is_posted}
+                            />
+                            <span className="absolute right-2 top-2.5 text-[10px] text-muted-foreground">$</span>
+                          </div>
+                        </div>
+                        <div className="md:col-span-1 flex justify-end">
+                          {!existingEntry?.is_posted && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full"
+                              onClick={() => removeLine(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </AnimatePresence>
             </div>
-            {!existingEntry?.is_posted && (
-              <Button variant="outline" size="sm" onClick={addLine}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Line
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Account</TableHead>
-                  <TableHead>Description (Optional)</TableHead>
-                  <TableHead className="w-[15%] text-right">Debit</TableHead>
-                  <TableHead className="w-[15%] text-right">Credit</TableHead>
-                  {!existingEntry?.is_posted && <TableHead className="w-[50px]"></TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lines.map((line, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Select
-                        value={line.account_id}
-                        onValueChange={(v) => updateLine(index, "account_id", v)}
-                        disabled={existingEntry?.is_posted}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts?.map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.code} - {acc.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Line description"
-                        value={line.description}
-                        onChange={(e) => updateLine(index, "description", e.target.value)}
-                        disabled={existingEntry?.is_posted}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        className="text-right font-mono"
-                        placeholder="0.00"
-                        value={line.debit || ""}
-                        onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
-                        disabled={existingEntry?.is_posted}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        className="text-right font-mono"
-                        placeholder="0.00"
-                        value={line.credit || ""}
-                        onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
-                        disabled={existingEntry?.is_posted}
-                      />
-                    </TableCell>
-                    {!existingEntry?.is_posted && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeLine(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+
+          {/* Sidebar Summary */}
+          <div className="space-y-6">
+            <Card className="ios-material-elevated border-none sticky top-24 shadow-elevated">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between mb-2">
+                   <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                    <Calculator className="h-5 w-5" />
+                   </div>
+                   <Badge variant={existingEntry?.is_posted ? "default" : "secondary"} className="rounded-full">
+                    {existingEntry?.is_posted ? "Posted" : "Draft"}
+                   </Badge>
+                </div>
+                <CardTitle className="text-xl">Transaction Summary</CardTitle>
+                <CardDescription>Real-time audit calculation</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4 pt-4 border-t border-muted-foreground/10">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground font-medium">Total Assets (Dr)</span>
+                    <span className="font-mono font-bold text-lg">${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground font-medium">Total Claims (Cr)</span>
+                    <span className="font-mono font-bold text-lg">${totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+
+                  <div className={cn(
+                    "flex flex-col gap-2 p-4 rounded-2xl transition-colors mt-6",
+                    isBalanced ? "bg-success/5 border border-success/10" : "bg-destructive/5 border border-destructive/10"
+                  )}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold uppercase tracking-widest opacity-70">Variance</span>
+                      <span className={cn("font-mono font-black text-xl", isBalanced ? "text-success" : "text-destructive")}>
+                        ${difference.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1">
+                      {isBalanced ? (
+                        <>
+                          <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                          <span className="text-[10px] text-success font-bold uppercase">Perfectly Balanced</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                          <span className="text-[10px] text-destructive font-bold uppercase">Imbalance Detected</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {!isBalanced && (totalDebit > 0 || totalCredit > 0) && (
+                  <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-500">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-[10px] font-black uppercase">Validation Error</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Journal entries must adhere to the double-entry system. Ensure total debits equal total credits to proceed with posting.
+                    </p>
+                  </div>
+                )}
+
+                {isDirty && (
+                  <div className="flex items-center justify-center gap-2 py-2">
+                    <History className="h-3 w-3 text-amber-500 animate-spin-slow" />
+                    <span className="text-[10px] text-amber-500 font-bold uppercase tracking-tight">Unsaved Draft on Local Storage</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </SpringTransition>
 
       <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="ios-material-elevated border-none max-w-sm rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes in this journal entry. Are you sure you want to leave?
-              Your changes will be saved as a draft in your browser.
+            <AlertDialogTitle className="text-center text-xl font-display">Abandon Entry?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm leading-relaxed">
+              Your modifications are temporarily stored. Navigating away will retain the browser draft, but changes won't be synced to the ledger server.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Stay on Page</AlertDialogCancel>
-            <AlertDialogAction onClick={() => navigate("/finance?tab=transactions&service=journal-mgmt")}>
-              Leave Page
+          <AlertDialogFooter className="sm:flex-col gap-2 mt-4">
+            <AlertDialogAction onClick={() => navigate("/finance?tab=transactions&service=journal-mgmt")} className="w-full rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm & Exit
             </AlertDialogAction>
+            <AlertDialogCancel className="w-full rounded-full ios-material border-none mt-0">
+              Continue Editing
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
