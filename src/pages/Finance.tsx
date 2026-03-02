@@ -78,6 +78,7 @@ import {
 import { useMemo } from "react";
 
 export default function Finance() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("transactions");
   const [selectedService, setSelectedService] = useState<string | null>(null);
 
@@ -406,6 +407,10 @@ export default function Finance() {
                   <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => { setActiveTab("transactions"); setSelectedService("period-close"); }}>
                     <Lock className="h-5 w-5" />
                     Period Close
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2 text-primary border-primary/20 bg-primary/5" onClick={() => navigate("/finance/journal/new")}>
+                    <Plus className="h-5 w-5" />
+                    New Journal
                   </Button>
                 </CardContent>
               </Card>
