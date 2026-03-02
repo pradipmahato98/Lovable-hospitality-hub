@@ -15,21 +15,9 @@ export const SQLEditor = () => {
   const handleExecute = async () => {
     setExecuting(true);
     try {
-      const response = await fetch("http://localhost:3001/api/database/query", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ sql: query })
-      });
+      const { data, error } = await api.post('/sql', { query });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to execute query');
-      }
-
-      const data = await response.json();
+      if (error) throw error;
 
       if (data && data.length > 0) {
         setResults(data);
