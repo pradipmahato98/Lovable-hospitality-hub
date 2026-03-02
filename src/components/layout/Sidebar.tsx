@@ -46,6 +46,7 @@ const navItems = [
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
   { icon: DollarSign, label: "Finance/Account", path: "/finance" },
+  { icon: Receipt, label: "Journal entries", path: "/finance/journal" },
   { icon: PartyPopper, label: "Banquet", path: "/banquet" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
