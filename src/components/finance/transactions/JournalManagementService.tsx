@@ -27,28 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Plus,
-  Check,
-  Send,
-  ShieldCheck,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Printer,
-  Trash,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Search
-} from "lucide-react";
+import { Plus, Check, Send, ShieldCheck, Activity, Eye, Trash2, Printer, MoreVertical, Edit2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   useJournalEntries,
   useCreateJournalEntry,
@@ -71,6 +51,7 @@ type SortConfig = {
 };
 
 export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
+  const navigate = useNavigate();
   const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
   const [newJournalEntry, setNewJournalEntry] = useState({
@@ -275,7 +256,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Send className="h-4 w-4" />
               Quick Post
             </Button>
-            <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
+            <Button onClick={() => navigate("/finance/journal/new")} className="gap-2">
               <Plus className="h-4 w-4" />
               New Journal Entry
             </Button>
@@ -301,36 +282,80 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           ) : journalEntries.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">No journal entries yet</div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">Action</TableHead>
-                    <TableHead>
-                      <div className="flex flex-col gap-1.5 py-2">
-                        <div
-                          className="flex items-center gap-1 cursor-pointer select-none hover:text-primary transition-colors"
-                          onClick={() => handleSort('voucher_type')}
-                        >
-                          <span className="font-bold text-xs">Voucher Type</span>
-                          <SortIcon column="voucher_type" />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Voucher Type</TableHead>
+                  <TableHead>Voucher No.</TableHead>
+                  <TableHead>Transaction Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Entry By</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {journalEntries.map((entry) => {
+                  const totalDebit = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
+                  const creatorName = entry.created_by_profile
+                    ? `${entry.created_by_profile.first_name || ""} ${entry.created_by_profile.last_name || ""}`.trim()
+                    : "System";
+                  const createdDate = new Date(entry.created_at).toLocaleString([], {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  return (
+                    <TableRow key={entry.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/finance/journal/${entry.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => navigate(`/finance/journal/${entry.id}`)}
+                          >
+                            {entry.is_posted ? <Eye className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
+                          </Button>
+                          {!entry.is_posted && !isReadOnly && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handlePostEntry(entry.id)}
+                              disabled={postJournalEntry.isPending}
+                              className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                          <Input
-                            placeholder="Search..."
-                            className="h-7 pl-7 text-[10px] bg-muted/30 focus-visible:bg-background"
-                            value={filters.voucherType}
-                            onChange={(e) => setFilters(f => ({ ...f, voucherType: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex flex-col gap-1.5 py-2">
-                        <div
-                          className="flex items-center gap-1 cursor-pointer select-none hover:text-primary transition-colors"
-                          onClick={() => handleSort('entry_number')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-mono">
+                          {entry.voucher_type || "JV"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-primary">{entry.entry_number}</TableCell>
+                      <TableCell>{entry.date}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
+                      <TableCell className="text-right font-mono font-bold">
+                        ${totalDebit.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400"}
                         >
                           <span className="font-bold text-xs">Voucher No.</span>
                           <SortIcon column="entry_number" />
