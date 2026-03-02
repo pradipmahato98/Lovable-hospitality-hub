@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, History, ShieldAlert, Loader2 } from "lucide-react";
+import { Users, History, ShieldAlert, Loader2, Activity } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
-import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
-import { UsersTable, AuditLogTable } from "@/components/users";
+import { useUsersWithRoles, useRoleChangeAudit, useAdminAuditLogs, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
+import { UsersTable, AuditLogTable, GeneralAuditLogTable } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
@@ -19,6 +19,7 @@ const UserManagement = () => {
 
   const { data: users, isLoading: isLoadingUsers } = useUsersWithRoles(isAdmin);
   const { data: auditLogs, isLoading: isLoadingAudit } = useRoleChangeAudit(isAdmin);
+  const { data: systemLogs, isLoading: isLoadingSystemLogs } = useAdminAuditLogs(isAdmin);
   const updateRole = useUpdateUserRole();
 
   const handleRoleChange = (userId: string, oldRole: AppRole, newRole: AppRole) => {
@@ -56,7 +57,11 @@ const UserManagement = () => {
               </TabsTrigger>
               <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
                 <History className="h-4 w-4" />
-                Audit Log
+                Role Audit
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-2 whitespace-nowrap">
+                <Activity className="h-4 w-4" />
+                Staff Activity
               </TabsTrigger>
             </TabsList>
           </div>
@@ -82,6 +87,13 @@ const UserManagement = () => {
               onSearchChange={setAuditSearchQuery}
               onRoleFilterChange={setAuditRoleFilter}
               onDateFilterChange={setAuditDateFilter}
+            />
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <GeneralAuditLogTable
+              logs={systemLogs}
+              isLoading={isLoadingSystemLogs}
             />
           </TabsContent>
         </Tabs>
