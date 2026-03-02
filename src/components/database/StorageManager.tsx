@@ -33,16 +33,19 @@ export const StorageManager = () => {
 
   useEffect(() => {
     const fetchBuckets = async () => {
+      setLoading(true);
       try {
-        const response = await fetch("http://localhost:3001/api/storage/buckets");
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            setBuckets(data);
-          }
+        const { data, error } = await api.storage.listBuckets();
+        if (!error && data) {
+          setBuckets(data.map(b => ({
+            name: b.name,
+            size: "...",
+            files: "...",
+            public: b.public
+          })));
         }
       } catch (error) {
-        console.error("Failed to fetch buckets from custom backend:", error);
+        console.error("Failed to fetch buckets:", error);
       } finally {
         setLoading(false);
       }
