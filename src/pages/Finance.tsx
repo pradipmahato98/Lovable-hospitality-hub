@@ -78,7 +78,7 @@ import {
 import { useMemo } from "react";
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("transactions");
   const [selectedService, setSelectedService] = useState<string | null>(null);
 
   const {
