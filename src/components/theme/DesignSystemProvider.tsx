@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, ReactNode } from "react";
 import { useUIPreferences } from "@/hooks/useSettings";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/hooks/use-sidebar";
 
 const DesignSystemContext = createContext({});
 
@@ -15,10 +15,14 @@ export const DesignSystemProvider = ({ children }: { children: ReactNode }) => {
 
     const root = document.documentElement;
 
-    // Inject CSS Variables for Layout (Mapping to Shadcn standard variables)
-    if (prefs.base_radius) {
-      root.style.setProperty("--radius", `${prefs.base_radius / 16}rem`);
-    }
+    // Inject CSS Variables for Materials
+    root.style.setProperty("--ios-blur", `${prefs.blur_amount || 12}px`);
+    root.style.setProperty("--ios-bg-opacity", `${prefs.background_opacity || 0.6}`);
+    root.style.setProperty("--ios-saturation", `${(prefs.saturation || 1.2) * 100}%`);
+
+    // Inject CSS Variables for Layout
+    root.style.setProperty("--ios-radius", `${prefs.base_radius || 12}px`);
+    root.style.setProperty("--ios-spacing", `${prefs.base_spacing || 4}px`);
 
     // Inject Theme Colors
     if (prefs.primary_color) {
@@ -33,15 +37,20 @@ export const DesignSystemProvider = ({ children }: { children: ReactNode }) => {
       root.style.setProperty("--font-display", prefs.font_family_display);
     }
 
+    // Handle iOS class
+    const iosEnabled = prefs.ios_materials && !(isMobile && prefs.disable_on_mobile);
+    if (iosEnabled) {
+      document.body.classList.add("ios-enabled");
+    } else {
+      document.body.classList.remove("ios-enabled");
+    }
+
     // Handle animations
     if (!prefs.animations_enabled) {
       document.body.classList.add("reduce-motion");
     } else {
       document.body.classList.remove("reduce-motion");
     }
-
-    // Clean up legacy iOS classes
-    document.body.classList.remove("ios-enabled");
 
   }, [prefs]);
 

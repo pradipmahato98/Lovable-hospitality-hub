@@ -63,7 +63,7 @@ export function QuickActions() {
   ];
 
   return (
-    <Card className="xl:col-span-1">
+    <Card variant="elevated" className="animate-slide-up" style={{ animationDelay: "400ms" }}>
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>

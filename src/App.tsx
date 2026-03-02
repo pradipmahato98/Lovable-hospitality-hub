@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/hooks/use-sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DesignSystemProvider } from "@/components/theme/DesignSystemProvider";
@@ -40,7 +40,6 @@ import Housekeeping from "./pages/Housekeeping";
 import Engineering from "./pages/Engineering";
 import StaffManagement from "./pages/StaffManagement";
 import Finance from "./pages/Finance";
-import JournalEntryEditor from "./pages/JournalEntryEditor";
 import Payments from "./pages/Payments";
 import Banquet from "./pages/Banquet";
 import DatabasePage from "./pages/Database";
@@ -90,8 +89,6 @@ const App = () => (
                 <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
                 <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
                 <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-                <Route path="/finance/journal/new" element={<ProtectedRoute><JournalEntryEditor /></ProtectedRoute>} />
-                <Route path="/finance/journal/:id" element={<ProtectedRoute><JournalEntryEditor /></ProtectedRoute>} />
                 <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                 <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
                 <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />

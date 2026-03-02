@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   Search,
   User,
@@ -32,23 +32,19 @@ import {
   Lock,
   Database,
   History,
+  Layout,
   UtensilsCrossed,
   CreditCard
 } from "lucide-react";
-import { useGuests } from "@/hooks/useGuests";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useGuests, Guest } from "@/hooks/useGuests";
 import { useStaff } from "@/hooks/useStaff";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const PAGES_DATA = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", keywords: ["home", "main", "overview"] },
@@ -73,8 +69,7 @@ const PAGES_DATA = [
   { icon: UserCog, label: "User Management", path: "/users", keywords: ["accounts", "permissions", "access"], isAdmin: true },
   { icon: Users, label: "Staff Management", path: "/staff", keywords: ["employees", "profiles"], isAdmin: true },
   { icon: UserCheck, label: "HR", path: "/hr", keywords: ["human resources", "recruitment", "payroll"], isAdmin: true },
-  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "expenses"] },
-  { icon: Receipt, label: "New Journal Entry", path: "/finance/journal/new", keywords: ["accounting", "journal", "voucher", "entry"] },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "journal", "expenses"] },
   { icon: CreditCard, label: "Payments", path: "/payments", keywords: ["transactions", "gateway", "eSewa", "Khalti"] },
   { icon: PartyPopper, label: "Banquet", path: "/banquet", keywords: ["events", "functions", "meetings"] },
   { icon: Database, label: "Database", path: "/database", keywords: ["sql", "tables", "data"], isAdmin: true },
@@ -85,32 +80,215 @@ const PAGES_DATA = [
 ];
 
 export function GlobalSearch() {
-  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
 
-  const { data: guests = [] } = useGuests();
-  const { data: staff = [] } = useStaff();
+  const { data: guests = [], isLoading: loadingGuests } = useGuests();
+  const { data: staff = [], isLoading: loadingStaff } = useStaff();
 
+  // Keyboard shortcut (Cmd+K or Ctrl+K) - only focus if it's already visible
+  // or use an alternative shortcut if needed to avoid conflict with CommandPalette
   useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (ctrlKey && e.key === "k") {
+        // Only focus the search input if it exists in the DOM
+        if (inputRef.current) {
+          e.preventDefault();
+          inputRef.current.focus();
+          setIsOpen(true);
+        }
+      }
+      if (e.key === "Escape") {
+        setIsOpen(false);
       }
     };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
+    window.addEventListener("keydown", handleKeyDown, true); // Use capture to prioritize
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, []);
 
-  const runCommand = useCallback((command: () => void) => {
-    setOpen(false);
-    command();
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const results = useMemo(() => {
+    if (!query.trim()) {
+      return { guests: [], staff: [], pages: [], all: [] };
+    }
+    const q = query.toLowerCase();
+
+    // Filter pages
+    const filteredPages = PAGES_DATA.filter(page => {
+      if (page.isAdmin && !isAdmin) return false;
+      return (
+        page.label.toLowerCase().includes(q) ||
+        page.keywords.some(k => k.toLowerCase().includes(q))
+      );
+    }).slice(0, 8);
+
+    // Deduplicate guests by ID and signature to handle potential DB duplicates
+    const guestMap = new Map<string, Guest>();
+    const seenSignatures = new Set<string>();
+
+    guests.forEach(g => {
+      const matches =
+        `${g.first_name} ${g.last_name}`.toLowerCase().includes(q) ||
+        g.email?.toLowerCase().includes(q) ||
+        g.phone?.includes(q) ||
+        g.id_number?.includes(q);
+
+      if (matches) {
+        const signature = `${g.first_name}|${g.last_name}|${g.email || ''}`.toLowerCase();
+        if (!guestMap.has(g.id) && !seenSignatures.has(signature)) {
+          guestMap.set(g.id, g);
+          seenSignatures.add(signature);
+        }
+      }
+    });
+
+    const filteredGuests = Array.from(guestMap.values()).slice(0, 5);
+
+    // Deduplicate staff by ID and signature
+    const staffMap = new Map<string, any>();
+    const seenStaffSignatures = new Set<string>();
+
+    staff.forEach(s => {
+      const matches =
+        `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+        s.employee_id.toLowerCase().includes(q) ||
+        s.email?.toLowerCase().includes(q);
+
+      if (matches) {
+        const signature = `${s.first_name}|${s.last_name}|${s.email || ''}`.toLowerCase();
+        if (!staffMap.has(s.id) && !seenStaffSignatures.has(signature)) {
+          staffMap.set(s.id, s);
+          seenStaffSignatures.add(signature);
+        }
+      }
+    });
+
+    const filteredStaff = Array.from(staffMap.values()).slice(0, 3);
+
+    const all = [
+      ...filteredPages.map(p => ({ type: 'page' as const, data: p })),
+      ...filteredGuests.map(g => ({ type: 'guest' as const, data: g })),
+      ...filteredStaff.map(s => ({ type: 'staff' as const, data: s }))
+    ];
+
+    return { guests: filteredGuests, staff: filteredStaff, pages: filteredPages, all };
+  }, [query, guests, staff, isAdmin]);
+
+  const hasResults = results.all.length > 0;
+
+  // Reset selection when query changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
+  const highlightText = (text: string, highlight: string) => {
+    if (!highlight.trim()) return text;
+    // Escape special characters for regex
+    const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escapedHighlight})`, "gi"));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-500/30 text-foreground font-bold">{part}</span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
+  const handleGuestAction = useCallback((e: React.MouseEvent | { stopPropagation: () => void }, guest: Guest, action: "check-in" | "check-out" | "profile") => {
+    e.stopPropagation();
+    setIsOpen(false);
+    setQuery("");
+    if (action === "profile") {
+      navigate(`/guests?guestId=${guest.id}`);
+    } else {
+      // Redirect to front desk or reservations with specific intent
+      navigate(`/front-desk?guestId=${guest.id}&action=${action}`);
+    }
+  }, [navigate]);
+
+  // Auto-redirect logic
+  useEffect(() => {
+    if (!query.trim()) return;
+
+    const q = query.toLowerCase();
+
+    // Check for exact matches in guests
+    const exactGuest = results.guests.find(g =>
+      g.email?.toLowerCase() === q ||
+      g.phone === query ||
+      g.id_number === query ||
+      `${g.first_name} ${g.last_name}`.toLowerCase() === q
+    );
+
+    if (exactGuest && query.length >= 3) {
+      setIsRedirecting(true);
+      const timer = setTimeout(() => {
+        setIsRedirecting(false);
+        handleGuestAction({ stopPropagation: () => {} }, exactGuest, "profile");
+      }, 1200);
+      return () => {
+        clearTimeout(timer);
+        setIsRedirecting(false);
+      };
+    }
+  }, [query, results.guests, navigate, handleGuestAction]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (results.all.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % results.all.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev - 1 + results.all.length) % results.all.length);
+    } else if (e.key === "Enter") {
+      const selected = results.all[selectedIndex];
+      if (selected) {
+        if (selected.type === 'page') {
+          setIsOpen(false);
+          setQuery("");
+          navigate(selected.data.path);
+        } else if (selected.type === 'guest') {
+          handleGuestAction({ stopPropagation: () => {} }, selected.data, "profile");
+        } else if (selected.type === 'staff') {
+          setIsOpen(false);
+          setQuery("");
+          navigate(`/staff?staffId=${selected.data.id}`);
+        }
+      }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+    }
+  };
 
   return (
-    <div className="relative w-full max-w-4xl" ref={containerRef}>
-      <div className="relative w-full sm:w-72 lg:w-96 transition-all duration-300 sm:focus-within:w-96 lg:focus-within:w-[700px] group/search">
+    <div className="relative w-full sm:w-72 lg:w-[480px]" ref={containerRef}>
+      <div className="relative w-full group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
@@ -130,14 +308,21 @@ export function GlobalSearch() {
         />
         {query ? (
           <button
-            onClick={(e) => {
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               setQuery("");
-              inputRef.current?.focus();
+              // Small delay to ensure state update doesn't conflict with focus
+              requestAnimationFrame(() => {
+                inputRef.current?.focus();
+              });
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted active:bg-muted/80 transition-all text-muted-foreground hover:text-foreground active:scale-90 z-10"
+            aria-label="Clear search"
+            title="Clear search"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </button>
         ) : (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none transition-opacity">
@@ -149,7 +334,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-2 w-full lg:w-[700px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {isRedirecting && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
