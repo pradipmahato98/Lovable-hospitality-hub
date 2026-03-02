@@ -79,32 +79,35 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Voucher Type</TableHead>
-                  <TableHead>Voucher No.</TableHead>
-                  <TableHead>Transaction Date</TableHead>
+                  <TableHead>Entry #</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Debit</TableHead>
+                  <TableHead className="text-right">Credit</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Entry By</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {journalEntries.map((entry) => {
                   const totalDebit = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
-                  const creatorName = entry.created_by_profile
-                    ? `${entry.created_by_profile.first_name || ""} ${entry.created_by_profile.last_name || ""}`.trim()
-                    : "System";
-                  const createdDate = new Date(entry.created_at).toLocaleString([], {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
+                  const totalCredit = entry.lines?.reduce((sum: number, l: any) => sum + (l.credit || 0), 0) || 0;
 
                   return (
                     <TableRow key={entry.id}>
+                      <TableCell className="font-mono text-primary">{entry.entry_number}</TableCell>
+                      <TableCell>{entry.date}</TableCell>
+                      <TableCell>{entry.description}</TableCell>
+                      <TableCell className="text-right font-mono">${totalDebit.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono">${totalCredit.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400"}
+                        >
+                          {entry.is_posted ? "Posted" : "Draft"}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           {!entry.is_posted && !isReadOnly && (
