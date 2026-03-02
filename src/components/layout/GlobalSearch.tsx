@@ -287,7 +287,7 @@ export function GlobalSearch() {
 
   return (
     <div className="relative w-full max-w-md" ref={containerRef}>
-      <div className="relative">
+      <div className="relative w-full sm:w-48 xl:w-64 transition-all duration-300 sm:focus-within:w-64 xl:focus-within:w-80 group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
@@ -296,7 +296,7 @@ export function GlobalSearch() {
         <Input
           ref={inputRef}
           placeholder="Search modules, guests, or staff..."
-          className="w-full sm:w-48 xl:w-64 pl-9 bg-secondary/50 border-border focus-visible:ring-primary transition-all duration-300 sm:focus:w-64 xl:focus:w-80"
+          className="w-full pl-9 bg-secondary/50 border-border focus-visible:ring-primary"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -305,11 +305,13 @@ export function GlobalSearch() {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none opacity-50">
-          <kbd className="h-5 min-w-[20px] items-center justify-center rounded border bg-muted px-1.5 font-sans text-[10px] font-medium flex gap-0.5">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </div>
+        {!query && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none opacity-50 transition-opacity group-focus-within/search:opacity-0">
+            <kbd className="h-5 min-w-[20px] items-center justify-center rounded border bg-muted px-1.5 font-sans text-[10px] font-medium flex gap-0.5">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </div>
+        )}
       </div>
 
       {isOpen && query.trim() && (
