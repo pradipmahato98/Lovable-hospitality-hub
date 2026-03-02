@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -71,6 +72,15 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const navRef = useRef<HTMLElement>(null);
+
+  // Auto-scroll to active item
+  useEffect(() => {
+    const activeItem = navRef.current?.querySelector('[data-active="true"]');
+    if (activeItem) {
+      activeItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [location.pathname]);
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -79,12 +89,16 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   };
 
   const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = location.pathname === item.path;
+    const isActive = item.path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(item.path);
+
     return (
       <Link
         key={item.path}
         to={item.path}
         onClick={onNavClick}
+        data-active={isActive}
         className={cn(
           "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
           isActive
@@ -100,7 +114,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border flex-shrink-0">
         <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
@@ -126,7 +140,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-hide">
+      <nav ref={navRef} className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-hide">
         {navItems.map(renderNavItem)}
 
         {/* Operations Section */}
@@ -138,12 +152,13 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           </div>
         )}
         {operationsNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}
               to={item.path}
               onClick={onNavClick}
+              data-active={isActive}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
@@ -236,7 +251,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300 sidebar",
         collapsed ? "w-20" : "w-64"
       )}
     >
