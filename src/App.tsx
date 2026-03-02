@@ -11,6 +11,8 @@ import { DynamicIslandProvider } from "@/components/ui/ios/DynamicIslandProvider
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { Database as DatabaseIcon, Loader2 } from "lucide-react";
+import { Suspense, lazy } from "react";
 import { RealtimeListener } from "@/components/layout/RealtimeListener";
 import Index from "./pages/Index";
 import Reservations from "./pages/Reservations";
@@ -44,8 +46,14 @@ import JournalRegister from "./pages/JournalRegister";
 import JournalEntryEditor from "./pages/JournalEntryEditor";
 import Payments from "./pages/Payments";
 import Banquet from "./pages/Banquet";
-import DatabasePage from "./pages/Database";
+import Database from "./pages/Database";
 const queryClient = new QueryClient();
+
+const LoadingScreen = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -98,7 +106,7 @@ const App = () => (
                 <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
                 <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
                 <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
-                <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
+                <Route path="/database" element={<ProtectedRoute><Database /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

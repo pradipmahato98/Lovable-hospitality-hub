@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,12 +74,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Zap,
-  Database
+  Database,
+  Plus
 } from "lucide-react";
 import { useMemo } from "react";
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("transactions");
   const [selectedService, setSelectedService] = useState<string | null>(null);
 
   const {
@@ -94,18 +97,16 @@ export default function Finance() {
 
   // Calculate totals and financial metrics for dashboard
   const { totalDebits, totalCredits, isBalanced, totalAssets, totalLiabilities, netIncome } = useMemo(() => {
-    const tb = trialBalance || [];
-    const debits = tb.reduce((sum, t) => sum + (t.totalDebit || 0), 0);
-    const credits = tb.reduce((sum, t) => sum + (t.totalCredit || 0), 0);
+    const debits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
+    const credits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
 
     let assets = 0;
     let liabilities = 0;
     let revenue = 0;
     let expenses = 0;
 
-    tb.forEach(item => {
-      if (!item.account) return;
-      const balance = (item.totalDebit || 0) - (item.totalCredit || 0);
+    trialBalance.forEach(item => {
+      const balance = item.totalDebit - item.totalCredit;
       const type = item.account.type;
 
       if (type === 'asset') assets += balance;
@@ -120,7 +121,7 @@ export default function Finance() {
       isBalanced: Math.abs(debits - credits) < 0.01,
       totalAssets: assets,
       totalLiabilities: Math.abs(liabilities),
-      netIncome: (Math.abs(revenue) || 0) - (expenses || 0)
+      netIncome: Math.abs(revenue) - expenses
     };
   }, [trialBalance]);
 
@@ -336,16 +337,16 @@ export default function Finance() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
                 title="Total Accounts"
-                value={(accounts?.length || 0).toString()}
-                change={`${(accounts?.filter((a) => a.is_active) || []).length} active`}
+                value={accounts.length.toString()}
+                change={`${accounts.filter((a) => a.is_active).length} active`}
                 changeType="neutral"
                 icon={BookOpen}
                 delay={200}
               />
               <MetricCard
                 title="Journal Entries"
-                value={(journalEntries?.length || 0).toString()}
-                change={`${(journalEntries?.filter((e) => e.is_posted) || []).length} posted`}
+                value={journalEntries.length.toString()}
+                change={`${journalEntries.filter((e) => e.is_posted).length} posted`}
                 changeType="neutral"
                 icon={FileText}
                 delay={250}
@@ -408,6 +409,10 @@ export default function Finance() {
                   <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => { setActiveTab("transactions"); setSelectedService("period-close"); }}>
                     <Lock className="h-5 w-5" />
                     Period Close
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2 text-primary border-primary/20 bg-primary/5" onClick={() => navigate("/finance/journal/new")}>
+                    <Plus className="h-5 w-5" />
+                    New Journal
                   </Button>
                 </CardContent>
               </Card>
