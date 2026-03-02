@@ -24,14 +24,13 @@ export interface JournalEntry {
   reference: string | null;
   is_posted: boolean;
   created_by: string | null;
-  created_by_profile?: {
-    first_name: string | null;
-    last_name: string | null;
-  };
-  voucher_type?: string;
   created_at: string;
   updated_at: string;
   lines?: JournalLine[];
+  created_by_profile?: {
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 
 export interface JournalLine {
@@ -185,10 +184,7 @@ export function useJournalEntries(filters?: {
         .from("journal_entries")
         .select(`
           *,
-          created_by_profile:profiles!journal_entries_created_by_fkey (
-            first_name,
-            last_name
-          ),
+          created_by_profile:profiles(first_name, last_name),
           journal_lines (
             *,
             account:accounts (*)
@@ -215,7 +211,6 @@ export function useJournalEntries(filters?: {
 
       return (data || []).map((entry: any) => ({
         ...entry,
-        voucher_type: "JV", // Default to Journal Voucher
         lines: entry.journal_lines || [],
       })) as JournalEntry[];
     },
@@ -262,6 +257,9 @@ export function useCreateJournalEntry() {
       reference?: string | null;
       lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
     }) => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Generate entry number
       const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
 
@@ -274,6 +272,7 @@ export function useCreateJournalEntry() {
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
+          created_by: user?.id,
         })
         .select()
         .single();
