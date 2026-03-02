@@ -1,7 +1,7 @@
 import { Bell, Search, Plus, Menu, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlobalSearch } from "./GlobalSearch";
-import { useSidebar } from "@/hooks/use-sidebar";
+import { useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 import {
   Tooltip,
@@ -15,22 +15,24 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const { isMobile, setMobileOpen } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const { setNewBookingOpen, setCommandPaletteOpen } = useQuickActions();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-4">
       <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-        {/* Mobile Menu Button */}
-        {isMobile && (
+        {/* Sidebar Trigger */}
+        {isMobile ? (
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileOpen(true)}
+            onClick={() => setOpenMobile(true)}
             className="flex-shrink-0 text-foreground hover:bg-secondary"
           >
             <Menu className="h-5 w-5" />
           </Button>
+        ) : (
+          <SidebarTrigger />
         )}
         
         <div className="min-w-0 hidden md:block">
