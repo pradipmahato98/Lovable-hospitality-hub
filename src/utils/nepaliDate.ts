@@ -195,6 +195,26 @@ export function bsToAd(bsDate: string): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Robustly formats a Date object to YYYY-MM-DD using local time
+ */
+export function toYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Robustly parses YYYY-MM-DD to a local Date object
+ */
+export function fromDateStr(ymd: string): Date | undefined {
+  const match = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return undefined;
+  const d = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
 export function formatAdDate(date: Date | string): string {
   let d: Date;
   if (typeof date === 'string') {

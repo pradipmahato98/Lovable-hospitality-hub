@@ -2,7 +2,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { adToBs, bsToAd, NEPALI_MONTHS } from "@/utils/nepaliDate";
+import { adToBs, bsToAd, NEPALI_MONTHS, fromDateStr } from "@/utils/nepaliDate";
 
 interface NepaliCalendarProps {
   selected?: string; // YYYY/MM/DD
@@ -67,9 +67,9 @@ export function NepaliCalendar({ selected, onSelect, disableFuture, className }:
 
   const daysInMonth = getMonthDays(currentDate.year, currentDate.month);
 
-  // Refined day calculation
+  // Refined day calculation using local time to avoid UTC shift
   const firstAdOfMonth = bsToAd(`${currentDate.year}/${(currentDate.month + 1).toString().padStart(2, '0')}/01`);
-  const firstDayOfMonth = new Date(firstAdOfMonth).getDay();
+  const firstDayOfMonth = fromDateStr(firstAdOfMonth)?.getDay() ?? 0;
 
   const days = [];
   for (let i = 0; i < firstDayOfMonth; i++) {

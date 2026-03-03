@@ -49,6 +49,7 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { useBusinessDate } from "@/hooks/useSettings";
+import { cn } from "@/lib/utils";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
