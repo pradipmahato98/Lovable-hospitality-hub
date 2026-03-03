@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +109,8 @@ export default function JournalEntryEditor() {
     description: "",
   });
   const [currentRowIndex, setCurrentRowIndex] = useState<number | null>(null);
-  const [attachments, setAttachments] = useState<{ id: string, name: string, size: string, type: string }[]>([]);
+  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+  const [attachments, setAttachments] = useState<{ id: string, name: string, size: string, type: string, url?: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -118,7 +119,7 @@ export default function JournalEntryEditor() {
     company: "Unico Plastics Inc.",
     posting_date: toYmd(new Date()),
     miti: adToBs(new Date()),
-    fiscal_year: "2080/81",
+    fiscal_year: "2082/83",
     voucher_no: "Generated Automatically",
     finance_book: "",
     from_template: "",
@@ -129,28 +130,38 @@ export default function JournalEntryEditor() {
     ] as JournalLineItem[],
   });
 
-  const [adDisplay, setAdDisplay] = useState(formatAdDate(formData.posting_date));
-  const [bsDisplay, setBsDisplay] = useState(formData.miti);
+  const [adDisplay, setAdDisplay] = useState(formatAdDate(toYmd(new Date())));
+  const [bsDisplay, setBsDisplay] = useState(adToBs(new Date()));
   const [adMonth, setAdMonth] = useState<Date>(new Date());
 
   const fiscalLimits = useMemo(() => {
-    if (formData.fiscal_year === "2080/81") {
-      return {
+    const limits: Record<string, { adStart: string, adEnd: string, bsStart: string, bsEnd: string }> = {
+      "2082/83": {
+        adStart: "2025-07-16",
+        adEnd: "2026-07-15",
+        bsStart: "2082/04/01",
+        bsEnd: "2083/03/31",
+      },
+      "2081/82": {
+        adStart: "2024-07-16",
+        adEnd: "2025-07-15",
+        bsStart: "2081/04/01",
+        bsEnd: "2082/03/31",
+      },
+      "2080/81": {
         adStart: "2023-07-17",
         adEnd: "2024-07-15",
         bsStart: "2080/04/01",
         bsEnd: "2081/03/31",
-      };
-    }
-    if (formData.fiscal_year === "2079/80") {
-      return {
+      },
+      "2079/80": {
         adStart: "2022-07-17",
         adEnd: "2023-07-16",
         bsStart: "2079/04/01",
         bsEnd: "2080/03/31",
-      };
-    }
-    return null;
+      }
+    };
+    return limits[formData.fiscal_year] || null;
   }, [formData.fiscal_year]);
 
   const syncDates = (newAd: string, newBs: string) => {
@@ -161,13 +172,15 @@ export default function JournalEntryEditor() {
     if (date) setAdMonth(date);
   };
 
-  // Sync posting date with business date
+  // Sync posting date with current date (Today) by default
   useEffect(() => {
-    if (businessDate && !id && !isDirty) {
-      const bs = adToBs(businessDate);
-      syncDates(businessDate, bs);
+    if (!id && !isDirty) {
+      const today = new Date();
+      const ad = toYmd(today);
+      const bs = adToBs(today);
+      syncDates(ad, bs);
     }
-  }, [businessDate, id, isDirty]);
+  }, [id, isDirty]);
 
   // Load existing entry if editing
   useEffect(() => {
@@ -338,7 +351,8 @@ export default function JournalEntryEditor() {
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
       size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-      type: file.type
+      type: file.type,
+      url: URL.createObjectURL(file)
     }));
 
     setAttachments(prev => [...prev, ...newAttachments]);
@@ -389,6 +403,7 @@ export default function JournalEntryEditor() {
       voucher_type: formData.entry_type,
       description: `Journal Entry - ${formData.narration || 'No Ref'}`,
       reference: formData.narration,
+      series: formData.series,
       lines: formData.lines
         .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
         .map(l => ({
@@ -419,13 +434,13 @@ export default function JournalEntryEditor() {
         setFormData(prev => ({
           ...prev,
           voucher_no: "Generated Automatically",
-          reference_number: "",
           narration: "",
           lines: [
             { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
             { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
           ]
         }));
+        setEditingRowIndex(null);
       }
     } catch (error) {
       toast.error("Failed to save journal entry");
@@ -446,10 +461,6 @@ export default function JournalEntryEditor() {
       }
       actions={
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
           {isDirty && !isReadOnly && (
             <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-3 py-1">
               <AlertCircle className="h-3 w-3" /> Not Saved
@@ -460,25 +471,26 @@ export default function JournalEntryEditor() {
               <ShieldCheck className="h-3 w-3" /> Posted Entry
             </Badge>
           )}
-          <Button variant="outline" onClick={() => navigate("/finance")}>
-            {isReadOnly ? "Back" : "Cancel"}
-          </Button>
           {!id && (
-            <Button variant="secondary" onClick={() => setType(type === 'Quick' ? 'Standard' : 'Quick')}>
+            <Button variant="secondary" size="sm" onClick={() => setType(type === 'Quick' ? 'Standard' : 'Quick')}>
               {type === 'Quick' ? 'Standard Mode' : 'Quick Entry'}
             </Button>
           )}
           {!isReadOnly && (
-            <Button onClick={handleSave} disabled={createJournalEntry.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button size="sm" onClick={() => handleSave(true)} disabled={createJournalEntry.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Save className="h-4 w-4 mr-2" />
               {createJournalEntry.isPending ? "Saving..." : "Save"}
             </Button>
           )}
           {isReadOnly && (
-            <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> Print
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={() => navigate("/finance")} className="ml-2 border-primary/20 hover:bg-primary/5">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {isReadOnly ? "Back" : "Cancel"}
+          </Button>
         </div>
       }
     >
@@ -497,12 +509,26 @@ export default function JournalEntryEditor() {
                 <Select
                   disabled={isReadOnly}
                   value={formData.fiscal_year}
-                  onValueChange={(v) => setFormData(p => ({...p, fiscal_year: v}))}
+                  onValueChange={(v) => {
+                    setFormData(p => ({...p, fiscal_year: v}));
+                    // Jump to start of selected fiscal year
+                    const limits: Record<string, { ad: string, bs: string }> = {
+                      "2082/83": { ad: "2025-07-16", bs: "2082/04/01" },
+                      "2081/82": { ad: "2024-07-16", bs: "2081/04/01" },
+                      "2080/81": { ad: "2023-07-17", bs: "2080/04/01" },
+                      "2079/80": { ad: "2022-07-17", bs: "2079/04/01" },
+                    };
+                    if (limits[v]) {
+                      syncDates(limits[v].ad, limits[v].bs);
+                    }
+                  }}
                 >
                   <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="2082/83">2082/83</SelectItem>
+                    <SelectItem value="2081/82">2081/82</SelectItem>
                     <SelectItem value="2080/81">2080/81</SelectItem>
                     <SelectItem value="2079/80">2079/80</SelectItem>
                   </SelectContent>
@@ -549,6 +575,11 @@ export default function JournalEntryEditor() {
                               const bs = adToBs(ad);
                               syncDates(ad, bs);
                             }
+                          }}
+                          onDayClick={(date) => {
+                            const ad = toYmd(date);
+                            const bs = adToBs(ad);
+                            syncDates(ad, bs);
                           }}
                           disabled={(date) => {
                             const ymd = toYmd(date);
@@ -687,14 +718,14 @@ export default function JournalEntryEditor() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <div className="min-w-[1100px]">
-                <div className="grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr] bg-muted/20 border-b items-center h-10 px-4">
+                <div className="grid grid-cols-[80px_60px_1fr_120px_120px_1.5fr_1fr] bg-muted/20 border-b items-center h-10 px-4">
                   <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Action</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">No.</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Account</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-4">Remarks</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
                 </div>
 
                 <Reorder.Group axis="y" values={formData.lines} onReorder={reorderLines} className="divide-y divide-muted-foreground/10">
@@ -704,8 +735,9 @@ export default function JournalEntryEditor() {
                       value={line}
                       dragListener={!isReadOnly}
                       className={cn(
-                        "grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr] items-center h-14 px-4 bg-background/40 transition-colors group",
-                        !isReadOnly && "hover:bg-muted/10"
+                        "grid grid-cols-[80px_60px_1fr_120px_120px_1.5fr_1fr] items-center h-14 px-4 bg-background/40 transition-colors group",
+                        !isReadOnly && "hover:bg-muted/10",
+                        editingRowIndex === index && "bg-primary/5"
                       )}
                     >
                       <div className="text-center skip-nav">
@@ -716,12 +748,12 @@ export default function JournalEntryEditor() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start">
-                            <DropdownMenuItem className="gap-2">
-                              <Edit2 className="h-4 w-4" /> Edit
+                            <DropdownMenuItem className="gap-2" onClick={() => setEditingRowIndex(editingRowIndex === index ? null : index)}>
+                              <Edit2 className="h-4 w-4" /> {editingRowIndex === index ? "Finish Editing" : "Edit Row"}
                             </DropdownMenuItem>
                             {!isReadOnly && (
                               <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleRemoveRow(index)}>
-                                <Trash2 className="h-4 w-4" /> Delete
+                                <Trash2 className="h-4 w-4" /> Delete Row
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -731,11 +763,14 @@ export default function JournalEntryEditor() {
                       <div className="flex items-center gap-2 pr-4">
                         <div className="flex-1 min-w-0">
                           <Select
-                            disabled={isReadOnly}
+                            disabled={isReadOnly || editingRowIndex !== index}
                             value={line.account_id}
                             onValueChange={(v) => updateLine(index, "account_id", v)}
                           >
-                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 w-full text-sm disabled:opacity-100">
+                            <SelectTrigger className={cn(
+                              "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 w-full text-sm disabled:opacity-100",
+                              editingRowIndex === index && "hover:bg-background/50"
+                            )}>
                               <SelectValue placeholder="Select Account" />
                             </SelectTrigger>
                             <SelectContent>
@@ -747,7 +782,7 @@ export default function JournalEntryEditor() {
                             </SelectContent>
                           </Select>
                         </div>
-                        {!isReadOnly && (
+                        {!isReadOnly && editingRowIndex === index && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -762,42 +797,54 @@ export default function JournalEntryEditor() {
                           </Button>
                         )}
                       </div>
-                      <div className="px-2">
-                        <Input
-                          readOnly={isReadOnly}
-                          placeholder="Sub Ledger"
-                          value={line.party_type}
-                          onChange={(e) => updateLine(index, "party_type", e.target.value)}
-                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm"
-                        />
-                      </div>
                       <div className="pr-4">
                         <Input
-                          readOnly={isReadOnly}
+                          readOnly={isReadOnly || editingRowIndex !== index}
                           type="number"
                           placeholder="0.00"
                           value={line.debit || ""}
                           onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
-                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono text-sm"
+                          className={cn(
+                            "text-right border-none bg-transparent transition-colors focus:ring-0 h-8 font-mono text-sm",
+                            editingRowIndex === index && "hover:bg-background/50"
+                          )}
                         />
                       </div>
                       <div className="pr-4">
                         <Input
-                          readOnly={isReadOnly}
+                          readOnly={isReadOnly || editingRowIndex !== index}
                           type="number"
                           placeholder="0.00"
                           value={line.credit || ""}
                           onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
-                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono text-sm"
+                          className={cn(
+                            "text-right border-none bg-transparent transition-colors focus:ring-0 h-8 font-mono text-sm",
+                            editingRowIndex === index && "hover:bg-background/50"
+                          )}
                         />
                       </div>
                       <div className="px-4">
                         <Input
-                          readOnly={isReadOnly}
+                          readOnly={isReadOnly || editingRowIndex !== index}
                           placeholder="Remarks"
                           value={line.party}
                           onChange={(e) => updateLine(index, "party", e.target.value)}
-                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm"
+                          className={cn(
+                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm",
+                            editingRowIndex === index && "hover:bg-background/50"
+                          )}
+                        />
+                      </div>
+                      <div className="px-2">
+                        <Input
+                          readOnly={isReadOnly || editingRowIndex !== index}
+                          placeholder="Sub Ledger"
+                          value={line.party_type}
+                          onChange={(e) => updateLine(index, "party_type", e.target.value)}
+                          className={cn(
+                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm",
+                            editingRowIndex === index && "hover:bg-background/50"
+                          )}
                         />
                       </div>
                     </Reorder.Item>
@@ -861,7 +908,7 @@ export default function JournalEntryEditor() {
                 {!isReadOnly && (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group relative"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 hover:border-primary/50 transition-colors cursor-pointer group relative bg-muted/5"
                   >
                     <input
                       type="file"
@@ -871,47 +918,69 @@ export default function JournalEntryEditor() {
                       onChange={handleFileUpload}
                       accept="image/*,application/pdf"
                     />
-                    <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Upload className="h-8 w-8 text-primary" />
+                    <div className="h-10 w-10 rounded-full bg-primary/5 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                      <Upload className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 2MB</p>
+                    <p className="text-xs font-medium">Click to upload or drag and drop</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">PDF, JPG, PNG up to 2MB</p>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attached Files ({attachments.length})</p>
-                  <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Attached Files ({attachments.length})</p>
+                  <div className="grid grid-cols-1 gap-2">
                     {attachments.length === 0 && (
-                      <div className="text-center py-4 border rounded-md border-dashed bg-muted/10 text-muted-foreground text-xs">
+                      <div className="text-center py-3 border rounded-md border-dashed bg-muted/10 text-muted-foreground text-[10px]">
                         No files attached
                       </div>
                     )}
                     {attachments.map((file) => (
                       <div key={file.id} className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-muted-foreground/10 group">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
                           <FileIcon className={cn(
-                            "h-4 w-4",
+                            "h-3.5 w-3.5 flex-shrink-0",
                             file.type.includes('image') ? "text-amber-500" : "text-blue-500"
                           )} />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium truncate max-w-[200px]">{file.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{file.size}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-medium truncate">{file.name}</span>
+                            <span className="text-[9px] text-muted-foreground">{file.size}</span>
                           </div>
                         </div>
-                        {!isReadOnly && (
+                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeAttachment(file.id);
-                            }}
+                            className="h-6 w-6"
+                            onClick={() => file.url && window.open(file.url, '_blank')}
+                            title="Preview"
                           >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            <Eye className="h-3 w-3" />
                           </Button>
-                        )}
+                          <a
+                            href={file.url}
+                            download={file.name}
+                            className={cn(
+                              buttonVariants({ variant: "ghost", size: "icon" }),
+                              "h-6 w-6"
+                            )}
+                            title="Download"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </a>
+                          {!isReadOnly && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeAttachment(file.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
