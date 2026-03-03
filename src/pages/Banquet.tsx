@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -775,7 +775,7 @@ export default function Banquet() {
                     <TableBody>
                       {filteredEvents.map((event) => (
                         <TableRow key={event.id}>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center w-[50px]">
                             <EventDetailsDialog event={event} />
                           </TableCell>
                           <TableCell>
