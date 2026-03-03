@@ -287,7 +287,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full sm:w-72 lg:w-[480px]" ref={containerRef}>
+    <div className="relative w-full sm:w-72 lg:w-96" ref={containerRef}>
       <div className="relative w-full group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
@@ -297,7 +297,7 @@ export function GlobalSearch() {
         <Input
           ref={inputRef}
           placeholder="Search modules, guests, or staff..."
-          className="w-full pl-10 pr-16 bg-secondary/40 border-border focus-visible:ring-primary shadow-sm group-focus-within/search:shadow-glow group-focus-within/search:bg-background transition-all"
+          className="w-full pl-10 pr-12 bg-secondary/40 border-border focus-visible:ring-primary shadow-sm group-focus-within/search:shadow-glow group-focus-within/search:bg-background transition-all"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -313,12 +313,11 @@ export function GlobalSearch() {
               e.preventDefault();
               e.stopPropagation();
               setQuery("");
-              // Small delay to ensure state update doesn't conflict with focus
               requestAnimationFrame(() => {
                 inputRef.current?.focus();
               });
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted active:bg-muted/80 transition-all text-muted-foreground hover:text-foreground active:scale-90 z-10"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full bg-muted/60 hover:bg-muted active:bg-muted/80 transition-all text-muted-foreground hover:text-foreground active:scale-90 z-10"
             aria-label="Clear search"
             title="Clear search"
           >

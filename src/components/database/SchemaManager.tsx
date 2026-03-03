@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { api } from "@/lib/api-bridge";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -51,49 +50,6 @@ const MOCK_SCHEMA = [
 ];
 
 export const SchemaManager = () => {
-  const [tables, setTables] = useState<any[]>(MOCK_SCHEMA);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchSchema = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await api.post('/sql', {
-          query: `
-            SELECT
-              t.table_name,
-              json_agg(json_build_object(
-                'name', c.column_name,
-                'type', c.data_type,
-                'pk', (
-                  SELECT count(*) > 0
-                  FROM information_schema.key_column_usage kcu
-                  JOIN information_schema.table_constraints tc ON kcu.constraint_name = tc.constraint_name
-                  WHERE tc.constraint_type = 'PRIMARY KEY'
-                  AND kcu.table_name = t.table_name
-                  AND kcu.column_name = c.column_name
-                )
-              )) as columns
-            FROM information_schema.tables t
-            JOIN information_schema.columns c ON t.table_name = c.table_name
-            WHERE t.table_schema = 'public'
-            AND t.table_type = 'BASE TABLE'
-            GROUP BY t.table_name;
-          `
-        });
-
-        if (!error && data) {
-          setTables(data.length > 0 ? data : MOCK_SCHEMA);
-        }
-      } catch (err) {
-        console.error("Failed to fetch schema:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSchema();
-  }, []);
-
   return (
     <div className="space-y-6">
       <Tabs defaultValue="visualizer" className="w-full">
@@ -113,12 +69,12 @@ export const SchemaManager = () => {
             </div>
 
             <div className="absolute inset-0 p-8 flex flex-wrap gap-8 items-start justify-center overflow-auto custom-scrollbar">
-              {tables.map((table) => (
-                <Card key={table.table_name || table.name} className="w-64 shrink-0 shadow-lg border-primary/20 bg-card/80 backdrop-blur-sm">
+              {MOCK_SCHEMA.map((table) => (
+                <Card key={table.name} className="w-64 shrink-0 shadow-lg border-primary/20 bg-card/80 backdrop-blur-sm">
                   <div className="p-3 bg-primary/10 border-b border-primary/20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <TableIcon className="h-4 w-4 text-primary" />
-                      <span className="font-bold text-sm">{table.table_name || table.name}</span>
+                      <span className="font-bold text-sm">{table.name}</span>
                     </div>
                     <Badge variant="outline" className="text-[10px] py-0">{table.columns.length} cols</Badge>
                   </div>
