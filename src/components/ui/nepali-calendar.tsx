@@ -84,6 +84,8 @@ export function NepaliCalendar({ selected, onSelect, disableFuture, minDate, max
     const isFuture = disableFuture && dateStr > todayBs;
     const isOutOfRange = (minDate && dateStr < minDate) || (maxDate && dateStr > maxDate);
 
+    const isToday = dateStr === todayBs;
+
     days.push(
       <Button
         key={d}
@@ -91,7 +93,9 @@ export function NepaliCalendar({ selected, onSelect, disableFuture, minDate, max
         disabled={isFuture || isOutOfRange}
         className={cn(
           "h-9 w-9 p-0 font-normal",
-          isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+          isToday && "bg-success text-success-foreground font-bold hover:bg-success/90 hover:text-success-foreground",
+          isSelected && !isToday && "bg-amber-500 text-white hover:bg-amber-600 hover:text-white focus:bg-amber-600 focus:text-white",
+          isSelected && isToday && "ring-2 ring-amber-500 ring-offset-2",
           (isFuture || isOutOfRange) && "opacity-20 pointer-events-none"
         )}
         onClick={() => onSelect?.(dateStr)}

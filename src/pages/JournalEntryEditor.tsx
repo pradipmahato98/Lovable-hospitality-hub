@@ -110,6 +110,8 @@ export default function JournalEntryEditor() {
   });
   const [currentRowIndex, setCurrentRowIndex] = useState<number | null>(null);
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<{ id: string, name: string, size: string, type: string, url?: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -120,7 +122,7 @@ export default function JournalEntryEditor() {
     posting_date: toYmd(new Date()),
     miti: adToBs(new Date()),
     fiscal_year: "2082/83",
-    voucher_no: "Generated Automatically",
+    voucher_no: "JR-2082/83-01",
     finance_book: "",
     from_template: "",
     narration: "",
@@ -510,7 +512,17 @@ export default function JournalEntryEditor() {
                   disabled={isReadOnly}
                   value={formData.fiscal_year}
                   onValueChange={(v) => {
-                    setFormData(p => ({...p, fiscal_year: v}));
+                    setFormData(p => {
+                      const prefix = p.entry_type === "Journal Voucher" ? "JR" :
+                                     p.entry_type === "Payment Voucher" ? "PV" :
+                                     p.entry_type === "Receipt Voucher" ? "RV" :
+                                     p.entry_type === "Contra Voucher" ? "CV" : "JV";
+                      return {
+                        ...p,
+                        fiscal_year: v,
+                        voucher_no: `${prefix}-${v}-01`
+                      };
+                    });
                     // Jump to start of selected fiscal year
                     const limits: Record<string, { ad: string, bs: string }> = {
                       "2082/83": { ad: "2025-07-16", bs: "2082/04/01" },
@@ -674,9 +686,21 @@ export default function JournalEntryEditor() {
                   Voucher Type <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || (formData.entry_type !== "Journal Voucher" && !!id)}
                   value={formData.entry_type}
-                  onValueChange={(v) => setFormData(p => ({...p, entry_type: v}))}
+                  onValueChange={(v) => {
+                    setFormData(p => {
+                      const prefix = v === "Journal Voucher" ? "JR" :
+                                     v === "Payment Voucher" ? "PV" :
+                                     v === "Receipt Voucher" ? "RV" :
+                                     v === "Contra Voucher" ? "CV" : "JV";
+                      return {
+                        ...p,
+                        entry_type: v,
+                        voucher_no: `${prefix}-${p.fiscal_year}-01`
+                      };
+                    });
+                  }}
                 >
                   <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm">
                     <SelectValue placeholder="Type" />
@@ -716,16 +740,16 @@ export default function JournalEntryEditor() {
             <CardTitle className="text-base font-semibold">Accounting Entries</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <div className="min-w-[1100px]">
-                <div className="grid grid-cols-[80px_60px_1fr_120px_120px_1.5fr_1fr] bg-muted/20 border-b items-center h-10 px-4">
+            <div className="overflow-hidden">
+              <div className="w-full">
+                <div className="grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] bg-muted/20 border-b items-center h-10 px-4">
                   <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Action</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">No.</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Account</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-4">Remarks</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
                 </div>
 
                 <Reorder.Group axis="y" values={formData.lines} onReorder={reorderLines} className="divide-y divide-muted-foreground/10">
@@ -735,7 +759,7 @@ export default function JournalEntryEditor() {
                       value={line}
                       dragListener={!isReadOnly}
                       className={cn(
-                        "grid grid-cols-[80px_60px_1fr_120px_120px_1.5fr_1fr] items-center h-14 px-4 bg-background/40 transition-colors group",
+                        "grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] items-center h-14 px-4 bg-background/40 transition-colors group",
                         !isReadOnly && "hover:bg-muted/10",
                         editingRowIndex === index && "bg-primary/5"
                       )}
@@ -759,7 +783,19 @@ export default function JournalEntryEditor() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <div className="font-mono text-muted-foreground text-sm pl-2">{index + 1}</div>
+                      <div className="font-mono text-muted-foreground text-xs">{index + 1}</div>
+                      <div className="px-2">
+                        <Input
+                          readOnly={isReadOnly || editingRowIndex !== index}
+                          placeholder="Sub Ledger"
+                          value={line.party_type}
+                          onChange={(e) => updateLine(index, "party_type", e.target.value)}
+                          className={cn(
+                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm",
+                            editingRowIndex === index && "hover:bg-background/50"
+                          )}
+                        />
+                      </div>
                       <div className="flex items-center gap-2 pr-4">
                         <div className="flex-1 min-w-0">
                           <Select
@@ -831,18 +867,6 @@ export default function JournalEntryEditor() {
                           onChange={(e) => updateLine(index, "party", e.target.value)}
                           className={cn(
                             "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm",
-                            editingRowIndex === index && "hover:bg-background/50"
-                          )}
-                        />
-                      </div>
-                      <div className="px-2">
-                        <Input
-                          readOnly={isReadOnly || editingRowIndex !== index}
-                          placeholder="Sub Ledger"
-                          value={line.party_type}
-                          onChange={(e) => updateLine(index, "party_type", e.target.value)}
-                          className={cn(
-                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm",
                             editingRowIndex === index && "hover:bg-background/50"
                           )}
                         />
@@ -974,7 +998,8 @@ export default function JournalEntryEditor() {
                               className="h-6 w-6 text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                removeAttachment(file.id);
+                                setAttachmentToDelete(file.id);
+                                setDeleteConfirmOpen(true);
                               }}
                             >
                               <Trash2 className="h-3 w-3" />
@@ -1026,6 +1051,34 @@ export default function JournalEntryEditor() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Attachment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this attachment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (attachmentToDelete) {
+                  removeAttachment(attachmentToDelete);
+                  setDeleteConfirmOpen(false);
+                  setAttachmentToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={ledgerDialogOpen} onOpenChange={setLedgerDialogOpen}>
         <DialogContent>
