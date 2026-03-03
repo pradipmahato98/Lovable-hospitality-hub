@@ -36,6 +36,7 @@ import {
   AlertTriangle,
   Package,
   Users,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -103,6 +104,7 @@ const beverageOptions = [
 export function CateringManagementPanel({ events }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
   
   // Local state for catering orders (would be DB in production)
@@ -156,6 +158,11 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
       });
     }
     setOrderDialogOpen(true);
+  };
+
+  const handleOpenDetailsDialog = (event: BanquetEvent) => {
+    setSelectedEvent(event);
+    setDetailsDialogOpen(true);
   };
 
   const handleSaveOrder = () => {
@@ -317,6 +324,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Before Event</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Guests</TableHead>
@@ -335,6 +343,17 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                     : null;
                   return (
                     <TableRow key={event.id}>
+                      <TableCell>
+                        {order && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDetailsDialog(event)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
@@ -420,6 +439,81 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
           )}
         </CardContent>
       </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Catering Details: {selectedEvent?.event_name}
+            </DialogTitle>
+            <DialogDescription>
+              View catering requirements and order status
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEvent && getOrderForEvent(selectedEvent.id) && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Menu Package</p>
+                  <p>{menuPackages.find(p => p.id === getOrderForEvent(selectedEvent.id)?.menuPackage)?.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Serving Style</p>
+                  <p>{getOrderForEvent(selectedEvent.id)?.servingStyle}</p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Dietary Requirements</p>
+                <div className="flex flex-wrap gap-2">
+                  {getOrderForEvent(selectedEvent.id)?.dietaryRequirements.length ? (
+                    getOrderForEvent(selectedEvent.id)?.dietaryRequirements.map(d => (
+                      <Badge key={d} variant="outline">{d}</Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm">None</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Beverages</p>
+                <div className="flex flex-wrap gap-2">
+                  {getOrderForEvent(selectedEvent.id)?.beverages.map(b => (
+                    <Badge key={b} variant="secondary">{b}</Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Special Notes</p>
+                <p className="text-sm p-3 rounded-lg bg-muted whitespace-pre-wrap">
+                  {getOrderForEvent(selectedEvent.id)?.specialNotes || "No special notes"}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center p-4 rounded-lg bg-secondary/50 border">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <Badge className={statusColors[getOrderForEvent(selectedEvent.id)!.status]}>
+                    {getOrderForEvent(selectedEvent.id)?.status}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-muted-foreground">Estimated Cost</p>
+                  <p className="text-xl font-bold">${getOrderForEvent(selectedEvent.id)?.estimatedCost.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Order Dialog */}
       <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>

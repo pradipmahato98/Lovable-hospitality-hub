@@ -41,6 +41,7 @@ import {
   Armchair,
   Lightbulb,
   Mic2,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -126,6 +127,7 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
 
   // Local state for venue setups (would be DB in production)
@@ -189,6 +191,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const handleOpenChecklist = (event: BanquetEvent) => {
     setSelectedEvent(event);
     setChecklistDialogOpen(true);
+  };
+
+  const handleOpenDetails = (event: BanquetEvent) => {
+    setSelectedEvent(event);
+    setDetailsDialogOpen(true);
   };
 
   const handleSaveSetup = () => {
@@ -375,12 +382,13 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Before Event</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Venue</TableHead>
                   <TableHead>Layout</TableHead>
                   <TableHead>Equipment</TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead>Checklist</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -394,6 +402,15 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                     : null;
                   return (
                     <TableRow key={event.id}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDetails(event)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
@@ -430,11 +447,21 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                       <TableCell>
                         {setup ? (
-                          <div className="w-24">
-                            <Progress value={progress} className="h-2" />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {progress.toFixed(0)}%
-                            </p>
+                          <div className="flex flex-col gap-2 w-24">
+                            <div>
+                              <Progress value={progress} className="h-2" />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {progress.toFixed(0)}%
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleOpenChecklist(event)}
+                            >
+                              Checklist
+                            </Button>
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
@@ -460,15 +487,6 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                           >
                             {setup ? "Edit" : "Setup"}
                           </Button>
-                          {setup && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenChecklist(event)}
-                            >
-                              Checklist
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -479,6 +497,121 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Setup Details: {selectedEvent?.event_name}</DialogTitle>
+            <DialogDescription>
+              View venue layout and equipment requirements
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEvent && (
+            <div className="space-y-6">
+              {getSetupForEvent(selectedEvent.id) ? (
+                <>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-muted-foreground">Layout Type</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          {(() => {
+                            const setup = getSetupForEvent(selectedEvent.id);
+                            const layout = layoutTypes.find(l => l.id === setup?.layoutType);
+                            const Icon = layout?.icon || Layout;
+                            return <><Icon className="h-5 w-5" /> <span>{layout?.name}</span></>;
+                          })()}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-muted-foreground">Tables</Label>
+                          <p className="text-lg font-semibold">{getSetupForEvent(selectedEvent.id)?.tableCount}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Chairs</Label>
+                          <p className="text-lg font-semibold">{getSetupForEvent(selectedEvent.id)?.chairCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-muted-foreground">Special Areas</Label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {getSetupForEvent(selectedEvent.id)?.stageRequired && <Badge>Stage</Badge>}
+                          {getSetupForEvent(selectedEvent.id)?.danceFloor && <Badge>Dance Floor</Badge>}
+                          {!getSetupForEvent(selectedEvent.id)?.stageRequired && !getSetupForEvent(selectedEvent.id)?.danceFloor && <p className="text-sm">None</p>}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Status</Label>
+                        <div className="mt-1">
+                          <Badge className={statusColors[getSetupForEvent(selectedEvent.id)!.setupStatus]}>
+                            {getSetupForEvent(selectedEvent.id)?.setupStatus.replace("_", " ")}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-muted-foreground">Equipment</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {getSetupForEvent(selectedEvent.id)?.equipment.length ? (
+                          getSetupForEvent(selectedEvent.id)?.equipment.map(eq => (
+                            <Badge key={eq} variant="outline">{equipmentOptions.find(e => e.id === eq)?.name || eq}</Badge>
+                          ))
+                        ) : <p className="text-sm">None</p>}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Decorations</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {getSetupForEvent(selectedEvent.id)?.decorations.length ? (
+                          getSetupForEvent(selectedEvent.id)?.decorations.map(dec => (
+                            <Badge key={dec} variant="secondary">{decorationOptions.find(d => d.id === dec)?.name || dec}</Badge>
+                          ))
+                        ) : <p className="text-sm">None</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-muted/50 border">
+                    <Label className="text-muted-foreground">Setup Notes</Label>
+                    <p className="text-sm mt-1 whitespace-pre-wrap">{getSetupForEvent(selectedEvent.id)?.setupNotes || "No additional notes"}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center border rounded-lg border-dashed">
+                  <p className="text-muted-foreground mb-4">No venue setup has been configured for this event yet.</p>
+                  <Button onClick={() => {
+                    setDetailsDialogOpen(false);
+                    handleOpenSetupDialog(selectedEvent);
+                  }}>
+                    Configure Setup Now
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+                {getSetupForEvent(selectedEvent.id) && (
+                  <Button onClick={() => {
+                    setDetailsDialogOpen(false);
+                    handleOpenSetupDialog(selectedEvent);
+                  }}>
+                    Edit Setup
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Setup Dialog */}
       <Dialog open={setupDialogOpen} onOpenChange={setSetupDialogOpen}>

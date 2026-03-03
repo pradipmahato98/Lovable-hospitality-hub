@@ -43,6 +43,7 @@ import {
   UtensilsCrossed,
   Layout,
   BarChart3,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -94,6 +95,113 @@ const statusColors: Record<string, string> = {
   in_progress: "bg-primary/20 text-primary border-primary/30",
   completed: "bg-muted text-muted-foreground border-muted",
   cancelled: "bg-destructive/20 text-destructive border-destructive/30",
+};
+
+const EventDetailsDialog = ({ event }: { event: BanquetEvent }) => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Eye className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-2xl font-bold">{event.event_name}</DialogTitle>
+              <DialogDescription className="text-base mt-1">
+                {event.client_name} • {event.event_type}
+              </DialogDescription>
+            </div>
+            <Badge variant="outline" className={statusColors[event.status]}>
+              {event.status.toUpperCase()}
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-6 py-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <CalendarDays className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Date</p>
+                <p>{new Date(event.event_date).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Clock className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Time</p>
+                <p>{event.start_time} - {event.end_time}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <MapPin className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Venue</p>
+                <p>{event.venue}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Users className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Guests</p>
+                <p>{event.guest_count} persons</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Total Amount</p>
+                <p className="font-semibold text-lg">${event.total_amount?.toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Contact</p>
+                <p>{event.client_phone || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {event.notes && (
+          <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
+            <h4 className="font-semibold text-sm mb-2">Notes</h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.notes}</p>
+          </div>
+        )}
+
+        {event.special_requests && (
+          <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
+            <h4 className="font-semibold text-sm mb-2">Special Requests</h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.special_requests}</p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default function Banquet() {
@@ -484,6 +592,7 @@ export default function Banquet() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Before Event</TableHead>
                         <TableHead>Event</TableHead>
                         <TableHead>Client</TableHead>
                         <TableHead>Date & Time</TableHead>
@@ -497,6 +606,9 @@ export default function Banquet() {
                     <TableBody>
                       {filteredEvents.map((event) => (
                         <TableRow key={event.id}>
+                          <TableCell className="text-center">
+                            <EventDetailsDialog event={event} />
+                          </TableCell>
                           <TableCell>
                             <div>
                               <p className="font-medium">{event.event_name}</p>
