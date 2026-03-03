@@ -50,7 +50,7 @@ const PAGES_DATA = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", keywords: ["home", "main", "overview"] },
   { icon: CalendarDays, label: "Reservations", path: "/reservations", keywords: ["booking", "stays", "calendar"] },
   { icon: Calendar, label: "Reservation Calendar", path: "/calendar", keywords: ["bookings", "schedule", "occupancy"] },
-  { icon: Users, label: "Guests", path: "/guests", keywords: ["customers", "profiles", "visitors"] },
+  { icon: Users, label: "Guests", path: "/guests", keywords: ["customers", "visitors", "profiles"] },
   { icon: BedDouble, label: "Front Desk", path: "/front-desk", keywords: ["reception", "checkin", "checkout", "arrivals", "departures"] },
   { icon: Receipt, label: "Billing", path: "/billing", keywords: ["invoice", "payment", "folio", "checkout"] },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping", keywords: ["cleaning", "rooms", "maintenance"] },
@@ -92,15 +92,13 @@ export function GlobalSearch() {
   const { data: guests = [], isLoading: loadingGuests } = useGuests();
   const { data: staff = [], isLoading: loadingStaff } = useStaff();
 
-  // Keyboard shortcut (Cmd+K or Ctrl+K) - only focus if it's already visible
-  // or use an alternative shortcut if needed to avoid conflict with CommandPalette
+  // Keyboard shortcut (Cmd+K or Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
 
       if (ctrlKey && e.key === "k") {
-        // Only focus the search input if it exists in the DOM
         if (inputRef.current) {
           e.preventDefault();
           inputRef.current.focus();
@@ -111,7 +109,7 @@ export function GlobalSearch() {
         setIsOpen(false);
       }
     };
-    window.addEventListener("keydown", handleKeyDown, true); // Use capture to prioritize
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, []);
 
@@ -202,7 +200,6 @@ export function GlobalSearch() {
 
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
-    // Escape special characters for regex
     const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const parts = text.split(new RegExp(`(${escapedHighlight})`, "gi"));
     return (
@@ -225,7 +222,6 @@ export function GlobalSearch() {
     if (action === "profile") {
       navigate(`/guests?guestId=${guest.id}`);
     } else {
-      // Redirect to front desk or reservations with specific intent
       navigate(`/front-desk?guestId=${guest.id}&action=${action}`);
     }
   }, [navigate]);
@@ -236,7 +232,6 @@ export function GlobalSearch() {
 
     const q = query.toLowerCase();
 
-    // Check for exact matches in guests
     const exactGuest = results.guests.find(g =>
       g.email?.toLowerCase() === q ||
       g.phone === query ||
