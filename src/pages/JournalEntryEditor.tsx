@@ -39,6 +39,7 @@ import {
   Printer,
   Eye,
   MoreVertical,
+  Menu,
 } from "lucide-react";
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry, useCreateAccount, Account } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
@@ -102,7 +103,7 @@ export default function JournalEntryEditor() {
     entry_type: "Journal Voucher",
     series: "ACC-JV-.YYYY.-",
     company: "Unico Plastics Inc.",
-    posting_date: new Date().toISOString().split("T")[0],
+    posting_date: toYmd(new Date()),
     miti: adToBs(new Date()),
     fiscal_year: "2080/81",
     voucher_no: "Generated Automatically",
@@ -117,11 +118,14 @@ export default function JournalEntryEditor() {
 
   const [adDisplay, setAdDisplay] = useState(formatAdDate(formData.posting_date));
   const [bsDisplay, setBsDisplay] = useState(formData.miti);
+  const [adMonth, setAdMonth] = useState<Date>(new Date());
 
   const syncDates = (newAd: string, newBs: string) => {
     setFormData(prev => ({ ...prev, posting_date: newAd, miti: newBs }));
     setAdDisplay(formatAdDate(newAd));
     setBsDisplay(newBs);
+    const date = fromDateStr(newAd);
+    if (date) setAdMonth(date);
   };
 
   // Sync posting date with business date
@@ -463,20 +467,36 @@ export default function JournalEntryEditor() {
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={fromDateStr(formData.posting_date)}
-                        month={fromDateStr(formData.posting_date)}
-                        onSelect={(date) => {
-                          if (date) {
-                            const ad = toYmd(date);
-                            const bs = adToBs(ad);
-                            syncDates(ad, bs);
-                          }
-                        }}
-                        disabled={(date) => !allowFutureDates && date > new Date()}
-                        initialFocus
-                      />
+                      <div className="flex flex-col">
+                        <Calendar
+                          mode="single"
+                          selected={fromDateStr(formData.posting_date)}
+                          month={adMonth}
+                          onMonthChange={setAdMonth}
+                          onSelect={(date) => {
+                            if (date) {
+                              const ad = toYmd(date);
+                              const bs = adToBs(ad);
+                              syncDates(ad, bs);
+                            }
+                          }}
+                          disabled={(date) => !allowFutureDates && date > new Date()}
+                          initialFocus
+                        />
+                        <div className="p-2 border-t flex justify-center bg-muted/5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-primary font-bold w-full hover:bg-primary/5"
+                            onClick={() => {
+                              const today = new Date();
+                              syncDates(toYmd(today), adToBs(today));
+                            }}
+                          >
+                            Today
+                          </Button>
+                        </div>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -511,16 +531,31 @@ export default function JournalEntryEditor() {
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
-                      <NepaliCalendar
-                        selected={formData.miti}
-                        disableFuture={!allowFutureDates}
-                        onSelect={(bs) => {
-                          const ad = bsToAd(bs);
-                          if (ad) {
-                            syncDates(ad, bs);
-                          }
-                        }}
-                      />
+                      <div className="flex flex-col">
+                        <NepaliCalendar
+                          selected={formData.miti}
+                          disableFuture={!allowFutureDates}
+                          onSelect={(bs) => {
+                            const ad = bsToAd(bs);
+                            if (ad) {
+                              syncDates(ad, bs);
+                            }
+                          }}
+                        />
+                        <div className="p-2 border-t flex justify-center bg-muted/5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-primary font-bold w-full hover:bg-primary/5"
+                            onClick={() => {
+                              const today = new Date();
+                              syncDates(toYmd(today), adToBs(today));
+                            }}
+                          >
+                            Today
+                          </Button>
+                        </div>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -554,8 +589,9 @@ export default function JournalEntryEditor() {
                 <div className="space-y-1">
                   <Input
                     readOnly
+                    tabIndex={-1}
                     value={formData.voucher_no}
-                    className="bg-muted/50 border-muted-foreground/20 h-10 font-mono font-bold text-primary text-sm"
+                    className="bg-muted/50 border-muted-foreground/20 h-10 font-mono font-bold text-amber-500 text-sm focus:ring-0 select-none pointer-events-none"
                     placeholder="Auto"
                   />
                   <p className="text-[9px] text-muted-foreground italic leading-tight">
@@ -574,15 +610,17 @@ export default function JournalEntryEditor() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <div className="min-w-[1100px]">
-                <div className="grid grid-cols-[50px_60px_2.5fr_1.5fr_120px_120px_2fr_80px] bg-muted/20 border-b items-center h-10 px-4">
-                  <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">#</div>
+                <div className="grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr_50px] bg-muted/20 border-b items-center h-10 px-4">
+                  <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Action</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">No.</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Account</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-4">Remarks</div>
-                  <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pr-4">Action</div>
+                  <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Menu className="h-3 w-3 mx-auto" />
+                  </div>
                 </div>
 
                 <Reorder.Group axis="y" values={formData.lines} onReorder={reorderLines} className="divide-y divide-muted-foreground/10">
@@ -592,17 +630,30 @@ export default function JournalEntryEditor() {
                       value={line}
                       dragListener={!isReadOnly}
                       className={cn(
-                        "grid grid-cols-[50px_60px_2.5fr_1.5fr_120px_120px_2fr_80px] items-center h-14 px-4 bg-background/40 transition-colors group",
+                        "grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr_50px] items-center h-14 px-4 bg-background/40 transition-colors group",
                         !isReadOnly && "hover:bg-muted/10"
                       )}
                     >
-                      <div className={cn(
-                        "flex justify-center text-muted-foreground transition-colors skip-nav",
-                        !isReadOnly ? "cursor-grab active:cursor-grabbing hover:text-primary" : "opacity-30"
-                      )}>
-                        <MoreVertical className="h-4 w-4" />
+                      <div className="text-center skip-nav">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem className="gap-2">
+                              <Edit2 className="h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            {!isReadOnly && (
+                              <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleRemoveRow(index)}>
+                                <Trash2 className="h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <div className="font-mono text-muted-foreground text-sm pl-2">{index + 1}</div>
+                      <div className="font-mono text-muted-foreground text-sm font-bold pl-2">{index + 1}</div>
                       <div className="flex items-center gap-2 pr-4">
                         <div className="flex-1 min-w-0">
                           <Select
@@ -610,12 +661,12 @@ export default function JournalEntryEditor() {
                             value={line.account_id}
                             onValueChange={(v) => updateLine(index, "account_id", v)}
                           >
-                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-semibold w-full text-sm disabled:opacity-100">
-                              <SelectValue placeholder="Select Account" />
+                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-bold w-full text-sm disabled:opacity-100">
+                              <SelectValue placeholder="Select Account" className="font-bold" />
                             </SelectTrigger>
                             <SelectContent>
                               {accounts?.map((acc) => (
-                                <SelectItem key={acc.id} value={acc.id}>
+                                <SelectItem key={acc.id} value={acc.id} className="font-bold">
                                   {acc.name} - {acc.code}
                                 </SelectItem>
                               ))}
@@ -643,7 +694,7 @@ export default function JournalEntryEditor() {
                           placeholder="Sub Ledger"
                           value={line.party_type}
                           onChange={(e) => updateLine(index, "party_type", e.target.value)}
-                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm"
+                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm font-bold"
                         />
                       </div>
                       <div className="pr-4">
@@ -672,31 +723,14 @@ export default function JournalEntryEditor() {
                           placeholder="Remarks"
                           value={line.party}
                           onChange={(e) => updateLine(index, "party", e.target.value)}
-                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm"
+                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm font-bold"
                         />
                       </div>
-                      <div className="text-right pr-4 skip-nav">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
-                              <Eye className="h-4 w-4" /> View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                              <Edit2 className="h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                              <Printer className="h-4 w-4" /> Print
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleRemoveRow(index)}>
-                              <Trash2 className="h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <div className={cn(
+                        "flex justify-center text-muted-foreground transition-colors skip-nav",
+                        !isReadOnly ? "cursor-grab active:cursor-grabbing hover:text-primary" : "opacity-30"
+                      )}>
+                        <Menu className="h-4 w-4" />
                       </div>
                     </Reorder.Item>
                   ))}
