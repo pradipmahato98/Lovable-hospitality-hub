@@ -116,30 +116,30 @@ export default function JournalEntryEditor() {
   const [adDisplay, setAdDisplay] = useState(formatAdDate(formData.posting_date));
   const [bsDisplay, setBsDisplay] = useState(formData.miti);
 
+  const syncDates = (newAd: string, newBs: string) => {
+    setFormData(prev => ({ ...prev, posting_date: newAd, miti: newBs }));
+    setAdDisplay(formatAdDate(newAd));
+    setBsDisplay(newBs);
+  };
+
   // Sync posting date with business date
   useEffect(() => {
     if (businessDate && !id && !isDirty) {
       const bs = adToBs(businessDate);
-      setFormData(prev => ({
-        ...prev,
-        posting_date: businessDate,
-        miti: bs
-      }));
-      setAdDisplay(formatAdDate(businessDate));
-      setBsDisplay(bs);
+      syncDates(businessDate, bs);
     }
   }, [businessDate, id, isDirty]);
 
   // Load existing entry if editing
   useEffect(() => {
     if (id && entryData) {
-      const bs = entryData.series === "BS" ? "TODO" : adToBs(entryData.date); // Fallback
+      const bs = entryData.miti || adToBs(entryData.date);
       setFormData({
         entry_type: entryData.voucher_type || "Journal Voucher",
         series: entryData.series || "ACC-JV-.YYYY.-",
-        company: "Unico Plastics Inc.", // Mocked for now
+        company: "Unico Plastics Inc.",
         posting_date: entryData.date,
-        miti: entryData.miti || bs,
+        miti: bs,
         fiscal_year: entryData.fiscal_year || "2080/81",
         voucher_no: entryData.entry_number,
         finance_book: entryData.finance_book || "",
@@ -444,9 +444,7 @@ export default function JournalEntryEditor() {
                           if (date) {
                             const ad = date.toISOString().split('T')[0];
                             const bs = adToBs(ad);
-                            setFormData(p => ({ ...p, posting_date: ad, miti: bs }));
-                            setAdDisplay(formatAdDate(ad));
-                            setBsDisplay(bs);
+                            syncDates(ad, bs);
                           }
                         }}
                         disabled={(date) => !allowFutureDates && date > new Date()}
@@ -492,9 +490,7 @@ export default function JournalEntryEditor() {
                         onSelect={(bs) => {
                           const ad = bsToAd(bs);
                           if (ad) {
-                            setFormData(p => ({ ...p, miti: bs, posting_date: ad }));
-                            setAdDisplay(formatAdDate(ad));
-                            setBsDisplay(bs);
+                            syncDates(ad, bs);
                           }
                         }}
                       />

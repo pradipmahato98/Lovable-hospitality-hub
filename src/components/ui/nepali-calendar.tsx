@@ -2,7 +2,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { adToBs, bsToAd } from "@/utils/nepaliDate";
+import { adToBs, bsToAd, NEPALI_MONTHS } from "@/utils/nepaliDate";
 
 interface NepaliCalendarProps {
   selected?: string; // YYYY/MM/DD
@@ -11,31 +11,7 @@ interface NepaliCalendarProps {
   className?: string;
 }
 
-const NEPALI_MONTHS = [
-  "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
-  "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
-];
-
 const NEPALI_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const bsMonthDays: Record<number, number[]> = {
-  2070: [31, 31, 31, 32, 31, 31, 30, 30, 30, 29, 30, 30],
-  2071: [31, 31, 32, 31, 31, 31, 30, 29, 30, 30, 30, 30],
-  2072: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2073: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2074: [31, 31, 31, 32, 31, 31, 30, 30, 30, 30, 29, 30],
-  2075: [31, 31, 32, 31, 31, 31, 30, 29, 30, 30, 30, 30],
-  2076: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2077: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2078: [31, 31, 31, 32, 31, 31, 30, 30, 30, 30, 29, 30],
-  2079: [31, 31, 32, 31, 31, 31, 30, 29, 30, 30, 30, 30],
-  2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2081: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2082: [31, 31, 31, 32, 31, 31, 30, 30, 30, 30, 29, 30],
-  2083: [31, 31, 32, 31, 31, 31, 30, 29, 30, 30, 30, 30],
-  2084: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  2085: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-};
 
 export function NepaliCalendar({ selected, onSelect, disableFuture, className }: NepaliCalendarProps) {
   const todayBs = adToBs(new Date());
@@ -81,8 +57,12 @@ export function NepaliCalendar({ selected, onSelect, disableFuture, className }:
   };
 
   const getMonthDays = (year: number, month: number) => {
-    const months = bsMonthDays[year] || bsMonthDays[2080];
-    return months[month];
+    // Access the raw data if available
+    const data = (adToBs as any).bsMonthDays?.[year];
+    if (data) return data[month];
+
+    // Fallback logic if needed, but the utility should have the data
+    return 30;
   };
 
   const daysInMonth = getMonthDays(currentDate.year, currentDate.month);
