@@ -103,8 +103,15 @@ const beverageOptions = [
 
 export function CateringManagementPanel({ events }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>({ key: "event_date", direction: "asc" });
+
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [noOrderDialogOpen, setNoOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
   
   // Local state for catering orders (would be DB in production)
@@ -119,16 +126,73 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     specialNotes: "",
   });
 
-  // Filter active events
+  // Filter and sort active events
   const activeEvents = useMemo(() => {
-    return events.filter(
-      (e) =>
-        e.status !== "completed" &&
-        e.status !== "cancelled" &&
-        (e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    let result = events.filter(
+      (e) => e.status !== "completed" && e.status !== "cancelled"
     );
-  }, [events, searchQuery]);
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.event_name.toLowerCase().includes(query) ||
+          e.client_name.toLowerCase().includes(query)
+      );
+    }
+
+    // Status filter (Catering Order Status)
+    if (statusFilter !== "all") {
+      result = result.filter((e) => {
+        const order = cateringOrders.find((o) => o.eventId === e.id);
+        if (statusFilter === "none") return !order;
+        return order?.status === statusFilter;
+      });
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      if (sortConfig.key === "estimatedCost" || sortConfig.key === "cateringStatus") {
+        const aOrder = cateringOrders.find((o) => o.eventId === a.id);
+        const bOrder = cateringOrders.find((o) => o.eventId === b.id);
+
+        if (sortConfig.key === "estimatedCost") {
+          aValue = aOrder?.estimatedCost || 0;
+          bValue = bOrder?.estimatedCost || 0;
+        } else {
+          aValue = aOrder?.status || "";
+          bValue = bOrder?.status || "";
+        }
+      } else {
+        aValue = a[sortConfig.key as keyof BanquetEvent];
+        bValue = b[sortConfig.key as keyof BanquetEvent];
+      }
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (aValue < bValue) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [events, searchQuery, statusFilter, sortConfig, cateringOrders]);
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
   // Get catering order for an event
   const getOrderForEvent = (eventId: string) => {
@@ -162,7 +226,12 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
 
   const handleOpenDetailsDialog = (event: BanquetEvent) => {
     setSelectedEvent(event);
-    setDetailsDialogOpen(true);
+    const order = getOrderForEvent(event.id);
+    if (order) {
+      setDetailsDialogOpen(true);
+    } else {
+      setNoOrderDialogOpen(true);
+    }
   };
 
   const handleSaveOrder = () => {
@@ -296,9 +365,9 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      {/* Search & Filter */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="relative flex-1 max-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search events..."
@@ -307,6 +376,21 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             className="pl-9"
           />
         </div>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Order Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Orders</SelectItem>
+            <SelectItem value="none">No Order</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="confirmed">Confirmed</SelectItem>
+            <SelectItem value="preparing">Preparing</SelectItem>
+            <SelectItem value="ready">Ready</SelectItem>
+            <SelectItem value="served">Served</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Events with Catering */}
@@ -318,14 +402,39 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead></TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Guests</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("event_name")}
+                  >
+                    Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("event_date")}
+                  >
+                    Date {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("guest_count")}
+                  >
+                    Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
                   <TableHead>Menu Package</TableHead>
                   <TableHead>Dietary</TableHead>
-                  <TableHead>Est. Cost</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("estimatedCost")}
+                  >
+                    Est. Cost {sortConfig.key === "estimatedCost" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("cateringStatus")}
+                  >
+                    Status {sortConfig.key === "cateringStatus" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -337,16 +446,14 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                     : null;
                   return (
                     <TableRow key={event.id}>
-                      <TableCell>
-                        {order && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenDetailsDialog(event)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
+                      <TableCell className="w-[50px]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDetailsDialog(event)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div>
@@ -433,6 +540,29 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
           )}
         </CardContent>
       </Card>
+
+      {/* No Order Dialog */}
+      <Dialog open={noOrderDialogOpen} onOpenChange={setNoOrderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>No Catering Order</DialogTitle>
+            <DialogDescription>
+              No catering order has been configured for this event yet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setNoOrderDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setNoOrderDialogOpen(false);
+              if (selectedEvent) handleOpenOrderDialog(selectedEvent);
+            }}>
+              Configure Setup Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
