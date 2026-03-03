@@ -45,6 +45,7 @@ import {
   Layout,
   BarChart3,
   Eye,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -664,8 +665,16 @@ export default function Banquet() {
                     placeholder="Search events..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="pl-9 pr-8"
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
 
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -708,6 +717,22 @@ export default function Banquet() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {(searchQuery || typeFilter !== "all" || statusFilter !== "all" || venueFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setTypeFilter("all");
+                      setStatusFilter("all");
+                      setVenueFilter("all");
+                    }}
+                    className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
 
               <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
