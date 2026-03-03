@@ -182,9 +182,40 @@ const EventDetailsDialog = ({ event }: { event: BanquetEvent }) => {
               <div>
                 <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Contact</p>
                 <p>{event.client_phone || 'N/A'}</p>
+                <p className="text-xs text-muted-foreground">{event.client_email || 'No email'}</p>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 py-4 border-t border-b">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <UtensilsCrossed className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Menu Package</p>
+                <p>{event.menu_package || 'Not specified'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Deposit Paid</p>
+                <p className="font-semibold">${event.deposit_amount?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center py-2 text-[10px] text-muted-foreground uppercase tracking-widest">
+          <span>ID: {event.id}</span>
+          <span>Created: {new Date(event.created_at).toLocaleString()}</span>
         </div>
 
         {event.notes && (
@@ -209,6 +240,14 @@ export default function Banquet() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("events");
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [venueFilter, setVenueFilter] = useState("all");
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof BanquetEvent;
+    direction: "asc" | "desc";
+  }>({ key: "event_date", direction: "asc" });
+
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
    const [editingEvent, setEditingEvent] = useState<BanquetEvent | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<
@@ -241,11 +280,7 @@ export default function Banquet() {
         .select("*")
         .order("event_date", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching banquet events:", error);
-        return [];
-      }
-
+      if (error) throw error;
       return data as BanquetEvent[];
     },
   });
@@ -469,12 +504,66 @@ export default function Banquet() {
     });
   };
 
-  // Filter events
-  const filteredEvents = events.filter(
-    (e) =>
-      e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.client_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Unique venues for filter
+  const venues = useMemo(() => {
+    return Array.from(new Set(events.map((e) => e.venue))).filter(Boolean).sort();
+  }, [events]);
+
+  // Filter and sort events
+  const filteredEvents = useMemo(() => {
+    let result = [...events];
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.event_name.toLowerCase().includes(query) ||
+          e.client_name.toLowerCase().includes(query)
+      );
+    }
+
+    // Type filter
+    if (typeFilter !== "all") {
+      result = result.filter((e) => e.event_type === typeFilter);
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((e) => e.status === statusFilter);
+    }
+
+    // Venue filter
+    if (venueFilter !== "all") {
+      result = result.filter((e) => e.venue === venueFilter);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (aValue < bValue) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [events, searchQuery, typeFilter, statusFilter, venueFilter, sortConfig]);
+
+  const handleSort = (key: keyof BanquetEvent) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
   // Metrics
   const upcomingEvents = events.filter(
@@ -568,15 +657,59 @@ export default function Banquet() {
 
           <TabsContent value="events" className="space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex items-center gap-2 flex-1 flex-wrap min-w-[300px]">
+                <div className="relative flex-1 max-w-[240px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search events..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="wedding">Wedding</SelectItem>
+                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="birthday">Birthday</SelectItem>
+                    <SelectItem value="conference">Conference</SelectItem>
+                    <SelectItem value="social">Social</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="inquiry">Inquiry</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={venueFilter} onValueChange={setVenueFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="All Venues" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Venues</SelectItem>
+                    {venues.map(v => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
               <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 New Event
@@ -593,14 +726,49 @@ export default function Banquet() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Before Event</TableHead>
-                        <TableHead>Event</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Venue</TableHead>
-                        <TableHead>Guests</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("event_name")}
+                        >
+                          Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("client_name")}
+                        >
+                          Client {sortConfig.key === "client_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("event_date")}
+                        >
+                          Date & Time {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("venue")}
+                        >
+                          Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("guest_count")}
+                        >
+                          Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("total_amount")}
+                        >
+                          Amount {sortConfig.key === "total_amount" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("status")}
+                        >
+                          Status {sortConfig.key === "status" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
