@@ -286,6 +286,8 @@ export function useCreateJournalEntry() {
         sub_ledger?: string;
       }[];
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Generate entry number based on series if provided
       const prefix = entry.series ? entry.series.replace(".YYYY.", new Date().getFullYear().toString()).replace(/\.$/, "") : "JE";
       const entryNumber = `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
@@ -301,6 +303,7 @@ export function useCreateJournalEntry() {
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
+          created_by: user?.id,
           voucher_type: entry.voucher_type || "JV",
           series: entry.series,
           company_id: entry.company_id,

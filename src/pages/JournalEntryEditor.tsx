@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,7 @@ import {
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry, useCreateAccount, Account } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
 import { toast } from "sonner";
-import { adToBs, bsToAd, formatAdDate, parseAdDate } from "@/utils/nepaliDate";
+import { adToBs, bsToAd, formatAdDate, parseAdDate, toYmd, fromDateStr } from "@/utils/nepaliDate";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -95,6 +95,8 @@ export default function JournalEntryEditor() {
     description: "",
   });
   const [currentRowIndex, setCurrentRowIndex] = useState<number | null>(null);
+  const [attachments, setAttachments] = useState<{ id: string, name: string, size: string, type: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     entry_type: "Journal Voucher",
@@ -278,6 +280,30 @@ export default function JournalEntryEditor() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newAttachments = Array.from(files).map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      type: file.type
+    }));
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+    setIsDirty(true);
+    toast.success(`${files.length} file(s) uploaded`);
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+    setIsDirty(true);
+  };
+
   const handleSave = async () => {
     if (!isBalanced) {
       toast.error("Debit and Credit totals must be equal and greater than zero");
@@ -439,10 +465,11 @@ export default function JournalEntryEditor() {
                     <PopoverContent className="w-auto p-0" align="end">
                       <Calendar
                         mode="single"
-                        selected={new Date(formData.posting_date)}
+                        selected={fromDateStr(formData.posting_date)}
+                        month={fromDateStr(formData.posting_date)}
                         onSelect={(date) => {
                           if (date) {
-                            const ad = date.toISOString().split('T')[0];
+                            const ad = toYmd(date);
                             const bs = adToBs(ad);
                             syncDates(ad, bs);
                           }
@@ -730,7 +757,18 @@ export default function JournalEntryEditor() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               <div className="space-y-4">
                 {!isReadOnly && (
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group relative"
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept="image/*,application/pdf"
+                    />
                     <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Upload className="h-6 w-6 text-primary" />
                     </div>
@@ -740,17 +778,40 @@ export default function JournalEntryEditor() {
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attached Files</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attached Files ({attachments.length})</p>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-muted-foreground/10 group">
-                      <div className="flex items-center gap-3">
-                        <FileIcon className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm">invoice_vendor_293.pdf</span>
+                    {attachments.length === 0 && (
+                      <div className="text-center py-4 border rounded-md border-dashed bg-muted/10 text-muted-foreground text-xs">
+                        No files attached
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
+                    )}
+                    {attachments.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-muted-foreground/10 group">
+                        <div className="flex items-center gap-3">
+                          <FileIcon className={cn(
+                            "h-4 w-4",
+                            file.type.includes('image') ? "text-amber-500" : "text-blue-500"
+                          )} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium truncate max-w-[200px]">{file.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{file.size}</span>
+                          </div>
+                        </div>
+                        {!isReadOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeAttachment(file.id);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
