@@ -367,12 +367,6 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
 
       {/* Events Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Layout className="h-5 w-5" />
-            Venue Setup Tracking
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {activeEvents.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -382,7 +376,7 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Before Event</TableHead>
+                  <TableHead></TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Venue</TableHead>

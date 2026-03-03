@@ -241,11 +241,7 @@ export default function Banquet() {
         .select("*")
         .order("event_date", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching banquet events:", error);
-        return [];
-      }
-
+      if (error) throw error;
       return data as BanquetEvent[];
     },
   });
@@ -593,7 +589,7 @@ export default function Banquet() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Before Event</TableHead>
+                        <TableHead></TableHead>
                         <TableHead>Event</TableHead>
                         <TableHead>Client</TableHead>
                         <TableHead>Date & Time</TableHead>

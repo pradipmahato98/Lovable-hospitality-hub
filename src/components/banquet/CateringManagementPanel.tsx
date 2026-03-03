@@ -311,12 +311,6 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
 
       {/* Events with Catering */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UtensilsCrossed className="h-5 w-5" />
-            Event Catering Orders
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {activeEvents.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">No active events</div>
@@ -324,7 +318,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Before Event</TableHead>
+                  <TableHead></TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Guests</TableHead>
