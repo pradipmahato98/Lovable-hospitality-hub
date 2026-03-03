@@ -32,3 +32,8 @@
 **Vulnerability:** The E2EE module used hardcoded master password and salt in the source code, and guest PII (id_number) was being stored encrypted but displayed in its ciphertext form in the UI. Additionally, some entry points (useAddGuestDocument) bypassed encryption entirely.
 **Learning:** Security features like E2EE are only as strong as their key management. Hardcoding keys makes the encryption trivial to bypass. Furthermore, security features must be implemented consistently across all data entry/retrieval paths.
 **Prevention:** Always use environment variables for system-wide secrets. Centralize encryption/decryption logic in an API bridge or utility layer and ensure all data hooks automatically handle the transformation to keep the UI clean and secure.
+
+## 2026-02-17 - SQL Injection via Dynamic Identifiers
+**Vulnerability:** SQL injection in the custom backend's database service via unsanitized table names and column identifiers in UPDATE and DELETE operations. These identifiers were interpolated directly into SQL strings.
+**Learning:** SQL parameterization (using placeholders like `$1`) typically only works for data values, not for structural identifiers like table or column names. This limitation often leads developers to mistakenly use string interpolation, creating a critical injection vector.
+**Prevention:** Always validate dynamic identifiers against a strict regex (e.g., `/^[a-zA-Z0-9_-]+$/`) and implement schema-based whitelisting by fetching valid column names from the database schema before query execution.
