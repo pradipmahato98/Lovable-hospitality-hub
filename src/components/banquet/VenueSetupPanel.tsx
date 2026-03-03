@@ -42,6 +42,7 @@ import {
   Lightbulb,
   Mic2,
   Eye,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -435,8 +436,16 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             placeholder="Search events..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-8"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -463,6 +472,21 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             ))}
           </SelectContent>
         </Select>
+
+        {(searchQuery || statusFilter !== "all" || venueFilter !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchQuery("");
+              setStatusFilter("all");
+              setVenueFilter("all");
+            }}
+            className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
+          >
+            Clear Filters
+          </Button>
+        )}
       </div>
 
       {/* Events Table */}
