@@ -29,6 +29,8 @@ export interface JournalEntry {
     last_name: string | null;
   };
   voucher_type?: string;
+  miti?: string;
+  fiscal_year?: string;
   series?: string;
   company_id?: string;
   finance_book?: string;
@@ -47,6 +49,7 @@ export interface JournalLine {
   description: string | null;
   party_type?: string;
   party_id?: string;
+  sub_ledger?: string;
   account?: Account;
 }
 
@@ -260,12 +263,13 @@ export function useJournalEntries(filters?: {
 
 export function useCreateJournalEntry() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (entry: {
       date: string;
       description: string;
+      miti?: string;
+      fiscal_year?: string;
       reference?: string | null;
       voucher_type?: string;
       series?: string;
@@ -279,6 +283,7 @@ export function useCreateJournalEntry() {
         description?: string | null;
         party_type?: string;
         party_id?: string;
+        sub_ledger?: string;
       }[];
     }) => {
       // Generate entry number based on series if provided
@@ -291,10 +296,11 @@ export function useCreateJournalEntry() {
         .insert({
           entry_number: entryNumber,
           date: entry.date,
+          miti: entry.miti,
+          fiscal_year: entry.fiscal_year,
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
-          created_by: user?.id,
           voucher_type: entry.voucher_type || "JV",
           series: entry.series,
           company_id: entry.company_id,
@@ -318,6 +324,7 @@ export function useCreateJournalEntry() {
         description: line.description ?? null,
         party_type: line.party_type,
         party_id: line.party_id,
+        sub_ledger: line.sub_ledger,
       }));
 
       const { error: linesError } = await db.from("journal_lines").insert(lines);
@@ -379,6 +386,8 @@ export function useUpdateJournalEntry() {
       entry: {
         date: string;
         description: string;
+        miti?: string;
+        fiscal_year?: string;
         reference?: string | null;
         voucher_type?: string;
         series?: string;
@@ -392,6 +401,7 @@ export function useUpdateJournalEntry() {
           description?: string | null;
           party_type?: string;
           party_id?: string;
+          sub_ledger?: string;
         }[];
       };
     }) => {
@@ -405,6 +415,8 @@ export function useUpdateJournalEntry() {
           .from("journal_entries")
           .update({
             date: entry.date,
+            miti: entry.miti,
+            fiscal_year: entry.fiscal_year,
             description: entry.description,
             reference: entry.reference ?? null,
             voucher_type: entry.voucher_type,
@@ -433,6 +445,7 @@ export function useUpdateJournalEntry() {
           description: line.description ?? null,
           party_type: line.party_type,
           party_id: line.party_id,
+          sub_ledger: line.sub_ledger,
         }));
 
         const { error: linesError } = await db.from("journal_lines").insert(lines);

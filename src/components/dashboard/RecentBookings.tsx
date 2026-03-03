@@ -53,7 +53,7 @@ const statusColors = {
 
 export function RecentBookings() {
   return (
-    <Card>
+    <Card variant="elevated" className="animate-slide-up" style={{ animationDelay: "200ms" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Bookings</CardTitle>
         <a href="/reservations" className="text-sm text-primary hover:underline">

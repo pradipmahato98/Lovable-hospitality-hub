@@ -24,40 +24,28 @@ const MOCK_TABLES = [
 export const TableExplorer = ({ searchQuery }: TableExplorerProps) => {
   const [tables, setTables] = useState(MOCK_TABLES);
   const [viewingTable, setViewingTable] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchTables = async () => {
-      setIsLoading(true);
       try {
-        // Querying information_schema to get real table list from Supabase
-        const { data, error } = await api.post('/sql', {
-          query: `
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-            AND table_type = 'BASE TABLE'
-            ORDER BY table_name;
-          `
+        const response = await fetch("http://localhost:3001/api/database/tables", {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
         });
-
-        if (!error && data) {
+        if (response.ok) {
+          const data = await response.json();
           const mappedTables = data.map((t: any) => ({
             name: t.table_name,
             rows: "...",
             columns: "...",
             size: "...",
-            lastModified: "Live"
+            lastModified: "Real-time"
           }));
-          setTables(mappedTables.length > 0 ? mappedTables : MOCK_TABLES);
-        } else {
-          // Fallback to MOCK if RPC doesn't exist or errors
-          setTables(MOCK_TABLES);
+          setTables(mappedTables);
         }
       } catch (error) {
         console.error("Failed to fetch tables:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
     fetchTables();

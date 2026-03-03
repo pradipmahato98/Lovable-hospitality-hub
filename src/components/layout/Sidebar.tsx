@@ -1,14 +1,18 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   CalendarDays,
+  Calendar,
   Users,
   BedDouble,
   Receipt,
   Package,
   BarChart3,
   Settings,
+  ChevronLeft,
+  ChevronRight,
   Hotel,
   LogOut,
   UserCog,
@@ -21,33 +25,16 @@ import {
   DollarSign,
   PartyPopper,
   ShieldCheck,
+  Terminal,
   Moon,
   Lock,
   Database,
-  ChevronRight,
-  User
 } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -60,7 +47,7 @@ const navItems = [
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
   { icon: DollarSign, label: "Finance/Account", path: "/finance" },
-  { icon: Receipt, label: "Journal Entry", path: "/finance/journal/new" },
+  { icon: Receipt, label: "Journal entries", path: "/finance/journal" },
   { icon: PartyPopper, label: "Banquet", path: "/banquet" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
@@ -80,10 +67,20 @@ const adminNavItems = [
   { icon: Code2, label: "Dev Panel", path: "/dev" },
 ];
 
-export function AppSidebar() {
+function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
+  const { collapsed, toggleCollapsed, isMobile } = useSidebar();
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const navRef = useRef<HTMLElement>(null);
+
+  // Auto-scroll to active item
+  useEffect(() => {
+    const activeItem = navRef.current?.querySelector('[data-active="true"]');
+    if (activeItem) {
+      activeItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [location.pathname]);
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -91,139 +88,174 @@ export function AppSidebar() {
     return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
   };
 
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link to="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-gold text-primary-foreground shadow-glow">
-                  <Hotel className="size-4" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-display font-semibold text-gradient-gold">LuxeStay</span>
-                  <span className="text-xs text-muted-foreground">Property Management</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path)}
-                    tooltip={item.label}
-                  >
-                    <Link to={item.path}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+  const renderNavItem = (item: typeof navItems[0]) => {
+    const isActive = item.path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(item.path);
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Operations</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {operationsNavItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname.startsWith(item.path)}
-                    tooltip={item.label}
-                  >
-                    <Link to={item.path}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {adminNavItems.map((item) => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location.pathname.startsWith(item.path)}
-                      tooltip={item.label}
-                    >
-                      <Link to={item.path}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={onNavClick}
+        data-active={isActive}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          isActive
+            ? "bg-sidebar-accent text-primary shadow-glow"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+          collapsed && !isMobile && "justify-center px-2"
         )}
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-gradient-gold text-primary-foreground shadow-glow">
-                    <span className="text-xs font-semibold">{getInitials()}</span>
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
-                      {profile?.first_name} {profile?.last_name}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">Staff Member</span>
-                  </div>
-                  <ChevronRight className="ml-auto size-4" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="bottom"
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer w-full">
-                    <User className="size-4" />
-                    My Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
-                  <LogOut className="size-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+      >
+        <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+        {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar sidebar">
+      {/* Logo */}
+      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border flex-shrink-0">
+        <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
+            <Hotel className="h-5 w-5 text-primary-foreground" />
+          </div>
+          {(!collapsed || isMobile) && (
+            <span className="font-display text-xl font-semibold text-gradient-gold truncate">
+              LuxeStay
+            </span>
+          )}
+        </Link>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            className="h-8 w-8 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent flex-shrink-0 ml-auto"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav ref={navRef} className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-hide">
+        {navItems.map(renderNavItem)}
+
+        {/* Operations Section */}
+        {(!collapsed || isMobile) && (
+          <div className="mt-4 mb-2 px-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Operations
+            </p>
+          </div>
+        )}
+        {operationsNavItems.map((item) => {
+          const isActive = location.pathname.startsWith(item.path);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={onNavClick}
+              data-active={isActive}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-sidebar-accent text-primary shadow-glow"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+                collapsed && !isMobile && "justify-center px-2"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+              {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+            </Link>
+          );
+        })}
+
+        {/* Admin Section */}
+        {isAdmin && (
+          <>
+            {(!collapsed || isMobile) && (
+              <div className="mt-4 mb-2 px-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Admin
+                </p>
+              </div>
+            )}
+            {adminNavItems.map(renderNavItem)}
+          </>
+        )}
+      </nav>
+
+      {/* User Section */}
+      <div className="mt-auto border-t border-sidebar-border flex-shrink-0 bg-sidebar-background/50 backdrop-blur-sm">
+        {(!collapsed || isMobile) ? (
+          <div className="p-4">
+            <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
+              <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0 shadow-glow">
+                <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {profile?.first_name || "User"} {profile?.last_name || ""}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">Staff Member</p>
+              </div>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="p-3 flex flex-col items-center gap-2">
+            <Link to="/profile" className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80 shadow-glow">
+              <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-export { AppSidebar as Sidebar };
+export function Sidebar() {
+  const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
+
+  // Mobile: Sheet overlay
+  if (isMobile) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-72 p-0 border-sidebar-border">
+          <SidebarContent onNavClick={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Fixed sidebar
+  return (
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300 sidebar",
+        collapsed ? "w-20" : "w-64"
+      )}
+    >
+      <SidebarContent />
+    </aside>
+  );
+}

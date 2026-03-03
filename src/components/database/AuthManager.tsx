@@ -48,22 +48,20 @@ export const AuthManager = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      setLoading(true);
       try {
-        // Try to fetch from profiles table via api bridge as fallback for Auth management
-        const { data: profiles, error } = await (await api.from('profiles')).select('*');
-
-        if (!error && profiles) {
-          setUsers(profiles.map((u: any) => ({
+        const response = await fetch("http://localhost:3001/api/auth/users");
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data.map((u: any) => ({
             id: u.id,
             email: u.email,
-            role: 'unknown', // Roles are in user_roles table
-            status: u.is_blocked ? 'blocked' : 'active',
-            lastSignIn: 'Live'
+            role: u.role || 'user',
+            status: u.status ? 'blocked' : 'active',
+            lastSignIn: u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : 'Never'
           })));
         }
       } catch (error) {
-        console.error("Failed to fetch users:", error);
+        console.error("Failed to fetch users from custom backend:", error);
       } finally {
         setLoading(false);
       }
