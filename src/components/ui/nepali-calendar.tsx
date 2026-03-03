@@ -8,12 +8,14 @@ interface NepaliCalendarProps {
   selected?: string; // YYYY/MM/DD
   onSelect?: (date: string) => void;
   disableFuture?: boolean;
+  minDate?: string;
+  maxDate?: string;
   className?: string;
 }
 
 const NEPALI_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function NepaliCalendar({ selected, onSelect, disableFuture, className }: NepaliCalendarProps) {
+export function NepaliCalendar({ selected, onSelect, disableFuture, minDate, maxDate, className }: NepaliCalendarProps) {
   const todayBs = adToBs(new Date());
 
   const [currentDate, setCurrentDate] = React.useState(() => {
@@ -80,16 +82,17 @@ export function NepaliCalendar({ selected, onSelect, disableFuture, className }:
     const dateStr = `${currentDate.year}/${(currentDate.month + 1).toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}`;
     const isSelected = selected === dateStr;
     const isFuture = disableFuture && dateStr > todayBs;
+    const isOutOfRange = (minDate && dateStr < minDate) || (maxDate && dateStr > maxDate);
 
     days.push(
       <Button
         key={d}
         variant="ghost"
-        disabled={isFuture}
+        disabled={isFuture || isOutOfRange}
         className={cn(
           "h-9 w-9 p-0 font-normal",
           isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-          isFuture && "opacity-20 pointer-events-none"
+          (isFuture || isOutOfRange) && "opacity-20 pointer-events-none"
         )}
         onClick={() => onSelect?.(dateStr)}
       >

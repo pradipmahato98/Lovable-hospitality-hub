@@ -76,8 +76,21 @@ interface JournalLineItem {
 export default function JournalEntryEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const type = searchParams.get("type") || "Standard";
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Persist entry type (Standard/Quick)
+  const [type, setType] = useState(() => {
+    const urlType = searchParams.get("type");
+    if (urlType) return urlType;
+    return localStorage.getItem("journal_entry_type") || "Standard";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("journal_entry_type", type);
+    if (searchParams.get("type") !== type) {
+      setSearchParams({ type }, { replace: true });
+    }
+  }, [type, searchParams, setSearchParams]);
 
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: entryData, isLoading: isLoadingEntry } = useJournalEntry(id);
@@ -109,7 +122,7 @@ export default function JournalEntryEditor() {
     voucher_no: "Generated Automatically",
     finance_book: "",
     from_template: "",
-    reference_number: "",
+    narration: "",
     lines: [
       { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
       { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
@@ -119,6 +132,26 @@ export default function JournalEntryEditor() {
   const [adDisplay, setAdDisplay] = useState(formatAdDate(formData.posting_date));
   const [bsDisplay, setBsDisplay] = useState(formData.miti);
   const [adMonth, setAdMonth] = useState<Date>(new Date());
+
+  const fiscalLimits = useMemo(() => {
+    if (formData.fiscal_year === "2080/81") {
+      return {
+        adStart: "2023-07-17",
+        adEnd: "2024-07-15",
+        bsStart: "2080/04/01",
+        bsEnd: "2081/03/31",
+      };
+    }
+    if (formData.fiscal_year === "2079/80") {
+      return {
+        adStart: "2022-07-17",
+        adEnd: "2023-07-16",
+        bsStart: "2079/04/01",
+        bsEnd: "2080/03/31",
+      };
+    }
+    return null;
+  }, [formData.fiscal_year]);
 
   const syncDates = (newAd: string, newBs: string) => {
     setFormData(prev => ({ ...prev, posting_date: newAd, miti: newBs }));
@@ -150,7 +183,7 @@ export default function JournalEntryEditor() {
         voucher_no: entryData.entry_number,
         finance_book: entryData.finance_book || "",
         from_template: entryData.from_template || "",
-        reference_number: entryData.reference || "",
+        narration: entryData.reference || "",
         lines: entryData.lines?.map(l => ({
           account_id: l.account_id,
           party_type: l.sub_ledger || l.party_type || "",
@@ -231,6 +264,13 @@ export default function JournalEntryEditor() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Ctrl+S to save
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      e.preventDefault();
+      handleSave(true);
+      return;
+    }
+
     if (e.key === "Enter") {
       const target = e.target as HTMLElement;
       // Skip buttons like plus, edit, delete
@@ -288,6 +328,12 @@ export default function JournalEntryEditor() {
     const files = e.target.files;
     if (!files) return;
 
+    const oversizedFiles = Array.from(files).filter(f => f.size > 2 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error("File size limit is 2MB. Please remove larger files.");
+      return;
+    }
+
     const newAttachments = Array.from(files).map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
@@ -308,9 +354,14 @@ export default function JournalEntryEditor() {
     setIsDirty(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (shouldNavigate: boolean = true) => {
     if (!isBalanced) {
       toast.error("Debit and Credit totals must be equal and greater than zero");
+      return;
+    }
+
+    if (!formData.narration) {
+      toast.error("Narration is mandatory");
       return;
     }
 
@@ -336,8 +387,8 @@ export default function JournalEntryEditor() {
       miti: formData.miti,
       fiscal_year: formData.fiscal_year,
       voucher_type: formData.entry_type,
-      description: `Journal Entry - ${formData.reference_number || 'No Ref'}`,
-      reference: formData.reference_number,
+      description: `Journal Entry - ${formData.narration || 'No Ref'}`,
+      reference: formData.narration,
       lines: formData.lines
         .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
         .map(l => ({
@@ -360,7 +411,22 @@ export default function JournalEntryEditor() {
         toast.success("Journal Entry saved successfully");
       }
       setIsDirty(false);
-      navigate("/finance");
+
+      if (shouldNavigate) {
+        navigate("/finance");
+      } else {
+        // Reset form for "Save & New"
+        setFormData(prev => ({
+          ...prev,
+          voucher_no: "Generated Automatically",
+          reference_number: "",
+          narration: "",
+          lines: [
+            { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
+            { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
+          ]
+        }));
+      }
     } catch (error) {
       toast.error("Failed to save journal entry");
     }
@@ -380,6 +446,10 @@ export default function JournalEntryEditor() {
       }
       actions={
         <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mr-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
           {isDirty && !isReadOnly && (
             <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-3 py-1">
               <AlertCircle className="h-3 w-3" /> Not Saved
@@ -394,7 +464,7 @@ export default function JournalEntryEditor() {
             {isReadOnly ? "Back" : "Cancel"}
           </Button>
           {!id && (
-            <Button variant="secondary" onClick={() => navigate(`/finance/journal/new?type=${type === 'Quick' ? 'Standard' : 'Quick'}`)}>
+            <Button variant="secondary" onClick={() => setType(type === 'Quick' ? 'Standard' : 'Quick')}>
               {type === 'Quick' ? 'Standard Mode' : 'Quick Entry'}
             </Button>
           )}
@@ -480,7 +550,12 @@ export default function JournalEntryEditor() {
                               syncDates(ad, bs);
                             }
                           }}
-                          disabled={(date) => !allowFutureDates && date > new Date()}
+                          disabled={(date) => {
+                            const ymd = toYmd(date);
+                            const outOfFiscal = fiscalLimits ? (ymd < fiscalLimits.adStart || ymd > fiscalLimits.adEnd) : false;
+                            const future = !allowFutureDates && date > new Date();
+                            return outOfFiscal || future;
+                          }}
                           initialFocus
                         />
                         <div className="p-2 border-t flex justify-center bg-muted/5">
@@ -535,6 +610,8 @@ export default function JournalEntryEditor() {
                         <NepaliCalendar
                           selected={formData.miti}
                           disableFuture={!allowFutureDates}
+                          minDate={fiscalLimits?.bsStart}
+                          maxDate={fiscalLimits?.bsEnd}
                           onSelect={(bs) => {
                             const ad = bsToAd(bs);
                             if (ad) {
@@ -591,7 +668,7 @@ export default function JournalEntryEditor() {
                     readOnly
                     tabIndex={-1}
                     value={formData.voucher_no}
-                    className="bg-muted/50 border-muted-foreground/20 h-10 font-mono font-bold text-amber-500 text-sm focus:ring-0 select-none pointer-events-none"
+                    className="bg-muted/50 border-muted-foreground/20 h-10 font-mono text-amber-500 text-sm focus:ring-0 select-none pointer-events-none"
                     placeholder="Auto"
                   />
                   <p className="text-[9px] text-muted-foreground italic leading-tight">
@@ -610,7 +687,7 @@ export default function JournalEntryEditor() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <div className="min-w-[1100px]">
-                <div className="grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr_50px] bg-muted/20 border-b items-center h-10 px-4">
+                <div className="grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr] bg-muted/20 border-b items-center h-10 px-4">
                   <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Action</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">No.</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Account</div>
@@ -618,9 +695,6 @@ export default function JournalEntryEditor() {
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-4">Remarks</div>
-                  <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Menu className="h-3 w-3 mx-auto" />
-                  </div>
                 </div>
 
                 <Reorder.Group axis="y" values={formData.lines} onReorder={reorderLines} className="divide-y divide-muted-foreground/10">
@@ -630,7 +704,7 @@ export default function JournalEntryEditor() {
                       value={line}
                       dragListener={!isReadOnly}
                       className={cn(
-                        "grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr_50px] items-center h-14 px-4 bg-background/40 transition-colors group",
+                        "grid grid-cols-[80px_60px_2.5fr_1.5fr_120px_120px_2fr] items-center h-14 px-4 bg-background/40 transition-colors group",
                         !isReadOnly && "hover:bg-muted/10"
                       )}
                     >
@@ -653,7 +727,7 @@ export default function JournalEntryEditor() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <div className="font-mono text-muted-foreground text-sm font-bold pl-2">{index + 1}</div>
+                      <div className="font-mono text-muted-foreground text-sm pl-2">{index + 1}</div>
                       <div className="flex items-center gap-2 pr-4">
                         <div className="flex-1 min-w-0">
                           <Select
@@ -661,12 +735,12 @@ export default function JournalEntryEditor() {
                             value={line.account_id}
                             onValueChange={(v) => updateLine(index, "account_id", v)}
                           >
-                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 font-bold w-full text-sm disabled:opacity-100">
-                              <SelectValue placeholder="Select Account" className="font-bold" />
+                            <SelectTrigger className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 w-full text-sm disabled:opacity-100">
+                              <SelectValue placeholder="Select Account" />
                             </SelectTrigger>
                             <SelectContent>
                               {accounts?.map((acc) => (
-                                <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                                <SelectItem key={acc.id} value={acc.id}>
                                   {acc.name} - {acc.code}
                                 </SelectItem>
                               ))}
@@ -694,7 +768,7 @@ export default function JournalEntryEditor() {
                           placeholder="Sub Ledger"
                           value={line.party_type}
                           onChange={(e) => updateLine(index, "party_type", e.target.value)}
-                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm font-bold"
+                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm"
                         />
                       </div>
                       <div className="pr-4">
@@ -704,7 +778,7 @@ export default function JournalEntryEditor() {
                           placeholder="0.00"
                           value={line.debit || ""}
                           onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
-                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold text-sm"
+                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono text-sm"
                         />
                       </div>
                       <div className="pr-4">
@@ -714,7 +788,7 @@ export default function JournalEntryEditor() {
                           placeholder="0.00"
                           value={line.credit || ""}
                           onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
-                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono font-bold text-sm"
+                          className="text-right border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 h-8 font-mono text-sm"
                         />
                       </div>
                       <div className="px-4">
@@ -723,14 +797,8 @@ export default function JournalEntryEditor() {
                           placeholder="Remarks"
                           value={line.party}
                           onChange={(e) => updateLine(index, "party", e.target.value)}
-                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm font-bold"
+                          className="border-none bg-transparent hover:bg-background/50 transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm"
                         />
-                      </div>
-                      <div className={cn(
-                        "flex justify-center text-muted-foreground transition-colors skip-nav",
-                        !isReadOnly ? "cursor-grab active:cursor-grabbing hover:text-primary" : "opacity-30"
-                      )}>
-                        <Menu className="h-4 w-4" />
                       </div>
                     </Reorder.Item>
                   ))}
@@ -803,11 +871,11 @@ export default function JournalEntryEditor() {
                       onChange={handleFileUpload}
                       accept="image/*,application/pdf"
                     />
-                    <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Upload className="h-6 w-6 text-primary" />
+                    <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Upload className="h-8 w-8 text-primary" />
                     </div>
                     <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 10MB</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 2MB</p>
                   </div>
                 )}
 
@@ -852,16 +920,37 @@ export default function JournalEntryEditor() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Reference Number
+                    Narration <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     readOnly={isReadOnly}
-                    placeholder="Invoice #, etc."
+                    placeholder="Brief description of the entry..."
                     className="bg-background/50 border-muted-foreground/20 h-11"
-                    value={formData.reference_number}
-                    onChange={(e) => setFormData(p => ({...p, reference_number: e.target.value}))}
+                    value={formData.narration}
+                    onChange={(e) => setFormData(p => ({...p, narration: e.target.value}))}
+                    required
                   />
                 </div>
+                {!isReadOnly && (
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSave(false)}
+                      disabled={createJournalEntry.isPending}
+                      className="border-primary/20 hover:bg-primary/5 text-primary"
+                    >
+                      Save & New
+                    </Button>
+                    <Button
+                      onClick={() => handleSave(true)}
+                      disabled={createJournalEntry.isPending}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[100px]"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
+                )}
               </div>
 
             </div>
