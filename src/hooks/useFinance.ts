@@ -29,6 +29,12 @@ export interface JournalEntry {
     last_name: string | null;
   };
   voucher_type?: string;
+  miti?: string;
+  fiscal_year?: string;
+  series?: string;
+  company_id?: string;
+  finance_book?: string;
+  from_template?: string;
   created_at: string;
   updated_at: string;
   lines?: JournalLine[];
@@ -41,6 +47,9 @@ export interface JournalLine {
   debit: number;
   credit: number;
   description: string | null;
+  party_type?: string;
+  party_id?: string;
+  sub_ledger?: string;
   account?: Account;
 }
 
@@ -259,11 +268,29 @@ export function useCreateJournalEntry() {
     mutationFn: async (entry: {
       date: string;
       description: string;
+      miti?: string;
+      fiscal_year?: string;
       reference?: string | null;
-      lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
+      voucher_type?: string;
+      series?: string;
+      company_id?: string;
+      finance_book?: string;
+      from_template?: string;
+      lines: {
+        account_id: string;
+        debit: number;
+        credit: number;
+        description?: string | null;
+        party_type?: string;
+        party_id?: string;
+        sub_ledger?: string;
+      }[];
     }) => {
-      // Generate entry number
-      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Generate entry number based on series if provided
+      const prefix = entry.series ? entry.series.replace(".YYYY.", new Date().getFullYear().toString()).replace(/\.$/, "") : "JE";
+      const entryNumber = `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
 
       // Insert journal entry
       const { data: journalEntry, error: entryError } = await db
@@ -271,9 +298,17 @@ export function useCreateJournalEntry() {
         .insert({
           entry_number: entryNumber,
           date: entry.date,
+          miti: entry.miti,
+          fiscal_year: entry.fiscal_year,
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
+          created_by: user?.id,
+          voucher_type: entry.voucher_type || "JV",
+          series: entry.series,
+          company_id: entry.company_id,
+          finance_book: entry.finance_book,
+          from_template: entry.from_template,
         })
         .select()
         .single();
@@ -290,6 +325,9 @@ export function useCreateJournalEntry() {
         debit: line.debit,
         credit: line.credit,
         description: line.description ?? null,
+        party_type: line.party_type,
+        party_id: line.party_id,
+        sub_ledger: line.sub_ledger,
       }));
 
       const { error: linesError } = await db.from("journal_lines").insert(lines);
@@ -303,6 +341,129 @@ export function useCreateJournalEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["ledger"] });
+    },
+  });
+}
+
+export function useJournalEntry(id?: string) {
+  return useQuery({
+    queryKey: ["journal-entry", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await db
+        .from("journal_entries")
+        .select(`
+          *,
+          journal_lines (
+            *,
+            account:accounts (*)
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching journal entry:", error);
+        throw error;
+      }
+
+      return {
+        ...data,
+        lines: data.journal_lines || [],
+      } as JournalEntry;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useUpdateJournalEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      entry,
+    }: {
+      id: string;
+      entry: {
+        date: string;
+        description: string;
+        miti?: string;
+        fiscal_year?: string;
+        reference?: string | null;
+        voucher_type?: string;
+        series?: string;
+        company_id?: string;
+        finance_book?: string;
+        from_template?: string;
+        lines: {
+          account_id: string;
+          debit: number;
+          credit: number;
+          description?: string | null;
+          party_type?: string;
+          party_id?: string;
+          sub_ledger?: string;
+        }[];
+      };
+    }) => {
+      // Use a RPC call or multi-step logic with better error handling
+      // Since we don't have a dedicated RPC for this, we use the multiple-request approach
+      // but wrap it in a try-catch for better atomicity (though not true DB transaction)
+
+      try {
+        // Update journal entry header
+        const { error: entryError } = await db
+          .from("journal_entries")
+          .update({
+            date: entry.date,
+            miti: entry.miti,
+            fiscal_year: entry.fiscal_year,
+            description: entry.description,
+            reference: entry.reference ?? null,
+            voucher_type: entry.voucher_type,
+            series: entry.series,
+            company_id: entry.company_id,
+            finance_book: entry.finance_book,
+            from_template: entry.from_template,
+          })
+          .eq("id", id);
+
+        if (entryError) throw entryError;
+
+        // Delete existing lines and insert new ones
+        const { error: deleteError } = await db
+          .from("journal_lines")
+          .delete()
+          .eq("journal_entry_id", id);
+
+        if (deleteError) throw deleteError;
+
+        const lines = entry.lines.map((line) => ({
+          journal_entry_id: id,
+          account_id: line.account_id,
+          debit: line.debit,
+          credit: line.credit,
+          description: line.description ?? null,
+          party_type: line.party_type,
+          party_id: line.party_id,
+          sub_ledger: line.sub_ledger,
+        }));
+
+        const { error: linesError } = await db.from("journal_lines").insert(lines);
+
+        if (linesError) throw linesError;
+      } catch (error) {
+        console.error("Failed to update journal entry transactionally:", error);
+        throw error;
+      }
+
+      return { id };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entry", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["ledger"] });
     },
   });

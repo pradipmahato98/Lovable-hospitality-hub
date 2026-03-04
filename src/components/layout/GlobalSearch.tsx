@@ -5,7 +5,6 @@ import {
   Users,
   CheckCircle2,
   LogOut,
-  X,
   ExternalLink,
   Loader2,
   LayoutDashboard,
@@ -69,7 +68,8 @@ const PAGES_DATA = [
   { icon: UserCog, label: "User Management", path: "/users", keywords: ["accounts", "permissions", "access"], isAdmin: true },
   { icon: Users, label: "Staff Management", path: "/staff", keywords: ["employees", "profiles"], isAdmin: true },
   { icon: UserCheck, label: "HR", path: "/hr", keywords: ["human resources", "recruitment", "payroll"], isAdmin: true },
-  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "journal", "expenses"] },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "expenses"] },
+  { icon: Receipt, label: "New Journal Entry", path: "/finance/journal/new", keywords: ["accounting", "journal", "voucher", "entry"] },
   { icon: CreditCard, label: "Payments", path: "/payments", keywords: ["transactions", "gateway", "eSewa", "Khalti"] },
   { icon: PartyPopper, label: "Banquet", path: "/banquet", keywords: ["events", "functions", "meetings"] },
   { icon: Database, label: "Database", path: "/database", keywords: ["sql", "tables", "data"], isAdmin: true },
@@ -328,7 +328,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-2 w-full bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full lg:w-[550px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {isRedirecting && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />

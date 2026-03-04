@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -43,6 +44,8 @@ import {
   UtensilsCrossed,
   Layout,
   BarChart3,
+  Eye,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -96,10 +99,156 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
+const EventDetailsDialog = ({ event }: { event: BanquetEvent }) => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Eye className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-2xl font-bold">{event.event_name}</DialogTitle>
+              <DialogDescription className="text-base mt-1">
+                {event.client_name} • {event.event_type}
+              </DialogDescription>
+            </div>
+            <Badge variant="outline" className={statusColors[event.status]}>
+              {event.status.toUpperCase()}
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-6 py-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <CalendarDays className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Date</p>
+                <p>{new Date(event.event_date).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Clock className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Time</p>
+                <p>{event.start_time} - {event.end_time}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <MapPin className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Venue</p>
+                <p>{event.venue}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Users className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Guests</p>
+                <p>{event.guest_count} persons</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Total Amount</p>
+                <p className="font-semibold text-lg">${event.total_amount?.toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Contact</p>
+                <p>{event.client_phone || 'N/A'}</p>
+                <p className="text-xs text-muted-foreground">{event.client_email || 'No email'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 py-4 border-t border-b">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <UtensilsCrossed className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Menu Package</p>
+                <p>{event.menu_package || 'Not specified'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-[10px] tracking-wider">Deposit Paid</p>
+                <p className="font-semibold">${event.deposit_amount?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center py-2 text-[10px] text-muted-foreground uppercase tracking-widest">
+          <span>ID: {event.id}</span>
+          <span>Created: {new Date(event.created_at).toLocaleString()}</span>
+        </div>
+
+        {event.notes && (
+          <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
+            <h4 className="font-semibold text-sm mb-2">Notes</h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.notes}</p>
+          </div>
+        )}
+
+        {event.special_requests && (
+          <div className="mt-4 p-4 rounded-lg bg-muted/50 border">
+            <h4 className="font-semibold text-sm mb-2">Special Requests</h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.special_requests}</p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function Banquet() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("events");
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [venueFilter, setVenueFilter] = useState("all");
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof BanquetEvent;
+    direction: "asc" | "desc";
+  }>({ key: "event_date", direction: "asc" });
+
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
    const [editingEvent, setEditingEvent] = useState<BanquetEvent | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<
@@ -132,11 +281,7 @@ export default function Banquet() {
         .select("*")
         .order("event_date", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching banquet events:", error);
-        return [];
-      }
-
+      if (error) throw error;
       return data as BanquetEvent[];
     },
   });
@@ -360,12 +505,66 @@ export default function Banquet() {
     });
   };
 
-  // Filter events
-  const filteredEvents = events.filter(
-    (e) =>
-      e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.client_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Unique venues for filter
+  const venues = useMemo(() => {
+    return Array.from(new Set(events.map((e) => e.venue))).filter(Boolean).sort();
+  }, [events]);
+
+  // Filter and sort events
+  const filteredEvents = useMemo(() => {
+    let result = [...events];
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.event_name.toLowerCase().includes(query) ||
+          e.client_name.toLowerCase().includes(query)
+      );
+    }
+
+    // Type filter
+    if (typeFilter !== "all") {
+      result = result.filter((e) => e.event_type === typeFilter);
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((e) => e.status === statusFilter);
+    }
+
+    // Venue filter
+    if (venueFilter !== "all") {
+      result = result.filter((e) => e.venue === venueFilter);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (aValue < bValue) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [events, searchQuery, typeFilter, statusFilter, venueFilter, sortConfig]);
+
+  const handleSort = (key: keyof BanquetEvent) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
   // Metrics
   const upcomingEvents = events.filter(
@@ -459,15 +658,83 @@ export default function Banquet() {
 
           <TabsContent value="events" className="space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex items-center gap-2 flex-1 flex-wrap min-w-[300px]">
+                <div className="relative flex-1 max-w-[240px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search events..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-8"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="wedding">Wedding</SelectItem>
+                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="birthday">Birthday</SelectItem>
+                    <SelectItem value="conference">Conference</SelectItem>
+                    <SelectItem value="social">Social</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="inquiry">Inquiry</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={venueFilter} onValueChange={setVenueFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="All Venues" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Venues</SelectItem>
+                    {venues.map(v => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {(searchQuery || typeFilter !== "all" || statusFilter !== "all" || venueFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setTypeFilter("all");
+                      setStatusFilter("all");
+                      setVenueFilter("all");
+                    }}
+                    className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
+
               <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 New Event
@@ -484,19 +751,58 @@ export default function Banquet() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Event</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Venue</TableHead>
-                        <TableHead>Guests</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("event_name")}
+                        >
+                          Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("client_name")}
+                        >
+                          Client {sortConfig.key === "client_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("event_date")}
+                        >
+                          Date & Time {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("venue")}
+                        >
+                          Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("guest_count")}
+                        >
+                          Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("total_amount")}
+                        >
+                          Amount {sortConfig.key === "total_amount" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("status")}
+                        >
+                          Status {sortConfig.key === "status" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredEvents.map((event) => (
                         <TableRow key={event.id}>
+                          <TableCell className="text-center w-[50px]">
+                            <EventDetailsDialog event={event} />
+                          </TableCell>
                           <TableCell>
                             <div>
                               <p className="font-medium">{event.event_name}</p>

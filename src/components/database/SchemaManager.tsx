@@ -145,7 +145,12 @@ export const SchemaManager = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Policies</h4>
-                    <Button variant="outline" size="xs" className="h-7 gap-1 text-xs">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="h-7 gap-1 text-xs"
+                      onClick={() => toast.info("New RLS Policy creation coming soon.")}
+                    >
                       <Plus className="h-3 w-3" /> New Policy
                     </Button>
                   </div>

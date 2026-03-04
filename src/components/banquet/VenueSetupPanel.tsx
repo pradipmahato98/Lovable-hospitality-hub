@@ -41,6 +41,8 @@ import {
   Armchair,
   Lightbulb,
   Mic2,
+  Eye,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -124,8 +126,16 @@ const defaultSetupChecklist: Omit<SetupItem, "id">[] = [
 
 export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [venueFilter, setVenueFilter] = useState("all");
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  }>({ key: "event_date", direction: "asc" });
+
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
 
   // Local state for venue setups (would be DB in production)
@@ -142,15 +152,83 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     setupNotes: "",
   });
 
-  // Filter active events
+  // Unique venues for filter
+  const venues = useMemo(() => {
+    return Array.from(new Set(events.map((e) => e.venue))).filter(Boolean).sort();
+  }, [events]);
+
+  // Filter and sort active events
   const activeEvents = useMemo(() => {
-    return events.filter(
-      (e) =>
-        (e.status === "confirmed" || e.status === "in_progress") &&
-        (e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    let result = events.filter(
+      (e) => e.status === "confirmed" || e.status === "in_progress"
     );
-  }, [events, searchQuery]);
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.event_name.toLowerCase().includes(query) ||
+          e.client_name.toLowerCase().includes(query)
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((e) => {
+        const setup = getSetupForEvent(e.id);
+        if (statusFilter === "none") return !setup;
+        return setup?.setupStatus === statusFilter;
+      });
+    }
+
+    // Venue filter
+    if (venueFilter !== "all") {
+      result = result.filter((e) => e.venue === venueFilter);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      if (sortConfig.key === "setupStatus" || sortConfig.key === "progress") {
+        const aSetup = getSetupForEvent(a.id);
+        const bSetup = getSetupForEvent(b.id);
+
+        if (sortConfig.key === "setupStatus") {
+          aValue = aSetup?.setupStatus || "";
+          bValue = bSetup?.setupStatus || "";
+        } else {
+          aValue = getSetupProgress(aSetup);
+          bValue = getSetupProgress(bSetup);
+        }
+      } else {
+        aValue = a[sortConfig.key as keyof BanquetEvent];
+        bValue = b[sortConfig.key as keyof BanquetEvent];
+      }
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (aValue < bValue) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [events, searchQuery, statusFilter, venueFilter, sortConfig, venueSetups]);
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
   // Get setup for an event
   const getSetupForEvent = (eventId: string) => {
@@ -189,6 +267,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const handleOpenChecklist = (event: BanquetEvent) => {
     setSelectedEvent(event);
     setChecklistDialogOpen(true);
+  };
+
+  const handleOpenDetails = (event: BanquetEvent) => {
+    setSelectedEvent(event);
+    setDetailsDialogOpen(true);
   };
 
   const handleSaveSetup = () => {
@@ -345,27 +428,69 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      {/* Search & Filter */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="relative flex-1 max-w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search events..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-8"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Setup Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Setup Status</SelectItem>
+            <SelectItem value="none">No Setup</SelectItem>
+            <SelectItem value="not_started">Not Started</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={venueFilter} onValueChange={setVenueFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All Venues" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Venues</SelectItem>
+            {venues.map(v => (
+              <SelectItem key={v} value={v}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {(searchQuery || statusFilter !== "all" || venueFilter !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchQuery("");
+              setStatusFilter("all");
+              setVenueFilter("all");
+            }}
+            className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
+          >
+            Clear Filters
+          </Button>
+        )}
       </div>
 
       {/* Events Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Layout className="h-5 w-5" />
-            Venue Setup Tracking
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {activeEvents.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -375,13 +500,39 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Venue</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("event_name")}
+                  >
+                    Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("event_date")}
+                  >
+                    Date {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("venue")}
+                  >
+                    Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
                   <TableHead>Layout</TableHead>
                   <TableHead>Equipment</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("progress")}
+                  >
+                    Checklist {sortConfig.key === "progress" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleSort("setupStatus")}
+                  >
+                    Status {sortConfig.key === "setupStatus" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  </TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -394,6 +545,15 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                     : null;
                   return (
                     <TableRow key={event.id}>
+                      <TableCell className="w-[50px]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDetails(event)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
@@ -430,11 +590,21 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                       <TableCell>
                         {setup ? (
-                          <div className="w-24">
-                            <Progress value={progress} className="h-2" />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {progress.toFixed(0)}%
-                            </p>
+                          <div className="flex flex-col gap-2 w-24">
+                            <div>
+                              <Progress value={progress} className="h-2" />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {progress.toFixed(0)}%
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleOpenChecklist(event)}
+                            >
+                              Checklist
+                            </Button>
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
@@ -460,15 +630,6 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                           >
                             {setup ? "Edit" : "Setup"}
                           </Button>
-                          {setup && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenChecklist(event)}
-                            >
-                              Checklist
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -479,6 +640,121 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Setup Details: {selectedEvent?.event_name}</DialogTitle>
+            <DialogDescription>
+              View venue layout and equipment requirements
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEvent && (
+            <div className="space-y-6">
+              {getSetupForEvent(selectedEvent.id) ? (
+                <>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-muted-foreground">Layout Type</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          {(() => {
+                            const setup = getSetupForEvent(selectedEvent.id);
+                            const layout = layoutTypes.find(l => l.id === setup?.layoutType);
+                            const Icon = layout?.icon || Layout;
+                            return <><Icon className="h-5 w-5" /> <span>{layout?.name}</span></>;
+                          })()}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-muted-foreground">Tables</Label>
+                          <p className="text-lg font-semibold">{getSetupForEvent(selectedEvent.id)?.tableCount}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Chairs</Label>
+                          <p className="text-lg font-semibold">{getSetupForEvent(selectedEvent.id)?.chairCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-muted-foreground">Special Areas</Label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {getSetupForEvent(selectedEvent.id)?.stageRequired && <Badge>Stage</Badge>}
+                          {getSetupForEvent(selectedEvent.id)?.danceFloor && <Badge>Dance Floor</Badge>}
+                          {!getSetupForEvent(selectedEvent.id)?.stageRequired && !getSetupForEvent(selectedEvent.id)?.danceFloor && <p className="text-sm">None</p>}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Status</Label>
+                        <div className="mt-1">
+                          <Badge className={statusColors[getSetupForEvent(selectedEvent.id)!.setupStatus]}>
+                            {getSetupForEvent(selectedEvent.id)?.setupStatus.replace("_", " ")}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-muted-foreground">Equipment</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {getSetupForEvent(selectedEvent.id)?.equipment.length ? (
+                          getSetupForEvent(selectedEvent.id)?.equipment.map(eq => (
+                            <Badge key={eq} variant="outline">{equipmentOptions.find(e => e.id === eq)?.name || eq}</Badge>
+                          ))
+                        ) : <p className="text-sm">None</p>}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Decorations</Label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {getSetupForEvent(selectedEvent.id)?.decorations.length ? (
+                          getSetupForEvent(selectedEvent.id)?.decorations.map(dec => (
+                            <Badge key={dec} variant="secondary">{decorationOptions.find(d => d.id === dec)?.name || dec}</Badge>
+                          ))
+                        ) : <p className="text-sm">None</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-muted/50 border">
+                    <Label className="text-muted-foreground">Setup Notes</Label>
+                    <p className="text-sm mt-1 whitespace-pre-wrap">{getSetupForEvent(selectedEvent.id)?.setupNotes || "No additional notes"}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center border rounded-lg border-dashed">
+                  <p className="text-muted-foreground mb-4">No venue setup has been configured for this event yet.</p>
+                  <Button onClick={() => {
+                    setDetailsDialogOpen(false);
+                    handleOpenSetupDialog(selectedEvent);
+                  }}>
+                    Configure Setup Now
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+                {getSetupForEvent(selectedEvent.id) && (
+                  <Button onClick={() => {
+                    setDetailsDialogOpen(false);
+                    handleOpenSetupDialog(selectedEvent);
+                  }}>
+                    Edit Setup
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Setup Dialog */}
       <Dialog open={setupDialogOpen} onOpenChange={setSetupDialogOpen}>
