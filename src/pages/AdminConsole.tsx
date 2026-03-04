@@ -95,7 +95,6 @@ const AdminConsole = () => {
   // State for modals
   const [provisionModalOpen, setProvisionModalOpen] = useState(false);
   const [newUserData, setNewUserData] = useState({ email: "", firstName: "", lastName: "", role: "staff" as AppRole });
-  const [userSearchQuery, setUserSearchQuery] = useState("");
   const [isProvisioning, setIsProvisioning] = useState(false);
 
   // Data hooks
