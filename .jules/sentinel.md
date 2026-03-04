@@ -32,3 +32,8 @@
 **Vulnerability:** The E2EE module used hardcoded master password and salt in the source code, and guest PII (id_number) was being stored encrypted but displayed in its ciphertext form in the UI. Additionally, some entry points (useAddGuestDocument) bypassed encryption entirely.
 **Learning:** Security features like E2EE are only as strong as their key management. Hardcoding keys makes the encryption trivial to bypass. Furthermore, security features must be implemented consistently across all data entry/retrieval paths.
 **Prevention:** Always use environment variables for system-wide secrets. Centralize encryption/decryption logic in an API bridge or utility layer and ensure all data hooks automatically handle the transformation to keep the UI clean and secure.
+
+## 2026-02-16 - Path Traversal & Prefix Vulnerabilities in Storage Service
+**Vulnerability:** The custom backend's storage service was vulnerable to path traversal attacks via unsanitized `bucketName` and `filePath` parameters. Furthermore, a naive `startsWith` check for path validation was susceptible to prefix attacks (e.g., unauthorized access to a 'data-private' bucket via a 'data' prefix check).
+**Learning:** Using `path.join` with user-supplied input without normalization via `path.resolve` and strict boundary checks is a critical risk. Path prefixing vulnerabilities occur when a security check doesn't account for the directory structure (missing trailing separator).
+**Prevention:** Implement a robust `getSafePath` helper that: 1. Validates input with strict regex. 2. Resolves absolute paths. 3. Ensures the resolved path resides within the intended directory by using a trailing path separator in string comparisons.
