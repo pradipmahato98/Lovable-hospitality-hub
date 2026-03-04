@@ -41,6 +41,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, MoreHorizontal, Eye, Edit, Trash } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
@@ -50,6 +60,9 @@ import { GuestDetailsDialog } from "@/components/guests/GuestDetailsDialog";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useIsAdmin } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useEffect } from "react";
@@ -82,6 +95,8 @@ const getGuestStatus = (guest: Guest): "vip" | "regular" | "new" => {
 
 const Guests = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAdmin } = useIsAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: guests = [], isLoading } = useGuests();
   const { data: feedback = [], createFeedback, respondToFeedback, updateStatus } = useGuestFeedback();
@@ -95,7 +110,30 @@ const Guests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+
+  const deleteGuestMutation = useMutation({
+    mutationFn: async (guestId: string) => {
+      const { error } = await supabase.from("guests").delete().eq("id", guestId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Guest profile deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      setDeleteDialogOpen(false);
+      setSelectedGuest(null);
+    },
+    onError: (error) => {
+      toast.error("Failed to delete guest: " + error.message);
+    },
+  });
+
+  const handleDeleteGuest = () => {
+    if (selectedGuest) {
+      deleteGuestMutation.mutate(selectedGuest.id);
+    }
+  };
 
   const guestIdFromUrl = searchParams.get("guestId");
 
@@ -160,10 +198,17 @@ const Guests = () => {
                 <Award className="mr-2 h-4 w-4 text-muted-foreground" /> Enroll Loyalty
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
-              <Trash className="mr-2 h-4 w-4" /> Delete Profile
-            </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => { setSelectedGuest(guest); setDeleteDialogOpen(true); }}
+                >
+                  <Trash className="mr-2 h-4 w-4" /> Delete Profile
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -203,6 +248,21 @@ const Guests = () => {
         const status = getGuestStatus(guest);
         return <Badge variant="outline" className={statusColors[status]}>{status?.toUpperCase() || ""}</Badge>;
       },
+    },
+    {
+      key: "folio",
+      header: "Folio",
+      render: (guest) => (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-xs font-semibold h-8"
+          onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}
+        >
+          <Receipt className="h-3.5 w-3.5" />
+          FOLIO
+        </Button>
+      ),
     },
   ];
 
@@ -552,6 +612,29 @@ const Guests = () => {
           open={detailsDialogOpen}
           onOpenChange={setDetailsDialogOpen}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the profile for
+                <strong> {selectedGuest?.first_name} {selectedGuest?.last_name}</strong> and remove all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteGuest}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteGuestMutation.isPending}
+              >
+                {deleteGuestMutation.isPending ? "Deleting..." : "Delete Profile"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Feedback Dialog */}
         <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
