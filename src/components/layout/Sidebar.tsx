@@ -36,9 +36,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 
 const navItems = [
+  { icon: Users, label: "Guests", path: "/guests" },
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-  { icon: Users, label: "Guests", path: "/guests" },
   { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
   { icon: Wrench, label: "Engineering", path: "/engineering" },
