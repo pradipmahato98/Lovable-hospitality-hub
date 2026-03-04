@@ -33,7 +33,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, MoreHorizontal, Eye, Edit, Trash } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -125,6 +133,42 @@ const Guests = () => {
 
   const columns: Column<Guest>[] = [
     {
+      key: "actions",
+      header: "",
+      className: "w-[50px]",
+      render: (guest) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}>
+              <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
+              <Receipt className="mr-2 h-4 w-4 text-muted-foreground" /> View Folio
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setSelectedGuest(guest); setFeedbackDialogOpen(true); }}>
+              <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" /> Add Feedback
+            </DropdownMenuItem>
+            {!loyaltyMemberIds.has(guest.id) && (
+              <DropdownMenuItem onClick={() => handleEnrollLoyalty(guest.id)}>
+                <Award className="mr-2 h-4 w-4 text-muted-foreground" /> Enroll Loyalty
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <Trash className="mr-2 h-4 w-4" /> Delete Profile
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+    {
       key: "first_name",
       header: "Guest",
       render: (guest) => (
@@ -160,16 +204,6 @@ const Guests = () => {
         return <Badge variant="outline" className={statusColors[status]}>{status?.toUpperCase() || ""}</Badge>;
       },
     },
-    {
-      key: "id",
-      header: "Folio",
-      render: (guest) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-          <Receipt className="h-4 w-4 mr-1" />
-          View
-        </Button>
-      ),
-    },
   ];
 
   const handleEnrollLoyalty = async (guestId: string) => {
@@ -194,28 +228,45 @@ const Guests = () => {
     }
   };
 
+  const [activeMainTab, setActiveMainTab] = useState("guests");
+
   return (
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
-        <Tabs defaultValue="guests" className="space-y-6">
-          <ScrollArea className="w-full whitespace-nowrap">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="guests" className="gap-2">
-              <Users className="h-4 w-4" />
-              Guests
-            </TabsTrigger>
-            <TabsTrigger value="feedback" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Feedback
-              {stats.pendingFeedback > 0 && <Badge variant="destructive" className="ml-1">{stats.pendingFeedback}</Badge>}
-            </TabsTrigger>
-              <TabsTrigger value="loyalty" className="gap-2">
-                <Award className="h-4 w-4" />
-                Loyalty Program
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full sm:w-auto">
+            <ScrollArea className="w-full whitespace-nowrap">
+              <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="guests" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Guests
+                </TabsTrigger>
+                <TabsTrigger value="feedback" className="gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Feedback
+                  {stats.pendingFeedback > 0 && <Badge variant="destructive" className="ml-1">{stats.pendingFeedback}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="loyalty" className="gap-2">
+                  <Award className="h-4 w-4" />
+                  Loyalty Program
+                </TabsTrigger>
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </Tabs>
+
+          <Button
+            variant="gold"
+            size="sm"
+            className="gap-2 w-full sm:w-auto shadow-md hover:shadow-lg transition-all"
+            onClick={() => setNewGuestOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            New Profile
+          </Button>
+        </div>
+
+        <Tabs value={activeMainTab} className="space-y-6">
 
           <TabsContent value="guests" className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -231,22 +282,13 @@ const Guests = () => {
                 <div className="relative flex-1 sm:w-64">
                   <Plus className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hidden" />
                   <Input
-                    placeholder="Search guests..."
+                    placeholder="Search profiles..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-4"
                   />
                 </div>
               </div>
-              <Button
-                variant="gold"
-                size="sm"
-                className="gap-2 w-full sm:w-auto"
-                onClick={() => setNewGuestOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-                Add Guest
-              </Button>
             </div>
 
             {isLoading ? (

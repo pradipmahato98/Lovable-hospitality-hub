@@ -43,7 +43,9 @@ export const api = {
    */
   async encryptGuestId(idNumber: string): Promise<string> {
     if (!idNumber) return idNumber;
-    const { encrypted, iv } = await this.encryptSensitive(idNumber);
+    const encryptedString = await this.encryptSensitive(idNumber);
+    // encryptedString is "enc:iv:encrypted"
+    const [_, iv, encrypted] = encryptedString.split(":");
     return `e2ee:${iv}:${encrypted}`;
   },
 
@@ -51,7 +53,8 @@ export const api = {
     if (!prefixedId || !prefixedId.startsWith("e2ee:")) return prefixedId;
     try {
       const [_, iv, encrypted] = prefixedId.split(":");
-      return await this.decryptSensitive(encrypted, iv);
+      // decryptSensitive expects "enc:iv:encrypted"
+      return await this.decryptSensitive(`enc:${iv}:${encrypted}`);
     } catch (error) {
       console.error("🛡️ Sentinel: Decryption failed for ID:", prefixedId, error);
       return prefixedId; // Fallback to raw value if decryption fails
