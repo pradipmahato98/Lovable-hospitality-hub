@@ -21,48 +21,43 @@ import { AuthManager } from "./AuthManager";
 import { StorageManager } from "./StorageManager";
 import { RealtimeMonitor } from "./RealtimeMonitor";
 
-import { toast } from "sonner";
-
 export const DatabaseControlCenter = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("explorer");
 
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="explorer" className="w-full">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <div className="overflow-x-auto pb-1 scrollbar-hide w-full sm:w-auto">
-            <TabsList className="bg-muted/50 flex-nowrap min-w-max">
-              <TabsTrigger value="explorer" className="gap-2">
-                <TableIcon className="h-4 w-4" />
-                Table Explorer
-              </TabsTrigger>
-              <TabsTrigger value="sql" className="gap-2">
-                <Terminal className="h-4 w-4" />
-                SQL Editor
-              </TabsTrigger>
-              <TabsTrigger value="schema" className="gap-2">
-                <Settings2 className="h-4 w-4" />
-                Schema
-              </TabsTrigger>
-              <TabsTrigger value="auth" className="gap-2">
-                <Users className="h-4 w-4" />
-                Auth
-              </TabsTrigger>
-              <TabsTrigger value="storage" className="gap-2">
-                <HardDrive className="h-4 w-4" />
-                Storage
-              </TabsTrigger>
-              <TabsTrigger value="realtime" className="gap-2">
-                <Zap className="h-4 w-4" />
-                Realtime
-              </TabsTrigger>
-              <TabsTrigger value="health" className="gap-2">
-                <Activity className="h-4 w-4" />
-                Health
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="bg-muted/50">
+            <TabsTrigger value="explorer" className="gap-2">
+              <TableIcon className="h-4 w-4" />
+              Table Explorer
+            </TabsTrigger>
+            <TabsTrigger value="sql" className="gap-2">
+              <Terminal className="h-4 w-4" />
+              SQL Editor
+            </TabsTrigger>
+            <TabsTrigger value="schema" className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              Schema
+            </TabsTrigger>
+            <TabsTrigger value="auth" className="gap-2">
+              <Users className="h-4 w-4" />
+              Auth
+            </TabsTrigger>
+            <TabsTrigger value="storage" className="gap-2">
+              <HardDrive className="h-4 w-4" />
+              Storage
+            </TabsTrigger>
+            <TabsTrigger value="realtime" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Realtime
+            </TabsTrigger>
+            <TabsTrigger value="health" className="gap-2">
+              <Activity className="h-4 w-4" />
+              Health
+            </TabsTrigger>
+          </TabsList>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-initial">
@@ -74,7 +69,7 @@ export const DatabaseControlCenter = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button className="gap-2 shrink-0" onClick={() => toast.info("New Table feature coming soon to the Database Control Center.")}>
+            <Button className="gap-2 shrink-0">
               <Plus className="h-4 w-4" />
               <span className="hidden xs:inline">New Table</span>
             </Button>

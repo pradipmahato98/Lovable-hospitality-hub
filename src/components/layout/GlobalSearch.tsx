@@ -5,6 +5,7 @@ import {
   Users,
   CheckCircle2,
   LogOut,
+  X,
   ExternalLink,
   Loader2,
   LayoutDashboard,
@@ -68,8 +69,7 @@ const PAGES_DATA = [
   { icon: UserCog, label: "User Management", path: "/users", keywords: ["accounts", "permissions", "access"], isAdmin: true },
   { icon: Users, label: "Staff Management", path: "/staff", keywords: ["employees", "profiles"], isAdmin: true },
   { icon: UserCheck, label: "HR", path: "/hr", keywords: ["human resources", "recruitment", "payroll"], isAdmin: true },
-  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "expenses"] },
-  { icon: Receipt, label: "New Journal Entry", path: "/finance/journal/new", keywords: ["accounting", "journal", "voucher", "entry"] },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance", keywords: ["accounting", "ledger", "journal", "expenses"] },
   { icon: CreditCard, label: "Payments", path: "/payments", keywords: ["transactions", "gateway", "eSewa", "Khalti"] },
   { icon: PartyPopper, label: "Banquet", path: "/banquet", keywords: ["events", "functions", "meetings"] },
   { icon: Database, label: "Database", path: "/database", keywords: ["sql", "tables", "data"], isAdmin: true },
@@ -145,10 +145,10 @@ export function GlobalSearch() {
 
     guests.forEach(g => {
       const matches =
-        `${g.first_name} ${g.last_name}`.toLowerCase().includes(q) ||
-        g.email?.toLowerCase().includes(q) ||
-        g.phone?.includes(q) ||
-        g.id_number?.includes(q);
+        `${g.first_name || ""} ${g.last_name || ""}`.toLowerCase().includes(q) ||
+        (g.email || "").toLowerCase().includes(q) ||
+        (g.phone || "").includes(q) ||
+        (g.id_number || "").includes(q);
 
       if (matches) {
         const signature = `${g.first_name}|${g.last_name}|${g.email || ''}`.toLowerCase();
@@ -167,9 +167,9 @@ export function GlobalSearch() {
 
     staff.forEach(s => {
       const matches =
-        `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
-        s.employee_id.toLowerCase().includes(q) ||
-        s.email?.toLowerCase().includes(q);
+        `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase().includes(q) ||
+        (s.employee_id || "").toLowerCase().includes(q) ||
+        (s.email || "").toLowerCase().includes(q);
 
       if (matches) {
         const signature = `${s.first_name}|${s.last_name}|${s.email || ''}`.toLowerCase();
@@ -282,7 +282,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full sm:w-72 lg:w-96" ref={containerRef}>
+    <div className="relative w-full sm:w-64 lg:w-72" ref={containerRef}>
       <div className="relative w-full group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
@@ -328,7 +328,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-2 w-full lg:w-[550px] bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full bg-background border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {isRedirecting && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-[60] flex flex-col items-center justify-center animate-in fade-in duration-300">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
@@ -402,10 +402,10 @@ export function GlobalSearch() {
                           <div className="flex items-center justify-between mb-2">
                           <div>
                             <p className="text-sm font-medium">
-                              {highlightText(`${g.first_name} ${g.last_name}`, query)}
+                              {highlightText(`${g.first_name || ""} ${g.last_name || ""}`, query)}
                             </p>
                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                              {g.email ? highlightText(g.email, query) : "No email"} • {g.phone ? highlightText(g.phone, query) : "No phone"}
+                              {(g.email) ? highlightText(g.email, query) : "No email"} • {(g.phone) ? highlightText(g.phone, query) : "No phone"}
                             </p>
                           </div>
                           {g.is_vip && <Badge className="bg-gradient-gold text-primary-foreground border-transparent text-[10px] h-4">VIP</Badge>}
@@ -467,10 +467,10 @@ export function GlobalSearch() {
                         >
                           <div>
                             <p className="text-sm font-medium">
-                              {highlightText(`${s.first_name} ${s.last_name}`, query)}
+                              {highlightText(`${s.first_name || ""} ${s.last_name || ""}`, query)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {s.position} • {highlightText(s.employee_id, query)}
+                              {s.position || "Staff"} • {highlightText(s.employee_id || "", query)}
                             </p>
                           </div>
                           <Badge variant="outline" className="text-[10px]">{s.department}</Badge>
