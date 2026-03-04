@@ -42,7 +42,6 @@ const navItems = [
   { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
   { icon: Wrench, label: "Engineering", path: "/engineering" },
-  { icon: ShoppingCart, label: "POS", path: "/pos" },
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
   { icon: DollarSign, label: "Finance/Account", path: "/finance" },
