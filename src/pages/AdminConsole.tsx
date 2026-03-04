@@ -438,8 +438,8 @@ const AdminConsole = () => {
           <UsersTable
             users={users}
             isLoading={loadingUsers}
-            searchQuery={userSearchQuery}
-            onSearchChange={setUserSearchQuery}
+            searchQuery=""
+            onSearchChange={() => {}}
             onRoleChange={(userId, oldRole, newRole) => updateUserRole.mutate({ userId, oldRole, newRole })}
             isUpdating={updateUserRole.isPending}
           />

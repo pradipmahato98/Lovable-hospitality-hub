@@ -49,7 +49,7 @@ const PAGES_DATA = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", keywords: ["home", "main", "overview"] },
   { icon: CalendarDays, label: "Reservations", path: "/reservations", keywords: ["booking", "stays", "calendar"] },
   { icon: Calendar, label: "Reservation Calendar", path: "/calendar", keywords: ["bookings", "schedule", "occupancy"] },
-  { icon: Users, label: "Guests", path: "/guests", keywords: ["customers", "profiles", "visitors"] },
+  { icon: Users, label: "Guests", path: "/guests", keywords: ["customers", "visitors", "profiles"] },
   { icon: BedDouble, label: "Front Desk", path: "/front-desk", keywords: ["reception", "checkin", "checkout", "arrivals", "departures"] },
   { icon: Receipt, label: "Billing", path: "/billing", keywords: ["invoice", "payment", "folio", "checkout"] },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping", keywords: ["cleaning", "rooms", "maintenance"] },
@@ -92,15 +92,13 @@ export function GlobalSearch() {
   const { data: guests = [], isLoading: loadingGuests } = useGuests();
   const { data: staff = [], isLoading: loadingStaff } = useStaff();
 
-  // Keyboard shortcut (Cmd+K or Ctrl+K) - only focus if it's already visible
-  // or use an alternative shortcut if needed to avoid conflict with CommandPalette
+  // Keyboard shortcut (Cmd+K or Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
 
       if (ctrlKey && e.key === "k") {
-        // Only focus the search input if it exists in the DOM
         if (inputRef.current) {
           e.preventDefault();
           inputRef.current.focus();
@@ -111,7 +109,7 @@ export function GlobalSearch() {
         setIsOpen(false);
       }
     };
-    window.addEventListener("keydown", handleKeyDown, true); // Use capture to prioritize
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, []);
 
@@ -202,7 +200,6 @@ export function GlobalSearch() {
 
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
-    // Escape special characters for regex
     const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const parts = text.split(new RegExp(`(${escapedHighlight})`, "gi"));
     return (
@@ -225,7 +222,6 @@ export function GlobalSearch() {
     if (action === "profile") {
       navigate(`/guests?guestId=${guest.id}`);
     } else {
-      // Redirect to front desk or reservations with specific intent
       navigate(`/front-desk?guestId=${guest.id}&action=${action}`);
     }
   }, [navigate]);
@@ -236,7 +232,6 @@ export function GlobalSearch() {
 
     const q = query.toLowerCase();
 
-    // Check for exact matches in guests
     const exactGuest = results.guests.find(g =>
       g.email?.toLowerCase() === q ||
       g.phone === query ||
@@ -287,8 +282,8 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full max-w-3xl" ref={containerRef}>
-      <div className="relative w-full sm:w-72 lg:w-96 transition-all duration-300 sm:focus-within:w-96 lg:focus-within:w-[550px] group/search">
+    <div className="relative w-full sm:w-72 lg:w-96" ref={containerRef}>
+      <div className="relative w-full group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
@@ -297,7 +292,7 @@ export function GlobalSearch() {
         <Input
           ref={inputRef}
           placeholder="Search modules, guests, or staff..."
-          className="w-full pl-10 pr-16 bg-secondary/40 border-border focus-visible:ring-primary shadow-sm group-focus-within/search:shadow-glow group-focus-within/search:bg-background transition-all"
+          className="w-full pl-10 pr-12 bg-secondary/40 border-border focus-visible:ring-primary shadow-sm group-focus-within/search:shadow-glow group-focus-within/search:bg-background transition-all"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -306,7 +301,24 @@ export function GlobalSearch() {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
         />
-        {!query && (
+        {query ? (
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setQuery("");
+              requestAnimationFrame(() => {
+                inputRef.current?.focus();
+              });
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full bg-muted/60 hover:bg-muted active:bg-muted/80 transition-all text-muted-foreground hover:text-foreground active:scale-90 z-10"
+            aria-label="Clear search"
+            title="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 pointer-events-none transition-opacity">
             <kbd className="h-6 min-w-[36px] items-center justify-center rounded-md border border-primary/30 bg-background px-2 font-sans text-[12px] font-bold flex gap-1 shadow-glow text-primary transition-all group-focus-within/search:scale-110">
               <span className="text-sm">⌘</span>K
