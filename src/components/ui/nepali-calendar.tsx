@@ -94,8 +94,7 @@ export function NepaliCalendar({ selected, onSelect, disableFuture, minDate, max
         className={cn(
           "h-9 w-9 p-0 font-normal",
           isToday && "bg-success text-success-foreground font-bold hover:bg-success/90 hover:text-success-foreground",
-          isSelected && !isToday && "bg-amber-500 text-white hover:bg-amber-600 hover:text-white focus:bg-amber-600 focus:text-white",
-          isSelected && isToday && "ring-2 ring-amber-500 ring-offset-2",
+          isSelected && "bg-amber-500 text-white hover:bg-amber-600 hover:text-white focus:bg-amber-600 focus:text-white",
           (isFuture || isOutOfRange) && "opacity-20 pointer-events-none"
         )}
         onClick={() => onSelect?.(dateStr)}

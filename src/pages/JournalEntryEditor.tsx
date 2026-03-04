@@ -40,6 +40,7 @@ import {
   Eye,
   MoreVertical,
   Menu,
+  ShieldCheck,
 } from "lucide-react";
 import { useAccounts, useCreateJournalEntry, useJournalEntry, useUpdateJournalEntry, useCreateAccount, Account } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
@@ -116,13 +117,13 @@ export default function JournalEntryEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    entry_type: "Journal Voucher",
+    entry_type: "",
     series: "ACC-JV-.YYYY.-",
     company: "Unico Plastics Inc.",
     posting_date: toYmd(new Date()),
     miti: adToBs(new Date()),
     fiscal_year: "2082/83",
-    voucher_no: "JR-2082/83-01",
+    voucher_no: "",
     finance_book: "",
     from_template: "",
     narration: "",
@@ -166,8 +167,35 @@ export default function JournalEntryEditor() {
     return limits[formData.fiscal_year] || null;
   }, [formData.fiscal_year]);
 
+  const calculateFiscalYear = (adDate: string) => {
+    if (adDate >= "2025-07-16" && adDate <= "2026-07-15") return "2082/83";
+    if (adDate >= "2024-07-16" && adDate <= "2025-07-15") return "2081/82";
+    if (adDate >= "2023-07-17" && adDate <= "2024-07-15") return "2080/81";
+    if (adDate >= "2022-07-17" && adDate <= "2023-07-16") return "2079/80";
+    return "2082/83"; // Default
+  };
+
   const syncDates = (newAd: string, newBs: string) => {
-    setFormData(prev => ({ ...prev, posting_date: newAd, miti: newBs }));
+    const newFy = calculateFiscalYear(newAd);
+
+    setFormData(prev => {
+      let voucherNo = prev.voucher_no;
+      if (prev.entry_type) {
+        const prefix = prev.entry_type === "Journal Voucher" ? "JV" :
+                       prev.entry_type === "Payment Voucher" ? "PV" :
+                       prev.entry_type === "Receipt Voucher" ? "RV" :
+                       prev.entry_type === "Contra Voucher" ? "CV" : "JV";
+        const shortFy = newFy.split('/').map(s => s.slice(-2)).join('/');
+        voucherNo = `${prefix}-${shortFy}-01`;
+      }
+      return {
+        ...prev,
+        posting_date: newAd,
+        miti: newBs,
+        fiscal_year: newFy,
+        voucher_no: voucherNo
+      };
+    });
     setAdDisplay(formatAdDate(newAd));
     setBsDisplay(newBs);
     const date = fromDateStr(newAd);
@@ -243,11 +271,22 @@ export default function JournalEntryEditor() {
       credit: 0
     }));
 
+    const newIndex = formData.lines.length;
     setFormData((prev) => ({
       ...prev,
       lines: [...prev.lines, ...newRows],
     }));
     setIsDirty(true);
+
+    // Auto-focus the first field of the new row (Sub Ledger) after a short delay
+    setTimeout(() => {
+      setEditingRowIndex(newIndex);
+      setTimeout(() => {
+        const subLedgerInputs = document.querySelectorAll('.sub-ledger-input');
+        const rowInput = subLedgerInputs[newIndex] as HTMLElement;
+        if (rowInput) rowInput.focus();
+      }, 50);
+    }, 100);
   };
 
   const handleRemoveRow = (index: number) => {
@@ -286,24 +325,68 @@ export default function JournalEntryEditor() {
       return;
     }
 
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || e.key === "Tab") {
       const target = e.target as HTMLElement;
-      // Skip buttons like plus, edit, delete
-      if (target.tagName === "BUTTON" || target.closest(".skip-nav")) return;
+
+      // Special logic for empty Ledger Account - only for Enter
+      if (e.key === "Enter") {
+        const trigger = target.classList.contains('ledger-account-select-trigger') ? target : target.closest('.ledger-account-select-trigger') as HTMLElement;
+        if (trigger) {
+          const rowIdx = parseInt(trigger.getAttribute('data-row-index') || "-1");
+          if (rowIdx !== -1 && !formData.lines[rowIdx].account_id) {
+            const saveBtn = document.querySelector('.main-save-btn') as HTMLElement;
+            if (saveBtn) {
+              saveBtn.focus();
+              e.preventDefault();
+              return;
+            }
+          }
+        }
+      }
+
+      // Logic for adding new row on Enter at the end of a row
+      if (e.key === "Enter" && target.classList.contains('remarks-input')) {
+        const rowIdx = parseInt(target.getAttribute('data-row-index') || "-1");
+        if (rowIdx === formData.lines.length - 1 && formData.lines.length >= 2) {
+          const currentLine = formData.lines[rowIdx];
+          if (currentLine.account_id && (currentLine.debit > 0 || currentLine.credit > 0)) {
+            handleAddRow(1);
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+
+      // Skip non-form buttons like Action, Add Row, etc. on Enter
+      const isNavigableButton = target.classList.contains('main-save-btn');
+      const isSelectTrigger = target.classList.contains('select-trigger');
+      if (e.key === "Enter" && target.tagName === "BUTTON" && !isNavigableButton && !isSelectTrigger) return;
 
       const form = document.querySelector("main");
       if (form) {
+        // Collect all potential form controls in order
         const focusableElements = Array.from(form.querySelectorAll(
-          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"]'
+          'input:not([disabled]), .select-trigger:not([disabled]), button.main-save-btn, textarea:not([disabled])'
         )).filter(el => {
           const style = window.getComputedStyle(el);
-          return style.display !== 'none' && style.visibility !== 'hidden' && (el as HTMLElement).tabIndex !== -1;
+          const isSkip = el.closest(".skip-nav") && e.key === "Enter";
+          const isSpecialInput = el.classList.contains('ad-date-input') || el.classList.contains('bs-miti-input');
+          const isReadonly = (el as HTMLInputElement).readOnly && !isSpecialInput;
+          const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
+          return isVisible && (el as HTMLElement).tabIndex !== -1 && !isSkip && !isReadonly;
         });
 
         const index = focusableElements.indexOf(target);
-        if (index > -1 && index < focusableElements.length - 1) {
-          (focusableElements[index + 1] as HTMLElement).focus();
-          e.preventDefault();
+        if (index > -1) {
+          if (e.shiftKey && e.key === "Tab") {
+            if (index > 0) {
+              (focusableElements[index - 1] as HTMLElement).focus();
+              e.preventDefault();
+            }
+          } else if (index < focusableElements.length - 1) {
+            (focusableElements[index + 1] as HTMLElement).focus();
+            e.preventDefault();
+          }
         }
       }
     }
@@ -405,7 +488,7 @@ export default function JournalEntryEditor() {
       voucher_type: formData.entry_type,
       description: `Journal Entry - ${formData.narration || 'No Ref'}`,
       reference: formData.narration,
-      series: formData.series,
+      series: formData.series || "ACC-JV-.YYYY.-",
       lines: formData.lines
         .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
         .map(l => ({
@@ -433,16 +516,24 @@ export default function JournalEntryEditor() {
         navigate("/finance");
       } else {
         // Reset form for "Save & New"
-        setFormData(prev => ({
-          ...prev,
-          voucher_no: "Generated Automatically",
-          narration: "",
-          lines: [
-            { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
-            { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
-          ]
-        }));
+        setFormData(prev => {
+          const prefix = prev.entry_type === "Journal Voucher" ? "JV" :
+                         prev.entry_type === "Payment Voucher" ? "PV" :
+                         prev.entry_type === "Receipt Voucher" ? "RV" :
+                         prev.entry_type === "Contra Voucher" ? "CV" : "JV";
+          const shortFy = prev.fiscal_year.split('/').map(s => s.slice(-2)).join('/');
+          return {
+            ...prev,
+            voucher_no: `${prefix}-${shortFy}-01`, // In a real app, this would fetch the next increment
+            narration: "",
+            lines: [
+              { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
+              { account_id: "", party_type: "", party: "", debit: 0, credit: 0 },
+            ]
+          };
+        });
         setEditingRowIndex(null);
+        setAttachments([]);
       }
     } catch (error) {
       toast.error("Failed to save journal entry");
@@ -513,14 +604,15 @@ export default function JournalEntryEditor() {
                   value={formData.fiscal_year}
                   onValueChange={(v) => {
                     setFormData(p => {
-                      const prefix = p.entry_type === "Journal Voucher" ? "JR" :
+                      const prefix = p.entry_type === "Journal Voucher" ? "JV" :
                                      p.entry_type === "Payment Voucher" ? "PV" :
                                      p.entry_type === "Receipt Voucher" ? "RV" :
                                      p.entry_type === "Contra Voucher" ? "CV" : "JV";
+                      const shortFy = v.split('/').map(s => s.slice(-2)).join('/');
                       return {
                         ...p,
                         fiscal_year: v,
-                        voucher_no: `${prefix}-${v}-01`
+                        voucher_no: `${prefix}-${shortFy}-01`
                       };
                     });
                     // Jump to start of selected fiscal year
@@ -535,7 +627,7 @@ export default function JournalEntryEditor() {
                     }
                   }}
                 >
-                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm">
+                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm select-trigger">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -549,7 +641,7 @@ export default function JournalEntryEditor() {
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Date (AD) <span className="text-destructive">*</span>
+                  Transaction Date AD <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -562,11 +654,10 @@ export default function JournalEntryEditor() {
                       const parsed = parseAdDate(val);
                       if (parsed) {
                         const bs = adToBs(parsed);
-                        setFormData(p => ({ ...p, posting_date: parsed, miti: bs }));
-                        setBsDisplay(bs);
+                        syncDates(parsed, bs);
                       }
                     }}
-                    className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm"
+                    className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm ad-date-input"
                   />
                   <Popover>
                     <PopoverTrigger asChild disabled={isReadOnly}>
@@ -634,13 +725,12 @@ export default function JournalEntryEditor() {
                       setBsDisplay(val);
                       const ad = bsToAd(val);
                       if (ad) {
-                        setFormData(p => ({ ...p, miti: val, posting_date: ad }));
-                        setAdDisplay(formatAdDate(ad));
+                        syncDates(ad, val);
                       } else {
                         setFormData(p => ({ ...p, miti: val }));
                       }
                     }}
-                    className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm"
+                    className="bg-background/50 border-muted-foreground/20 h-10 font-mono pr-8 text-sm bs-miti-input"
                   />
                   <Popover>
                     <PopoverTrigger asChild disabled={isReadOnly}>
@@ -686,23 +776,24 @@ export default function JournalEntryEditor() {
                   Voucher Type <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  disabled={isReadOnly || (formData.entry_type !== "Journal Voucher" && !!id)}
+                  disabled={isReadOnly || (formData.entry_type !== "" && !!id)}
                   value={formData.entry_type}
                   onValueChange={(v) => {
                     setFormData(p => {
-                      const prefix = v === "Journal Voucher" ? "JR" :
+                      const prefix = v === "Journal Voucher" ? "JV" :
                                      v === "Payment Voucher" ? "PV" :
                                      v === "Receipt Voucher" ? "RV" :
                                      v === "Contra Voucher" ? "CV" : "JV";
+                      const shortFy = p.fiscal_year.split('/').map(s => s.slice(-2)).join('/');
                       return {
                         ...p,
                         entry_type: v,
-                        voucher_no: `${prefix}-${p.fiscal_year}-01`
+                        voucher_no: `${prefix}-${shortFy}-01`
                       };
                     });
                   }}
                 >
-                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm">
+                  <SelectTrigger className="bg-background/50 border-muted-foreground/20 h-10 text-sm select-trigger voucher-type-select">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -724,7 +815,7 @@ export default function JournalEntryEditor() {
                     tabIndex={-1}
                     value={formData.voucher_no}
                     className="bg-muted/50 border-muted-foreground/20 h-10 font-mono text-amber-500 text-sm focus:ring-0 select-none pointer-events-none"
-                    placeholder="Auto"
+                    placeholder="Pick Type"
                   />
                   <p className="text-[9px] text-muted-foreground italic leading-tight">
                     * Assigned automatically
@@ -740,13 +831,16 @@ export default function JournalEntryEditor() {
             <CardTitle className="text-base font-semibold">Accounting Entries</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-hidden">
+            <div
+              data-testid="accounting-entries-container"
+              className={cn("overflow-hidden transition-all duration-300", !formData.entry_type && "opacity-50 pointer-events-none grayscale-[0.5]")}
+            >
               <div className="w-full">
                 <div className="grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] bg-muted/20 border-b items-center h-10 px-4">
                   <div className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Action</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">No.</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2">Sub Ledger</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Account</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ledger Account</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</div>
                   <div className="text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-4">Remarks</div>
@@ -789,9 +883,10 @@ export default function JournalEntryEditor() {
                           readOnly={isReadOnly || editingRowIndex !== index}
                           placeholder="Sub Ledger"
                           value={line.party_type}
+                          data-row-index={index}
                           onChange={(e) => updateLine(index, "party_type", e.target.value)}
                           className={cn(
-                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm",
+                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 text-sm sub-ledger-input",
                             editingRowIndex === index && "hover:bg-background/50"
                           )}
                         />
@@ -803,13 +898,16 @@ export default function JournalEntryEditor() {
                             value={line.account_id}
                             onValueChange={(v) => updateLine(index, "account_id", v)}
                           >
-                            <SelectTrigger className={cn(
-                              "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 w-full text-sm disabled:opacity-100",
-                              editingRowIndex === index && "hover:bg-background/50"
-                            )}>
+                            <SelectTrigger
+                              data-row-index={index}
+                              className={cn(
+                                "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 w-full text-sm disabled:opacity-100 select-trigger ledger-account-select-trigger",
+                                editingRowIndex === index && "hover:bg-background/50"
+                              )}
+                            >
                               <SelectValue placeholder="Select Account" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="ledger-account-select">
                               {accounts?.map((acc) => (
                                 <SelectItem key={acc.id} value={acc.id}>
                                   {acc.name} - {acc.code}
@@ -839,9 +937,10 @@ export default function JournalEntryEditor() {
                           type="number"
                           placeholder="0.00"
                           value={line.debit || ""}
+                          data-row-index={index}
                           onChange={(e) => updateLine(index, "debit", parseFloat(e.target.value) || 0)}
                           className={cn(
-                            "text-right border-none bg-transparent transition-colors focus:ring-0 h-8 font-mono text-sm",
+                            "text-right border-none bg-transparent transition-colors focus:ring-0 h-8 font-mono text-sm debit-input",
                             editingRowIndex === index && "hover:bg-background/50"
                           )}
                         />
@@ -852,9 +951,10 @@ export default function JournalEntryEditor() {
                           type="number"
                           placeholder="0.00"
                           value={line.credit || ""}
+                          data-row-index={index}
                           onChange={(e) => updateLine(index, "credit", parseFloat(e.target.value) || 0)}
                           className={cn(
-                            "text-right border-none bg-transparent transition-colors focus:ring-0 h-8 font-mono text-sm",
+                            "text-right border-none bg-transparent transition-colors focus:ring-0 h-8 font-mono text-sm credit-input",
                             editingRowIndex === index && "hover:bg-background/50"
                           )}
                         />
@@ -864,9 +964,10 @@ export default function JournalEntryEditor() {
                           readOnly={isReadOnly || editingRowIndex !== index}
                           placeholder="Remarks"
                           value={line.party}
+                          data-row-index={index}
                           onChange={(e) => updateLine(index, "party", e.target.value)}
                           className={cn(
-                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm",
+                            "border-none bg-transparent transition-colors focus:ring-0 px-0 h-8 placeholder:text-muted-foreground/30 w-full text-sm remarks-input",
                             editingRowIndex === index && "hover:bg-background/50"
                           )}
                         />
@@ -919,7 +1020,10 @@ export default function JournalEntryEditor() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
+        <Card
+          data-testid="attachments-container"
+          className={cn("border-none shadow-sm bg-card/50 backdrop-blur-sm transition-all duration-300", !formData.entry_type && "opacity-50 pointer-events-none grayscale-[0.5]")}
+        >
           <CardHeader className="border-b bg-muted/30 px-6 py-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Paperclip className="h-4 w-4" />
@@ -1038,7 +1142,7 @@ export default function JournalEntryEditor() {
                     <Button
                       onClick={() => handleSave(true)}
                       disabled={createJournalEntry.isPending}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[100px]"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[100px] main-save-btn"
                     >
                       <Save className="h-4 w-4 mr-2" />
                       Save
