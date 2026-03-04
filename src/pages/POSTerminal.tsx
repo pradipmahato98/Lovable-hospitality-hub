@@ -53,6 +53,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { POSTableSystem } from "@/components/pos/POSTableSystem";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
+import { POSNav } from "@/components/pos/POSNav";
 
 interface CartItem {
   id: string;
@@ -233,46 +234,31 @@ const POSTerminal = () => {
 
   return (
     <MainLayout title="POS Terminal" subtitle="Restaurant and bar transactions">
-      {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="tables" className="gap-2">
-              <Grid3X3 className="h-4 w-4" />
-              Tables
-            </TabsTrigger>
-            <TabsTrigger value="order" className="gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Order
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="gap-2">
-              <Receipt className="h-4 w-4" />
-              Billing
-            </TabsTrigger>
-             <TabsTrigger value="clock" className="gap-2">
-               <Clock className="h-4 w-4" />
-               Clock In/Out
-             </TabsTrigger>
-          </TabsList>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos/kitchen")} className="gap-2">
-              <ChefHat className="h-4 w-4" />
-              Kitchen
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos/reports")} className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Reports
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos/history")} className="gap-2">
-              <History className="h-4 w-4" />
-              History
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/pos")} className="gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Button>
+      <div className="space-y-6">
+        <POSNav activeTab="terminal" />
+
+        {/* Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+              <TabsTrigger value="tables" className="gap-2">
+                <Grid3X3 className="h-4 w-4" />
+                Tables
+              </TabsTrigger>
+              <TabsTrigger value="order" className="gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Order
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="gap-2">
+                <Receipt className="h-4 w-4" />
+                Billing
+              </TabsTrigger>
+              <TabsTrigger value="clock" className="gap-2">
+                <Clock className="h-4 w-4" />
+                Clock In/Out
+              </TabsTrigger>
+            </TabsList>
           </div>
-        </div>
 
         {/* Tables Tab - Table Selection System */}
         <TabsContent value="tables">
@@ -673,7 +659,8 @@ const POSTerminal = () => {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </MainLayout>
   );
 };

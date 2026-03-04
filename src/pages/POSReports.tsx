@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePOSTransactions, POSTransaction, POSOrderItem } from "@/hooks/usePOS";
+import { POSNav } from "@/components/pos/POSNav";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isWithinInterval } from "date-fns";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -265,21 +266,7 @@ export default function POSReports() {
   return (
     <MainLayout title="POS Reports" subtitle="Sales analytics and performance metrics">
       <div className="space-y-6">
-        {/* Navigation Shortcuts */}
-        <div className="flex items-center gap-2 mb-2">
-          <Button variant="outline" size="sm" asChild className="gap-2">
-            <Link to="/pos">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild className="gap-2">
-            <Link to="/pos/terminal">
-              <ShoppingCart className="h-4 w-4" />
-              Terminal
-            </Link>
-          </Button>
-        </div>
+        <POSNav activeTab="reports" />
 
         {/* Period Selector */}
         <Card>

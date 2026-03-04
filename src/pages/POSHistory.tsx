@@ -45,6 +45,7 @@ import {
 import { Link } from "react-router-dom";
 import { usePOSTransactions, POSTransaction } from "@/hooks/usePOS";
 import { format } from "date-fns";
+import { POSNav } from "@/components/pos/POSNav";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
@@ -167,21 +168,7 @@ export default function POSHistory() {
   return (
     <MainLayout title="POS History" subtitle="View and export transaction history">
       <div className="space-y-6">
-        {/* Navigation Shortcuts */}
-        <div className="flex items-center gap-2 mb-2">
-          <Button variant="outline" size="sm" asChild className="gap-2">
-            <Link to="/pos">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild className="gap-2">
-            <Link to="/pos/terminal">
-              <ShoppingCart className="h-4 w-4" />
-              Terminal
-            </Link>
-          </Button>
-        </div>
+        <POSNav activeTab="history" />
 
         {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
