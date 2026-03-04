@@ -196,8 +196,8 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[95vw] md:w-[90vw] h-[95vh] md:h-[90vh] p-0 overflow-hidden flex flex-col bg-background">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-6 py-4 border-b bg-muted/30 gap-4">
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] md:h-[85vh] p-0 overflow-hidden flex flex-col bg-background">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-4 py-3 border-b bg-muted/30 gap-4">
           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
             <Button variant="ghost" size="sm" className="gap-2 px-2" onClick={() => onOpenChange(false)}>
               <ArrowLeft className="h-4 w-4" />
@@ -223,77 +223,66 @@ export function GuestDetailsDialog({ guest, open, onOpenChange }: GuestDetailsDi
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Sidebar */}
-          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r bg-muted/10 p-4 md:p-6 flex flex-col items-center overflow-y-auto max-h-[35vh] md:max-h-full shrink-0">
-            <Avatar className="h-24 w-24 md:h-48 md:w-48 rounded-sm mb-3 md:mb-6 border-4 border-background shadow-lg">
+          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-muted/10 p-4 md:p-6 flex flex-col items-center overflow-y-auto max-h-[30vh] md:max-h-full shrink-0">
+            <Avatar className="h-20 w-20 md:h-32 md:w-32 rounded-lg mb-4 border-2 border-background shadow-md">
               <AvatarImage src={guest.image_url || guest.id_image_url || ""} alt={`${guest.first_name} ${guest.last_name}`} className="object-cover" />
-              <AvatarFallback className="text-2xl md:text-4xl bg-gradient-gold text-primary-foreground rounded-none">
+              <AvatarFallback className="text-xl md:text-2xl bg-gradient-gold text-primary-foreground rounded-lg">
                 {guest.first_name[0]}{guest.last_name[0]}
               </AvatarFallback>
             </Avatar>
 
-            <div className="w-full space-y-4 md:space-y-6">
-            <div className="space-y-1 w-full">
-                <h3 className="text-lg md:text-xl font-bold text-center flex items-center justify-center gap-2 break-words">
+            <div className="w-full space-y-4">
+              <div className="text-center">
+                <h3 className="text-base md:text-lg font-bold flex items-center justify-center gap-2 break-words">
                   {guest.first_name} {guest.last_name}
-                  {guest.is_vip && <Star className="h-5 w-5 text-primary fill-primary" />}
+                  {guest.is_vip && <Star className="h-4 w-4 text-primary fill-primary" />}
                 </h3>
+                <Badge variant="outline" className="mt-2 bg-primary/10 text-primary border-primary/20 text-[10px] uppercase tracking-wider">
+                  {guest.is_vip ? "VIP Guest" : "Regular Guest"}
+                </Badge>
               </div>
 
-              <div className="space-y-3 md:space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
-                  <div className="text-sm">
-                    <p className="text-muted-foreground text-xs">Guest Name</p>
-                    <p className="font-medium">{guest.first_name} {guest.last_name}</p>
-                  </div>
+              <div className="space-y-4 pt-4 border-t border-border/50">
+                <div className="text-sm">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-widest mb-1">Membership</p>
+                  <p className="font-mono text-xs">{loyaltyMember?.member_number || "NOT ENROLLED"}</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
-                  <div className="text-sm">
-                    <p className="text-muted-foreground text-xs">Membership Number</p>
-                    <p className="font-medium font-mono">{loyaltyMember?.member_number || "None"}</p>
-                  </div>
+                <div className="text-sm">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-widest mb-1">Contact</p>
+                  <p className="font-medium text-xs truncate">{guest.email || "No Email"}</p>
+                  <p className="font-medium text-xs mt-1">{guest.phone || "No Phone"}</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
+                {guest.company && (
                   <div className="text-sm">
-                    <p className="text-muted-foreground text-xs">Email</p>
-                    <p className="font-medium break-all">{guest.email || "None"}</p>
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-widest mb-1">Company</p>
+                    <p className="font-medium text-xs truncate">{guest.company}</p>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
-                  <div className="text-sm">
-                    <p className="text-muted-foreground text-xs">Phone</p>
-                    <p className="font-medium">{guest.phone || "None"}</p>
-                  </div>
-                </div>
+                )}
               </div>
-
             </div>
           </div>
 
           {/* Right Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-2 md:p-4 bg-muted/30 border-b">
+              <div className="px-4 py-2 bg-muted/30 border-b">
                 <ScrollArea className="w-full whitespace-nowrap">
                   <TabsList className="bg-transparent h-auto p-0 flex gap-1 w-max">
                     {[
-                      "Main Info",
-                      "Statistics",
-                      "Communication",
-                      "Stay History",
-                      "Reservation",
-                      "Preference",
-                      "Change History",
+                      { id: "main-info", label: "Profile" },
+                      { id: "statistics", label: "Insights" },
+                      { id: "communication", label: "Timeline" },
+                      { id: "stay-history", label: "Stays" },
+                      { id: "reservation", label: "Booking" },
+                      { id: "preference", label: "Notes" },
+                      { id: "change-history", label: "Audit" },
                     ].map((tab) => (
                       <TabsTrigger
-                        key={tab}
-                        value={tab.toLowerCase().replace(" ", "-")}
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 md:px-4 py-1.5 md:py-2 border rounded-none text-xs md:text-sm transition-colors shrink-0"
+                        key={tab.id}
+                        value={tab.id}
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-3 py-1.5 border rounded-md text-xs transition-all shrink-0 font-medium"
                       >
-                        {tab}
+                        {tab.label}
                       </TabsTrigger>
                     ))}
                   </TabsList>

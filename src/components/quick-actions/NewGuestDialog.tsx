@@ -27,6 +27,9 @@ interface GuestFormData {
   email: string;
   phone: string;
   is_vip: boolean;
+  company: string;
+  id_type: string;
+  id_number: string;
 }
 
 const initialFormData: GuestFormData = {
@@ -35,6 +38,9 @@ const initialFormData: GuestFormData = {
   email: "",
   phone: "",
   is_vip: false,
+  company: "",
+  id_type: "",
+  id_number: "",
 };
 
 export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialogProps) {
@@ -51,6 +57,9 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
           email: data.email || null,
           phone: data.phone || null,
           is_vip: data.is_vip,
+          company: data.company || null,
+          id_type: data.id_type || null,
+          id_number: data.id_number || null,
         })
         .select()
         .single();
@@ -86,12 +95,12 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add New Guest</DialogTitle>
+            <DialogTitle>New Guest / Company Profile</DialogTitle>
             <DialogDescription>
-              Create a new guest profile. Press Ctrl+G to open this dialog.
+              Create a new profile. Press Ctrl+G to open this dialog anywhere.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -145,6 +154,41 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
                 }
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="company">Company / Organization</Label>
+              <Input
+                id="company"
+                placeholder="Company Name"
+                value={formData.company}
+                onChange={(e) =>
+                  setFormData({ ...formData, company: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="id_type">ID Type</Label>
+                <Input
+                  id="id_type"
+                  placeholder="Passport/VAT"
+                  value={formData.id_type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, id_type: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="id_number">ID Number</Label>
+                <Input
+                  id="id_number"
+                  placeholder="Number"
+                  value={formData.id_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, id_number: e.target.value })
+                  }
+                />
+              </div>
+            </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="is_vip"
@@ -153,8 +197,8 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
                   setFormData({ ...formData, is_vip: checked as boolean })
                 }
               />
-              <Label htmlFor="is_vip" className="cursor-pointer">
-                VIP Guest
+              <Label htmlFor="is_vip" className="cursor-pointer text-sm font-medium">
+                Mark as VIP Profile
               </Label>
             </div>
           </div>
