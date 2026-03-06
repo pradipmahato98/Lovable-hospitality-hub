@@ -314,11 +314,8 @@ const FrontDesk = () => {
           </TabsList>
 
           {/* Rooms Tab */}
-          <TabsContent value="rooms">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Main Content */}
-              <div className="lg:col-span-3 space-y-6">
-                <div className="flex flex-col space-y-4">
+          <TabsContent value="rooms" className="space-y-6">
+            <div className="flex flex-col space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <Button
@@ -450,7 +447,7 @@ const FrontDesk = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
                     {filteredRooms.map((room, index) => (
                       <Card
                         key={room.id}
@@ -541,8 +538,6 @@ const FrontDesk = () => {
                     )}
                   </div>
                 )}
-              </div>
-            </div>
           </TabsContent>
 
           {/* Guest Folios Tab */}
