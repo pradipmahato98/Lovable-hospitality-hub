@@ -183,8 +183,6 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     }
   };
 
-  const fyRange = useMemo(() => getFiscalYearRange(fiscalYear), [fiscalYear]);
-
   const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
   const difference = Math.abs(totalDebit - totalCredit);
