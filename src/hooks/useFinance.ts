@@ -40,7 +40,7 @@ export interface JournalLine {
   id: string;
   journal_entry_id: string;
   account_id: string;
-  sub_ledger_id?: string | null;
+  sub_ledger?: string | null;
   debit: number;
   credit: number;
   description: string | null;
@@ -268,7 +268,7 @@ export function useCreateJournalEntry() {
       reference?: string | null;
       lines: {
         account_id: string;
-        sub_ledger_id?: string | null;
+        sub_ledger?: string | null;
         debit: number;
         credit: number;
         description?: string | null;
@@ -302,7 +302,7 @@ export function useCreateJournalEntry() {
       const lines = entry.lines.map((line) => ({
         journal_entry_id: journalEntry.id,
         account_id: line.account_id,
-        sub_ledger_id: line.sub_ledger_id || null,
+        sub_ledger: line.sub_ledger || null,
         debit: line.debit,
         credit: line.credit,
         description: line.description ?? null,

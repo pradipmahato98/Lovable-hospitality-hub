@@ -41,11 +41,17 @@ import { JournalEntryEditor } from "./JournalEntryEditor";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
+  onEditorToggle?: (isOpen: boolean) => void;
 }
 
-export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
+export function JournalManagementService({ isReadOnly, onEditorToggle }: JournalManagementServiceProps) {
   const [journalEditorOpen, setJournalEditorOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
+
+  const toggleEditor = (open: boolean) => {
+    setJournalEditorOpen(open);
+    onEditorToggle?.(open);
+  };
   const [quickPost, setQuickPost] = useState({
     account_id: "",
     contra_account_id: "",
@@ -113,7 +119,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
   };
 
   if (journalEditorOpen) {
-    return <JournalEntryEditor onClose={() => setJournalEditorOpen(false)} />;
+    return <JournalEntryEditor onClose={() => toggleEditor(false)} />;
   }
 
   return (
@@ -129,7 +135,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Send className="h-4 w-4" />
               Quick Post
             </Button>
-            <Button onClick={() => setJournalEditorOpen(true)} className="gap-2">
+            <Button onClick={() => toggleEditor(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               New Journal Entry
             </Button>
