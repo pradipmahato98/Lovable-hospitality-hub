@@ -21,13 +21,19 @@ interface NepaliCalendarProps {
 }
 
 export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate }: NepaliCalendarProps) {
+  const effectiveMaxDate = useMemo(() => {
+    const today = new Date();
+    if (!maxDate) return today;
+    return maxDate < today ? maxDate : today;
+  }, [maxDate]);
+
   const currentBS = useMemo(() => adToBs(selected || new Date()), [selected]);
 
   const [viewMonth, setViewMonth] = useState(currentBS.month);
   const [viewYear, setViewYear] = useState(currentBS.year);
 
   const minBS = useMemo(() => minDate ? adToBs(minDate) : null, [minDate]);
-  const maxBS = useMemo(() => maxDate ? adToBs(maxDate) : null, [maxDate]);
+  const maxBS = useMemo(() => effectiveMaxDate ? adToBs(effectiveMaxDate) : null, [effectiveMaxDate]);
 
   // Calculate days in the view month
   const daysInMonth = getDaysInBsMonth(viewYear, viewMonth);
@@ -45,11 +51,20 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
 
   const handleNextMonth = () => {
     if (viewMonth === 12) {
+      if (maxBS && viewYear >= maxBS.year) return;
       setViewMonth(1);
       setViewYear(viewYear + 1);
     } else {
+      if (maxBS && viewYear === maxBS.year && viewMonth >= maxBS.month) return;
       setViewMonth(viewMonth + 1);
     }
+  };
+
+  const goToToday = () => {
+    const today = adToBs(new Date());
+    setViewMonth(today.month);
+    setViewYear(today.year);
+    onSelect?.(new Date());
   };
 
   const isToday = (day: number) => {
@@ -123,7 +138,7 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
           const dateAD = bsToAd(viewYear, viewMonth, day);
           let disabled = false;
           if (minDate && dateAD < minDate) disabled = true;
-          if (maxDate && dateAD > maxDate) disabled = true;
+          if (effectiveMaxDate && dateAD > effectiveMaxDate) disabled = true;
 
           return (
             <Button
@@ -143,6 +158,11 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
             </Button>
           );
         })}
+      </div>
+      <div className="mt-4 pt-2 border-t flex justify-center">
+        <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={goToToday}>
+          Go to Today
+        </Button>
       </div>
     </div>
   );
