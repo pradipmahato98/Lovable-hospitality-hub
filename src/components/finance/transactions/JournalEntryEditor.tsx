@@ -32,7 +32,18 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { adToBs, bsToAd, formatBsDate, getFiscalYear, parseBsDate } from "@/utils/nepaliDate";
+import {
+  adToBs,
+  bsToAd,
+  formatBsDate,
+  getFiscalYear,
+  getFiscalYearRange,
+  parseBsDate
+} from "@/utils/nepaliDate";
+import { NepaliCalendar } from "@/components/ui/nepali-calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 
 interface JournalLine {
   id: string;
@@ -60,7 +71,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const createJournalEntry = useCreateJournalEntry();
 
   const [fiscalYear, setFiscalYear] = useState(getFiscalYear(new Date()));
-  const [dateAD, setDateAD] = useState(new Date().toISOString().split("T")[0]);
+  const [dateAD, setDateAD] = useState(new Date());
   const [mitiBS, setMitiBS] = useState(formatBsDate(adToBs(new Date())));
   const [voucherType, setVoucherType] = useState<string>("");
   const [voucherNo, setVoucherNo] = useState("");
@@ -71,6 +82,19 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   ]);
 
   const [editingRowId, setEditingRowId] = useState<string | null>(lines[0].id);
+
+  const fiscalYears = useMemo(() => {
+    const currentAD = new Date();
+    const currentFYStr = getFiscalYear(currentAD);
+    const [start] = currentFYStr.split('/').map(Number);
+
+    // Generate 3 years: Previous, Current, Next
+    return [
+      `${start - 1}/${start.toString().slice(-2)}`,
+      currentFYStr,
+      `${start + 1}/${(start + 2).toString().slice(-2)}`
+    ];
+  }, []);
 
   // Focus management
   const fyRef = useRef<HTMLButtonElement>(null);
@@ -94,24 +118,25 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   }, [voucherType, fiscalYear, entries]);
 
   // Synchronize dates
-  const handleDateADChange = (val: string) => {
-    setDateAD(val);
-    const date = new Date(val);
-    if (!isNaN(date.getTime())) {
-      setMitiBS(formatBsDate(adToBs(date)));
-      // Check if fiscal year needs update? User said: "when old back date select then not also changed of fiscal year."
-      // I'll keep fiscal year stable unless manually changed.
-    }
+  const handleDateADChange = (date: Date | undefined) => {
+    if (!date) return;
+    setDateAD(date);
+    setMitiBS(formatBsDate(adToBs(date)));
   };
 
-  const handleMitiBSChange = (val: string) => {
-    setMitiBS(val);
-    const parsed = parseBsDate(val);
-    if (parsed) {
-      const ad = bsToAd(parsed.year, parsed.month, parsed.day);
-      setDateAD(ad.toISOString().split("T")[0]);
-    }
+  const handleMitiBSChange = (date: Date) => {
+    setDateAD(date);
+    setMitiBS(formatBsDate(adToBs(date)));
   };
+
+  const handleFYChange = (fy: string) => {
+    setFiscalYear(fy);
+    const { start } = getFiscalYearRange(fy);
+    setDateAD(start);
+    setMitiBS(formatBsDate(adToBs(start)));
+  };
+
+  const fyRange = useMemo(() => getFiscalYearRange(fiscalYear), [fiscalYear]);
 
   const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
@@ -164,7 +189,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
 
     try {
       await createJournalEntry.mutateAsync({
-        date: dateAD,
+        date: dateAD.toISOString().split("T")[0],
         miti: mitiBS,
         fiscal_year: fiscalYear,
         voucher_type: voucherType,
@@ -174,7 +199,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
           .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
           .map(l => ({
             account_id: l.account_id,
-            sub_ledger_id: l.sub_ledger, // Map text input to sub_ledger_id for now as requested
+            sub_ledger: l.sub_ledger,
             debit: l.debit,
             credit: l.credit,
             description: l.remarks,
@@ -256,50 +281,93 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
 
       <div className="flex-1 overflow-auto p-6 space-y-6">
         <Card className="border-primary/10 shadow-sm">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-              <div className="space-y-2">
-                <Label>Fiscal Year</Label>
-                <Select value={fiscalYear} onValueChange={setFiscalYear}>
-                  <SelectTrigger ref={fyRef} onKeyDown={(e) => handleKeyDown(e, "fy")}>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fiscal Year</Label>
+                <Select value={fiscalYear} onValueChange={handleFYChange}>
+                  <SelectTrigger ref={fyRef} className="h-9" onKeyDown={(e) => handleKeyDown(e, "fy")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="80/81">80/81</SelectItem>
-                    <SelectItem value="81/82">81/82</SelectItem>
-                    <SelectItem value="82/83">82/83</SelectItem>
+                    {fiscalYears.map(fy => (
+                      <SelectItem key={fy} value={fy}>{fy}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Transaction Date AD</Label>
-                <Input
-                  ref={dateAdRef}
-                  type="date"
-                  value={dateAD}
-                  onChange={(e) => handleDateADChange(e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, "dateAD")}
-                />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Transaction Date AD</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      ref={dateAdRef}
+                          id="date-ad-trigger"
+                      variant="outline"
+                      className={cn(
+                        "w-full h-9 justify-start text-left font-normal",
+                        !dateAD && "text-muted-foreground"
+                      )}
+                      onKeyDown={(e) => handleKeyDown(e, "dateAD")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateAD ? dateAD.toLocaleDateString() : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateAD}
+                      onSelect={handleDateADChange}
+                      fromDate={fyRange.start}
+                      toDate={fyRange.end}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <div className="space-y-2">
-                <Label>Miti (BS)</Label>
-                <Input
-                  ref={mitiBsRef}
-                  placeholder="YYYY-MM-DD"
-                  value={mitiBS}
-                  onChange={(e) => handleMitiBSChange(e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, "mitiBS")}
-                />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Miti (BS)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      ref={mitiBsRef}
+                          id="miti-bs-trigger"
+                      variant="outline"
+                      className="w-full h-9 justify-start text-left font-normal"
+                      onKeyDown={(e) => handleKeyDown(e, "mitiBS")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {mitiBS}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <NepaliCalendar
+                      selected={dateAD}
+                      onSelect={handleMitiBSChange}
+                      minDate={fyRange.start}
+                      maxDate={fyRange.end}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <div className="space-y-2">
-                <Label>Voucher Type</Label>
-                <Select value={voucherType} onValueChange={setVoucherType}>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Voucher Type</Label>
+                <Select
+                  value={voucherType}
+                  onValueChange={(v) => {
+                    setVoucherType(v);
+                    setTimeout(() => {
+                      document.getElementById(`sub-ledger-${lines[0].id}`)?.focus();
+                    }, 50);
+                  }}
+                >
                   <SelectTrigger
                     ref={voucherTypeRef}
-                    className={cn(isBlocked && "ring-2 ring-primary animate-pulse")}
+                    className={cn("h-9", isBlocked && "ring-2 ring-primary animate-pulse")}
                     onKeyDown={(e) => handleKeyDown(e, "voucherType")}
                   >
                     <SelectValue placeholder="Select Type" />
@@ -312,12 +380,12 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Voucher No.</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Voucher No.</Label>
                 <Input
                   value={voucherNo}
                   readOnly
-                  className="bg-muted font-mono text-amber-500 font-bold"
+                  className="h-9 bg-muted font-mono text-amber-500 font-bold pointer-events-none"
                   tabIndex={-1}
                 />
               </div>
@@ -340,8 +408,8 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden bg-card">
-            <div className="grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] bg-muted/50 border-b text-[10px] uppercase font-bold tracking-wider p-3 gap-2">
+          <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
+            <div className="grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] bg-muted/50 border-b text-[10px] uppercase font-bold tracking-wider px-3 py-2 gap-2">
               <div className="flex items-center">Action</div>
               <div className="flex items-center">No.</div>
               <div className="flex items-center">Sub Ledger</div>
@@ -389,7 +457,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                       readOnly={editingRowId !== line.id}
                       onChange={(e) => updateLine(line.id, "sub_ledger", e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, "sub_ledger", line.id)}
-                      className="h-8 bg-transparent border-none focus-visible:ring-1"
+                      className="h-7 text-xs bg-transparent border-none focus-visible:ring-1"
                     />
                   </div>
                   <div className={cn(editingRowId !== line.id && "pointer-events-none opacity-80")}>
@@ -406,7 +474,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                     >
                       <SelectTrigger
                         id={`account-${line.id}`}
-                        className="h-8 bg-transparent border-none focus-visible:ring-1"
+                        className="h-7 text-xs bg-transparent border-none focus-visible:ring-1"
                         onKeyDown={(e) => handleKeyDown(e, "account", line.id)}
                       >
                         <SelectValue placeholder="Select Ledger Account" />
@@ -424,7 +492,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                       type="number"
                       placeholder="0.00"
                       readOnly={editingRowId !== line.id}
-                      className="h-8 text-right bg-transparent border-none focus-visible:ring-1"
+                      className="h-7 text-xs text-right bg-transparent border-none focus-visible:ring-1"
                       value={line.debit || ""}
                       onChange={(e) => updateLine(line.id, "debit", parseFloat(e.target.value) || 0)}
                       onKeyDown={(e) => handleKeyDown(e, "debit", line.id)}
@@ -436,7 +504,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                       type="number"
                       placeholder="0.00"
                       readOnly={editingRowId !== line.id}
-                      className="h-8 text-right bg-transparent border-none focus-visible:ring-1"
+                      className="h-7 text-xs text-right bg-transparent border-none focus-visible:ring-1"
                       value={line.credit || ""}
                       onChange={(e) => updateLine(line.id, "credit", parseFloat(e.target.value) || 0)}
                       onKeyDown={(e) => handleKeyDown(e, "credit", line.id)}
@@ -447,7 +515,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                       id={`remarks-${line.id}`}
                       placeholder="Remarks"
                       readOnly={editingRowId !== line.id}
-                      className="h-8 bg-transparent border-none focus-visible:ring-1"
+                      className="h-7 text-xs bg-transparent border-none focus-visible:ring-1"
                       value={line.remarks}
                       onChange={(e) => updateLine(line.id, "remarks", e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, "remarks", line.id)}
@@ -469,16 +537,16 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                 className="h-20"
               />
             </div>
-            <div className="bg-muted/30 rounded-lg p-6 space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Total Debit</span>
-                <span className="font-mono font-bold">${totalDebit.toFixed(2)}</span>
+            <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground uppercase font-bold tracking-tight">Total Debit</span>
+                <span className="font-mono font-bold text-sm">${totalDebit.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Total Credit</span>
-                <span className="font-mono font-bold">${totalCredit.toFixed(2)}</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground uppercase font-bold tracking-tight">Total Credit</span>
+                <span className="font-mono font-bold text-sm">${totalCredit.toFixed(2)}</span>
               </div>
-              <div className="pt-4 border-t flex justify-between items-center">
+              <div className="pt-3 border-t flex justify-between items-center">
                 <span className="font-bold">Difference</span>
                 <Badge variant={difference === 0 ? "outline" : "destructive"} className={cn(difference === 0 && "bg-success/10 text-success border-success/20")}>
                   ${difference.toFixed(2)}

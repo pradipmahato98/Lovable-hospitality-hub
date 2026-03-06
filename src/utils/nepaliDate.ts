@@ -124,7 +124,7 @@ const referenceBS: NepaliDate = { year: 2000, month: 1, day: 1 };
  * Converts AD Date to BS Date
  */
 export function adToBs(adDate: Date): NepaliDate {
-  let diffTime = adDate.getTime() - referenceAD.getTime();
+  const diffTime = adDate.getTime() - referenceAD.getTime();
   let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
   let bsYear = referenceBS.year;
@@ -132,7 +132,7 @@ export function adToBs(adDate: Date): NepaliDate {
   let bsDay = referenceBS.day;
 
   while (diffDays > 0) {
-    let daysInMonth = nepaliMonthDays[bsYear][bsMonth - 1];
+    const daysInMonth = nepaliMonthDays[bsYear][bsMonth - 1];
     if (diffDays >= daysInMonth) {
       diffDays -= daysInMonth;
       bsMonth++;
@@ -176,7 +176,7 @@ export function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
   // Add days for current month
   totalDays += bsDay - 1;
 
-  let adDate = new Date(referenceAD);
+  const adDate = new Date(referenceAD);
   adDate.setDate(adDate.getDate() + totalDays);
   return adDate;
 }
@@ -204,10 +204,47 @@ export function parseBsDate(dateStr: string): NepaliDate | null {
  */
 export function getFiscalYear(adDate: Date): string {
   const bsDate = adToBs(adDate);
-  // Nepali FY usually starts in Shrawan (4th month)
+  // Nepali FY starts in Shrawan (4th month)
   if (bsDate.month >= 4) {
-    return `${bsDate.year}/${(bsDate.year + 1) % 100}`;
+    const nextYear = (bsDate.year + 1).toString().slice(-2);
+    return `${bsDate.year}/${nextYear}`;
   } else {
-    return `${bsDate.year - 1}/${bsDate.year % 100}`;
+    const currentYearShort = bsDate.year.toString().slice(-2);
+    return `${bsDate.year - 1}/${currentYearShort}`;
   }
+}
+
+/**
+ * Gets start and end AD dates for a given BS Fiscal Year (e.g., "80/81")
+ */
+export function getFiscalYearRange(fy: string): { start: Date; end: Date } {
+  // Assume FY format "YY/YY" or "YYYY/YY"
+  const parts = fy.split("/");
+  let startYearBS = parseInt(parts[0]);
+  if (startYearBS < 100) startYearBS += 2000; // Handle "80/81"
+
+  const startDate = bsToAd(startYearBS, 4, 1); // Shrawan 1
+  const endDate = bsToAd(startYearBS + 1, 3, nepaliMonthDays[startYearBS + 1][2]); // Chaitra end
+
+  return { start: startDate, end: endDate };
+}
+
+/**
+ * Returns names of months in Bikram Sambat
+ */
+export const BS_MONTH_NAMES = [
+  "Baisakh", "Jestha", "Ashad", "Shrawan", "Bhadra", "Ashwin",
+  "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
+];
+
+/**
+ * Returns names of days in Bikram Sambat
+ */
+export const BS_DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Gets number of days in a specific BS month
+ */
+export function getDaysInBsMonth(year: number, month: number): number {
+  return nepaliMonthDays[year]?.[month - 1] || 30;
 }

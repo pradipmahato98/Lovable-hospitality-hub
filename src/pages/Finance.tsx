@@ -80,6 +80,7 @@ import { useMemo } from "react";
 export default function Finance() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [isJournalEditorOpen, setIsJournalEditorOpen] = useState(false);
 
   const {
     activeRole,
@@ -177,7 +178,24 @@ export default function Finance() {
 
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <service.Component isReadOnly={isReadOnly} />
+            {!isJournalEditorOpen && (
+              <div className="flex items-center gap-4 mb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedService(null)}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Services
+                </Button>
+                <h2 className="text-xl font-bold font-display">{service.title}</h2>
+              </div>
+            )}
+            <service.Component
+              isReadOnly={isReadOnly}
+              onEditorToggle={service.id === 'journal-mgmt' ? setIsJournalEditorOpen : undefined}
+            />
           </div>
         );
       }
@@ -238,6 +256,7 @@ export default function Finance() {
       }
     >
       <div className="space-y-6">
+        {!isJournalEditorOpen && (
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedService(null); }}>
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
@@ -455,6 +474,8 @@ export default function Finance() {
             {renderServiceList(infrastructureServices)}
           </TabsContent>
         </Tabs>
+        )}
+        {isJournalEditorOpen && renderServiceList(transactionServices)}
       </div>
     </MainLayout>
   );
