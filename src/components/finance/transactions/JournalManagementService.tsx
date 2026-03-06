@@ -37,23 +37,15 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { useBusinessDate } from "@/hooks/useSettings";
+import { JournalEntryEditor } from "./JournalEntryEditor";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
 }
 
 export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
-  const [journalDialogOpen, setJournalDialogOpen] = useState(false);
+  const [journalEditorOpen, setJournalEditorOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
-  const [newJournalEntry, setNewJournalEntry] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    description: "",
-    reference: "",
-    lines: [
-      { account_id: "", debit: 0, credit: 0 },
-      { account_id: "", debit: 0, credit: 0 },
-    ],
-  });
   const [quickPost, setQuickPost] = useState({
     account_id: "",
     contra_account_id: "",
@@ -67,52 +59,6 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
   const createJournalEntry = useCreateJournalEntry();
   const postJournalEntry = usePostJournalEntry();
   const { data: businessDate } = useBusinessDate();
-
-  const handleCreateJournalEntry = async () => {
-    if (!newJournalEntry.description) {
-      toast.error("Please enter a description");
-      return;
-    }
-
-    const validLines = newJournalEntry.lines.filter(
-      (l) => l.account_id && (l.debit > 0 || l.credit > 0)
-    );
-
-    if (validLines.length < 2) {
-      toast.error("Please add at least two lines");
-      return;
-    }
-
-    const totalDebit = validLines.reduce((sum, l) => sum + l.debit, 0);
-    const totalCredit = validLines.reduce((sum, l) => sum + l.credit, 0);
-
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      toast.error("Debits must equal credits");
-      return;
-    }
-
-    try {
-      await createJournalEntry.mutateAsync({
-        date: newJournalEntry.date,
-        description: newJournalEntry.description,
-        reference: newJournalEntry.reference || null,
-        lines: validLines,
-      });
-      toast.success("Journal entry created");
-      setJournalDialogOpen(false);
-      setNewJournalEntry({
-        date: new Date().toISOString().slice(0, 10),
-        description: "",
-        reference: "",
-        lines: [
-          { account_id: "", debit: 0, credit: 0 },
-          { account_id: "", debit: 0, credit: 0 },
-        ],
-      });
-    } catch (error) {
-      toast.error("Failed to create journal entry");
-    }
-  };
 
   const handlePostEntry = async (entryId: string) => {
     try {
@@ -166,21 +112,9 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     }
   };
 
-  const addJournalLine = () => {
-    setNewJournalEntry((prev) => ({
-      ...prev,
-      lines: [...prev.lines, { account_id: "", debit: 0, credit: 0 }],
-    }));
-  };
-
-  const updateJournalLine = (index: number, field: string, value: any) => {
-    setNewJournalEntry((prev) => ({
-      ...prev,
-      lines: prev.lines.map((line, i) =>
-        i === index ? { ...line, [field]: value } : line
-      ),
-    }));
-  };
+  if (journalEditorOpen) {
+    return <JournalEntryEditor onClose={() => setJournalEditorOpen(false)} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -195,7 +129,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Send className="h-4 w-4" />
               Quick Post
             </Button>
-            <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
+            <Button onClick={() => setJournalEditorOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               New Journal Entry
             </Button>
@@ -303,97 +237,6 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
         </CardContent>
       </Card>
 
-      <Dialog open={journalDialogOpen} onOpenChange={setJournalDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Journal Entry</DialogTitle>
-            <DialogDescription>Enter debits and credits for this transaction</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={newJournalEntry.date}
-                  onChange={(e) => setNewJournalEntry((p) => ({ ...p, date: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Description</Label>
-                <Input
-                  placeholder="Transaction description"
-                  value={newJournalEntry.description}
-                  onChange={(e) => setNewJournalEntry((p) => ({ ...p, description: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Reference (Optional)</Label>
-              <Input
-                placeholder="Invoice #, Check #, etc."
-                value={newJournalEntry.reference}
-                onChange={(e) => setNewJournalEntry((p) => ({ ...p, reference: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Lines</Label>
-              <div className="space-y-2">
-                {newJournalEntry.lines.map((line, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-2">
-                    <Select
-                      value={line.account_id}
-                      onValueChange={(v) => updateJournalLine(index, "account_id", v)}
-                    >
-                      <SelectTrigger className="col-span-2">
-                        <SelectValue placeholder="Select account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.code} - {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      placeholder="Debit"
-                      value={line.debit || ""}
-                      onChange={(e) => updateJournalLine(index, "debit", parseFloat(e.target.value) || 0)}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Credit"
-                      value={line.credit || ""}
-                      onChange={(e) => updateJournalLine(index, "credit", parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                ))}
-              </div>
-              <Button variant="outline" size="sm" onClick={addJournalLine}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Line
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-muted-foreground">
-                Debit: ${newJournalEntry.lines.reduce((s, l) => s + l.debit, 0).toFixed(2)} |
-                Credit: ${newJournalEntry.lines.reduce((s, l) => s + l.credit, 0).toFixed(2)}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setJournalDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateJournalEntry} disabled={createJournalEntry.isPending}>
-                  {createJournalEntry.isPending ? "Creating..." : "Create Entry"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Quick Posting Dialog */}
       <Dialog open={postingDialogOpen} onOpenChange={setPostingDialogOpen}>

@@ -20,6 +20,9 @@ export interface JournalEntry {
   id: string;
   entry_number: string;
   date: string;
+  miti?: string;
+  fiscal_year?: string;
+  voucher_type?: string;
   description: string;
   reference: string | null;
   is_posted: boolean;
@@ -28,7 +31,6 @@ export interface JournalEntry {
     first_name: string | null;
     last_name: string | null;
   };
-  voucher_type?: string;
   created_at: string;
   updated_at: string;
   lines?: JournalLine[];
@@ -38,6 +40,7 @@ export interface JournalLine {
   id: string;
   journal_entry_id: string;
   account_id: string;
+  sub_ledger_id?: string | null;
   debit: number;
   credit: number;
   description: string | null;
@@ -258,12 +261,21 @@ export function useCreateJournalEntry() {
   return useMutation({
     mutationFn: async (entry: {
       date: string;
+      miti?: string;
+      fiscal_year?: string;
+      voucher_type?: string;
       description: string;
       reference?: string | null;
-      lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
+      lines: {
+        account_id: string;
+        sub_ledger_id?: string | null;
+        debit: number;
+        credit: number;
+        description?: string | null;
+      }[];
     }) => {
-      // Generate entry number
-      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
+      // Generate entry number if not provided (should follow format: [Prefix]-[FY]-XX)
+      const entryNumber = entry.reference || `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
 
       // Insert journal entry
       const { data: journalEntry, error: entryError } = await db
@@ -271,6 +283,9 @@ export function useCreateJournalEntry() {
         .insert({
           entry_number: entryNumber,
           date: entry.date,
+          miti: entry.miti,
+          fiscal_year: entry.fiscal_year,
+          voucher_type: entry.voucher_type,
           description: entry.description,
           reference: entry.reference ?? null,
           is_posted: false,
@@ -287,6 +302,7 @@ export function useCreateJournalEntry() {
       const lines = entry.lines.map((line) => ({
         journal_entry_id: journalEntry.id,
         account_id: line.account_id,
+        sub_ledger_id: line.sub_ledger_id || null,
         debit: line.debit,
         credit: line.credit,
         description: line.description ?? null,
