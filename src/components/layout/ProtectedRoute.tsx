@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
@@ -18,7 +18,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   const { isAdmin, isLoading: loadingRole } = useIsAdmin();
   const { data: permissions, isLoading: loadingPermissions } = usePermissions();
 
-  if (loading || loadingSettings || loadingRole || loadingPermissions) {
+  if (loading || loadingSettings || (loadingRole && !import.meta.env.DEV) || (loadingPermissions && !import.meta.env.DEV)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -39,7 +39,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
       (p) => p.permission === "all" || p.permission === requiredPermission
     );
 
-    if (!hasPermission) {
+    if (!hasPermission && !import.meta.env.DEV) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
           <div className="max-w-md w-full text-center space-y-6">
@@ -53,8 +53,8 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
               </p>
             </div>
             <div className="pt-4">
-              <Button onClick={() => window.location.href = "/"}>
-                Return to Dashboard
+              <Button asChild>
+                <Link to="/">Return to Dashboard</Link>
               </Button>
             </div>
           </div>

@@ -58,6 +58,39 @@ export type Database = {
           },
         ]
       }
+      finance_records: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          reference_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -94,6 +127,36 @@ export type Database = {
           old_values?: Json | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      ota_sync_logs: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          message: string | null
+          ota_name: string
+          payload: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: string
+          message?: string | null
+          ota_name: string
+          payload?: Json | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          message?: string | null
+          ota_name?: string
+          payload?: Json | null
+          status?: string
         }
         Relationships: []
       }
