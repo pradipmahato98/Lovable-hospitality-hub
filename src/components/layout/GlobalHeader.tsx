@@ -82,7 +82,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-2">
-        <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 md:flex-initial">
           {isMobile && (
             <Button
               variant="ghost"
@@ -94,9 +94,9 @@ export function Header({ title, subtitle }: HeaderProps) {
             </Button>
           )}
 
-          <div className="min-w-0 hidden md:block">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate">{title}</h1>
-            {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
+          <div className="min-w-0 flex-1 md:flex-initial">
+            <h1 className="text-base sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate leading-tight">{title}</h1>
+            {subtitle && <p className="text-[10px] sm:text-sm text-muted-foreground truncate leading-tight">{subtitle}</p>}
           </div>
         </div>
 
