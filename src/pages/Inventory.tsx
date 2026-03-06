@@ -1457,16 +1457,47 @@ const Inventory = () => {
                 <CardTitle>Stock Value Trend</CardTitle>
                 <CardDescription>Inventory valuation over the last 30 days</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={reportData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <RechartsTooltip />
-                    <Line type="monotone" dataKey="value" stroke="#EAB308" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                {reportData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={reportData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                      <XAxis
+                        dataKey="date"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={4}
+                      />
+                      <YAxis
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          borderColor: "hsl(var(--border))",
+                          fontSize: "12px"
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#EAB308"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
+                    <BarChart3 className="h-8 w-8 opacity-20" />
+                    No data available for the last 30 days
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1475,25 +1506,39 @@ const Inventory = () => {
                 <CardTitle>Category Distribution</CardTitle>
                 <CardDescription>Stock value by category</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={Object.entries(stats.categoryDistribution || {}).map(([name, value]) => ({ name, value }))}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {Object.entries(stats.categoryDistribution || {}).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={[`#EAB308`, `#3B82F6`, `#10B981`, `#F59E0B`, `#6366F1`][index % 5]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                {Object.keys(stats.categoryDistribution || {}).length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={Object.entries(stats.categoryDistribution || {}).map(([name, value]) => ({ name, value }))}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {Object.entries(stats.categoryDistribution || {}).map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={[`#EAB308`, `#3B82F6`, `#10B981`, `#F59E0B`, `#6366F1`][index % 5]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, "Value"]}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          borderColor: "hsl(var(--border))",
+                          fontSize: "12px"
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
+                    <PieChartIcon className="h-8 w-8 opacity-20" />
+                    No category data available
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1502,17 +1547,40 @@ const Inventory = () => {
                 <CardTitle>Movement Volume</CardTitle>
                 <CardDescription>Daily Stock In vs Stock Out</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={reportData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <RechartsTooltip />
-                    <Bar dataKey="in" fill="#10B981" name="Stock In" />
-                    <Bar dataKey="out" fill="#EF4444" name="Stock Out" />
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                {reportData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={reportData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                      <XAxis
+                        dataKey="date"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={4}
+                      />
+                      <YAxis
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          borderColor: "hsl(var(--border))",
+                          fontSize: "12px"
+                        }}
+                      />
+                      <Bar dataKey="in" fill="#10B981" name="Stock In" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="out" fill="#EF4444" name="Stock Out" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
+                    <RefreshCw className="h-8 w-8 opacity-20" />
+                    No movement data recorded recently
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
