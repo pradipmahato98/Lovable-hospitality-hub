@@ -465,6 +465,10 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
                         fromDate={fyRange.start}
                         toDate={fyRange.end}
                         initialFocus
+                        classNames={{
+                          day_today: "bg-success text-success-foreground hover:bg-success/90 rounded-full",
+                          day_selected: "bg-amber-500 text-white hover:bg-amber-600 focus:bg-amber-500 focus:text-white rounded-full",
+                        }}
                       />
                     </PopoverContent>
                   </Popover>
