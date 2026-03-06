@@ -498,10 +498,11 @@ export function useInventoryStats() {
 }
 
 export function useInventoryReportData() {
+  const { data: items } = useInventoryItems({ showInactive: false });
+
   return useQuery({
-    queryKey: ["inventory-report-data"],
+    queryKey: ["inventory-report-data", items?.length],
     queryFn: async () => {
-      // Fetch last 30 days of movements for trend analysis
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -513,24 +514,54 @@ export function useInventoryReportData() {
 
       if (error) throw error;
 
-      // Group movements by day
-      const dailyData = movements.reduce((acc: any[], m: any) => {
+      // Calculate current total value
+      const currentTotalValue = items?.reduce((sum, i) => sum + i.current_stock * i.cost_price, 0) || 0;
+
+      // Create a map of daily movements
+      const dailyMap = new Map();
+      movements?.forEach((m: any) => {
         const date = m.created_at.split("T")[0];
-        let dayEntry = acc.find(d => d.date === date);
-        if (!dayEntry) {
-          dayEntry = { date, in: 0, out: 0, value: 0 };
-          acc.push(dayEntry);
+        if (!dailyMap.has(date)) {
+          dailyMap.set(date, { in: 0, out: 0, valueChange: 0 });
         }
-
+        const day = dailyMap.get(date);
         const value = m.quantity * (m.item?.cost_price || 0);
-        if (m.movement_type === "in") dayEntry.in += m.quantity;
-        if (m.movement_type === "out") dayEntry.out += m.quantity;
-        dayEntry.value += (m.movement_type === "in" ? value : -value);
+        if (m.movement_type === "in") day.in += m.quantity;
+        if (m.movement_type === "out") day.out += m.quantity;
+        day.valueChange += (m.movement_type === "in" ? value : -value);
+      });
 
-        return acc;
-      }, []);
+      // Generate last 30 days
+      const result = [];
+      const totalChangeInLast30Days = movements?.reduce((sum, m: any) => {
+        const value = m.quantity * (m.item?.cost_price || 0);
+        return sum + (m.movement_type === "in" ? value : -value);
+      }, 0) || 0;
 
-      return dailyData;
+      let rollingValue = currentTotalValue - totalChangeInLast30Days;
+
+      for (let i = 30; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        const dayMovements = dailyMap.get(dateStr) || { in: 0, out: 0, valueChange: 0 };
+
+        rollingValue += dayMovements.valueChange;
+
+        // Ensure format is imported or use a simple slice
+        const label = dateStr.split("-").slice(1).join("/"); // MM/DD
+
+        result.push({
+          date: label,
+          fullDate: dateStr,
+          in: dayMovements.in,
+          out: dayMovements.out,
+          value: rollingValue
+        });
+      }
+
+      return result;
     },
+    enabled: items !== undefined
   });
 }
