@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_PERMISSIONS } from "./usePermissions";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -128,12 +129,26 @@ export const useRolePermissions = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["role-permissions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("role_permissions")
-        .select("*");
+      try {
+        const { data, error } = await supabase
+          .from("role_permissions")
+          .select("*");
 
-      if (error) throw error;
-      return data;
+        if (error) {
+          console.warn("Could not fetch permissions table, using default mapping:", error.message);
+          const roles = Object.keys(DEFAULT_PERMISSIONS) as AppRole[];
+          return roles.flatMap(role =>
+            DEFAULT_PERMISSIONS[role].map(perm => ({ id: `${role}-${perm}`, role, permission: perm }))
+          );
+        }
+        return data;
+      } catch (err) {
+        console.warn("Exception while fetching permissions, using defaults");
+        const roles = Object.keys(DEFAULT_PERMISSIONS) as AppRole[];
+        return roles.flatMap(role =>
+          DEFAULT_PERMISSIONS[role].map(perm => ({ id: `${role}-${perm}`, role, permission: perm }))
+        );
+      }
     },
     enabled,
   });
@@ -221,8 +236,11 @@ export const useUpdateRolePermission = () => {
       queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
       toast.success("Role permissions updated");
     },
-    onError: (error) => {
-      toast.error("Failed to update permissions: " + error.message);
+    onError: (error: any) => {
+      const message = error.message?.includes("PGRST205") || error.message?.includes("schema cache")
+        ? "The RBAC permissions table has not been initialized in the database yet. Please run the migrations."
+        : error.message;
+      toast.error("Failed to update permissions: " + message);
     },
   });
 };
