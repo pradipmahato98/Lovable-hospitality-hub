@@ -2189,6 +2189,24 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          permission: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          permission: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          permission?: string
+        }
+        Relationships: []
+      }
       role_change_audit: {
         Row: {
           changed_by_user_id: string

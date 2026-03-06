@@ -3,6 +3,30 @@
 -- manager: most permissions, excluding some admin/dev tools
 -- staff: limited permissions (front desk, pos, guests, etc.)
 
+-- Ensure table exists (redundant but safe)
+CREATE TABLE IF NOT EXISTS public.role_permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role public.app_role NOT NULL,
+    permission TEXT NOT NULL,
+    UNIQUE(role, permission)
+);
+
+-- Enable RLS
+ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
+
+-- Allow authenticated users to view permissions
+DROP POLICY IF EXISTS "Authenticated users can view permissions" ON public.role_permissions;
+CREATE POLICY "Authenticated users can view permissions"
+ON public.role_permissions FOR SELECT
+TO authenticated
+USING (true);
+
+-- Allow admins to manage permissions
+DROP POLICY IF EXISTS "Admins can manage permissions" ON public.role_permissions;
+CREATE POLICY "Admins can manage permissions"
+ON public.role_permissions FOR ALL
+USING (public.has_role(auth.uid(), 'admin'));
+
 -- Clear existing permissions to avoid duplicates
 TRUNCATE public.role_permissions;
 
