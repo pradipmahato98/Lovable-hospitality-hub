@@ -182,21 +182,51 @@ export function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
 }
 
 /**
- * Formats BS date to YYYY-MM-DD
+ * Formats BS date to YYYY/MM/DD with dynamic separator
  */
-export function formatBsDate(date: NepaliDate): string {
+export function formatBsDate(date: NepaliDate, separator: string = "/"): string {
   const month = String(date.month).padStart(2, "0");
   const day = String(date.day).padStart(2, "0");
-  return `${date.year}-${month}-${day}`;
+  return `${date.year}${separator}${month}${separator}${day}`;
 }
 
 /**
- * Parses BS date from YYYY-MM-DD string
+ * Parses BS date from YYYY/MM/DD or YYYY-MM-DD string
  */
 export function parseBsDate(dateStr: string): NepaliDate | null {
-  const parts = dateStr.split("-").map(Number);
+  const parts = dateStr.split(/[-/]/).map(Number);
   if (parts.length !== 3 || parts.some(isNaN)) return null;
-  return { year: parts[0], month: parts[1], day: parts[2] };
+  // Basic validation for BS dates
+  const [year, month, day] = parts;
+  if (year < 2000 || year > 2100) return null;
+  if (month < 1 || month > 12) return null;
+  const maxDays = getDaysInBsMonth(year, month);
+  if (day < 1 || day > maxDays) return null;
+  return { year, month, day };
+}
+
+/**
+ * Formats AD date to DD/MM/YYYY with dynamic separator
+ */
+export function formatAdDate(date: Date, separator: string = "/"): string {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}${separator}${month}${separator}${year}`;
+}
+
+/**
+ * Parses AD date from DD/MM/YYYY or DD-MM-YYYY string
+ */
+export function parseAdDate(dateStr: string): Date | null {
+  const parts = dateStr.split(/[-/]/).map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [day, month, year] = parts;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+  return date;
 }
 
 /**
@@ -216,6 +246,7 @@ export function getFiscalYear(adDate: Date): string {
 
 /**
  * Gets start and end AD dates for a given BS Fiscal Year (e.g., "80/81")
+ * Caps the end date at today's date.
  */
 export function getFiscalYearRange(fy: string): { start: Date; end: Date } {
   // Assume FY format "YY/YY" or "YYYY/YY"
@@ -224,7 +255,12 @@ export function getFiscalYearRange(fy: string): { start: Date; end: Date } {
   if (startYearBS < 100) startYearBS += 2000; // Handle "80/81"
 
   const startDate = bsToAd(startYearBS, 4, 1); // Shrawan 1
-  const endDate = bsToAd(startYearBS + 1, 3, nepaliMonthDays[startYearBS + 1][2]); // Chaitra end
+  let endDate = bsToAd(startYearBS + 1, 3, nepaliMonthDays[startYearBS + 1][2]); // Chaitra end
+
+  const today = new Date();
+  if (endDate > today) {
+    endDate = today;
+  }
 
   return { start: startDate, end: endDate };
 }

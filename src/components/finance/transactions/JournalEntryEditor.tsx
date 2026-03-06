@@ -38,12 +38,15 @@ import {
   formatBsDate,
   getFiscalYear,
   getFiscalYearRange,
-  parseBsDate
+  parseBsDate,
+  formatAdDate,
+  parseAdDate
 } from "@/utils/nepaliDate";
 import { NepaliCalendar } from "@/components/ui/nepali-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 interface JournalLine {
   id: string;
@@ -69,10 +72,20 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const { data: accounts } = useAccounts();
   const { data: entries } = useJournalEntries();
   const createJournalEntry = useCreateJournalEntry();
+  const { data: uiPrefs } = useUIPreferences();
+  const separator = uiPrefs?.date_separator || "/";
 
   const [fiscalYear, setFiscalYear] = useState(getFiscalYear(new Date()));
   const [dateAD, setDateAD] = useState(new Date());
-  const [mitiBS, setMitiBS] = useState(formatBsDate(adToBs(new Date())));
+  const [dateADInput, setDateADInput] = useState(formatAdDate(new Date(), separator));
+  const [mitiBS, setMitiBS] = useState(formatBsDate(adToBs(new Date()), separator));
+
+  // Sync inputs when separator changes
+  useEffect(() => {
+    setDateADInput(formatAdDate(dateAD, separator));
+    setMitiBS(formatBsDate(adToBs(dateAD), separator));
+  }, [separator]);
+
   const [voucherType, setVoucherType] = useState<string>("");
   const [voucherNo, setVoucherNo] = useState("");
   const [narration, setNarration] = useState("");
@@ -88,11 +101,11 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     const currentFYStr = getFiscalYear(currentAD);
     const [start] = currentFYStr.split('/').map(Number);
 
-    // Generate 3 years: Previous, Current, Next
+    // Generate years up to current
     return [
+      `${start - 2}/${(start - 1).toString().slice(-2)}`,
       `${start - 1}/${start.toString().slice(-2)}`,
-      currentFYStr,
-      `${start + 1}/${(start + 2).toString().slice(-2)}`
+      currentFYStr
     ];
   }, []);
 
@@ -121,19 +134,53 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const handleDateADChange = (date: Date | undefined) => {
     if (!date) return;
     setDateAD(date);
-    setMitiBS(formatBsDate(adToBs(date)));
+    setDateADInput(formatAdDate(date, separator));
+    setMitiBS(formatBsDate(adToBs(date), separator));
   };
 
   const handleMitiBSChange = (date: Date) => {
     setDateAD(date);
-    setMitiBS(formatBsDate(adToBs(date)));
+    setDateADInput(formatAdDate(date, separator));
+    setMitiBS(formatBsDate(adToBs(date), separator));
   };
 
   const handleFYChange = (fy: string) => {
     setFiscalYear(fy);
-    const { start } = getFiscalYearRange(fy);
-    setDateAD(start);
-    setMitiBS(formatBsDate(adToBs(start)));
+    const { start, end } = getFiscalYearRange(fy);
+    // Ensure date is within range
+    const newDate = dateAD < start ? start : (dateAD > end ? end : dateAD);
+    setDateAD(newDate);
+    setDateADInput(formatAdDate(newDate, separator));
+    setMitiBS(formatBsDate(adToBs(newDate), separator));
+  };
+
+  const fyRange = useMemo(() => getFiscalYearRange(fiscalYear), [fiscalYear]);
+
+  const handleManualADInput = (val: string) => {
+    setDateADInput(val);
+    const parsed = parseAdDate(val);
+    if (parsed) {
+        if (parsed >= fyRange.start && parsed <= fyRange.end) {
+            setDateAD(parsed);
+            setMitiBS(formatBsDate(adToBs(parsed), separator));
+        } else {
+            toast.error(`Date must be within Fiscal Year ${fiscalYear}`);
+        }
+    }
+  };
+
+  const handleManualBSInput = (val: string) => {
+    setMitiBS(val);
+    const parsedBS = parseBsDate(val);
+    if (parsedBS) {
+        const ad = bsToAd(parsedBS.year, parsedBS.month, parsedBS.day);
+        if (ad >= fyRange.start && ad <= fyRange.end) {
+            setDateAD(ad);
+            setDateADInput(formatAdDate(ad, separator));
+        } else {
+            toast.error(`Date must be within Fiscal Year ${fiscalYear}`);
+        }
+    }
   };
 
   const fyRange = useMemo(() => getFiscalYearRange(fiscalYear), [fiscalYear]);
@@ -298,60 +345,73 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Transaction Date AD</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      ref={dateAdRef}
-                          id="date-ad-trigger"
-                      variant="outline"
-                      className={cn(
-                        "w-full h-9 justify-start text-left font-normal",
-                        !dateAD && "text-muted-foreground"
-                      )}
-                      onKeyDown={(e) => handleKeyDown(e, "dateAD")}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateAD ? dateAD.toLocaleDateString() : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateAD}
-                      onSelect={handleDateADChange}
-                      fromDate={fyRange.start}
-                      toDate={fyRange.end}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="dateAD">Transaction Date AD</Label>
+                <div className="relative">
+                  <Input
+                    id="dateAD"
+                    ref={dateAdRef}
+                    className="h-9 pr-8"
+                    value={dateADInput}
+                    onChange={(e) => handleManualADInput(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "dateAD")}
+                    placeholder={`DD${separator}MM${separator}YYYY`}
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-primary"
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateAD}
+                        onSelect={handleDateADChange}
+                        fromDate={fyRange.start}
+                        toDate={fyRange.end}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Miti (BS)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      ref={mitiBsRef}
-                          id="miti-bs-trigger"
-                      variant="outline"
-                      className="w-full h-9 justify-start text-left font-normal"
-                      onKeyDown={(e) => handleKeyDown(e, "mitiBS")}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {mitiBS}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <NepaliCalendar
-                      selected={dateAD}
-                      onSelect={handleMitiBSChange}
-                      minDate={fyRange.start}
-                      maxDate={fyRange.end}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="mitiBS">Miti (BS)</Label>
+                <div className="relative">
+                  <Input
+                    id="mitiBS"
+                    ref={mitiBsRef}
+                    className="h-9 pr-8"
+                    value={mitiBS}
+                    onChange={(e) => handleManualBSInput(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "mitiBS")}
+                    placeholder={`YYYY${separator}MM${separator}DD`}
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-primary"
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <NepaliCalendar
+                        selected={dateAD}
+                        onSelect={handleMitiBSChange}
+                        minDate={fyRange.start}
+                        maxDate={fyRange.end}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
               <div className="space-y-1.5">
