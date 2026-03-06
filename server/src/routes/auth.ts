@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as authService from '../services/auth';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorizeAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -24,7 +24,7 @@ router.get('/me', authenticate, async (req: any, res) => {
   res.json(req.user);
 });
 
-router.get('/users', authenticate, async (req, res, next) => {
+router.get('/users', authenticate, authorizeAdmin, async (req, res, next) => {
   try {
     const users = await authService.listUsers();
     res.json(users);
