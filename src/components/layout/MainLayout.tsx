@@ -21,12 +21,12 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
       <Sidebar />
       <div
         className={cn(
-          "flex-1 transition-all duration-300 min-h-screen flex flex-col min-w-0",
+          "flex-1 transition-all duration-300 h-screen flex flex-col min-w-0 overflow-hidden",
           !isMobile && (collapsed ? "pl-20" : "pl-64")
         )}
       >
         <Header title={title} subtitle={subtitle} />
-        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden scrollbar-hide">{children}</main>
       </div>
     </div>
   );
