@@ -107,16 +107,22 @@ export function useInventoryCategories() {
 }
 
 // ============= Suppliers =============
-export function useSuppliers() {
+export function useSuppliers(filters?: { showInactive?: boolean }) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["suppliers"],
+    queryKey: ["suppliers", filters],
     queryFn: async () => {
-      const { data, error } = await db
+      let q = db
         .from("suppliers")
         .select("*")
         .order("name");
+
+      if (!filters?.showInactive) {
+        q = q.eq("is_active", true);
+      }
+
+      const { data, error } = await q;
       if (error) throw error;
       return data as Supplier[];
     },
@@ -151,11 +157,19 @@ export function useSuppliers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
   });
 
-  return { ...query, createSupplier, updateSupplier };
+  const deleteSupplier = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("suppliers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
+  return { ...query, createSupplier, updateSupplier, deleteSupplier };
 }
 
 // ============= Inventory Items =============
-export function useInventoryItems(filters?: { category?: string; lowStock?: boolean }) {
+export function useInventoryItems(filters?: { category?: string; lowStock?: boolean; showInactive?: boolean }) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -164,8 +178,11 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
       let q = db
         .from("inventory_items")
         .select(`*, category:inventory_categories(*), supplier:suppliers(*)`)
-        .eq("is_active", true)
         .order("name");
+
+      if (!filters?.showInactive) {
+        q = q.eq("is_active", true);
+      }
 
       if (filters?.category) {
         q = q.eq("category_id", filters.category);
@@ -211,6 +228,14 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-items"] }),
   });
 
+  const deleteItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-items"] }),
+  });
+
   const adjustStock = useMutation({
     mutationFn: async ({ itemId, quantity, type, notes }: { itemId: string; quantity: number; type: "in" | "out" | "adjustment"; notes?: string }) => {
       // Get current stock
@@ -238,7 +263,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
     },
   });
 
-  return { ...query, createItem, updateItem, adjustStock };
+  return { ...query, createItem, updateItem, deleteItem, adjustStock };
 }
 
 // ============= Purchase Orders =============
@@ -289,23 +314,92 @@ export function usePurchaseOrders(status?: string) {
 
   const updatePurchaseOrderStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: Record<string, unknown> = { status };
-      if (status === "received") updates.received_date = new Date().toISOString().split("T")[0];
+      // 1. Get current status to prevent double-receiving
+      const { data: currentOrder, error: fetchError } = await db
+        .from("purchase_orders")
+        .select("status, order_number")
+        .eq("id", id)
+        .single();
 
+      if (fetchError) throw fetchError;
+      if (currentOrder.status === "received" && status === "received") {
+        throw new Error("Order already received");
+      }
+
+      const updates: Record<string, unknown> = { status };
+      if (status === "received") {
+        updates.received_date = new Date().toISOString().split("T")[0];
+      }
+
+      // 2. Update order status
       const { data, error } = await db.from("purchase_orders").update(updates).eq("id", id).select().single();
       if (error) throw error;
+
+      // 3. If received, update stock
+      if (status === "received") {
+        const { data: items, error: itemsError } = await db
+          .from("purchase_order_items")
+          .select("item_id, quantity")
+          .eq("purchase_order_id", id);
+
+        if (itemsError) throw itemsError;
+
+        for (const poItem of items) {
+          // Get current stock
+          const { data: invItem, error: invError } = await db
+            .from("inventory_items")
+            .select("current_stock")
+            .eq("id", poItem.item_id)
+            .single();
+
+          if (invError) throw invError;
+
+          // Update stock
+          const newStock = (invItem?.current_stock || 0) + poItem.quantity;
+          await db.from("inventory_items")
+            .update({
+              current_stock: newStock,
+              last_restocked_at: new Date().toISOString()
+            })
+            .eq("id", poItem.item_id);
+
+          // Record movement
+          await db.from("stock_movements").insert({
+            item_id: poItem.item_id,
+            movement_type: "in",
+            quantity: poItem.quantity,
+            reference_type: "purchase_order",
+            reference_id: id,
+            notes: `Received from Purchase Order ${currentOrder.order_number}`,
+          });
+        }
+      }
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+    },
+  });
+
+  const deletePurchaseOrder = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete items first
+      await db.from("purchase_order_items").delete().eq("purchase_order_id", id);
+      const { error } = await db.from("purchase_orders").delete().eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }),
   });
 
-  return { ...query, createPurchaseOrder, updatePurchaseOrderStatus };
+  return { ...query, createPurchaseOrder, updatePurchaseOrderStatus, deletePurchaseOrder };
 }
 
 // ============= Stock Movements =============
-export function useStockMovements(itemId?: string) {
+export function useStockMovements(filters?: { itemId?: string; type?: string }) {
   return useQuery({
-    queryKey: ["stock-movements", itemId],
+    queryKey: ["stock-movements", filters],
     queryFn: async () => {
       let q = db
         .from("stock_movements")
@@ -313,7 +407,8 @@ export function useStockMovements(itemId?: string) {
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (itemId) q = q.eq("item_id", itemId);
+      if (filters?.itemId) q = q.eq("item_id", filters.itemId);
+      if (filters?.type && filters.type !== "all") q = q.eq("movement_type", filters.type);
 
       const { data, error } = await q;
       if (error) throw error;
