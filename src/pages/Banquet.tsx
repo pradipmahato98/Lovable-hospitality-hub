@@ -743,62 +743,70 @@ export default function Banquet() {
 
             <Card>
               <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">Loading events...</div>
-                ) : filteredEvents.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No events found</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("event_name")}
+                      >
+                        Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("client_name")}
+                      >
+                        Client {sortConfig.key === "client_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("event_date")}
+                      >
+                        Date & Time {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("venue")}
+                      >
+                        Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("guest_count")}
+                      >
+                        Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("total_amount")}
+                      >
+                        Amount {sortConfig.key === "total_amount" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("status")}
+                      >
+                        Status {sortConfig.key === "status" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                      </TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
                       <TableRow>
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("event_name")}
-                        >
-                          Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("client_name")}
-                        >
-                          Client {sortConfig.key === "client_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("event_date")}
-                        >
-                          Date & Time {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("venue")}
-                        >
-                          Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("guest_count")}
-                        >
-                          Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("total_amount")}
-                        >
-                          Amount {sortConfig.key === "total_amount" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleSort("status")}
-                        >
-                          Status {sortConfig.key === "status" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                        </TableHead>
-                        <TableHead></TableHead>
+                        <TableCell colSpan={9} className="h-24 text-center">
+                          Loading events...
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEvents.map((event) => (
+                    ) : filteredEvents.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                          No events found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredEvents.map((event) => (
                         <TableRow key={event.id}>
                           <TableCell className="text-center w-[50px]">
                             <EventDetailsDialog event={event} />
@@ -872,20 +880,20 @@ export default function Banquet() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                           <TableCell>
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => handleEditEvent(event)}
-                             >
-                               Edit
-                             </Button>
-                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditEvent(event)}
+                            >
+                              Edit
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>

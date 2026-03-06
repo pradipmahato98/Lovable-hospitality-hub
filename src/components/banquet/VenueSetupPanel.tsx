@@ -127,6 +127,7 @@ const defaultSetupChecklist: Omit<SetupItem, "id">[] = [
 export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [venueFilter, setVenueFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{
     key: string;
@@ -152,7 +153,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     setupNotes: "",
   });
 
-  // Unique venues for filter
+  // Unique types and venues for filters
+  const eventTypes = useMemo(() => {
+    return Array.from(new Set(events.map((e) => e.event_type))).filter(Boolean).sort();
+  }, [events]);
+
   const venues = useMemo(() => {
     return Array.from(new Set(events.map((e) => e.venue))).filter(Boolean).sort();
   }, [events]);
@@ -182,6 +187,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
       });
     }
 
+    // Type filter
+    if (typeFilter !== "all") {
+      result = result.filter((e) => e.event_type === typeFilter);
+    }
+
     // Venue filter
     if (venueFilter !== "all") {
       result = result.filter((e) => e.venue === venueFilter);
@@ -189,8 +199,8 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
 
     // Sorting
     result.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number | null | undefined;
+      let bValue: string | number | null | undefined;
 
       if (sortConfig.key === "setupStatus" || sortConfig.key === "progress") {
         const aSetup = getSetupForEvent(a.id);
@@ -204,8 +214,10 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
           bValue = getSetupProgress(bSetup);
         }
       } else {
-        aValue = a[sortConfig.key as keyof BanquetEvent];
-        bValue = b[sortConfig.key as keyof BanquetEvent];
+        const valA = a[sortConfig.key as keyof BanquetEvent];
+        const valB = b[sortConfig.key as keyof BanquetEvent];
+        aValue = typeof valA === 'string' || typeof valA === 'number' ? valA : null;
+        bValue = typeof valB === 'string' || typeof valB === 'number' ? valB : null;
       }
 
       if (aValue === null || aValue === undefined) return 1;
@@ -221,7 +233,7 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     });
 
     return result;
-  }, [events, searchQuery, statusFilter, venueFilter, sortConfig, venueSetups]);
+  }, [events, searchQuery, statusFilter, typeFilter, venueFilter, sortConfig, venueSetups]);
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => ({
@@ -448,8 +460,20 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
           )}
         </div>
 
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {eventTypes.map(t => (
+              <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Setup Status" />
           </SelectTrigger>
           <SelectContent>
@@ -462,7 +486,7 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
         </Select>
 
         <Select value={venueFilter} onValueChange={setVenueFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Venues" />
           </SelectTrigger>
           <SelectContent>
@@ -473,13 +497,14 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
           </SelectContent>
         </Select>
 
-        {(searchQuery || statusFilter !== "all" || venueFilter !== "all") && (
+        {(searchQuery || statusFilter !== "all" || typeFilter !== "all" || venueFilter !== "all") && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               setSearchQuery("");
               setStatusFilter("all");
+              setTypeFilter("all");
               setVenueFilter("all");
             }}
             className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
@@ -492,52 +517,54 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
       {/* Events Table */}
       <Card>
         <CardContent className="p-0">
-          {activeEvents.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              No confirmed events requiring setup
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("event_name")}
+                >
+                  Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("event_date")}
+                >
+                  Date {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("venue")}
+                >
+                  Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead>Layout</TableHead>
+                <TableHead>Equipment</TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("progress")}
+                >
+                  Checklist {sortConfig.key === "progress" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("setupStatus")}
+                >
+                  Status {sortConfig.key === "setupStatus" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activeEvents.length === 0 ? (
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("event_name")}
-                  >
-                    Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("event_date")}
-                  >
-                    Date {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("venue")}
-                  >
-                    Venue {sortConfig.key === "venue" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead>Layout</TableHead>
-                  <TableHead>Equipment</TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("progress")}
-                  >
-                    Checklist {sortConfig.key === "progress" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("setupStatus")}
-                  >
-                    Status {sortConfig.key === "setupStatus" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead></TableHead>
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    No confirmed events requiring setup
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activeEvents.map((event) => {
+              ) : (
+                activeEvents.map((event) => {
                   const setup = getSetupForEvent(event.id);
                   const progress = getSetupProgress(setup);
                   const layout = setup
@@ -634,10 +661,10 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                     </TableRow>
                   );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                })
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

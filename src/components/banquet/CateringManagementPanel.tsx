@@ -105,6 +105,8 @@ const beverageOptions = [
 export function CateringManagementPanel({ events }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [venueFilter, setVenueFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
@@ -126,6 +128,15 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     beverages: [] as string[],
     specialNotes: "",
   });
+
+  // Unique types and venues for filters
+  const eventTypes = useMemo(() => {
+    return Array.from(new Set(events.map((e) => e.event_type))).filter(Boolean).sort();
+  }, [events]);
+
+  const venues = useMemo(() => {
+    return Array.from(new Set(events.map((e) => e.venue))).filter(Boolean).sort();
+  }, [events]);
 
   // Filter and sort active events
   const activeEvents = useMemo(() => {
@@ -152,10 +163,20 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
       });
     }
 
+    // Type filter
+    if (typeFilter !== "all") {
+      result = result.filter((e) => e.event_type === typeFilter);
+    }
+
+    // Venue filter
+    if (venueFilter !== "all") {
+      result = result.filter((e) => e.venue === venueFilter);
+    }
+
     // Sorting
     result.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number | null | undefined;
+      let bValue: string | number | null | undefined;
 
       if (sortConfig.key === "estimatedCost" || sortConfig.key === "cateringStatus") {
         const aOrder = cateringOrders.find((o) => o.eventId === a.id);
@@ -169,8 +190,10 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
           bValue = bOrder?.status || "";
         }
       } else {
-        aValue = a[sortConfig.key as keyof BanquetEvent];
-        bValue = b[sortConfig.key as keyof BanquetEvent];
+        const valA = a[sortConfig.key as keyof BanquetEvent];
+        const valB = b[sortConfig.key as keyof BanquetEvent];
+        aValue = typeof valA === 'string' || typeof valA === 'number' ? valA : null;
+        bValue = typeof valB === 'string' || typeof valB === 'number' ? valB : null;
       }
 
       if (aValue === null || aValue === undefined) return 1;
@@ -186,7 +209,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     });
 
     return result;
-  }, [events, searchQuery, statusFilter, sortConfig, cateringOrders]);
+  }, [events, searchQuery, statusFilter, typeFilter, venueFilter, sortConfig, cateringOrders]);
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => ({
@@ -368,7 +391,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
 
       {/* Search & Filter */}
       <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 max-w-[300px]">
+        <div className="relative flex-1 max-w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search events..."
@@ -386,8 +409,20 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
           )}
         </div>
 
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {eventTypes.map(t => (
+              <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Order Status" />
           </SelectTrigger>
           <SelectContent>
@@ -401,13 +436,27 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
           </SelectContent>
         </Select>
 
-        {(searchQuery || statusFilter !== "all") && (
+        <Select value={venueFilter} onValueChange={setVenueFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Venues" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Venues</SelectItem>
+            {venues.map(v => (
+              <SelectItem key={v} value={v}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {(searchQuery || statusFilter !== "all" || typeFilter !== "all" || venueFilter !== "all") && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               setSearchQuery("");
               setStatusFilter("all");
+              setTypeFilter("all");
+              setVenueFilter("all");
             }}
             className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
           >
@@ -419,50 +468,54 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
       {/* Events with Catering */}
       <Card>
         <CardContent className="p-0">
-          {activeEvents.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">No active events</div>
-          ) : (
-            <Table>
-              <TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("event_name")}
+                >
+                  Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("event_date")}
+                >
+                  Date {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("guest_count")}
+                >
+                  Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead>Menu Package</TableHead>
+                <TableHead>Dietary</TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("estimatedCost")}
+                >
+                  Est. Cost {sortConfig.key === "estimatedCost" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort("cateringStatus")}
+                >
+                  Status {sortConfig.key === "cateringStatus" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+                </TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activeEvents.length === 0 ? (
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("event_name")}
-                  >
-                    Event {sortConfig.key === "event_name" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("event_date")}
-                  >
-                    Date {sortConfig.key === "event_date" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("guest_count")}
-                  >
-                    Guests {sortConfig.key === "guest_count" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead>Menu Package</TableHead>
-                  <TableHead>Dietary</TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("estimatedCost")}
-                  >
-                    Est. Cost {sortConfig.key === "estimatedCost" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort("cateringStatus")}
-                  >
-                    Status {sortConfig.key === "cateringStatus" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </TableHead>
-                  <TableHead></TableHead>
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    No active events found
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activeEvents.map((event) => {
+              ) : (
+                activeEvents.map((event) => {
                   const order = getOrderForEvent(event.id);
                   const pkg = order
                     ? menuPackages.find((p) => p.id === order.menuPackage)
@@ -557,10 +610,10 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                       </TableCell>
                     </TableRow>
                   );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                })
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
