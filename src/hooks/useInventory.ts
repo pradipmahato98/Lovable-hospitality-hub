@@ -93,7 +93,9 @@ const db = supabase as any;
 
 // ============= Categories =============
 export function useInventoryCategories() {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["inventory-categories"],
     queryFn: async () => {
       const { data, error } = await db
@@ -104,6 +106,34 @@ export function useInventoryCategories() {
       return data as InventoryCategory[];
     },
   });
+
+  const createCategory = useMutation({
+    mutationFn: async (category: Omit<InventoryCategory, "id" | "created_at">) => {
+      const { data, error } = await db.from("inventory_categories").insert(category).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<InventoryCategory> & { id: string }) => {
+      const { data, error } = await db.from("inventory_categories").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  return { ...query, createCategory, updateCategory, deleteCategory };
 }
 
 // ============= Suppliers =============
@@ -263,7 +293,38 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
     },
   });
 
-  return { ...query, createItem, updateItem, deleteItem, adjustStock };
+  const bulkAdjustStock = useMutation({
+    mutationFn: async (adjustments: { itemId: string; quantity: number; type: "in" | "out" | "adjustment"; notes?: string }[]) => {
+      for (const adj of adjustments) {
+        // Get current stock
+        const { data: item, error: fetchError } = await db.from("inventory_items").select("current_stock").eq("id", adj.itemId).single();
+        if (fetchError) throw fetchError;
+
+        const newStock = adj.type === "out" ? item.current_stock - adj.quantity :
+                        adj.type === "in" ? item.current_stock + adj.quantity : adj.quantity;
+
+        // Update stock
+        await db.from("inventory_items").update({
+          current_stock: newStock,
+          last_restocked_at: adj.type === "in" ? new Date().toISOString() : undefined
+        }).eq("id", adj.itemId);
+
+        // Record movement
+        await db.from("stock_movements").insert({
+          item_id: adj.itemId,
+          movement_type: adj.type,
+          quantity: adj.quantity,
+          notes: adj.notes,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+    },
+  });
+
+  return { ...query, createItem, updateItem, deleteItem, adjustStock, bulkAdjustStock };
 }
 
 // ============= Purchase Orders =============
@@ -417,16 +478,59 @@ export function useStockMovements(filters?: { itemId?: string; type?: string }) 
   });
 }
 
-// ============= Stats =============
+// ============= Stats & Reports =============
 export function useInventoryStats() {
-  const { data: items } = useInventoryItems();
+  const { data: items } = useInventoryItems({ showInactive: false });
 
   const stats = {
     totalItems: items?.length || 0,
     lowStock: items?.filter((i) => i.current_stock <= i.reorder_point).length || 0,
     outOfStock: items?.filter((i) => i.current_stock === 0).length || 0,
     totalValue: items?.reduce((sum, i) => sum + i.current_stock * i.cost_price, 0) || 0,
+    categoryDistribution: items?.reduce((acc: Record<string, number>, item) => {
+      const catName = item.category?.name || "Uncategorized";
+      acc[catName] = (acc[catName] || 0) + (item.current_stock * item.cost_price);
+      return acc;
+    }, {}),
   };
 
   return stats;
+}
+
+export function useInventoryReportData() {
+  return useQuery({
+    queryKey: ["inventory-report-data"],
+    queryFn: async () => {
+      // Fetch last 30 days of movements for trend analysis
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: movements, error } = await db
+        .from("stock_movements")
+        .select(`*, item:inventory_items(name, cost_price)`)
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .order("created_at");
+
+      if (error) throw error;
+
+      // Group movements by day
+      const dailyData = movements.reduce((acc: any[], m: any) => {
+        const date = m.created_at.split("T")[0];
+        let dayEntry = acc.find(d => d.date === date);
+        if (!dayEntry) {
+          dayEntry = { date, in: 0, out: 0, value: 0 };
+          acc.push(dayEntry);
+        }
+
+        const value = m.quantity * (m.item?.cost_price || 0);
+        if (m.movement_type === "in") dayEntry.in += m.quantity;
+        if (m.movement_type === "out") dayEntry.out += m.quantity;
+        dayEntry.value += (m.movement_type === "in" ? value : -value);
+
+        return acc;
+      }, []);
+
+      return dailyData;
+    },
+  });
 }

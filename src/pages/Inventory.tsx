@@ -32,14 +32,21 @@ import {
 } from "@/components/ui/table";
 import { 
   Search, Plus, Package, AlertTriangle, TrendingUp, TrendingDown,
-  Warehouse, Truck, ArrowUpDown, RefreshCw, Loader2, DollarSign
+  Warehouse, Truck, ArrowUpDown, RefreshCw, Loader2, DollarSign,
+  PieChart as PieChartIcon, FileDown, Layers, Settings2, BarChart3
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
   useInventoryItems, useInventoryCategories, useSuppliers, 
-  usePurchaseOrders, useStockMovements, useInventoryStats 
+  usePurchaseOrders, useStockMovements, useInventoryStats,
+  useInventoryReportData
 } from "@/hooks/useInventory";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie
+} from "recharts";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,14 +62,21 @@ const Inventory = () => {
   const [addPOOpen, setAddPOOpen] = useState(false);
   const [viewPOOpen, setViewPOOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<any>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [movementFilters, setMovementFilters] = useState({ itemId: "all", type: "all" });
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [bulkAdjustOpen, setBulkAdjustOpen] = useState(false);
 
-  const { data: items = [], isLoading, createItem, updateItem, deleteItem, adjustStock } = useInventoryItems({
+  const { data: items = [], isLoading, createItem, updateItem, deleteItem, adjustStock, bulkAdjustStock } = useInventoryItems({
     category: categoryFilter !== "all" ? categoryFilter : undefined,
     lowStock: showLowStock,
     showInactive: true
   });
-  const { data: categories = [] } = useInventoryCategories();
+
+  const departments = Array.from(new Set(items.map(i => i.department).filter(Boolean)));
+  const { data: categories = [], createCategory, updateCategory, deleteCategory } = useInventoryCategories();
   const { data: suppliers = [], createSupplier, updateSupplier, deleteSupplier } = useSuppliers({ showInactive: true });
   const { data: purchaseOrders = [], createPurchaseOrder, updatePurchaseOrderStatus, deletePurchaseOrder } = usePurchaseOrders();
   const { data: movements = [], refetch: refetchMovements } = useStockMovements({
@@ -70,6 +84,7 @@ const Inventory = () => {
     type: movementFilters.type !== "all" ? movementFilters.type : undefined
   });
   const stats = useInventoryStats();
+  const { data: reportData = [] } = useInventoryReportData();
 
   const [newItem, setNewItem] = useState({
     name: "",
@@ -110,10 +125,16 @@ const Inventory = () => {
     items: [] as { item_id: string; quantity: number; unit_price: number }[],
   });
 
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [bulkAdjustments, setBulkAdjustments] = useState<any[]>([]);
+
+  const filteredItems = items.filter((item) => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || item.category_id === categoryFilter;
+    const matchesDept = departmentFilter === "all" || item.department === departmentFilter;
+    return matchesSearch && matchesCategory && matchesDept;
+  });
 
   const handleCreateItem = async () => {
     try {
@@ -207,6 +228,47 @@ const Inventory = () => {
     }
   };
 
+  const handleCreateCategory = async () => {
+    try {
+      await createCategory.mutateAsync(newCategory);
+      toast.success("Category created");
+      setAddCategoryOpen(false);
+      setNewCategory({ name: "", description: "" });
+    } catch (error) {
+      toast.error("Failed to create category");
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!selectedCategoryId) return;
+    try {
+      await updateCategory.mutateAsync({ id: selectedCategoryId, ...newCategory });
+      toast.success("Category updated");
+      setEditCategoryOpen(false);
+      setSelectedCategoryId(null);
+    } catch (error) {
+      toast.error("Failed to update category");
+    }
+  };
+
+  const handleBulkAdjust = async () => {
+    try {
+      await bulkAdjustStock.mutateAsync(bulkAdjustments);
+      toast.success("Bulk adjustment completed");
+      setBulkAdjustOpen(false);
+      setBulkAdjustments([]);
+    } catch (error) {
+      toast.error("Bulk adjustment failed");
+    }
+  };
+
+  const exportToExcel = (data: any[], fileName: string) => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, `${fileName}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+  };
+
   const getStockStatus = (current: number, min: number, reorder: number, active: boolean) => {
     if (!active) return { label: "Inactive", color: "bg-muted text-muted-foreground" };
     if (current === 0) return { label: "Out of Stock", color: "bg-destructive/20 text-destructive" };
@@ -217,10 +279,14 @@ const Inventory = () => {
   return (
     <MainLayout title="Inventory Management" subtitle="Track stock, suppliers, and purchase orders">
       <Tabs defaultValue="items" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto gap-2">
           <TabsTrigger value="items" className="gap-2">
             <Package className="h-4 w-4" />
             Items
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="gap-2">
+            <Layers className="h-4 w-4" />
+            Categories
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="gap-2">
             <Truck className="h-4 w-4" />
@@ -232,7 +298,11 @@ const Inventory = () => {
           </TabsTrigger>
           <TabsTrigger value="movements" className="gap-2">
             <ArrowUpDown className="h-4 w-4" />
-            Stock Movements
+            Movements
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
           </TabsTrigger>
         </TabsList>
 
@@ -308,6 +378,17 @@ const Inventory = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept!}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button 
                 variant={showLowStock ? "secondary" : "outline"} 
                 size="sm"
@@ -316,8 +397,24 @@ const Inventory = () => {
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 Low Stock Only
               </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportToExcel(items, "Inventory_Items")}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
             </div>
-            <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
+              <div className="flex gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => {
+                  setBulkAdjustments(items.map(i => ({ itemId: i.id, quantity: 0, type: "adjustment", notes: "" })));
+                  setBulkAdjustOpen(true);
+                }}>
+                  <Settings2 className="h-4 w-4" />
+                  Bulk Adjust
+                </Button>
+                <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
               <DialogTrigger asChild>
                 <Button variant="gold" className="gap-2">
                   <Plus className="h-4 w-4" />
@@ -395,6 +492,7 @@ const Inventory = () => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
 
           {/* Items Table */}
           <Card>
@@ -621,6 +719,105 @@ const Inventory = () => {
                   {adjustStock.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Save
                 </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <div className="flex justify-end mb-4">
+            <Button variant="gold" onClick={() => setAddCategoryOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Category
+            </Button>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Categories</CardTitle>
+              <CardDescription>Organize your items into categories</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((cat) => (
+                    <TableRow key={cat.id}>
+                      <TableCell className="font-medium">{cat.name}</TableCell>
+                      <TableCell>{cat.description || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedCategoryId(cat.id);
+                            setNewCategory({ name: cat.name, description: cat.description || "" });
+                            setEditCategoryOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Category</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input value={newCategory.description} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateCategory} disabled={!newCategory.name}>Add Category</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={editCategoryOpen} onOpenChange={setEditCategoryOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Category</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input value={newCategory.description} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} />
+                </div>
+              </div>
+              <DialogFooter className="flex justify-between w-full">
+                <Button variant="destructive" onClick={() => {
+                  if (confirm("Delete category?")) {
+                    deleteCategory.mutate(selectedCategoryId!);
+                    setEditCategoryOpen(false);
+                  }
+                }}>Delete</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setEditCategoryOpen(false)}>Cancel</Button>
+                  <Button onClick={handleUpdateCategory} disabled={!newCategory.name}>Save</Button>
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -1165,7 +1362,7 @@ const Inventory = () => {
         </TabsContent>
 
         <TabsContent value="movements">
-          <div className="flex flex-wrap gap-4 mb-4">
+          <div className="flex flex-wrap gap-4 mb-4 items-end">
             <div className="w-64">
               <Label className="text-xs mb-1 block">Filter by Item</Label>
               <Select value={movementFilters.itemId} onValueChange={(v) => setMovementFilters({ ...movementFilters, itemId: v })}>
@@ -1188,11 +1385,13 @@ const Inventory = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <Button variant="ghost" size="sm" onClick={() => setMovementFilters({ itemId: "all", type: "all" })}>
-                Clear Filters
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={() => setMovementFilters({ itemId: "all", type: "all" })}>
+              Clear Filters
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportToExcel(movements, "Stock_Movements")} className="ml-auto">
+              <FileDown className="h-4 w-4 mr-2" />
+              Export
+            </Button>
           </div>
           <Card>
             <CardHeader>
@@ -1250,7 +1449,154 @@ const Inventory = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Stock Value Trend</CardTitle>
+                <CardDescription>Inventory valuation over the last 30 days</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={reportData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Line type="monotone" dataKey="value" stroke="#EAB308" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Category Distribution</CardTitle>
+                <CardDescription>Stock value by category</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(stats.categoryDistribution || {}).map(([name, value]) => ({ name, value }))}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {Object.entries(stats.categoryDistribution || {}).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={[`#EAB308`, `#3B82F6`, `#10B981`, `#F59E0B`, `#6366F1`][index % 5]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Movement Volume</CardTitle>
+                <CardDescription>Daily Stock In vs Stock Out</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reportData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Bar dataKey="in" fill="#10B981" name="Stock In" />
+                    <Bar dataKey="out" fill="#EF4444" name="Stock Out" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      {/* Bulk Adjustment Dialog */}
+      <Dialog open={bulkAdjustOpen} onOpenChange={setBulkAdjustOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Bulk Stock Adjustment</DialogTitle>
+            <DialogDescription>Update stock levels for multiple items at once</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Current</TableHead>
+                  <TableHead className="w-32">Type</TableHead>
+                  <TableHead className="w-24">Value</TableHead>
+                  <TableHead>Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bulkAdjustments.map((adj, index) => {
+                  const item = items.find(i => i.id === adj.itemId);
+                  return (
+                    <TableRow key={adj.itemId}>
+                      <TableCell className="font-medium">{item?.name}</TableCell>
+                      <TableCell>{item?.current_stock}</TableCell>
+                      <TableCell>
+                        <Select value={adj.type} onValueChange={(v: any) => {
+                          const newAdjs = [...bulkAdjustments];
+                          newAdjs[index].type = v;
+                          setBulkAdjustments(newAdjs);
+                        }}>
+                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in">In (+)</SelectItem>
+                            <SelectItem value="out">Out (-)</SelectItem>
+                            <SelectItem value="adjustment">Set (=)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          className="h-8"
+                          value={adj.quantity}
+                          onChange={(e) => {
+                            const newAdjs = [...bulkAdjustments];
+                            newAdjs[index].quantity = Number(e.target.value);
+                            setBulkAdjustments(newAdjs);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          className="h-8"
+                          placeholder="Reason..."
+                          value={adj.notes}
+                          onChange={(e) => {
+                            const newAdjs = [...bulkAdjustments];
+                            newAdjs[index].notes = e.target.value;
+                            setBulkAdjustments(newAdjs);
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAdjustOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkAdjust} disabled={bulkAdjustStock.isPending}>
+              {bulkAdjustStock.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save All Adjustments
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
