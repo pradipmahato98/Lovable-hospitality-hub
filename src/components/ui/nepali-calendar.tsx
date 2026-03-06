@@ -8,8 +8,6 @@ import {
   BS_MONTH_NAMES,
   BS_DAY_NAMES,
   getDaysInBsMonth,
-  formatBsDate,
-  parseBsDate
 } from "@/utils/nepaliDate";
 
 interface NepaliCalendarProps {
@@ -32,7 +30,6 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
   const [viewMonth, setViewMonth] = useState(currentBS.month);
   const [viewYear, setViewYear] = useState(currentBS.year);
 
-  const minBS = useMemo(() => minDate ? adToBs(minDate) : null, [minDate]);
   const maxBS = useMemo(() => effectiveMaxDate ? adToBs(effectiveMaxDate) : null, [effectiveMaxDate]);
 
   // Calculate days in the view month
@@ -61,10 +58,11 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
   };
 
   const goToToday = () => {
-    const today = adToBs(new Date());
-    setViewMonth(today.month);
-    setViewYear(today.year);
-    onSelect?.(new Date());
+    const today = new Date();
+    const todayBS = adToBs(today);
+    setViewMonth(todayBS.month);
+    setViewYear(todayBS.year);
+    onSelect?.(today);
   };
 
   const isToday = (day: number) => {
@@ -73,13 +71,14 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
   };
 
   const isSelected = (day: number) => {
-    const sel = adToBs(selected || new Date());
+    if (!selected) return false;
+    const sel = adToBs(selected);
     return sel.year === viewYear && sel.month === viewMonth && sel.day === day;
   };
 
   const years = useMemo(() => {
     const currentYear = adToBs(new Date()).year;
-    return Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+    return Array.from({ length: 41 }, (_, i) => currentYear - 20 + i);
   }, []);
 
   return (
@@ -141,21 +140,26 @@ export function NepaliCalendar({ selected, onSelect, className, minDate, maxDate
           if (effectiveMaxDate && dateAD > effectiveMaxDate) disabled = true;
 
           return (
-            <Button
-              key={day}
-              variant="ghost"
-              disabled={disabled}
-              className={cn(
-                "h-8 w-8 p-0 text-sm font-normal transition-colors",
-                today && "bg-success text-success-foreground hover:bg-success/90",
-                sel && !today && "bg-amber-500 text-white hover:bg-amber-600",
-                !today && !sel && "hover:bg-accent",
-                disabled && "opacity-30 cursor-not-allowed"
-              )}
-              onClick={() => !disabled && onSelect?.(dateAD)}
-            >
-              {day}
-            </Button>
+            <div key={day} className="relative h-8 w-8 flex items-center justify-center">
+                <Button
+                variant="ghost"
+                disabled={disabled}
+                className={cn(
+                    "h-7 w-7 p-0 text-xs font-normal transition-all rounded-full z-10",
+                    today && "bg-success text-success-foreground hover:bg-success/90 shadow-sm",
+                    sel && !today && "bg-amber-500 text-white hover:bg-amber-600 shadow-sm",
+                    !today && !sel && "hover:bg-accent",
+                    disabled && "opacity-30 cursor-not-allowed"
+                )}
+                onClick={() => !disabled && onSelect?.(dateAD)}
+                >
+                {day}
+                </Button>
+                {/* Visual indicator for today when not selected */}
+                {today && sel && (
+                    <div className="absolute inset-0 rounded-full border-2 border-amber-500 pointer-events-none z-20" />
+                )}
+            </div>
           );
         })}
       </div>
