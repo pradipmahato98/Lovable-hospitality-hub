@@ -2,130 +2,111 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { adToBs, bsToAd, NEPALI_MONTHS, fromDateStr } from "@/utils/nepaliDate";
+import { bsMonthDays, NEPALI_MONTHS, adToBs } from "@/utils/nepaliDate";
 
 interface NepaliCalendarProps {
-  selected?: string; // YYYY/MM/DD
-  onSelect?: (date: string) => void;
+  selected?: string;
+  onSelect?: (bsDate: string) => void;
+  className?: string;
   disableFuture?: boolean;
   minDate?: string;
   maxDate?: string;
-  className?: string;
 }
 
-const NEPALI_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export function NepaliCalendar({
+  selected,
+  onSelect,
+  className,
+  disableFuture = false,
+  minDate,
+  maxDate,
+}: NepaliCalendarProps) {
+  const todayAd = new Date();
+  const todayBs = adToBs(todayAd);
 
-export function NepaliCalendar({ selected, onSelect, disableFuture, minDate, maxDate, className }: NepaliCalendarProps) {
-  const todayBs = adToBs(new Date());
+  const [currentYear, setCurrentYear] = React.useState(selected ? parseInt(selected.split('/')[0]) : parseInt(todayBs.split('/')[0]));
+  const [currentMonth, setCurrentMonth] = React.useState(selected ? parseInt(selected.split('/')[1]) - 1 : parseInt(todayBs.split('/')[1]) - 1);
 
-  const [currentDate, setCurrentDate] = React.useState(() => {
-    if (selected && selected.match(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/)) {
-      const [y, m, d] = selected.split(/[/-]/).map(Number);
-      return { year: y, month: m - 1, day: d };
-    }
-    const [y, m, d] = todayBs.split(/[/-]/).map(Number);
-    return { year: y, month: m - 1, day: d };
-  });
-
-  React.useEffect(() => {
-    if (selected && selected.match(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/)) {
-      const [y, m, d] = selected.split(/[/-]/).map(Number);
-      setCurrentDate({ year: y, month: m - 1, day: d });
-    }
-  }, [selected]);
+  const daysInMonth = bsMonthDays[currentYear]?.[currentMonth] || 30;
+  const firstDayOfMonth = (currentYear + currentMonth) % 7;
 
   const handlePrevMonth = () => {
-    setCurrentDate(prev => {
-      let newMonth = prev.month - 1;
-      let newYear = prev.year;
-      if (newMonth < 0) {
-        newMonth = 11;
-        newYear -= 1;
-      }
-      return { ...prev, year: newYear, month: newMonth };
-    });
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(prev => {
-      let newMonth = prev.month + 1;
-      let newYear = prev.year;
-      if (newMonth > 11) {
-        newMonth = 0;
-        newYear += 1;
-      }
-      return { ...prev, year: newYear, month: newMonth };
-    });
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
   };
 
-  const getMonthDays = (year: number, month: number) => {
-    // Access the raw data if available
-    const data = (adToBs as any).bsMonthDays?.[year];
-    if (data) return data[month];
-
-    // Fallback logic if needed, but the utility should have the data
-    return 30;
+  const isToday = (day: number) => {
+    const [ty, tm, td] = todayBs.split('/').map(Number);
+    return day === td && currentMonth === tm - 1 && currentYear === ty;
   };
 
-  const daysInMonth = getMonthDays(currentDate.year, currentDate.month);
-
-  // Refined day calculation using local time to avoid UTC shift
-  const firstAdOfMonth = bsToAd(`${currentDate.year}/${(currentDate.month + 1).toString().padStart(2, '0')}/01`);
-  const firstDayOfMonth = fromDateStr(firstAdOfMonth)?.getDay() ?? 0;
-
-  const days = [];
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    days.push(<div key={`empty-${i}`} className="h-9 w-9" />);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentDate.year}/${(currentDate.month + 1).toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}`;
-    const isSelected = selected === dateStr;
-    const isFuture = disableFuture && dateStr > todayBs;
-    const isOutOfRange = (minDate && dateStr < minDate) || (maxDate && dateStr > maxDate);
-
-    const isToday = dateStr === todayBs;
-
-    days.push(
-      <Button
-        key={d}
-        variant="ghost"
-        disabled={isFuture || isOutOfRange}
-        className={cn(
-          "h-9 w-9 p-0 font-normal",
-          isToday && "bg-success text-success-foreground font-bold hover:bg-success/90 hover:text-success-foreground",
-          isSelected && "bg-amber-500 text-white hover:bg-amber-600 hover:text-white focus:bg-amber-600 focus:text-white",
-          (isFuture || isOutOfRange) && "opacity-20 pointer-events-none"
-        )}
-        onClick={() => onSelect?.(dateStr)}
-      >
-        {d}
-      </Button>
-    );
-  }
+  const isSelected = (day: number) => {
+    if (!selected) return false;
+    const [y, m, d] = selected.split('/').map(Number);
+    return y === currentYear && m === currentMonth + 1 && d === day;
+  };
 
   return (
-    <div className={cn("p-3 w-[280px]", className)}>
+    <div className={cn("p-3 bg-card border rounded-md shadow-sm", className)}>
       <div className="flex items-center justify-between mb-4">
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={handlePrevMonth}>
+        <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-7 w-7">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="text-sm font-medium">
-          {NEPALI_MONTHS[currentDate.month]} {currentDate.year}
+        <div className="font-semibold text-sm">
+          {NEPALI_MONTHS[currentMonth]} {currentYear}
         </div>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNextMonth}>
+        <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-7 w-7">
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+
       <div className="grid grid-cols-7 gap-1 text-center mb-2">
-        {NEPALI_DAYS.map(day => (
-          <div key={day} className="text-muted-foreground text-[0.8rem] font-normal w-9">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="text-[10px] font-medium text-muted-foreground uppercase">
             {day}
           </div>
         ))}
       </div>
+
       <div className="grid grid-cols-7 gap-1">
-        {days}
+        {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+          <div key={`empty-${i}`} />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const isCurrentToday = isToday(day);
+          const isCurrentSelected = isSelected(day);
+          const dateStr = `${currentYear}/${(currentMonth + 1).toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
+
+          return (
+            <Button
+              key={day}
+              variant="ghost"
+              size="sm"
+              onClick={() => onSelect?.(dateStr)}
+              className={cn(
+                "h-8 w-8 p-0 text-xs font-normal",
+                isCurrentToday && "bg-success text-success-foreground hover:bg-success hover:text-success-foreground",
+                isCurrentSelected && "bg-amber-500 text-white hover:bg-amber-600 hover:text-white"
+              )}
+            >
+              {day}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );

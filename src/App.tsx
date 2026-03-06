@@ -42,11 +42,11 @@ import Housekeeping from "./pages/Housekeeping";
 import Engineering from "./pages/Engineering";
 import StaffManagement from "./pages/StaffManagement";
 import Finance from "./pages/Finance";
-import JournalRegister from "./pages/JournalRegister";
-import JournalEntryEditor from "./pages/JournalEntryEditor";
 import Payments from "./pages/Payments";
 import Banquet from "./pages/Banquet";
 import Database from "./pages/Database";
+import JournalEntryEditor from "./pages/JournalEntryEditor";
+
 const queryClient = new QueryClient();
 
 const LoadingScreen = () => (
@@ -99,7 +99,6 @@ const App = () => (
                 <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
                 <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
                 <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-                <Route path="/finance/journal" element={<ProtectedRoute><JournalRegister /></ProtectedRoute>} />
                 <Route path="/finance/journal/new" element={<ProtectedRoute><JournalEntryEditor /></ProtectedRoute>} />
                 <Route path="/finance/journal/:id" element={<ProtectedRoute><JournalEntryEditor /></ProtectedRoute>} />
                 <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
