@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,6 +140,9 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
 
   // Filter and sort active events
   const activeEvents = useMemo(() => {
+    // Inner function for filtering/sorting to avoid dependency on outer functions
+    const findOrder = (eventId: string) => cateringOrders.find((o) => o.eventId === eventId);
+
     let result = events.filter(
       (e) => e.status !== "completed" && e.status !== "cancelled"
     );
@@ -157,7 +160,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     // Status filter (Catering Order Status)
     if (statusFilter !== "all") {
       result = result.filter((e) => {
-        const order = cateringOrders.find((o) => o.eventId === e.id);
+        const order = findOrder(e.id);
         if (statusFilter === "none") return !order;
         return order?.status === statusFilter;
       });
@@ -179,8 +182,8 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
       let bValue: string | number | null | undefined;
 
       if (sortConfig.key === "estimatedCost" || sortConfig.key === "cateringStatus") {
-        const aOrder = cateringOrders.find((o) => o.eventId === a.id);
-        const bOrder = cateringOrders.find((o) => o.eventId === b.id);
+        const aOrder = findOrder(a.id);
+        const bOrder = findOrder(b.id);
 
         if (sortConfig.key === "estimatedCost") {
           aValue = aOrder?.estimatedCost || 0;
@@ -219,9 +222,9 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
   };
 
   // Get catering order for an event
-  const getOrderForEvent = (eventId: string) => {
+  const getOrderForEvent = useCallback((eventId: string) => {
     return cateringOrders.find((o) => o.eventId === eventId);
-  };
+  }, [cateringOrders]);
 
   const handleOpenOrderDialog = (event: BanquetEvent) => {
     setSelectedEvent(event);

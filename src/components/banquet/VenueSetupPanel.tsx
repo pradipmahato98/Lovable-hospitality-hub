@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -164,6 +164,13 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
 
   // Filter and sort active events
   const activeEvents = useMemo(() => {
+    const findSetup = (eventId: string) => venueSetups.find((s) => s.eventId === eventId);
+    const calculateProgress = (setup: VenueSetup | undefined) => {
+      if (!setup) return 0;
+      const completed = setup.setupItems.filter((i) => i.completed).length;
+      return (completed / setup.setupItems.length) * 100;
+    };
+
     let result = events.filter(
       (e) => e.status === "confirmed" || e.status === "in_progress"
     );
@@ -181,7 +188,7 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     // Status filter
     if (statusFilter !== "all") {
       result = result.filter((e) => {
-        const setup = getSetupForEvent(e.id);
+        const setup = findSetup(e.id);
         if (statusFilter === "none") return !setup;
         return setup?.setupStatus === statusFilter;
       });
@@ -203,15 +210,15 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
       let bValue: string | number | null | undefined;
 
       if (sortConfig.key === "setupStatus" || sortConfig.key === "progress") {
-        const aSetup = getSetupForEvent(a.id);
-        const bSetup = getSetupForEvent(b.id);
+        const aSetup = findSetup(a.id);
+        const bSetup = findSetup(b.id);
 
         if (sortConfig.key === "setupStatus") {
           aValue = aSetup?.setupStatus || "";
           bValue = bSetup?.setupStatus || "";
         } else {
-          aValue = getSetupProgress(aSetup);
-          bValue = getSetupProgress(bSetup);
+          aValue = calculateProgress(aSetup);
+          bValue = calculateProgress(bSetup);
         }
       } else {
         const valA = a[sortConfig.key as keyof BanquetEvent];
@@ -243,9 +250,9 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   };
 
   // Get setup for an event
-  const getSetupForEvent = (eventId: string) => {
+  const getSetupForEvent = useCallback((eventId: string) => {
     return venueSetups.find((s) => s.eventId === eventId);
-  };
+  }, [venueSetups]);
 
   const handleOpenSetupDialog = (event: BanquetEvent) => {
     setSelectedEvent(event);
@@ -361,11 +368,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     );
   };
 
-  const getSetupProgress = (setup: VenueSetup | undefined) => {
+  const getSetupProgress = useCallback((setup: VenueSetup | undefined) => {
     if (!setup) return 0;
     const completed = setup.setupItems.filter((i) => i.completed).length;
     return (completed / setup.setupItems.length) * 100;
-  };
+  }, []);
 
   const statusColors: Record<string, string> = {
     not_started: "bg-muted text-muted-foreground border-muted",
