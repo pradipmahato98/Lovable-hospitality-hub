@@ -34,35 +34,36 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const navItems = [
-  { icon: Users, label: "Guests", path: "/guests" },
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-  { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
-  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-  { icon: Wrench, label: "Engineering", path: "/engineering" },
-  { icon: ShoppingCart, label: "POS", path: "/pos" },
-  { icon: Package, label: "Inventory", path: "/inventory" },
-  { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
-  { icon: DollarSign, label: "Finance/Account", path: "/finance" },
-  { icon: PartyPopper, label: "Banquet", path: "/banquet" },
-  { icon: BarChart3, label: "Reports", path: "/reports" },
+  { icon: Users, label: "Guests", path: "/guests", permission: "guests:view" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", permission: "" },
+  { icon: CalendarDays, label: "Reservations", path: "/reservations", permission: "reservations:view" },
+  { icon: BedDouble, label: "Front Desk", path: "/front-desk", permission: "front_desk:view" },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping", permission: "housekeeping:view" },
+  { icon: Wrench, label: "Engineering", path: "/engineering", permission: "engineering:view" },
+  { icon: ShoppingCart, label: "POS", path: "/pos", permission: "pos:view" },
+  { icon: Package, label: "Inventory", path: "/inventory", permission: "inventory:view" },
+  { icon: Globe, label: "Channel Manager", path: "/channel-manager", permission: "channel_manager:view" },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance", permission: "finance:view" },
+  { icon: PartyPopper, label: "Banquet", path: "/banquet", permission: "banquet:view" },
+  { icon: BarChart3, label: "Reports", path: "/reports", permission: "reports:view" },
 ];
 
 const operationsNavItems = [
-  { icon: Moon, label: "Night Audit", path: "/night-audit" },
-  { icon: Lock, label: "Day Close", path: "/day-close" },
+  { icon: Moon, label: "Night Audit", path: "/night-audit", permission: "operations:night_audit" },
+  { icon: Lock, label: "Day Close", path: "/day-close", permission: "operations:day_close" },
 ];
 
 const adminNavItems = [
-  { icon: UserCog, label: "User Management", path: "/users" },
-  { icon: Users, label: "Staff Management", path: "/staff" },
-  { icon: UserCheck, label: "HR", path: "/hr" },
-  { icon: Database, label: "Database", path: "/database" },
-  { icon: Settings, label: "Settings", path: "/settings" },
-  { icon: ShieldCheck, label: "Admin Console", path: "/admin-console" },
-  { icon: Code2, label: "Dev Panel", path: "/dev" },
+  { icon: UserCog, label: "User Management", path: "/users", permission: "all" },
+  { icon: Users, label: "Staff Management", path: "/staff", permission: "admin:staff" },
+  { icon: UserCheck, label: "HR", path: "/hr", permission: "admin:hr" },
+  { icon: Database, label: "Database", path: "/database", permission: "all" },
+  { icon: Settings, label: "Settings", path: "/settings", permission: "all" },
+  { icon: ShieldCheck, label: "Admin Console", path: "/admin-console", permission: "all" },
+  { icon: Code2, label: "Dev Panel", path: "/dev", permission: "all" },
 ];
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
@@ -70,6 +71,12 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { data: permissions } = usePermissions();
+
+  const hasPermission = (permission?: string) => {
+    if (!permission) return true;
+    return permissions?.some(p => p.permission === "all" || p.permission === permission) ?? false;
+  };
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -126,39 +133,43 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-hide">
-        {navItems.map(renderNavItem)}
+        {navItems.filter(item => hasPermission(item.permission)).map(renderNavItem)}
 
         {/* Operations Section */}
-        {(!collapsed || isMobile) && (
-          <div className="mt-4 mb-2 px-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Operations
-            </p>
-          </div>
+        {operationsNavItems.some(item => hasPermission(item.permission)) && (
+          <>
+            {(!collapsed || isMobile) && (
+              <div className="mt-4 mb-2 px-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Operations
+                </p>
+              </div>
+            )}
+            {operationsNavItems.filter(item => hasPermission(item.permission)).map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={onNavClick}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-sidebar-accent text-primary shadow-glow"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+                    collapsed && !isMobile && "justify-center px-2"
+                  )}
+                >
+                  <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+                  {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            })}
+          </>
         )}
-        {operationsNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-accent text-primary shadow-glow"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-                collapsed && !isMobile && "justify-center px-2"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
-            </Link>
-          );
-        })}
 
         {/* Admin Section */}
-        {isAdmin && (
+        {adminNavItems.some(item => hasPermission(item.permission)) && (
           <>
             {(!collapsed || isMobile) && (
               <div className="mt-4 mb-2 px-3">
@@ -167,7 +178,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 </p>
               </div>
             )}
-            {adminNavItems.map(renderNavItem)}
+            {adminNavItems.filter(item => hasPermission(item.permission)).map(renderNavItem)}
           </>
         )}
       </nav>

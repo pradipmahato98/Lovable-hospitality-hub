@@ -67,33 +67,33 @@ const App = () => (
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                <Route path="/reservations" element={<ProtectedRoute><Reservations /></ProtectedRoute>} />
-                <Route path="/guests" element={<ProtectedRoute><Guests /></ProtectedRoute>} />
-                <Route path="/front-desk" element={<ProtectedRoute><FrontDesk /></ProtectedRoute>} />
-                <Route path="/calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
-                <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-                <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
-                <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
-                <Route path="/pos/terminal" element={<ProtectedRoute><POSTerminal /></ProtectedRoute>} />
-                <Route path="/pos/history" element={<ProtectedRoute><POSHistory /></ProtectedRoute>} />
-                <Route path="/pos/reports" element={<ProtectedRoute><POSReports /></ProtectedRoute>} />
-                <Route path="/pos/kitchen" element={<ProtectedRoute><KitchenDisplay /></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-                <Route path="/channel-manager" element={<ProtectedRoute><ChannelManager /></ProtectedRoute>} />
-                <Route path="/night-audit" element={<ProtectedRoute><NightAudit /></ProtectedRoute>} />
-                <Route path="/day-close" element={<ProtectedRoute><DayClose /></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-                <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-                <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
-                <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-                <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-                <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
-                <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
-                <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
-                <Route path="/database" element={<ProtectedRoute><Database /></ProtectedRoute>} />
+                <Route path="/reservations" element={<ProtectedRoute requiredPermission="reservations:view"><Reservations /></ProtectedRoute>} />
+                <Route path="/guests" element={<ProtectedRoute requiredPermission="guests:view"><Guests /></ProtectedRoute>} />
+                <Route path="/front-desk" element={<ProtectedRoute requiredPermission="front_desk:view"><FrontDesk /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute requiredPermission="reservations:view"><ReservationCalendar /></ProtectedRoute>} />
+                <Route path="/billing" element={<ProtectedRoute requiredPermission="finance:view"><Billing /></ProtectedRoute>} />
+                <Route path="/housekeeping" element={<ProtectedRoute requiredPermission="housekeeping:view"><Housekeeping /></ProtectedRoute>} />
+                <Route path="/engineering" element={<ProtectedRoute requiredPermission="engineering:view"><Engineering /></ProtectedRoute>} />
+                <Route path="/pos" element={<ProtectedRoute requiredPermission="pos:view"><POS /></ProtectedRoute>} />
+                <Route path="/pos/terminal" element={<ProtectedRoute requiredPermission="pos:manage"><POSTerminal /></ProtectedRoute>} />
+                <Route path="/pos/history" element={<ProtectedRoute requiredPermission="pos:view"><POSHistory /></ProtectedRoute>} />
+                <Route path="/pos/reports" element={<ProtectedRoute requiredPermission="reports:view"><POSReports /></ProtectedRoute>} />
+                <Route path="/pos/kitchen" element={<ProtectedRoute requiredPermission="pos:manage"><KitchenDisplay /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute requiredPermission="inventory:view"><Inventory /></ProtectedRoute>} />
+                <Route path="/channel-manager" element={<ProtectedRoute requiredPermission="channel_manager:view"><ChannelManager /></ProtectedRoute>} />
+                <Route path="/night-audit" element={<ProtectedRoute requiredPermission="operations:night_audit"><NightAudit /></ProtectedRoute>} />
+                <Route path="/day-close" element={<ProtectedRoute requiredPermission="operations:day_close"><DayClose /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute requiredPermission="reports:view"><Reports /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute requiredPermission="all"><Settings /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute requiredPermission="all"><UserManagement /></ProtectedRoute>} />
+                <Route path="/staff" element={<ProtectedRoute requiredPermission="admin:staff"><StaffManagement /></ProtectedRoute>} />
+                <Route path="/hr" element={<ProtectedRoute requiredPermission="admin:hr"><HR /></ProtectedRoute>} />
+                <Route path="/finance" element={<ProtectedRoute requiredPermission="finance:view"><Finance /></ProtectedRoute>} />
+                <Route path="/payments" element={<ProtectedRoute requiredPermission="finance:view"><Payments /></ProtectedRoute>} />
+                <Route path="/banquet" element={<ProtectedRoute requiredPermission="banquet:view"><Banquet /></ProtectedRoute>} />
+                <Route path="/dev" element={<ProtectedRoute requiredPermission="all"><DevPanel /></ProtectedRoute>} />
+                <Route path="/admin-console" element={<ProtectedRoute requiredPermission="all"><AdminConsole /></ProtectedRoute>} />
+                <Route path="/database" element={<ProtectedRoute requiredPermission="all"><Database /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
