@@ -16,7 +16,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
 
   return (
     <div className={cn(
-      "min-h-screen bg-background transition-all duration-500 relative flex overflow-x-hidden"
+      "min-h-screen bg-background transition-all duration-500 relative flex overflow-x-hidden m-0 p-0"
     )}>
       <Sidebar />
       <div
