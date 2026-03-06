@@ -177,18 +177,6 @@ export default function Finance() {
 
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => setSelectedService(null)}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Microservices
-              </Button>
-              <h2 className="text-xl font-bold font-display">{service.title}</h2>
-              {isReadOnly && (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
-                  <Eye className="h-3 w-3" /> View Only
-                </Badge>
-              )}
-            </div>
             <service.Component isReadOnly={isReadOnly} />
           </div>
         );
