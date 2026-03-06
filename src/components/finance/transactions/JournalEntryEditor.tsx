@@ -18,6 +18,11 @@ import {
   ArrowLeft,
   MoreHorizontal,
   PlusCircle,
+  Upload,
+  FileText,
+  X,
+  Eye,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,6 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   useAccounts,
   useCreateJournalEntry,
@@ -47,6 +59,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useUIPreferences } from "@/hooks/useSettings";
+import { api } from "@/lib/api-bridge";
 
 interface JournalLine {
   id: string;
@@ -69,6 +82,41 @@ const VOUCHER_TYPES = [
 ];
 
 export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => {
+      if (file.size > 1 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 1MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setAttachments(prev => [...prev, ...validFiles]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePreview = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setPreviewFile({ url, name: file.name, type: file.type });
+  };
+
+  const handleDownload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const { data: accounts } = useAccounts();
   const { data: entries } = useJournalEntries();
   const createJournalEntry = useCreateJournalEntry();
@@ -101,11 +149,11 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     const currentFYStr = getFiscalYear(currentAD);
     const [start] = currentFYStr.split('/').map(Number);
 
-    // Generate years up to current
+    // Generate years up to current, descending
     return [
-      `${start - 2}/${(start - 1).toString().slice(-2)}`,
+      currentFYStr,
       `${start - 1}/${start.toString().slice(-2)}`,
-      currentFYStr
+      `${start - 2}/${(start - 1).toString().slice(-2)}`
     ];
   }, []);
 
@@ -146,12 +194,11 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
 
   const handleFYChange = (fy: string) => {
     setFiscalYear(fy);
-    const { start, end } = getFiscalYearRange(fy);
-    // Ensure date is within range
-    const newDate = dateAD < start ? start : (dateAD > end ? end : dateAD);
-    setDateAD(newDate);
-    setDateADInput(formatAdDate(newDate, separator));
-    setMitiBS(formatBsDate(adToBs(newDate), separator));
+    const { start } = getFiscalYearRange(fy);
+    // Always jump to the start date of the selected fiscal year
+    setDateAD(start);
+    setDateADInput(formatAdDate(start, separator));
+    setMitiBS(formatBsDate(adToBs(start), separator));
   };
 
   const fyRange = useMemo(() => getFiscalYearRange(fiscalYear), [fiscalYear]);
@@ -232,7 +279,37 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
       return;
     }
 
+    const toastId = toast.loading("Saving voucher...");
+
     try {
+      // 1. Upload Attachments if any
+      const uploadedAttachments: { name: string; url: string; type: string }[] = [];
+
+      for (const file of attachments) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `journal-attachments/${crypto.randomUUID()}.${fileExt}`;
+
+        const { error: uploadError } = await api.storage
+          .from('attachments')
+          .upload(filePath, file);
+
+        if (uploadError) {
+           console.error("Upload error:", uploadError);
+           continue;
+        }
+
+        const { data: { publicUrl } } = api.storage
+          .from('attachments')
+          .getPublicUrl(filePath);
+
+        uploadedAttachments.push({
+          name: file.name,
+          url: publicUrl,
+          type: file.type
+        });
+      }
+
+      // 2. Create Journal Entry
       await createJournalEntry.mutateAsync({
         date: dateAD.toISOString().split("T")[0],
         miti: mitiBS,
@@ -240,6 +317,7 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
         voucher_type: voucherType,
         description: narration,
         reference: voucherNo,
+        attachments: uploadedAttachments,
         lines: lines
           .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
           .map(l => ({
@@ -250,14 +328,26 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
             description: l.remarks,
           })),
       });
-      toast.success("Voucher saved successfully");
+      toast.success("Voucher saved successfully", { id: toastId });
       onClose();
     } catch (error) {
-      toast.error("Failed to save voucher");
+      toast.error("Failed to save voucher", { id: toastId });
     }
   };
 
   const isBlocked = !voucherType;
+
+  // Global Shortcut for Saving
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleSave]);
 
   // Keyboard navigation handler
   const handleKeyDown = (e: React.KeyboardEvent, field: string, id?: string) => {
@@ -314,12 +404,15 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             ref={saveBtnRef}
-            className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
+            className="gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-sm transition-all active:scale-95"
             onClick={handleSave}
             disabled={createJournalEntry.isPending || isBlocked}
           >
             <Save className="h-4 w-4" />
-            Save Voucher
+            <span>Save Voucher</span>
+            <kbd className="hidden md:inline-flex h-4 select-none items-center gap-1 rounded border bg-white/20 px-1.5 font-mono text-[10px] font-medium text-white opacity-90 ml-1">
+              <span className="text-[10px]">⌘</span>S
+            </kbd>
           </Button>
         </div>
       </div>
@@ -585,15 +678,57 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div className="space-y-2">
-              <Label>Narration</Label>
-              <Input
-                ref={narrationRef}
-                placeholder="Enter overall transaction narration"
-                value={narration}
-                onChange={(e) => setNarration(e.target.value)}
-                className="h-20"
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Narration</Label>
+                <Input
+                  ref={narrationRef}
+                  placeholder="Enter overall transaction narration"
+                  value={narration}
+                  onChange={(e) => setNarration(e.target.value)}
+                  className="h-20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Voucher Attachments (Max 1MB)</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {attachments.map((file, i) => (
+                    <div key={i} className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted px-2 py-1 rounded-md text-[11px] border border-border transition-colors group">
+                      <FileText className="h-3 w-3 text-primary/60" />
+                      <span className="max-w-[100px] truncate font-medium">{file.name}</span>
+                      <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handlePreview(file)}>
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleDownload(file)}>
+                          <Download className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => removeAttachment(i)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 text-[11px] gap-1.5"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add File
+                  </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    multiple
+                    onChange={handleFileChange}
+                    accept="image/*,.pdf"
+                  />
+                </div>
+              </div>
             </div>
             <div className="bg-muted/30 rounded-lg p-4 space-y-3">
               <div className="flex justify-between items-center text-xs">
@@ -614,6 +749,43 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b flex-row items-center justify-between">
+            <DialogTitle className="text-base truncate pr-8">{previewFile?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 bg-black/5 flex items-center justify-center p-4">
+            {previewFile?.type.startsWith('image/') ? (
+              <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-full object-contain" />
+            ) : previewFile?.type === 'application/pdf' ? (
+              <iframe src={previewFile.url} className="w-full h-full border-none" title="PDF Preview" />
+            ) : (
+              <div className="text-center space-y-4">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
+                <p>Preview not available for this file type</p>
+                <Button onClick={() => previewFile && handleDownload(new File([], previewFile.name))}>Download to View</Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-4 border-t">
+            <Button variant="outline" onClick={() => setPreviewFile(null)}>Close</Button>
+            {previewFile && (
+              <Button onClick={() => {
+                const a = document.createElement('a');
+                a.href = previewFile.url;
+                a.download = previewFile.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }}>
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

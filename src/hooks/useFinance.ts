@@ -25,6 +25,7 @@ export interface JournalEntry {
   voucher_type?: string;
   description: string;
   reference: string | null;
+  attachments?: { name: string; url: string; type: string }[];
   is_posted: boolean;
   created_by: string | null;
   created_by_profile?: {
@@ -266,6 +267,7 @@ export function useCreateJournalEntry() {
       voucher_type?: string;
       description: string;
       reference?: string | null;
+      attachments?: { name: string; url: string; type: string }[];
       lines: {
         account_id: string;
         sub_ledger?: string | null;
@@ -288,6 +290,7 @@ export function useCreateJournalEntry() {
           voucher_type: entry.voucher_type,
           description: entry.description,
           reference: entry.reference ?? null,
+          attachments: entry.attachments || [],
           is_posted: false,
         })
         .select()
