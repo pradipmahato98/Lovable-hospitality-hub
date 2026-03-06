@@ -99,7 +99,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-sidebar border-l-0 -ml-[1px]">
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border flex-shrink-0">
         <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
@@ -235,7 +235,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border transition-all duration-300",
+        "fixed inset-y-0 left-0 z-40 border-r border-sidebar-border transition-all duration-300 overflow-hidden",
         collapsed ? "w-20" : "w-64"
       )}
     >
