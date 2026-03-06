@@ -46,17 +46,29 @@ const Inventory = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [editItemOpen, setEditItemOpen] = useState(false);
   const [adjustStockOpen, setAdjustStockOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [addSupplierOpen, setAddSupplierOpen] = useState(false);
+  const [editSupplierOpen, setEditSupplierOpen] = useState(false);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+  const [addPOOpen, setAddPOOpen] = useState(false);
+  const [viewPOOpen, setViewPOOpen] = useState(false);
+  const [selectedPO, setSelectedPO] = useState<any>(null);
+  const [movementFilters, setMovementFilters] = useState({ itemId: "all", type: "all" });
 
-  const { data: items = [], isLoading, createItem, adjustStock } = useInventoryItems({ 
+  const { data: items = [], isLoading, createItem, updateItem, deleteItem, adjustStock } = useInventoryItems({
     category: categoryFilter !== "all" ? categoryFilter : undefined,
-    lowStock: showLowStock 
+    lowStock: showLowStock,
+    showInactive: true
   });
   const { data: categories = [] } = useInventoryCategories();
-  const { data: suppliers = [] } = useSuppliers();
-  const { data: purchaseOrders = [] } = usePurchaseOrders();
-  const { data: movements = [] } = useStockMovements();
+  const { data: suppliers = [], createSupplier, updateSupplier, deleteSupplier } = useSuppliers({ showInactive: true });
+  const { data: purchaseOrders = [], createPurchaseOrder, updatePurchaseOrderStatus, deletePurchaseOrder } = usePurchaseOrders();
+  const { data: movements = [], refetch: refetchMovements } = useStockMovements({
+    itemId: movementFilters.itemId !== "all" ? movementFilters.itemId : undefined,
+    type: movementFilters.type !== "all" ? movementFilters.type : undefined
+  });
   const stats = useInventoryStats();
 
   const [newItem, setNewItem] = useState({
@@ -70,12 +82,32 @@ const Inventory = () => {
     reorder_point: 0,
     cost_price: 0,
     department: "",
+    is_active: true,
+  });
+
+  const [newSupplier, setNewSupplier] = useState({
+    name: "",
+    contact_person: "",
+    email: "",
+    phone: "",
+    address: "",
+    payment_terms: "",
+    notes: "",
+    is_active: true,
   });
 
   const [stockAdjustment, setStockAdjustment] = useState({
     quantity: 0,
     type: "in" as "in" | "out" | "adjustment",
     notes: "",
+  });
+
+  const [newPO, setNewPO] = useState({
+    supplier_id: "",
+    order_date: format(new Date(), "yyyy-MM-dd"),
+    expected_delivery: "",
+    notes: "",
+    items: [] as { item_id: string; quantity: number; unit_price: number }[],
   });
 
   const filteredItems = items.filter((item) =>
@@ -88,26 +120,95 @@ const Inventory = () => {
       await createItem.mutateAsync(newItem as any);
       toast.success("Item created successfully");
       setAddItemOpen(false);
-      setNewItem({ name: "", sku: "", category_id: "", supplier_id: "", unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "" });
+      setNewItem({ name: "", sku: "", category_id: "", supplier_id: "", unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "", is_active: true });
     } catch (error) {
       toast.error("Failed to create item");
     }
   };
 
-  const handleAdjustStock = async () => {
-    if (!selectedItem) return;
+  const handleUpdateItem = async () => {
+    if (!selectedItemId) return;
     try {
-      await adjustStock.mutateAsync({ itemId: selectedItem, ...stockAdjustment });
+      const { current_stock, ...updates } = newItem;
+      await updateItem.mutateAsync({ id: selectedItemId, ...updates } as any);
+      toast.success("Item updated successfully");
+      setEditItemOpen(false);
+      setSelectedItemId(null);
+    } catch (error) {
+      toast.error("Failed to update item");
+    }
+  };
+
+  const handleCreateSupplier = async () => {
+    try {
+      await createSupplier.mutateAsync(newSupplier as any);
+      toast.success("Supplier added successfully");
+      setAddSupplierOpen(false);
+      setNewSupplier({ name: "", contact_person: "", email: "", phone: "", address: "", payment_terms: "", notes: "", is_active: true });
+    } catch (error) {
+      toast.error("Failed to add supplier");
+    }
+  };
+
+  const handleUpdateSupplier = async () => {
+    if (!selectedSupplierId) return;
+    try {
+      await updateSupplier.mutateAsync({ id: selectedSupplierId, ...newSupplier } as any);
+      toast.success("Supplier updated successfully");
+      setEditSupplierOpen(false);
+      setSelectedSupplierId(null);
+    } catch (error) {
+      toast.error("Failed to update supplier");
+    }
+  };
+
+  const handleAdjustStock = async () => {
+    if (!selectedItemId) return;
+    try {
+      await adjustStock.mutateAsync({ itemId: selectedItemId, ...stockAdjustment });
       toast.success("Stock adjusted successfully");
       setAdjustStockOpen(false);
-      setSelectedItem(null);
+      setSelectedItemId(null);
       setStockAdjustment({ quantity: 0, type: "in", notes: "" });
     } catch (error) {
       toast.error("Failed to adjust stock");
     }
   };
 
-  const getStockStatus = (current: number, min: number, reorder: number) => {
+  const handleCreatePO = async () => {
+    try {
+      if (newPO.items.length === 0) {
+        toast.error("Add at least one item to the order");
+        return;
+      }
+      const subtotal = newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+      await createPurchaseOrder.mutateAsync({
+        ...newPO,
+        subtotal,
+        tax_amount: subtotal * 0.13, // 13% VAT
+        total: subtotal * 1.13,
+        status: "sent",
+      } as any);
+      toast.success("Purchase order created");
+      setAddPOOpen(false);
+      setNewPO({ supplier_id: "", order_date: format(new Date(), "yyyy-MM-dd"), expected_delivery: "", notes: "", items: [] });
+    } catch (error) {
+      toast.error("Failed to create purchase order");
+    }
+  };
+
+  const handleReceivePO = async (id: string) => {
+    try {
+      await updatePurchaseOrderStatus.mutateAsync({ id, status: "received" });
+      toast.success("Purchase order received and stock updated");
+      setViewPOOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to receive order");
+    }
+  };
+
+  const getStockStatus = (current: number, min: number, reorder: number, active: boolean) => {
+    if (!active) return { label: "Inactive", color: "bg-muted text-muted-foreground" };
     if (current === 0) return { label: "Out of Stock", color: "bg-destructive/20 text-destructive" };
     if (current <= reorder) return { label: "Low Stock", color: "bg-amber-500/20 text-amber-400" };
     return { label: "In Stock", color: "bg-success/20 text-success" };
@@ -296,7 +397,7 @@ const Inventory = () => {
           </div>
 
           {/* Items Table */}
-          <Card variant="elevated">
+          <Card>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -312,7 +413,7 @@ const Inventory = () => {
                       <TableHead>Status</TableHead>
                       <TableHead>Cost</TableHead>
                       <TableHead>Value</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -324,7 +425,7 @@ const Inventory = () => {
                       </TableRow>
                     ) : (
                       filteredItems.map((item) => {
-                        const status = getStockStatus(item.current_stock, item.min_stock, item.reorder_point);
+                        const status = getStockStatus(item.current_stock, item.min_stock, item.reorder_point, item.is_active);
                         return (
                           <TableRow key={item.id}>
                             <TableCell>
@@ -343,15 +444,39 @@ const Inventory = () => {
                             </TableCell>
                             <TableCell>${item.cost_price.toFixed(2)}</TableCell>
                             <TableCell className="font-medium">${(item.current_stock * item.cost_price).toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => { setSelectedItem(item.id); setAdjustStockOpen(true); }}
-                              >
-                                <ArrowUpDown className="h-4 w-4 mr-1" />
-                                Adjust
-                              </Button>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { setSelectedItemId(item.id); setAdjustStockOpen(true); }}
+                                >
+                                  <ArrowUpDown className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedItemId(item.id);
+                                    setNewItem({
+                                      name: item.name,
+                                      sku: item.sku || "",
+                                      category_id: item.category_id || "",
+                                      supplier_id: item.supplier_id || "",
+                                      unit: item.unit,
+                                      current_stock: item.current_stock,
+                                      min_stock: item.min_stock,
+                                      reorder_point: item.reorder_point,
+                                      cost_price: item.cost_price,
+                                      department: item.department || "",
+                                      is_active: item.is_active,
+                                    });
+                                    setEditItemOpen(true);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -362,6 +487,103 @@ const Inventory = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit Item Dialog */}
+          <Dialog open={editItemOpen} onOpenChange={setEditItemOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Edit Inventory Item</DialogTitle>
+                <DialogDescription>Update item details</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Name *</Label>
+                  <Input value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>SKU</Label>
+                  <Input value={newItem.sku} onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={newItem.category_id} onValueChange={(v) => setNewItem({ ...newItem, category_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Supplier</Label>
+                  <Select value={newItem.supplier_id} onValueChange={(v) => setNewItem({ ...newItem, supplier_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Unit</Label>
+                  <Input value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Min Stock</Label>
+                  <Input type="number" value={newItem.min_stock} onChange={(e) => setNewItem({ ...newItem, min_stock: Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Reorder Point</Label>
+                  <Input type="number" value={newItem.reorder_point} onChange={(e) => setNewItem({ ...newItem, reorder_point: Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cost Price</Label>
+                  <Input type="number" value={newItem.cost_price} onChange={(e) => setNewItem({ ...newItem, cost_price: Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input value={newItem.department} onChange={(e) => setNewItem({ ...newItem, department: e.target.value })} />
+                </div>
+                <div className="space-y-2 flex items-center gap-2 pt-8">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={newItem.is_active}
+                    onChange={(e) => setNewItem({ ...newItem, is_active: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="is_active">Active Item</Label>
+                </div>
+              </div>
+              <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (window.confirm("Are you sure you want to delete this item?")) {
+                      try {
+                        await deleteItem.mutateAsync(selectedItemId!);
+                        toast.success("Item deleted");
+                        setEditItemOpen(false);
+                      } catch (e) {
+                        toast.error("Failed to delete item");
+                      }
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setEditItemOpen(false)}>Cancel</Button>
+                  <Button onClick={handleUpdateItem} disabled={!newItem.name || updateItem.isPending}>
+                    {updateItem.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Adjust Stock Dialog */}
           <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}>
@@ -405,10 +627,20 @@ const Inventory = () => {
         </TabsContent>
 
         <TabsContent value="suppliers">
-          <Card variant="elevated">
+          <div className="flex justify-end mb-4">
+            <Button variant="gold" onClick={() => setAddSupplierOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Supplier
+            </Button>
+          </div>
+          <Card>
             <CardHeader>
-              <CardTitle>Suppliers</CardTitle>
-              <CardDescription>{suppliers.length} suppliers registered</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Suppliers</CardTitle>
+                  <CardDescription>{suppliers.length} suppliers registered</CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -419,6 +651,7 @@ const Inventory = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -433,23 +666,167 @@ const Inventory = () => {
                           {s.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSupplierId(s.id);
+                            setNewSupplier({
+                              name: s.name,
+                              contact_person: s.contact_person || "",
+                              email: s.email || "",
+                              phone: s.phone || "",
+                              address: s.address || "",
+                              payment_terms: s.payment_terms || "",
+                              notes: s.notes || "",
+                              is_active: s.is_active,
+                            });
+                            setEditSupplierOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
+
+          {/* Add Supplier Dialog */}
+          <Dialog open={addSupplierOpen} onOpenChange={setAddSupplierOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Supplier</DialogTitle>
+                <DialogDescription>Add a new supplier to your directory</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-2 col-span-2">
+                  <Label>Supplier Name *</Label>
+                  <Input value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact Person</Label>
+                  <Input value={newSupplier.contact_person} onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={newSupplier.email} onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Terms</Label>
+                  <Input value={newSupplier.payment_terms} onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })} placeholder="e.g. Net 30" />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Address</Label>
+                  <Input value={newSupplier.address} onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Notes</Label>
+                  <Input value={newSupplier.notes} onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddSupplierOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateSupplier} disabled={!newSupplier.name || createSupplier.isPending}>
+                  {createSupplier.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Add Supplier
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Supplier Dialog */}
+          <Dialog open={editSupplierOpen} onOpenChange={setEditSupplierOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Supplier</DialogTitle>
+                <DialogDescription>Update supplier information</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-2 col-span-2">
+                  <Label>Supplier Name *</Label>
+                  <Input value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact Person</Label>
+                  <Input value={newSupplier.contact_person} onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={newSupplier.email} onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Terms</Label>
+                  <Input value={newSupplier.payment_terms} onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Address</Label>
+                  <Input value={newSupplier.address} onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Notes</Label>
+                  <Input value={newSupplier.notes} onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })} />
+                </div>
+                <div className="space-y-2 flex items-center gap-2 pt-4">
+                  <input
+                    type="checkbox"
+                    id="supplier_active"
+                    checked={newSupplier.is_active}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, is_active: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="supplier_active">Active Supplier</Label>
+                </div>
+              </div>
+              <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (window.confirm("Are you sure you want to delete this supplier?")) {
+                      try {
+                        await deleteSupplier.mutateAsync(selectedSupplierId!);
+                        toast.success("Supplier deleted");
+                        setEditSupplierOpen(false);
+                      } catch (e) {
+                        toast.error("Failed to delete supplier");
+                      }
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setEditSupplierOpen(false)}>Cancel</Button>
+                  <Button onClick={handleUpdateSupplier} disabled={!newSupplier.name || updateSupplier.isPending}>
+                    {updateSupplier.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="orders">
-          <Card variant="elevated">
+          <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Purchase Orders</CardTitle>
                   <CardDescription>{purchaseOrders.length} orders</CardDescription>
                 </div>
-                <Button variant="gold" className="gap-2">
+                <Button variant="gold" className="gap-2" onClick={() => setAddPOOpen(true)}>
                   <Plus className="h-4 w-4" />
                   New Order
                 </Button>
@@ -464,12 +841,13 @@ const Inventory = () => {
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {purchaseOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         No purchase orders yet
                       </TableCell>
                     </TableRow>
@@ -489,6 +867,18 @@ const Inventory = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">${po.total.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPO(po);
+                              setViewPOOpen(true);
+                            }}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -496,13 +886,326 @@ const Inventory = () => {
               </Table>
             </CardContent>
           </Card>
+
+          {/* New Purchase Order Dialog */}
+          <Dialog open={addPOOpen} onOpenChange={setAddPOOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>New Purchase Order</DialogTitle>
+                <DialogDescription>Create a new order for items</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Supplier *</Label>
+                  <Select value={newPO.supplier_id} onValueChange={(v) => setNewPO({ ...newPO, supplier_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Expected Delivery</Label>
+                  <Input type="date" value={newPO.expected_delivery} onChange={(e) => setNewPO({ ...newPO, expected_delivery: e.target.value })} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Notes</Label>
+                  <Input value={newPO.notes} onChange={(e) => setNewPO({ ...newPO, notes: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Order Items</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNewPO({
+                      ...newPO,
+                      items: [...newPO.items, { item_id: "", quantity: 1, unit_price: 0 }]
+                    })}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Item
+                  </Button>
+                </div>
+
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="w-24">Quantity</TableHead>
+                        <TableHead className="w-32">Unit Price</TableHead>
+                        <TableHead className="w-32">Total</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {newPO.items.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-xs">
+                            No items added yet. Click 'Add Item' to start.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        newPO.items.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Select
+                                value={item.item_id}
+                                onValueChange={(v) => {
+                                  const updatedItems = [...newPO.items];
+                                  const selectedItem = items.find(i => i.id === v);
+                                  updatedItems[index] = {
+                                    ...item,
+                                    item_id: v,
+                                    unit_price: selectedItem?.cost_price || 0
+                                  };
+                                  setNewPO({ ...newPO, items: updatedItems });
+                                }}
+                              >
+                                <SelectTrigger><SelectValue placeholder="Select Item" /></SelectTrigger>
+                                <SelectContent>
+                                  {items.map((i) => (
+                                    <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const updatedItems = [...newPO.items];
+                                  updatedItems[index].quantity = Number(e.target.value);
+                                  setNewPO({ ...newPO, items: updatedItems });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.unit_price}
+                                onChange={(e) => {
+                                  const updatedItems = [...newPO.items];
+                                  updatedItems[index].unit_price = Number(e.target.value);
+                                  setNewPO({ ...newPO, items: updatedItems });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              ${(item.quantity * item.unit_price).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => {
+                                  const updatedItems = newPO.items.filter((_, i) => i !== index);
+                                  setNewPO({ ...newPO, items: updatedItems });
+                                }}
+                              >
+                                &times;
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex flex-col items-end gap-1 px-4 py-2 bg-muted/50 rounded-lg">
+                  <div className="text-sm flex justify-between w-48">
+                    <span>Subtotal:</span>
+                    <span>${newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0).toFixed(2)}</span>
+                  </div>
+                  <div className="text-sm flex justify-between w-48">
+                    <span>Tax (13%):</span>
+                    <span>${(newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 0.13).toFixed(2)}</span>
+                  </div>
+                  <div className="text-lg font-bold flex justify-between w-48 border-t mt-1 pt-1">
+                    <span>Total:</span>
+                    <span>${(newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 1.13).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddPOOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreatePO} disabled={!newPO.supplier_id || createPurchaseOrder.isPending}>
+                  {createPurchaseOrder.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Create Order
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* View Purchase Order Dialog */}
+          <Dialog open={viewPOOpen} onOpenChange={setViewPOOpen}>
+            <DialogContent className="max-w-3xl">
+              {selectedPO && (
+                <>
+                  <DialogHeader>
+                    <div className="flex justify-between items-start w-full">
+                      <div>
+                        <DialogTitle>Order {selectedPO.order_number}</DialogTitle>
+                        <DialogDescription>
+                          From {selectedPO.supplier?.name} on {format(new Date(selectedPO.order_date), "MMM d, yyyy")}
+                        </DialogDescription>
+                      </div>
+                      <Badge className={
+                        selectedPO.status === "received" ? "bg-success/20 text-success" :
+                        selectedPO.status === "sent" ? "bg-blue-500/20 text-blue-400" :
+                        "bg-muted text-muted-foreground"
+                      }>
+                        {selectedPO.status}
+                      </Badge>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="py-4 space-y-6">
+                    <div className="grid grid-cols-2 gap-8 text-sm">
+                      <div>
+                        <h4 className="font-semibold mb-1">Supplier Info</h4>
+                        <p>{selectedPO.supplier?.name}</p>
+                        <p className="text-muted-foreground">{selectedPO.supplier?.contact_person}</p>
+                        <p className="text-muted-foreground">{selectedPO.supplier?.email}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-1">Shipping Info</h4>
+                        <p>Expected: {selectedPO.expected_delivery ? format(new Date(selectedPO.expected_delivery), "MMM d, yyyy") : "Not specified"}</p>
+                        {selectedPO.received_date && (
+                          <p>Received: {format(new Date(selectedPO.received_date), "MMM d, yyyy")}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Item</TableHead>
+                            <TableHead className="text-right">Quantity</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedPO.items?.map((item: any) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">{item.item?.name}</TableCell>
+                              <TableCell className="text-right">{item.quantity}</TableCell>
+                              <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                              <TableCell className="text-right">${(item.quantity * item.unit_price).toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="flex flex-col items-end text-sm space-y-1">
+                      <div className="flex justify-between w-48">
+                        <span className="text-muted-foreground">Subtotal:</span>
+                        <span>${selectedPO.subtotal?.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between w-48">
+                        <span className="text-muted-foreground">Tax:</span>
+                        <span>${selectedPO.tax_amount?.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between w-48 font-bold text-lg pt-1 border-t">
+                        <span>Total:</span>
+                        <span>${selectedPO.total?.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {selectedPO.notes && (
+                      <div className="bg-muted p-3 rounded-md text-sm">
+                        <span className="font-semibold block mb-1">Notes:</span>
+                        {selectedPO.notes}
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter className="flex justify-between sm:justify-between w-full border-t pt-4">
+                    <Button
+                      variant="destructive"
+                      onClick={async () => {
+                        if (window.confirm("Delete this purchase order?")) {
+                          await deletePurchaseOrder.mutateAsync(selectedPO.id);
+                          toast.success("Order deleted");
+                          setViewPOOpen(false);
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setViewPOOpen(false)}>Close</Button>
+                      {selectedPO.status !== "received" && (
+                        <Button
+                          variant="gold"
+                          onClick={() => handleReceivePO(selectedPO.id)}
+                          disabled={updatePurchaseOrderStatus.isPending}
+                        >
+                          {updatePurchaseOrderStatus.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          Mark as Received
+                        </Button>
+                      )}
+                    </div>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="movements">
-          <Card variant="elevated">
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div className="w-64">
+              <Label className="text-xs mb-1 block">Filter by Item</Label>
+              <Select value={movementFilters.itemId} onValueChange={(v) => setMovementFilters({ ...movementFilters, itemId: v })}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-40">
+              <Label className="text-xs mb-1 block">Movement Type</Label>
+              <Select value={movementFilters.type} onValueChange={(v) => setMovementFilters({ ...movementFilters, type: v })}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="in">Stock In</SelectItem>
+                  <SelectItem value="out">Stock Out</SelectItem>
+                  <SelectItem value="adjustment">Adjustment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button variant="ghost" size="sm" onClick={() => setMovementFilters({ itemId: "all", type: "all" })}>
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+          <Card>
             <CardHeader>
-              <CardTitle>Stock Movements</CardTitle>
-              <CardDescription>Recent inventory changes</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Stock Movements</CardTitle>
+                  <CardDescription>Recent inventory changes</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => refetchMovements()}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
