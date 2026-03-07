@@ -185,10 +185,15 @@ export function useJournalEntries(filters?: {
   const query = useQuery({
     queryKey: ["journal-entries", filters],
     queryFn: async () => {
+      // Use explicit join with profiles on created_by
       let q = db
         .from("journal_entries")
         .select(`
           *,
+          created_by_profile:profiles (
+            first_name,
+            last_name
+          ),
           journal_lines (
             *,
             account:accounts (*)

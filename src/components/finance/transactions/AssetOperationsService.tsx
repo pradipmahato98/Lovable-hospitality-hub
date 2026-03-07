@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useFixedAssets } from "@/hooks/useFinanceAdvanced";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export function AssetOperationsService({ isReadOnly }: { isReadOnly?: boolean }) {
   const { data: assets, isLoading } = useFixedAssets();
@@ -147,5 +148,3 @@ export function AssetOperationsService({ isReadOnly }: { isReadOnly?: boolean })
     </div>
   );
 }
-
-const cn = (...classes: any[]) => classes.filter(Boolean).join(" ");
