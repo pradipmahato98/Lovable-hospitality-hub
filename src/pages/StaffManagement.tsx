@@ -20,7 +20,7 @@ import { LogsReportTab } from "@/components/staff/LogsReportTab";
 import { cn } from "@/lib/utils";
 
 const StaffManagement = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
@@ -30,14 +30,14 @@ const StaffManagement = () => {
 
   const handleTabChange = (value: string) => {
     if (value === "about") {
-      navigate(`/staff?tab=about&sub=${subTab}`, { replace: true });
+      setSearchParams({ tab: "about", sub: subTab });
     } else {
-      navigate(`/staff?tab=${value}`, { replace: true });
+      setSearchParams({ tab: value });
     }
   };
 
   const handleSubTabChange = (value: string) => {
-    navigate(`/staff?tab=about&sub=${value}`, { replace: true });
+    setSearchParams({ tab: "about", sub: value });
   };
 
   if (loadingAdmin || loadingManager) {

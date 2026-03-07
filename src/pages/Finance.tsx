@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -71,8 +72,13 @@ import { useFinancePermissions } from "@/hooks/useFinancePermissions";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "dashboard";
   const [activeService, setActiveService] = useState<string | null>(null);
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
   const [isJournalEditorOpen, setIsJournalEditorOpen] = useState(false);
 
   const {
@@ -222,7 +228,10 @@ export default function Finance() {
     >
       <div className="space-y-6">
         {!isJournalEditorOpen && (
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setActiveService(null); }}>
+        <Tabs value={activeTab} onValueChange={(v) => {
+          setActiveTab(v);
+          setActiveService(null);
+        }}>
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
               {[

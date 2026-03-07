@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,11 +50,21 @@ const mockEmployees = [
 const departments = ["Front Desk", "Housekeeping", "F&B", "Maintenance", "Management"];
 
 const HR = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "employees";
+  const empSubTab = searchParams.get("sub") || "directory";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
+  const setEmpSubTab = (sub: string) => {
+    setSearchParams({ tab: activeTab, sub });
+  };
+
   const { isAdmin, isLoading } = useIsAdmin();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("employees");
-  const [empSubTab, setEmpSubTab] = useState("directory");
   const { setNewStaffOpen } = useQuickActions();
 
   if (isLoading) {

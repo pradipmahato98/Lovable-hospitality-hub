@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,8 +101,14 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Banquet() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "events";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("events");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, History, ShieldAlert, Loader2 } from "lucide-react";
@@ -11,6 +12,13 @@ import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 const UserManagement = () => {
   useAdminRealtime();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "users";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
   const [auditRoleFilter, setAuditRoleFilter] = useState<string>("all");
@@ -47,7 +55,7 @@ const UserManagement = () => {
           <span>You are viewing admin-only settings. Role changes take effect immediately.</span>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto pb-1 scrollbar-hide">
             <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
