@@ -24,8 +24,10 @@ import {
   FileUp
 } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useFinanceAdvanced";
+import { useBusinessDate } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { subDays, format, parseISO } from "date-fns";
 
 interface BankCashTransactionServiceProps {
   isReadOnly?: boolean;
@@ -34,7 +36,10 @@ interface BankCashTransactionServiceProps {
 export function BankCashTransactionService({ isReadOnly }: BankCashTransactionServiceProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: bankAccounts, isLoading } = useBankAccounts();
+  const { data: businessDate } = useBusinessDate();
   const [isReconciling, setIsReconciling] = useState(false);
+
+  const bDate = useMemo(() => businessDate ? parseISO(businessDate) : new Date(), [businessDate]);
 
   const handleSmartReconcile = () => {
     setIsReconciling(true);
@@ -128,7 +133,7 @@ export function BankCashTransactionService({ isReadOnly }: BankCashTransactionSe
             </TableHeader>
             <TableBody>
                <TableRow className="group hover:bg-muted/30">
-                  <TableCell className="text-xs">2026-02-15</TableCell>
+                  <TableCell className="text-xs">{format(subDays(bDate, 1), "yyyy-MM-dd")}</TableCell>
                   <TableCell className="font-medium">Direct Room Booking - #RES-4521</TableCell>
                   <TableCell className="font-mono text-[10px]">TXN-99281-AD</TableCell>
                   <TableCell className="text-right font-mono">-</TableCell>
@@ -140,7 +145,7 @@ export function BankCashTransactionService({ isReadOnly }: BankCashTransactionSe
                   </TableCell>
                </TableRow>
                <TableRow className="group hover:bg-muted/30">
-                  <TableCell className="text-xs">2026-02-14</TableCell>
+                  <TableCell className="text-xs">{format(subDays(bDate, 2), "yyyy-MM-dd")}</TableCell>
                   <TableCell className="font-medium">Vendor Payout: Fresh Foods Co</TableCell>
                   <TableCell className="font-mono text-[10px]">PAY-5512-V</TableCell>
                   <TableCell className="text-right font-mono text-destructive">-$850.00</TableCell>
@@ -152,7 +157,7 @@ export function BankCashTransactionService({ isReadOnly }: BankCashTransactionSe
                   </TableCell>
                </TableRow>
                <TableRow className="group bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
-                  <TableCell className="text-xs font-bold text-amber-600">2026-02-14</TableCell>
+                  <TableCell className="text-xs font-bold text-amber-600">{format(subDays(bDate, 2), "yyyy-MM-dd")}</TableCell>
                   <TableCell className="font-bold text-amber-900">Unidentified ATM Withdrawal</TableCell>
                   <TableCell className="font-mono text-[10px]">ATM-WH-442</TableCell>
                   <TableCell className="text-right font-mono text-amber-600 font-bold">-$200.00</TableCell>
