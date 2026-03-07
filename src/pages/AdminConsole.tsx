@@ -75,6 +75,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
 import { RoomManagement } from "@/components/admin/RoomManagement";
 import { DatabaseControlCenter } from "@/components/database/DatabaseControlCenter";
+import { BackendSyncTab } from "@/components/admin/BackendSyncTab";
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -312,6 +313,10 @@ const AdminConsole = () => {
             <TabsTrigger value="database" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Database className="h-4 w-4" />
               Database Control
+            </TabsTrigger>
+            <TabsTrigger value="backend_sync" className="gap-2 whitespace-nowrap flex-shrink-0">
+              <RefreshCw className="h-4 w-4" />
+              Backend Sync
             </TabsTrigger>
             <TabsTrigger value="design_system" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Layout className="h-4 w-4" />
@@ -705,6 +710,10 @@ const AdminConsole = () => {
 
         <TabsContent value="database">
           <DatabaseControlCenter />
+        </TabsContent>
+
+        <TabsContent value="backend_sync">
+          <BackendSyncTab />
         </TabsContent>
 
         <TabsContent value="design_system">
