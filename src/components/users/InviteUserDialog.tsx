@@ -59,13 +59,14 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
 
       if (error) throw error;
 
-      // 2. Pre-assign role if possible (using a custom RPC or direct insert if permissions allow)
-      // Since we don't have a user ID yet (user hasn't signed up),
-      // in a real app we'd store this in a 'pending_invites' table.
-      // For now, we'll try to insert into user_roles if we can get a user_id back,
-      // but usually auth.signInWithOtp doesn't return the user_id for security.
+      // 2. Pre-assign role
+      // Note: In this architecture, we use a custom trigger 'on_auth_user_created' in Supabase
+      // that defaults users to 'staff'. Admins can upgrade them here once they join.
 
-      toast.success(`Invitation link sent to ${email}. Role ${role} will be assigned on first login.`);
+      toast.success(`Invitation link sent to ${email}.`, {
+        description: `Note: The user will be assigned the system default role initially. You can adjust it here once they appear in the users list.`,
+        duration: 6000,
+      });
       onOpenChange(false);
       setEmail("");
       setRole("staff");

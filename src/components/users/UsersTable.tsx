@@ -63,9 +63,10 @@ export const UsersTable = ({
   const filteredUsers = useMemo(() => users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
-      user.email?.toLowerCase().includes(searchLower) ||
-      user.first_name?.toLowerCase().includes(searchLower) ||
-      user.last_name?.toLowerCase().includes(searchLower)
+      (user.email?.toLowerCase() || "").includes(searchLower) ||
+      (user.first_name?.toLowerCase() || "").includes(searchLower) ||
+      (user.last_name?.toLowerCase() || "").includes(searchLower) ||
+      user.user_id.toLowerCase().includes(searchLower)
     );
   }), [users, searchQuery]);
 
@@ -188,10 +189,25 @@ export const UsersTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers?.length === 0 ? (
+                {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      No users found
+                    <TableCell colSpan={7} className="text-center py-10">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm text-muted-foreground mt-2">Loading users...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredUsers?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                      <div className="flex flex-col items-center gap-2">
+                        <Users className="h-8 w-8 opacity-20" />
+                        <p>No users found matching your search</p>
+                        {searchQuery && (
+                          <Button variant="link" onClick={() => onSearchChange("")}>
+                            Clear search
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -205,15 +221,18 @@ export const UsersTable = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shadow-3d-gold border border-amber-500/20">
                             <span className="text-sm font-semibold text-primary">
                               {(userItem.first_name?.[0] || "") + (userItem.last_name?.[0] || "") || "U"}
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">
+                            <p className="font-medium text-foreground flex items-center gap-2">
                               {userItem.first_name || ""} {userItem.last_name || ""}
                               {!userItem.first_name && !userItem.last_name && "Unnamed User"}
+                              {userItem.is_blocked && (
+                                <ShieldAlert className="h-3 w-3 text-destructive animate-pulse" />
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               ID: {userItem.user_id.slice(0, 8)}...

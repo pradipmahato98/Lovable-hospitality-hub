@@ -62,19 +62,28 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
         .from("profiles")
         .select("id, user_id, email, first_name, last_name, is_blocked, blocked_reason, created_at");
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error("Profiles fetch error:", profilesError);
+        throw profilesError;
+      }
 
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.warn("User roles fetch error, continuing with empty roles:", rolesError.message);
+      }
 
-      const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
-        const userRoles = roles.filter((r) => r.user_id === profile.user_id);
+      const safeRoles = roles || [];
+
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
+        const userRoles = safeRoles.filter((r) => r.user_id === profile.user_id);
         const allRoles = userRoles.map((r) => r.role as AppRole);
+
+        // Ensure even users with no roles in user_roles table are visible
         const hasMultipleRoles = allRoles.length > 1;
-        const highestRole = getHighestRole(allRoles);
+        const highestRole = allRoles.length > 0 ? getHighestRole(allRoles) : "user" as AppRole;
 
         return {
           id: profile.id,
@@ -392,7 +401,7 @@ export const useUpdateUserRole = () => {
           .insert({
             user_id: userId,
             title: "Role Updated",
-            message: `Your role has been changed from ${roleConfig[oldRole].label} to ${roleConfig[newRole].label}`,
+            message: `Your role has been changed ${oldRole ? `from ${roleConfig[oldRole]?.label || oldRole} ` : ""}to ${roleConfig[newRole]?.label || newRole}`,
             type: "role_change",
             category: "system",
           });
