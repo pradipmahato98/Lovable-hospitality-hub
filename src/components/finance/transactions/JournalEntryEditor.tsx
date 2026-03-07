@@ -23,6 +23,8 @@ import {
   X,
   Eye,
   Download,
+  Globe,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +44,8 @@ import {
   useCreateJournalEntry,
   useJournalEntries,
 } from "@/hooks/useFinance";
+import { useSuppliers } from "@/hooks/useInventory";
+import { useGuests } from "@/hooks/useGuests";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -63,11 +67,16 @@ import { api } from "@/lib/api-bridge";
 
 interface JournalLine {
   id: string;
-  sub_ledger: string;
+  sub_ledger_type: "none" | "vendor" | "customer";
+  sub_ledger_id: string;
   account_id: string;
   debit: number;
   credit: number;
   remarks: string;
+  currency: string;
+  exchange_rate: number;
+  base_debit: number;
+  base_credit: number;
 }
 
 interface JournalEntryEditorProps {
@@ -81,6 +90,14 @@ const VOUCHER_TYPES = [
   { label: "Contra Voucher", value: "CV" },
 ];
 
+const CURRENCIES = [
+  { code: "USD", symbol: "$", rate: 1 },
+  { code: "NPR", symbol: "Rs", rate: 133.5 },
+  { code: "EUR", symbol: "€", rate: 0.92 },
+  { code: "GBP", symbol: "£", rate: 0.79 },
+  { code: "INR", symbol: "₹", rate: 83.3 },
+];
+
 export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
@@ -89,8 +106,8 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles = files.filter(file => {
-      if (file.size > 1 * 1024 * 1024) {
-        toast.error(`${file.name} exceeds 1MB limit`);
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 2MB limit`);
         return false;
       }
       return true;
@@ -119,6 +136,8 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
 
   const { data: accounts } = useAccounts();
   const { data: entries } = useJournalEntries();
+  const { data: suppliers } = useSuppliers();
+  const { data: guests } = useGuests();
   const createJournalEntry = useCreateJournalEntry();
   const { data: uiPrefs } = useUIPreferences();
   const separator = uiPrefs?.date_separator || "/";
@@ -128,7 +147,6 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const [dateADInput, setDateADInput] = useState(formatAdDate(new Date(), separator));
   const [mitiBS, setMitiBS] = useState(formatBsDate(adToBs(new Date()), separator));
 
-  // Sync inputs when separator changes
   useEffect(() => {
     setDateADInput(formatAdDate(dateAD, separator));
     setMitiBS(formatBsDate(adToBs(dateAD), separator));
@@ -138,8 +156,8 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const [voucherNo, setVoucherNo] = useState("");
   const [narration, setNarration] = useState("");
   const [lines, setLines] = useState<JournalLine[]>([
-    { id: crypto.randomUUID(), sub_ledger: "", account_id: "", debit: 0, credit: 0, remarks: "" },
-    { id: crypto.randomUUID(), sub_ledger: "", account_id: "", debit: 0, credit: 0, remarks: "" },
+    { id: crypto.randomUUID(), sub_ledger_type: "none", sub_ledger_id: "", account_id: "", debit: 0, credit: 0, remarks: "", currency: "USD", exchange_rate: 1, base_debit: 0, base_credit: 0 },
+    { id: crypto.randomUUID(), sub_ledger_type: "none", sub_ledger_id: "", account_id: "", debit: 0, credit: 0, remarks: "", currency: "USD", exchange_rate: 1, base_debit: 0, base_credit: 0 },
   ]);
 
   const [editingRowId, setEditingRowId] = useState<string | null>(lines[0].id);
@@ -148,8 +166,6 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     const currentAD = new Date();
     const currentFYStr = getFiscalYear(currentAD);
     const [start] = currentFYStr.split('/').map(Number);
-
-    // Generate years up to current, descending
     return [
       currentFYStr,
       `${start - 1}/${start.toString().slice(-2)}`,
@@ -157,28 +173,21 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     ];
   }, []);
 
-  // Focus management
-  const fyRef = useRef<HTMLButtonElement>(null);
   const dateAdRef = useRef<HTMLInputElement>(null);
   const mitiBsRef = useRef<HTMLInputElement>(null);
   const voucherTypeRef = useRef<HTMLButtonElement>(null);
-  const narrationRef = useRef<HTMLInputElement>(null);
   const saveBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Voucher Number Generation
   useEffect(() => {
     if (voucherType && fiscalYear && entries) {
       const prefix = voucherType;
-      // Use short form of FY for Voucher No (e.g., 81/82, 82/83)
-      const shortFY = fiscalYear;
       const count = (entries.filter(e => e.voucher_type === voucherType).length + 1).toString().padStart(2, '0');
-      setVoucherNo(`${prefix}-${shortFY}-${count}`);
+      setVoucherNo(`${prefix}-${fiscalYear}-${count}`);
     } else {
       setVoucherNo("");
     }
   }, [voucherType, fiscalYear, entries]);
 
-  // Synchronize dates
   const handleDateADChange = (date: Date | undefined) => {
     if (!date) return;
     setDateAD(date);
@@ -195,7 +204,6 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   const handleFYChange = (fy: string) => {
     setFiscalYear(fy);
     const { start } = getFiscalYearRange(fy);
-    // Always jump to the start date of the selected fiscal year
     setDateAD(start);
     setDateADInput(formatAdDate(start, separator));
     setMitiBS(formatBsDate(adToBs(start), separator));
@@ -230,27 +238,15 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     }
   };
 
-  const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
-  const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
+  const totalDebit = lines.reduce((sum, l) => sum + (Number(l.base_debit) || 0), 0);
+  const totalCredit = lines.reduce((sum, l) => sum + (Number(l.base_credit) || 0), 0);
   const difference = Math.abs(totalDebit - totalCredit);
 
   const addRow = () => {
     const newId = crypto.randomUUID();
-    setLines(prev => [...prev, { id: newId, sub_ledger: "", account_id: "", debit: 0, credit: 0, remarks: "" }]);
+    setLines(prev => [...prev, { id: newId, sub_ledger_type: "none", sub_ledger_id: "", account_id: "", debit: 0, credit: 0, remarks: "", currency: "USD", exchange_rate: 1, base_debit: 0, base_credit: 0 }]);
     setEditingRowId(newId);
     return newId;
-  };
-
-  const addMultipleRows = (count: number) => {
-    const newRows = Array.from({ length: count }).map(() => ({
-      id: crypto.randomUUID(),
-      sub_ledger: "",
-      account_id: "",
-      debit: 0,
-      credit: 0,
-      remarks: "",
-    }));
-    setLines([...lines, ...newRows]);
   };
 
   const removeRow = (id: string) => {
@@ -262,7 +258,20 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
   };
 
   const updateLine = (id: string, field: keyof JournalLine, value: any) => {
-    setLines(lines.map(l => l.id === id ? { ...l, [field]: value } : l));
+    setLines(prevLines => prevLines.map(l => {
+      if (l.id !== id) return l;
+      const newLine = { ...l, [field]: value };
+
+      // Recalculate base amounts if debit, credit, or rate changes
+      if (field === "debit" || field === "credit" || field === "exchange_rate" || field === "currency") {
+          if (field === "currency") {
+              newLine.exchange_rate = CURRENCIES.find(c => c.code === value)?.rate || 1;
+          }
+          newLine.base_debit = (newLine.debit || 0) * newLine.exchange_rate;
+          newLine.base_credit = (newLine.credit || 0) * newLine.exchange_rate;
+      }
+      return newLine;
+    }));
   };
 
   const handleSave = async () => {
@@ -282,34 +291,16 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     const toastId = toast.loading("Saving voucher...");
 
     try {
-      // 1. Upload Attachments if any
       const uploadedAttachments: { name: string; url: string; type: string }[] = [];
-
       for (const file of attachments) {
         const fileExt = file.name.split('.').pop();
         const filePath = `journal-attachments/${crypto.randomUUID()}.${fileExt}`;
-
-        const { error: uploadError } = await api.storage
-          .from('attachments')
-          .upload(filePath, file);
-
-        if (uploadError) {
-           console.error("Upload error:", uploadError);
-           continue;
-        }
-
-        const { data: { publicUrl } } = api.storage
-          .from('attachments')
-          .getPublicUrl(filePath);
-
-        uploadedAttachments.push({
-          name: file.name,
-          url: publicUrl,
-          type: file.type
-        });
+        const { error: uploadError } = await api.storage.from('attachments').upload(filePath, file);
+        if (uploadError) continue;
+        const { data: { publicUrl } } = api.storage.from('attachments').getPublicUrl(filePath);
+        uploadedAttachments.push({ name: file.name, url: publicUrl, type: file.type });
       }
 
-      // 2. Create Journal Entry
       await createJournalEntry.mutateAsync({
         date: dateAD.toISOString().split("T")[0],
         miti: mitiBS,
@@ -319,12 +310,12 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
         reference: voucherNo,
         attachments: uploadedAttachments,
         lines: lines
-          .filter(l => l.account_id && (l.debit > 0 || l.credit > 0))
+          .filter(l => l.account_id && (l.base_debit > 0 || l.base_credit > 0))
           .map(l => ({
             account_id: l.account_id,
-            sub_ledger: l.sub_ledger,
-            debit: l.debit,
-            credit: l.credit,
+            sub_ledger: l.sub_ledger_id ? `${l.sub_ledger_type}:${l.sub_ledger_id}` : null,
+            debit: l.base_debit,
+            credit: l.base_credit,
             description: l.remarks,
           })),
       });
@@ -337,7 +328,6 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
 
   const isBlocked = !voucherType;
 
-  // Global Shortcut for Saving
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -349,43 +339,28 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [handleSave]);
 
-  // Keyboard navigation handler
   const handleKeyDown = (e: React.KeyboardEvent, field: string, id?: string) => {
     if (e.key === "Enter" || e.key === "Tab") {
       e.preventDefault();
-
       if (field === "fy") dateAdRef.current?.focus();
       else if (field === "dateAD") mitiBsRef.current?.focus();
       else if (field === "mitiBS") voucherTypeRef.current?.focus();
       else if (field === "voucherType") {
-        // Move to first row Sub Ledger
-        const firstRowSubLedger = document.getElementById(`sub-ledger-${lines[0].id}`);
-        firstRowSubLedger?.focus();
+        document.getElementById(`sub-type-${lines[0].id}`)?.focus();
       }
-      else if (field === "sub_ledger" && id) {
-        document.getElementById(`account-${id}`)?.focus();
-      }
-      else if (field === "account" && id) {
-        const line = lines.find(l => l.id === id);
-        if (!line?.account_id && lines.indexOf(line!) >= 2) {
-            // Redirect to save button if at least 2 entries exist and current account is empty
-            saveBtnRef.current?.focus();
-        } else {
-            document.getElementById(`debit-${id}`)?.focus();
-        }
-      }
+      else if (field === "sub_type" && id) document.getElementById(`sub-ledger-${id}`)?.focus();
+      else if (field === "sub_ledger" && id) document.getElementById(`account-${id}`)?.focus();
+      else if (field === "account" && id) document.getElementById(`currency-${id}`)?.focus();
+      else if (field === "currency" && id) document.getElementById(`debit-${id}`)?.focus();
       else if (field === "debit" && id) document.getElementById(`credit-${id}`)?.focus();
       else if (field === "credit" && id) document.getElementById(`remarks-${id}`)?.focus();
       else if (field === "remarks" && id) {
         const index = lines.findIndex(l => l.id === id);
         if (index === lines.length - 1) {
           const newId = addRow();
-          // Timeout to wait for DOM update
-          setTimeout(() => {
-            document.getElementById(`sub-ledger-${newId}`)?.focus();
-          }, 50);
+          setTimeout(() => document.getElementById(`sub-type-${newId}`)?.focus(), 50);
         } else {
-          document.getElementById(`sub-ledger-${lines[index + 1].id}`)?.focus();
+          document.getElementById(`sub-type-${lines[index + 1].id}`)?.focus();
         }
       }
     }
@@ -398,21 +373,18 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold font-display">Journal Entry Editor</h1>
+          <h1 className="text-xl font-bold font-display">Advanced Journal Editor</h1>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             ref={saveBtnRef}
-            className="gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-sm transition-all active:scale-95"
+            className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
             onClick={handleSave}
             disabled={createJournalEntry.isPending || isBlocked}
           >
             <Save className="h-4 w-4" />
             <span>Save Voucher</span>
-            <kbd className="hidden md:inline-flex h-4 select-none items-center gap-1 rounded border bg-white/20 px-1.5 font-mono text-[10px] font-medium text-white opacity-90 ml-1">
-              <span className="text-[10px]">⌘</span>S
-            </kbd>
           </Button>
         </div>
       </div>
@@ -424,125 +396,36 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fiscal Year</Label>
                 <Select value={fiscalYear} onValueChange={handleFYChange}>
-                  <SelectTrigger ref={fyRef} className="h-9" onKeyDown={(e) => handleKeyDown(e, "fy")}>
+                  <SelectTrigger className="h-9" onKeyDown={(e) => handleKeyDown(e, "fy")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {fiscalYears.map(fy => (
-                      <SelectItem key={fy} value={fy}>{fy}</SelectItem>
-                    ))}
+                    {fiscalYears.map(fy => <SelectItem key={fy} value={fy}>{fy}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="dateAD">Transaction Date AD</Label>
-                <div className="relative">
-                  <Input
-                    id="dateAD"
-                    ref={dateAdRef}
-                    className="h-9 pr-8"
-                    value={dateADInput}
-                    onChange={(e) => handleManualADInput(e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(e, "dateAD")}
-                    placeholder={`DD${separator}MM${separator}YYYY`}
-                  />
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-primary"
-                      >
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dateAD}
-                        onSelect={handleDateADChange}
-                        fromDate={fyRange.start}
-                        toDate={fyRange.end}
-                        initialFocus
-                        classNames={{
-                          day_today: "bg-success text-success-foreground hover:bg-success/90 rounded-full",
-                          day_selected: "bg-amber-500 text-white hover:bg-amber-600 focus:bg-amber-500 focus:text-white rounded-full",
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="dateAD">Date AD</Label>
+                <Input id="dateAD" ref={dateAdRef} className="h-9" value={dateADInput} onChange={(e) => handleManualADInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, "dateAD")} />
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="mitiBS">Miti (BS)</Label>
-                <div className="relative">
-                  <Input
-                    id="mitiBS"
-                    ref={mitiBsRef}
-                    className="h-9 pr-8"
-                    value={mitiBS}
-                    onChange={(e) => handleManualBSInput(e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(e, "mitiBS")}
-                    placeholder={`YYYY${separator}MM${separator}DD`}
-                  />
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-primary"
-                      >
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <NepaliCalendar
-                        selected={dateAD}
-                        onSelect={handleMitiBSChange}
-                        minDate={fyRange.start}
-                        maxDate={fyRange.end}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="mitiBS">Miti BS</Label>
+                <Input id="mitiBS" ref={mitiBsRef} className="h-9" value={mitiBS} onChange={(e) => handleManualBSInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, "mitiBS")} />
               </div>
-
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Voucher Type</Label>
-                <Select
-                  value={voucherType}
-                  onValueChange={(v) => {
-                    setVoucherType(v);
-                    setTimeout(() => {
-                      document.getElementById(`sub-ledger-${lines[0].id}`)?.focus();
-                    }, 50);
-                  }}
-                >
-                  <SelectTrigger
-                    ref={voucherTypeRef}
-                    className={cn("h-9", isBlocked && "ring-2 ring-primary animate-pulse")}
-                    onKeyDown={(e) => handleKeyDown(e, "voucherType")}
-                  >
+                <Select value={voucherType} onValueChange={setVoucherType}>
+                  <SelectTrigger ref={voucherTypeRef} className={cn("h-9", isBlocked && "ring-2 ring-primary animate-pulse")} onKeyDown={(e) => handleKeyDown(e, "voucherType")}>
                     <SelectValue placeholder="Select Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VOUCHER_TYPES.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
+                    {VOUCHER_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Voucher No.</Label>
-                <Input
-                  value={voucherNo}
-                  readOnly
-                  className="h-9 bg-muted font-mono text-amber-500 font-bold pointer-events-none"
-                  tabIndex={-1}
-                />
+                <Input value={voucherNo} readOnly className="h-9 bg-muted font-mono text-amber-500 font-bold" />
               </div>
             </div>
           </CardContent>
@@ -550,131 +433,79 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
 
         <div className={cn("space-y-4 transition-all duration-300", isBlocked && "opacity-50 grayscale pointer-events-none")}>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold font-display">Accounting Entries</h2>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => addMultipleRows(5)} className="gap-2">
-                <PlusCircle className="h-4 w-4" />
-                Add Multiple (5)
-              </Button>
-              <Button variant="outline" size="sm" onClick={addRow} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Row
-              </Button>
-            </div>
+            <h2 className="text-lg font-bold font-display">Multi-Currency & Sub-Ledger Entries</h2>
+            <Button variant="outline" size="sm" onClick={addRow} className="gap-2"><Plus className="h-4 w-4" />Add Row</Button>
           </div>
 
           <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
-            <div className="grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] bg-muted/50 border-b text-[10px] uppercase font-bold tracking-wider px-3 py-2 gap-2">
-              <div className="flex items-center">Action</div>
-              <div className="flex items-center">No.</div>
-              <div className="flex items-center">Sub Ledger</div>
-              <div className="flex items-center">Ledger Account</div>
-              <div className="flex items-center justify-end">Debit</div>
-              <div className="flex items-center justify-end">Credit</div>
-              <div className="flex items-center">Remarks</div>
+            <div className="grid grid-cols-[50px_100px_1fr_1.5fr_100px_120px_120px_1fr] bg-muted/50 border-b text-[10px] uppercase font-bold tracking-wider px-3 py-2 gap-2">
+              <div>Act</div>
+              <div>Sub Type</div>
+              <div>Sub Ledger</div>
+              <div>Ledger Account</div>
+              <div>Curr</div>
+              <div className="text-right">Debit</div>
+              <div className="text-right">Credit</div>
+              <div>Remarks</div>
             </div>
             <div className="divide-y">
-              {lines.map((line, index) => (
-                <div
-                  key={line.id}
-                  className={cn(
-                    "grid grid-cols-[60px_40px_1fr_1.5fr_100px_100px_1.2fr] p-2 items-center gap-2 group transition-colors",
-                    editingRowId === line.id ? "bg-accent/30" : "hover:bg-accent/10"
-                  )}
-                >
+              {lines.map((line) => (
+                <div key={line.id} className={cn("grid grid-cols-[50px_100px_1fr_1.5fr_100px_120px_120px_1fr] p-2 items-center gap-2 transition-colors", editingRowId === line.id ? "bg-accent/30" : "hover:bg-accent/10")}>
                   <div className="flex justify-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => setEditingRowId(line.id)}>
-                          Edit Row
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => removeRow(line.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Row
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeRow(line.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                  <div className="text-sm font-mono text-muted-foreground">{index + 1}</div>
-                  <div className={cn(editingRowId !== line.id && "pointer-events-none opacity-80")}>
-                    <Input
-                      id={`sub-ledger-${line.id}`}
-                      placeholder="Sub Ledger"
-                      value={line.sub_ledger}
-                      readOnly={editingRowId !== line.id}
-                      onChange={(e) => updateLine(line.id, "sub_ledger", e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, "sub_ledger", line.id)}
-                      className="h-7 text-xs bg-transparent border-none focus-visible:ring-1"
-                    />
-                  </div>
-                  <div className={cn(editingRowId !== line.id && "pointer-events-none opacity-80")}>
-                    <Select
-                      value={line.account_id}
-                      disabled={editingRowId !== line.id}
-                      onValueChange={(v) => {
-                        updateLine(line.id, "account_id", v);
-                        // Auto-forward on selection
-                        setTimeout(() => {
-                          document.getElementById(`debit-${line.id}`)?.focus();
-                        }, 50);
-                      }}
-                    >
-                      <SelectTrigger
-                        id={`account-${line.id}`}
-                        className="h-7 text-xs bg-transparent border-none focus-visible:ring-1"
-                        onKeyDown={(e) => handleKeyDown(e, "account", line.id)}
-                      >
-                        <SelectValue placeholder="Select Ledger Account" />
+                  <div>
+                    <Select value={line.sub_ledger_type} onValueChange={(v: any) => updateLine(line.id, "sub_ledger_type", v)}>
+                      <SelectTrigger id={`sub-type-${line.id}`} className="h-7 text-xs" onKeyDown={(e) => handleKeyDown(e, "sub_type", line.id)}>
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {accounts?.map(acc => (
-                          <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name}</SelectItem>
-                        ))}
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="vendor">Vendor</SelectItem>
+                        <SelectItem value="customer">Customer</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className={cn(editingRowId !== line.id && "pointer-events-none opacity-80")}>
-                    <Input
-                      id={`debit-${line.id}`}
-                      type="number"
-                      placeholder="0.00"
-                      readOnly={editingRowId !== line.id}
-                      className="h-7 text-xs text-right bg-transparent border-none focus-visible:ring-1"
-                      value={line.debit || ""}
-                      onChange={(e) => updateLine(line.id, "debit", parseFloat(e.target.value) || 0)}
-                      onKeyDown={(e) => handleKeyDown(e, "debit", line.id)}
-                    />
+                  <div>
+                    <Select value={line.sub_ledger_id} disabled={line.sub_ledger_type === 'none'} onValueChange={(v) => updateLine(line.id, "sub_ledger_id", v)}>
+                      <SelectTrigger id={`sub-ledger-${line.id}`} className="h-7 text-xs" onKeyDown={(e) => handleKeyDown(e, "sub_ledger", line.id)}>
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {line.sub_ledger_type === 'vendor' && suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        {line.sub_ledger_type === 'customer' && guests?.map(g => <SelectItem key={g.id} value={g.id}>{g.first_name} {g.last_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className={cn(editingRowId !== line.id && "pointer-events-none opacity-80")}>
-                    <Input
-                      id={`credit-${line.id}`}
-                      type="number"
-                      placeholder="0.00"
-                      readOnly={editingRowId !== line.id}
-                      className="h-7 text-xs text-right bg-transparent border-none focus-visible:ring-1"
-                      value={line.credit || ""}
-                      onChange={(e) => updateLine(line.id, "credit", parseFloat(e.target.value) || 0)}
-                      onKeyDown={(e) => handleKeyDown(e, "credit", line.id)}
-                    />
+                  <div>
+                    <Select value={line.account_id} onValueChange={(v) => updateLine(line.id, "account_id", v)}>
+                      <SelectTrigger id={`account-${line.id}`} className="h-7 text-xs" onKeyDown={(e) => handleKeyDown(e, "account", line.id)}>
+                        <SelectValue placeholder="Account..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className={cn(editingRowId !== line.id && "pointer-events-none opacity-80")}>
-                    <Input
-                      id={`remarks-${line.id}`}
-                      placeholder="Remarks"
-                      readOnly={editingRowId !== line.id}
-                      className="h-7 text-xs bg-transparent border-none focus-visible:ring-1"
-                      value={line.remarks}
-                      onChange={(e) => updateLine(line.id, "remarks", e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, "remarks", line.id)}
-                    />
+                  <div>
+                    <Select value={line.currency} onValueChange={(v) => updateLine(line.id, "currency", v)}>
+                      <SelectTrigger id={`currency-${line.id}`} className="h-7 text-xs" onKeyDown={(e) => handleKeyDown(e, "currency", line.id)}>
+                        <Globe className="h-3 w-3 mr-1" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CURRENCIES.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Input id={`debit-${line.id}`} type="number" className="h-7 text-xs text-right" value={line.debit || ""} onChange={(e) => updateLine(line.id, "debit", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, "debit", line.id)} />
+                  </div>
+                  <div>
+                    <Input id={`credit-${line.id}`} type="number" className="h-7 text-xs text-right" value={line.credit || ""} onChange={(e) => updateLine(line.id, "credit", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, "credit", line.id)} />
+                  </div>
+                  <div>
+                    <Input id={`remarks-${line.id}`} className="h-7 text-xs" value={line.remarks} onChange={(e) => updateLine(line.id, "remarks", e.target.value)} onKeyDown={(e) => handleKeyDown(e, "remarks", line.id)} />
                   </div>
                 </div>
               ))}
@@ -685,111 +516,46 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Narration</Label>
-                <Input
-                  ref={narrationRef}
-                  placeholder="Enter overall transaction narration"
-                  value={narration}
-                  onChange={(e) => setNarration(e.target.value)}
-                  className="h-20"
-                />
+                <Input placeholder="Voucher narration..." value={narration} onChange={(e) => setNarration(e.target.value)} className="h-20" />
               </div>
-
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Voucher Attachments (Max 1MB)</Label>
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Attachments (Max 2MB)</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {attachments.map((file, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted px-2 py-1 rounded-md text-[11px] border border-border transition-colors group">
-                      <FileText className="h-3 w-3 text-primary/60" />
-                      <span className="max-w-[100px] truncate font-medium">{file.name}</span>
-                      <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handlePreview(file)}>
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleDownload(file)}>
-                          <Download className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => removeAttachment(i)}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
+                    <div key={i} className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[11px] border group">
+                      <FileText className="h-3 w-3" />
+                      <span className="max-w-[100px] truncate">{file.name}</span>
+                      <Button variant="ghost" size="icon" className="h-4 w-4 text-destructive opacity-0 group-hover:opacity-100" onClick={() => removeAttachment(i)}><X className="h-2 w-2" /></Button>
                     </div>
                   ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 text-[11px] gap-1.5"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Plus className="h-3 w-3" />
-                    Add File
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    multiple
-                    onChange={handleFileChange}
-                    accept="image/*,.pdf"
-                  />
+                  <Button variant="outline" size="sm" className="h-7 px-2 border-dashed text-[11px]" onClick={() => fileInputRef.current?.click()}><Plus className="h-3 w-3 mr-1" />Add File</Button>
+                  <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileChange} accept="image/*,.pdf" />
                 </div>
               </div>
             </div>
-            <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+            <div className="bg-muted/30 rounded-lg p-4 space-y-3 border">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground uppercase font-bold tracking-tight">Total Debit</span>
+                <span className="text-muted-foreground uppercase font-bold">Base Total Debit (USD)</span>
                 <span className="font-mono font-bold text-sm">${totalDebit.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground uppercase font-bold tracking-tight">Total Credit</span>
+                <span className="text-muted-foreground uppercase font-bold">Base Total Credit (USD)</span>
                 <span className="font-mono font-bold text-sm">${totalCredit.toFixed(2)}</span>
               </div>
               <div className="pt-3 border-t flex justify-between items-center">
                 <span className="font-bold">Difference</span>
-                <Badge variant={difference === 0 ? "outline" : "destructive"} className={cn(difference === 0 && "bg-success/10 text-success border-success/20")}>
+                <Badge variant={difference < 0.01 ? "outline" : "destructive"} className={cn(difference < 0.01 && "bg-success/10 text-success border-success/20")}>
                   ${difference.toFixed(2)}
                 </Badge>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded bg-primary/5 text-[10px] text-primary/70 italic">
+                <RefreshCw className="h-3 w-3" />
+                Amounts are automatically converted to Base Currency (USD) using real-time simulated exchange rates.
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-4 border-b flex-row items-center justify-between">
-            <DialogTitle className="text-base truncate pr-8">{previewFile?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 bg-black/5 flex items-center justify-center p-4">
-            {previewFile?.type.startsWith('image/') ? (
-              <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-full object-contain" />
-            ) : previewFile?.type === 'application/pdf' ? (
-              <iframe src={previewFile.url} className="w-full h-full border-none" title="PDF Preview" />
-            ) : (
-              <div className="text-center space-y-4">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
-                <p>Preview not available for this file type</p>
-                <Button onClick={() => previewFile && handleDownload(new File([], previewFile.name))}>Download to View</Button>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="p-4 border-t">
-            <Button variant="outline" onClick={() => setPreviewFile(null)}>Close</Button>
-            {previewFile && (
-              <Button onClick={() => {
-                const a = document.createElement('a');
-                a.href = previewFile.url;
-                a.download = previewFile.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-              }}>
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
