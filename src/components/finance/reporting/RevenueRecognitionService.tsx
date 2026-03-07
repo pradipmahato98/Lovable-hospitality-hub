@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +12,14 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { useBusinessDate } from "@/hooks/useSettings";
+import { format, parseISO, subDays } from "date-fns";
 
 export function RevenueRecognitionService({ isReadOnly }: { isReadOnly?: boolean }) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const { data: businessDate } = useBusinessDate();
+
+  const bDate = useMemo(() => businessDate ? parseISO(businessDate) : new Date(), [businessDate]);
 
   const handleRecognizeRevenue = () => {
     setIsProcessing(true);
@@ -89,8 +94,8 @@ export function RevenueRecognitionService({ isReadOnly }: { isReadOnly?: boolean
           <div className="divide-y">
             {[
               { id: '1', event: 'Nightly Audit Posting', module: 'PMS', amount: 8400, date: 'Tonight' },
-              { id: '2', event: 'Corporate Banquet Completion', module: 'Events', amount: 5500, date: '2026-02-18' },
-              { id: '3', event: 'Pre-paid Voucher Utilization', module: 'POS', amount: 450, date: '2026-02-17' },
+              { id: '2', event: 'Corporate Banquet Completion', module: 'Events', amount: 5500, date: format(subDays(bDate, 1), "yyyy-MM-dd") },
+              { id: '3', event: 'Pre-paid Voucher Utilization', module: 'POS', amount: 450, date: format(subDays(bDate, 2), "yyyy-MM-dd") },
             ].map((item) => (
               <div key={item.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-4">
