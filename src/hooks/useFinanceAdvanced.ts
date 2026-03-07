@@ -46,6 +46,23 @@ export interface BankAccount {
   is_active: boolean;
 }
 
+export interface COGSConfig {
+  id: string;
+  inventory_category_id: string;
+  inventory_asset_account_id: string;
+  cogs_expense_account_id: string;
+  auto_post: boolean;
+}
+
+export interface FinancialPeriod {
+  id: string;
+  period_name: string;
+  start_date: string;
+  end_date: string;
+  fiscal_year: string;
+  status: 'open' | 'locked' | 'closed';
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
@@ -91,6 +108,62 @@ export function useCreateFixedAsset() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fixed-assets"] });
       toast.success("Fixed asset registered successfully");
+    },
+  });
+}
+
+// ============= Automated Rules =============
+
+export function useCOGSConfigs() {
+  return useQuery({
+    queryKey: ["cogs-configs"],
+    queryFn: async () => {
+      const { data, error } = await db.from("cogs_configurations").select("*");
+      if (error) throw error;
+      return data as COGSConfig[];
+    },
+  });
+}
+
+export function useFinancialPeriods() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["financial-periods"],
+    queryFn: async () => {
+      const { data, error } = await db.from("financial_periods").select("*").order("start_date", { ascending: false });
+      if (error) throw error;
+      return data as FinancialPeriod[];
+    },
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("periods-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "financial_periods" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["financial-periods"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  return query;
+}
+
+export function useLockPeriod() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await db.from("financial_periods").update({
+        status: 'locked',
+        locked_at: new Date().toISOString(),
+        locked_by: (await supabase.auth.getUser()).data.user?.id
+      }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-periods"] });
+      toast.success("Financial period locked successfully");
     },
   });
 }

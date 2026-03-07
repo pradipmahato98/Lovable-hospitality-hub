@@ -49,6 +49,9 @@ import { BankCashTransactionService } from "@/components/finance/transactions/Ba
 import { AssetOperationsService } from "@/components/finance/transactions/AssetOperationsService";
 import { BudgetExecutionService } from "@/components/finance/transactions/BudgetExecutionService";
 import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
+import { TaxCalculationService } from "@/components/finance/transactions/TaxCalculationService";
+import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
+import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
 
 // Reporting Services
 import { FinancialReportingService } from "@/components/finance/reporting/FinancialReportingService";
@@ -57,6 +60,7 @@ import { ARReportingService } from "@/components/finance/reporting/ARReportingSe
 import { LedgerInquiryService } from "@/components/finance/reporting/LedgerInquiryService";
 import { AuditReportingService } from "@/components/finance/reporting/AuditReportingService";
 import { BudgetForecastReportingService } from "@/components/finance/reporting/BudgetForecastReportingService";
+import { RevenueRecognitionService } from "@/components/finance/reporting/RevenueRecognitionService";
 
 // Infrastructure
 import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
@@ -134,6 +138,9 @@ export default function Finance() {
       { id: "ar", name: "Accounts Receivable", icon: ArrowUpRight, description: "Billing & customer receipts", component: ARTransactionService },
       { id: "banking", name: "Bank & Cash Ops", icon: Wallet, description: "Reconciliation & transfers", component: BankCashTransactionService },
       { id: "asset-ops", name: "Asset Operations", icon: Briefcase, description: "Depreciation & disposals", component: AssetOperationsService },
+      { id: "tax-calc", name: "Tax Calculation", icon: Calculator, description: "Automated tax computation", component: TaxCalculationService },
+      { id: "orchestrator", name: "Module Integrations", icon: Zap, description: "Sync PMS/POS revenue", component: IntegrationOrchestratorService },
+      { id: "approvals", name: "Approval Workflows", icon: ShieldCheck, description: "Maker-checker logic", component: ApprovalWorkflowService },
       { id: "budget-exec", name: "Budget Execution", icon: PieChart, description: "Approve budget variances", component: BudgetExecutionService },
       { id: "period-close", name: "Period End Close", icon: History, description: "Month/Year-end processing", component: FinancialPeriodCloseService },
     ],
@@ -142,6 +149,7 @@ export default function Finance() {
       { id: "ledger-inquiry", name: "Ledger Inquiry", icon: BookOpen, description: "Detailed account analysis", component: LedgerInquiryService },
       { id: "ap-reports", name: "AP Reports", icon: ArrowDownRight, description: "Aging & vendor statements", component: APReportingService },
       { id: "ar-reports", name: "AR Reports", icon: ArrowUpRight, description: "Aging & guest statements", component: ARReportingService },
+      { id: "revenue-recognition", name: "Revenue Recognition", icon: TrendingUp, description: "Deferred to earned revenue", component: RevenueRecognitionService },
       { id: "budget-variance", name: "Budget vs Actual", icon: PieChart, description: "Variance trend analysis", component: BudgetForecastReportingService },
       { id: "audit", name: "Audit Reports", icon: ShieldCheck, description: "Trial balance & logs", component: AuditReportingService },
     ]
