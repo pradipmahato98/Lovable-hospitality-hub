@@ -107,7 +107,13 @@ export function useBudgets(fiscalYear?: string) {
     },
   });
 
-  const updateBudget = useMutation({
+  return query;
+}
+
+export function useUpdateBudget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Budget> & { id: string }) => {
       const { data, error } = await db.from("budgets").update(updates).eq("id", id).select().single();
       if (error) throw error;
@@ -115,8 +121,6 @@ export function useBudgets(fiscalYear?: string) {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets"] }),
   });
-
-  return { ...query, updateBudget };
 }
 
 // ============= Bank Accounts =============
