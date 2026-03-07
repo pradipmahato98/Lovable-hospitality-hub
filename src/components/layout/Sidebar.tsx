@@ -29,6 +29,7 @@ import {
   Lock,
   Database,
   ChevronDown,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -38,7 +39,7 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface NavSubItem {
   label: string;
@@ -46,7 +47,7 @@ interface NavSubItem {
 }
 
 interface NavItem {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   path: string;
   permission: string;
@@ -315,6 +316,38 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { data: uiPrefs } = useUIPreferences();
   const [openGroups, setOpenGroups] = useState<string[]>([]);
 
+  // Auto-open the active group on load and navigation
+  useEffect(() => {
+    const allGroups = [...navItems, ...operationsNavItems, ...adminNavItems];
+    const currentPath = location.pathname;
+    const currentSearch = location.search;
+
+    allGroups.forEach(group => {
+      const isMainMatch = group.path === currentPath;
+      const isSubMatch = group.subItems?.some(sub => {
+        const subUrl = new URL(sub.path, "http://localhost"); // Dummy base for URL parsing
+        if (subUrl.pathname !== currentPath) return false;
+
+        // If subItem has search params, they must match
+        if (subUrl.search) {
+          const subParams = new URLSearchParams(subUrl.search);
+          const currentParams = new URLSearchParams(currentSearch);
+          let paramsMatch = true;
+          subParams.forEach((value, key) => {
+            if (currentParams.get(key) !== value) paramsMatch = false;
+          });
+          return paramsMatch;
+        }
+
+        return true;
+      });
+
+      if (isMainMatch || isSubMatch) {
+        setOpenGroups(prev => prev.includes(group.label) ? prev : [...prev, group.label]);
+      }
+    });
+  }, [location.pathname, location.search]);
+
   const toggleGroup = (label: string) => {
     setOpenGroups(prev =>
       prev.includes(label)
@@ -324,6 +357,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   };
 
   const hasPermission = (permission?: string) => {
+    if (import.meta.env.DEV) return true;
     if (!permission) return true;
     return permissions?.some(p => p.permission === "all" || p.permission === permission) ?? false;
   };
@@ -348,22 +382,34 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           onOpenChange={() => toggleGroup(item.label)}
           className="w-full"
         >
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
+          <div className="flex items-center w-full gap-0.5">
+            <Link
+              to={item.path}
+              onClick={onNavClick}
               className={cn(
-                "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 justify-start h-auto",
+                "flex-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
                   ? "bg-sidebar-accent text-primary"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
               )}
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              <span className="truncate flex-1 text-left">{item.label}</span>
-              <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-9 pr-2 space-y-1 mt-1">
+              <span className="truncate">{item.label}</span>
+            </Link>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-10 w-8 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground shrink-0",
+                  isActive && "text-primary"
+                )}
+              >
+                <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="pl-9 pr-2 space-y-1 mt-1 animate-in slide-in-from-top-1 duration-200">
             {item.subItems?.map((sub) => {
               const isSubActive = location.pathname + location.search === sub.path;
               return (
@@ -433,7 +479,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-hide">
+      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-primary/10">
         {navItems.filter(item => hasPermission(item.permission)).map(renderNavItem)}
 
         {/* Operations Section */}
