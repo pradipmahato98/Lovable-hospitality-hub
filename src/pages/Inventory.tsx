@@ -72,6 +72,10 @@ import { AdjustStockDialog } from "@/components/inventory/AdjustStockDialog";
 import { StockOutDialog } from "@/components/inventory/StockOutDialog";
 import { WastageDialog } from "@/components/inventory/WastageDialog";
 import { BulkAdjustDialog } from "@/components/inventory/BulkAdjustDialog";
+import { GeneralSettingsTab } from "@/components/inventory/GeneralSettingsTab";
+import { SupplierDialog } from "@/components/inventory/SupplierDialog";
+import { LocationDialog } from "@/components/inventory/LocationDialog";
+import { CategoryDialog } from "@/components/inventory/CategoryDialog";
 
 const Inventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -121,17 +125,14 @@ const Inventory = () => {
   const [addWastageOpen, setAddWastageOpen] = useState(false);
   const [selectedWastage, setSelectedWastage] = useState<any>(null);
 
-  const [addLocationOpen, setAddLocationOpen] = useState(false);
-  const [editLocationOpen, setEditLocationOpen] = useState(false);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
 
-  const [addSupplierOpen, setAddSupplierOpen] = useState(false);
-  const [editSupplierOpen, setEditSupplierOpen] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
 
-  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
-  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
 
   const [stockOutOpen, setStockOutOpen] = useState(false);
 
@@ -178,20 +179,6 @@ const Inventory = () => {
     // We fetch all active items for dropdowns to ensure selection works even if filtering is active
     return items;
   }, [items]);
-
-  // Form States
-  const [itemForm, setItemForm] = useState({
-    name: "", sku: "", barcode: "", image_url: "", category_id: "", supplier_id: "", location_id: "",
-    unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "", is_active: true,
-    batch_number: "", expiry_date: "", is_perishable: false
-  });
-
-  const [supplierForm, setSupplierForm] = useState({
-    name: "", contact_person: "", email: "", phone: "", address: "", payment_terms: "", notes: "", is_active: true,
-  });
-
-  const [locationForm, setLocationForm] = useState({ name: "", description: "" });
-  const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
 
   const [stockAdjustment, setStockAdjustment] = useState({
     quantity: 0, type: "in" as "in" | "out" | "adjustment", notes: "", department: "", locationId: "",
@@ -322,6 +309,9 @@ const Inventory = () => {
                 <TabsTrigger value="audits" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><CheckCircle2 className="h-4 w-4" />Audits</TabsTrigger>
                 <TabsTrigger value="recipes" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Layers className="h-4 w-4" />Recipes</TabsTrigger>
                 <TabsTrigger value="wastage" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Trash2 className="h-4 w-4" />Wastage</TabsTrigger>
+
+                <h3 className="text-[10px] uppercase font-bold text-muted-foreground mt-4 mb-2 px-3 tracking-widest">Configuration</h3>
+                <TabsTrigger value="settings" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Settings2 className="h-4 w-4" />General Settings</TabsTrigger>
               </div>
             </TabsList>
 
@@ -476,8 +466,8 @@ const Inventory = () => {
         <TabsContent value="categories" className="space-y-4">
           <CategoriesTab
             categories={categories}
-            onAddCategory={() => { setCategoryForm({ name: "", description: "" }); setAddCategoryOpen(true); }}
-            onEditCategory={(c) => { setSelectedCategoryId(c.id); setCategoryForm({ name: c.name, description: c.description || "" }); setEditCategoryOpen(true); }}
+            onAddCategory={() => { setSelectedCategory(null); setCategoryDialogOpen(true); }}
+            onEditCategory={(c) => { setSelectedCategory(c); setCategoryDialogOpen(true); }}
             onDeleteCategory={(id) => { if (confirm("Delete category?")) deleteCategory.mutate(id); }}
           />
         </TabsContent>
@@ -504,12 +494,8 @@ const Inventory = () => {
         <TabsContent value="suppliers" className="space-y-4">
           <SuppliersTab
             suppliers={suppliers}
-            onAddSupplier={() => { setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "", payment_terms: "", notes: "", is_active: true }); setAddSupplierOpen(true); }}
-            onEditSupplier={(s) => {
-              setSelectedSupplierId(s.id);
-              setSupplierForm({ ...s, contact_person: s.contact_person || "", email: s.email || "", phone: s.phone || "", address: s.address || "", payment_terms: s.payment_terms || "", notes: s.notes || "" });
-              setEditSupplierOpen(true);
-            }}
+            onAddSupplier={() => { setSelectedSupplier(null); setSupplierDialogOpen(true); }}
+            onEditSupplier={(s) => { setSelectedSupplier(s); setSupplierDialogOpen(true); }}
             onDeleteSupplier={(id) => { if (confirm("Delete supplier?")) deleteSupplier.mutate(id); }}
           />
         </TabsContent>
@@ -518,8 +504,8 @@ const Inventory = () => {
           <LocationsTab
             locations={locations}
             items={items}
-            onAddLocation={() => { setLocationForm({ name: "", description: "" }); setAddLocationOpen(true); }}
-            onEditLocation={(loc) => { setSelectedLocationId(loc.id); setLocationForm({ name: loc.name, description: loc.description || "" }); setEditLocationOpen(true); }}
+            onAddLocation={() => { setSelectedLocation(null); setLocationDialogOpen(true); }}
+            onEditLocation={(loc) => { setSelectedLocation(loc); setLocationDialogOpen(true); }}
             onDeleteLocation={(id) => { if (confirm("Delete location?")) deleteLocation.mutate(id); }}
             onViewStock={(id) => { setLocationFilter(id); setActiveTab("items"); }}
           />
@@ -574,6 +560,10 @@ const Inventory = () => {
             reportData={reportData}
             stats={stats}
           />
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <GeneralSettingsTab />
         </TabsContent>
 
       <ItemDialog
@@ -920,6 +910,51 @@ const Inventory = () => {
         onConfirm={async (data) => {
           await recordWastage.mutateAsync(data as any);
           toast.success("Wastage recorded");
+        }}
+      />
+
+      <SupplierDialog
+        open={supplierDialogOpen}
+        onOpenChange={setSupplierDialogOpen}
+        supplier={selectedSupplier}
+        onSave={async (data) => {
+          if (selectedSupplier) {
+            await updateSupplier.mutateAsync({ id: selectedSupplier.id, ...data });
+            toast.success("Supplier updated");
+          } else {
+            await createSupplier.mutateAsync(data);
+            toast.success("Supplier created");
+          }
+        }}
+      />
+
+      <LocationDialog
+        open={locationDialogOpen}
+        onOpenChange={setLocationDialogOpen}
+        location={selectedLocation}
+        onSave={async (data) => {
+          if (selectedLocation) {
+            await updateLocation.mutateAsync({ id: selectedLocation.id, ...data });
+            toast.success("Location updated");
+          } else {
+            await createLocation.mutateAsync(data);
+            toast.success("Location created");
+          }
+        }}
+      />
+
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        category={selectedCategory}
+        onSave={async (data) => {
+          if (selectedCategory) {
+            await updateCategory.mutateAsync({ id: selectedCategory.id, ...data });
+            toast.success("Category updated");
+          } else {
+            await createCategory.mutateAsync(data);
+            toast.success("Category created");
+          }
         }}
       />
 

@@ -23,6 +23,7 @@ import {
   QrCode, Edit, FileDown, FilterX, Loader2
 } from "lucide-react";
 import { InventoryItem, InventoryCategory, InventoryLocation } from "@/hooks/useInventory";
+import { useInventoryUISettings } from "@/hooks/useSettings";
 
 interface ItemsTabProps {
   items: InventoryItem[];
@@ -45,6 +46,7 @@ export const ItemsTab = ({
   onAdjustStock,
   onExport
 }: ItemsTabProps) => {
+  const { data: uiSettings } = useInventoryUISettings();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
@@ -122,7 +124,7 @@ export const ItemsTab = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12"></TableHead>
+              {(!uiSettings || uiSettings.product_image_show) && <TableHead className="w-12"></TableHead>}
               <TableHead>Item Details</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Location</TableHead>
@@ -138,19 +140,21 @@ export const ItemsTab = ({
               <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No items match your filters</TableCell></TableRow>
             ) : filteredItems.map(item => (
               <TableRow key={item.id} className={item.is_active ? "" : "opacity-50"}>
-                <TableCell>
-                  {item.image_url ? (
-                    <img src={item.image_url} alt="" className="h-8 w-8 rounded object-cover shadow-sm" />
-                  ) : (
-                    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center"><Package className="h-4 w-4 text-muted-foreground" /></div>
-                  )}
-                </TableCell>
+                {(!uiSettings || uiSettings.product_image_show) && (
+                  <TableCell>
+                    {item.image_url ? (
+                      <img src={item.image_url} alt="" className="h-8 w-8 rounded object-cover shadow-sm" />
+                    ) : (
+                      <div className="h-8 w-8 rounded bg-muted flex items-center justify-center"><Package className="h-4 w-4 text-muted-foreground" /></div>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="flex flex-col">
                     <span className="font-medium">{item.name}</span>
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span className="font-mono bg-muted px-1 rounded">{item.sku || "NO-SKU"}</span>
-                      {item.barcode && <span className="flex items-center gap-0.5"><QrCode className="h-2.5 w-2.5" />{item.barcode}</span>}
+                      {(!uiSettings || uiSettings.sku_show) && <span className="font-mono bg-muted px-1 rounded">{item.sku || "NO-SKU"}</span>}
+                      {(!uiSettings || uiSettings.barcode_show) && item.barcode && <span className="flex items-center gap-0.5"><QrCode className="h-2.5 w-2.5" />{item.barcode}</span>}
                     </div>
                   </div>
                 </TableCell>

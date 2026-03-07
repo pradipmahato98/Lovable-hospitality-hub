@@ -117,6 +117,34 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
+export interface InventoryUISettings {
+  barcode_show: boolean;
+  batch_number_show: boolean;
+  branchwise_product_show: boolean;
+  brand_show: boolean;
+  color_show: boolean;
+  display_name_show: boolean;
+  expiration_show: boolean;
+  inventory_item_show: boolean;
+  narcotics_show: boolean;
+  non_stock_show: boolean;
+  opening_detail_show: boolean;
+  other_identifier_show: boolean;
+  perishable_show: boolean;
+  product_desc_show: boolean;
+  product_image_show: boolean;
+  production_item_show: boolean;
+  rack_show: boolean;
+  raw_item_show: boolean;
+  re_order_show: boolean;
+  serial_number_show: boolean;
+  size_show: boolean;
+  sku_show: boolean;
+  hs_code_show: boolean;
+  category_japanese_name_show: boolean;
+  product_japanese_name_show: boolean;
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -220,6 +248,34 @@ const defaultUITemplates: UITemplatesSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
+};
+
+const defaultInventoryUISettings: InventoryUISettings = {
+  barcode_show: true,
+  batch_number_show: false,
+  branchwise_product_show: false,
+  brand_show: false,
+  color_show: false,
+  display_name_show: false,
+  expiration_show: true,
+  inventory_item_show: true,
+  narcotics_show: false,
+  non_stock_show: false,
+  opening_detail_show: false,
+  other_identifier_show: false,
+  perishable_show: false,
+  product_desc_show: false,
+  product_image_show: false,
+  production_item_show: false,
+  rack_show: false,
+  raw_item_show: false,
+  re_order_show: true,
+  serial_number_show: false,
+  size_show: false,
+  sku_show: false,
+  hs_code_show: true,
+  category_japanese_name_show: false,
+  product_japanese_name_show: false,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -374,6 +430,14 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
+}
+
+export function useInventoryUISettings() {
+  return useSettings<InventoryUISettings>("inventory_ui_settings", defaultInventoryUISettings);
+}
+
+export function useUpdateInventoryUISettings() {
+  return useUpdateSettings<InventoryUISettings>("inventory_ui_settings");
 }
 
 export function useBusinessDate() {
