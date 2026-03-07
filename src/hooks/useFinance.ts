@@ -185,15 +185,11 @@ export function useJournalEntries(filters?: {
   const query = useQuery({
     queryKey: ["journal-entries", filters],
     queryFn: async () => {
-      // Use explicit join with profiles on created_by
+      // Basic fetch without complex profile join to avoid PGRST200 schema cache issues in local dev
       let q = db
         .from("journal_entries")
         .select(`
           *,
-          created_by_profile:profiles (
-            first_name,
-            last_name
-          ),
           journal_lines (
             *,
             account:accounts (*)
