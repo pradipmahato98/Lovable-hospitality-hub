@@ -43,6 +43,7 @@ import { FinancialConfigurationService } from "@/components/finance/setup/Financ
 
 // Transaction Services
 import { JournalManagementService } from "@/components/finance/transactions/JournalManagementService";
+import { JournalEntryEditor } from "@/components/finance/transactions/JournalEntryEditor";
 import { APTransactionService } from "@/components/finance/transactions/APTransactionService";
 import { ARTransactionService } from "@/components/finance/transactions/ARTransactionService";
 import { BankCashTransactionService } from "@/components/finance/transactions/BankCashTransactionService";

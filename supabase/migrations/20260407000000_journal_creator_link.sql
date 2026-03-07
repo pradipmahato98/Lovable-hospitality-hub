@@ -4,7 +4,7 @@ DROP CONSTRAINT IF EXISTS journal_entries_created_by_fkey;
 
 ALTER TABLE public.journal_entries
 ADD CONSTRAINT journal_entries_created_by_profile_fkey
-FOREIGN KEY (created_by) REFERENCES public.profiles(user_id);
+FOREIGN KEY (created_by) REFERENCES public.profiles(id);
 
 -- Ensure profiles.user_id has a unique constraint if not already present
 -- (PostgREST requires it for one-to-one joins)
