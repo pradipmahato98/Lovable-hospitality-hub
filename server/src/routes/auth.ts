@@ -13,7 +13,7 @@ const auth = new Hono();
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(10),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
 });
