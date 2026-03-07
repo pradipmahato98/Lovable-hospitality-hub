@@ -274,33 +274,57 @@ export const useUpdateUserStatus = () => {
     mutationFn: async ({
       userId,
       is_blocked,
-      blocked_reason
+      blocked_reason,
+      first_name,
+      last_name,
+      phone
     }: {
       userId: string;
-      is_blocked: boolean;
-      blocked_reason: string | null
+      is_blocked?: boolean;
+      blocked_reason?: string | null;
+      first_name?: string;
+      last_name?: string;
+      phone?: string;
     }) => {
+      const updateData: any = { updated_at: new Date().toISOString() };
+      if (is_blocked !== undefined) updateData.is_blocked = is_blocked;
+      if (blocked_reason !== undefined) updateData.blocked_reason = blocked_reason;
+      if (first_name !== undefined) updateData.first_name = first_name;
+      if (last_name !== undefined) updateData.last_name = last_name;
+      if (phone !== undefined) updateData.phone = phone;
+
       const { error } = await supabase
         .from("profiles")
-        .update({ is_blocked, blocked_reason, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq("user_id", userId);
 
       if (error) throw error;
 
-      // Also log to audit_log
-      await supabase.from("audit_log").insert({
-        action: is_blocked ? "block_user" : "unblock_user",
-        entity_type: "user",
-        entity_id: userId,
-        new_values: { is_blocked, blocked_reason },
-      });
+      // Log to audit_log
+      if (is_blocked !== undefined) {
+        await supabase.from("audit_log").insert({
+          action: is_blocked ? "block_user" : "unblock_user",
+          entity_type: "user",
+          entity_id: userId,
+          new_values: { is_blocked, blocked_reason },
+        });
+      }
+
+      if (first_name !== undefined || last_name !== undefined || phone !== undefined) {
+        await supabase.from("audit_log").insert({
+          action: "update_profile",
+          entity_type: "user",
+          entity_id: userId,
+          new_values: { first_name, last_name, phone },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
-      toast.success("User account status updated");
+      toast.success("User profile updated successfully");
     },
     onError: (error) => {
-      toast.error("Failed to update status: " + error.message);
+      toast.error("Failed to update profile: " + error.message);
     },
   });
 };
@@ -310,34 +334,47 @@ export const useUpdateUserRole = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ userId, oldRole, newRole }: { userId: string; oldRole: AppRole; newRole: AppRole }) => {
-      const { data: existingRoles, error: rolesFetchError } = await supabase
-        .from("user_roles")
-        .select("id, role")
-        .eq("user_id", userId);
+    mutationFn: async ({
+      userId,
+      oldRole,
+      newRole,
+      action = 'replace'
+    }: {
+      userId: string;
+      oldRole?: AppRole;
+      newRole: AppRole;
+      action?: 'add' | 'remove' | 'replace'
+    }) => {
+      if (action === 'replace') {
+        const { error: deleteError } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId);
 
-      if (rolesFetchError) throw rolesFetchError;
+        if (deleteError) throw deleteError;
 
-      const roles = (existingRoles ?? []).map((r) => r.role as AppRole);
-      const alreadyHasNewRole = roles.includes(newRole);
-
-      if (!alreadyHasNewRole) {
         const { error: insertError } = await supabase
           .from("user_roles")
           .insert({ user_id: userId, role: newRole });
 
         if (insertError) throw insertError;
+      } else if (action === 'add') {
+        const { error: insertError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: newRole });
+
+        if (insertError) throw insertError;
+      } else if (action === 'remove') {
+        const { error: deleteError } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId)
+          .eq("role", newRole);
+
+        if (deleteError) throw deleteError;
       }
 
-      const { error: cleanupError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .neq("role", newRole);
-
-      if (cleanupError) throw cleanupError;
-
-      if (oldRole !== newRole) {
+      if (oldRole !== newRole || action !== 'replace') {
         const { error: auditError } = await supabase
           .from("role_change_audit")
           .insert({

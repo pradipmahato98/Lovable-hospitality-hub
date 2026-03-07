@@ -7,8 +7,8 @@ interface RoleBadgeProps {
   showIcon?: boolean;
 }
 
-export const RoleBadge = ({ role, showIcon = true }: RoleBadgeProps) => {
-  const config = roleConfig[role];
+export const RoleBadge = ({ role, showIcon = true, className }: RoleBadgeProps & { className?: string }) => {
+  const config = roleConfig[role] || { label: role, color: "bg-muted text-muted-foreground" };
   const icons: Record<AppRole, React.ComponentType<{ className?: string }>> = {
     admin: ShieldAlert,
     manager: Shield,
@@ -18,8 +18,8 @@ export const RoleBadge = ({ role, showIcon = true }: RoleBadgeProps) => {
   const Icon = icons[role];
 
   return (
-    <Badge variant="outline" className={config.color}>
-      {showIcon && <Icon className="h-3 w-3 mr-1" />}
+    <Badge variant="outline" className={`${config.color} ${className}`}>
+      {showIcon && Icon && <Icon className="h-3 w-3 mr-1" />}
       {config.label}
     </Badge>
   );
