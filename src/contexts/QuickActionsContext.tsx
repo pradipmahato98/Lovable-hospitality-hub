@@ -164,10 +164,8 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      // Escape to close all dialogs
-      if (e.key === "Escape") {
-        closeAll();
-      }
+      // Escape to close all dialogs is intentionally disabled to honor new project rules
+      // which require explicit closing via "X" or "Cancel" buttons.
     };
 
     window.addEventListener("keydown", handleKeyDown);

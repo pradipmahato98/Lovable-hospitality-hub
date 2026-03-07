@@ -335,8 +335,8 @@ export function GlobalSearch() {
               <p className="text-sm font-medium animate-pulse">Redirecting to profile...</p>
             </div>
           )}
-          <ScrollArea className="max-h-[400px]">
-            <div className="p-2">
+          <ScrollArea className="h-[450px] max-h-[70vh]">
+            <div className="p-2 pb-10">
               {!hasResults && !loadingGuests && (
                 <div className="py-8 text-center text-muted-foreground">
                   No results found for "{query}"
@@ -378,6 +378,18 @@ export function GlobalSearch() {
                       </div>
                     ))}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-[10px] text-muted-foreground hover:text-primary mt-1 h-7 px-3"
+                    onClick={() => {
+                      setIsOpen(false);
+                      setQuery("");
+                      navigate("/guests");
+                    }}
+                  >
+                    View all guests <ExternalLink className="h-2 w-2 ml-1" />
+                  </Button>
                 </div>
               )}
 
@@ -478,8 +490,27 @@ export function GlobalSearch() {
                       );
                     })}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-[10px] text-muted-foreground hover:text-primary mt-1 h-7 px-3"
+                    onClick={() => {
+                      setIsOpen(false);
+                      setQuery("");
+                      navigate("/staff");
+                    }}
+                  >
+                    View all staff <ExternalLink className="h-2 w-2 ml-1" />
+                  </Button>
                 </div>
               )}
+            </div>
+            <div className="sticky bottom-0 left-0 right-0 bg-muted/95 backdrop-blur-sm border-t p-2 flex justify-between items-center text-[10px] text-muted-foreground z-20">
+              <div className="flex gap-3">
+                <span className="flex items-center gap-1"><kbd className="border bg-background px-1 rounded">↑↓</kbd> to navigate</span>
+                <span className="flex items-center gap-1"><kbd className="border bg-background px-1 rounded">↵</kbd> to select</span>
+              </div>
+              <span className="italic">Press <kbd className="border bg-background px-1 rounded">Esc</kbd> to close</span>
             </div>
           </ScrollArea>
         </div>
