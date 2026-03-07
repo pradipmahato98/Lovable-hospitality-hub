@@ -136,6 +136,16 @@ export function useInventoryCategories() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-categories-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_categories" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-categories"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createCategory = useMutation({
     mutationFn: async (category: Omit<InventoryCategory, "id" | "created_at">) => {
       const { data, error } = await db.from("inventory_categories").insert(category).select().single();
@@ -145,7 +155,24 @@ export function useInventoryCategories() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
   });
 
-  return { ...query, createCategory };
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<InventoryCategory> & { id: string }) => {
+      const { data, error } = await db.from("inventory_categories").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  return { ...query, createCategory, updateCategory, deleteCategory };
 }
 
 // ============= Locations =============
@@ -161,6 +188,16 @@ export function useInventoryLocations() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-locations-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_locations" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-locations"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createLocation = useMutation({
     mutationFn: async (location: Omit<InventoryLocation, "id" | "created_at">) => {
       const { data, error } = await db.from("inventory_locations").insert(location).select().single();
@@ -170,7 +207,24 @@ export function useInventoryLocations() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-locations"] }),
   });
 
-  return { ...query, createLocation };
+  const updateLocation = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<InventoryLocation> & { id: string }) => {
+      const { data, error } = await db.from("inventory_locations").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-locations"] }),
+  });
+
+  const deleteLocation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_locations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-locations"] }),
+  });
+
+  return { ...query, createLocation, updateLocation, deleteLocation };
 }
 
 // ============= Suppliers =============
@@ -188,6 +242,16 @@ export function useSuppliers(filters?: { showInactive?: boolean }) {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("suppliers-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "suppliers" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createSupplier = useMutation({
     mutationFn: async (supplier: Omit<Supplier, "id" | "created_at">) => {
       const { data, error } = await db.from("suppliers").insert(supplier).select().single();
@@ -197,7 +261,24 @@ export function useSuppliers(filters?: { showInactive?: boolean }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
   });
 
-  return { ...query, createSupplier };
+  const updateSupplier = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
+      const { data, error } = await db.from("suppliers").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
+  const deleteSupplier = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("suppliers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
+  return { ...query, createSupplier, updateSupplier, deleteSupplier };
 }
 
 // ============= Inventory Items =============
@@ -219,11 +300,29 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-items-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createItem = useMutation({
     mutationFn: async (item: Omit<InventoryItem, "id" | "created_at" | "category" | "supplier" | "location">) => {
       const { data, error } = await db.from("inventory_items").insert(item).select().single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-items"] }),
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_items").delete().eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-items"] }),
   });
@@ -258,7 +357,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
     },
   });
 
-  return { ...query, createItem, updateItem, adjustStock };
+  return { ...query, createItem, updateItem, deleteItem, adjustStock };
 }
 
 // ============= Purchase Orders =============
@@ -276,12 +375,27 @@ export function usePurchaseOrders(status?: string) {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("purchase-orders-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createPurchaseOrder = useMutation({
     mutationFn: async ({ items, ...order }: Omit<PurchaseOrder, "id" | "created_at" | "order_number" | "supplier"> & { items: { item_id: string; quantity: number; unit_price: number }[] }) => {
       const orderNumber = `PO-${generateSecureNumericString(10)}`;
-      const { data: po } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber }).select().single();
+      const { data: po, error: poError } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber }).select().single();
+      if (poError) throw poError;
+      if (!po) throw new Error("Failed to create purchase order header");
+
       const poItems = items.map((i) => ({ ...i, purchase_order_id: po.id }));
-      await db.from("purchase_order_items").insert(poItems);
+      const { error: itemsError } = await db.from("purchase_order_items").insert(poItems);
+      if (itemsError) throw itemsError;
+
       return po;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }),
@@ -289,13 +403,22 @@ export function usePurchaseOrders(status?: string) {
 
   const updatePurchaseOrderStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { data: currentPO } = await db.from("purchase_orders").select("status").eq("id", id).single();
+      if (currentPO?.status === "received" && status === "received") throw new Error("Order already received");
+
       const updates: Record<string, any> = { status };
       if (status === "received") updates.received_date = new Date().toISOString().split("T")[0];
-      const { data } = await db.from("purchase_orders").update(updates).eq("id", id).select().single();
+      const { data, error } = await db.from("purchase_orders").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+
       if (status === "received") {
-        const { data: items } = await db.from("purchase_order_items").select("item_id, quantity").eq("purchase_order_id", id);
+        const { data: items, error: itemsError } = await db.from("purchase_order_items").select("item_id, quantity").eq("purchase_order_id", id);
+        if (itemsError) throw itemsError;
+
         for (const poItem of items || []) {
-          const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", poItem.item_id).single();
+          const { data: invItem, error: invError } = await db.from("inventory_items").select("current_stock").eq("id", poItem.item_id).single();
+          if (invError) throw invError;
+
           const newStock = (invItem?.current_stock || 0) + poItem.quantity;
           await db.from("inventory_items").update({ current_stock: newStock, last_restocked_at: new Date().toISOString() }).eq("id", poItem.item_id);
           await db.from("stock_movements").insert({
@@ -313,6 +436,7 @@ export function usePurchaseOrders(status?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
     },
   });
 
@@ -334,12 +458,27 @@ export function useInventoryRequisitions(status?: string) {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-requisitions-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_requisitions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createRequisition = useMutation({
     mutationFn: async ({ items, ...req }: Omit<InventoryRequisition, "id" | "created_at" | "requisition_number"> & { items: { item_id: string; quantity: number }[] }) => {
       const requisitionNumber = `REQ-${generateSecureNumericString(10)}`;
-      const { data: record } = await db.from("inventory_requisitions").insert({ ...req, requisition_number: requisitionNumber }).select().single();
+      const { data: record, error: reqError } = await db.from("inventory_requisitions").insert({ ...req, requisition_number: requisitionNumber }).select().single();
+      if (reqError) throw reqError;
+      if (!record) throw new Error("Failed to create requisition header");
+
       const reqItems = items.map((i) => ({ ...i, requisition_id: record.id }));
-      await db.from("inventory_requisition_items").insert(reqItems);
+      const { error: itemsError } = await db.from("inventory_requisition_items").insert(reqItems);
+      if (itemsError) throw itemsError;
+
       return record;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] }),
@@ -352,27 +491,51 @@ export function useInventoryRequisitions(status?: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] }),
   });
 
+  const deleteRequisition = useMutation({
+    mutationFn: async (id: string) => {
+      await db.from("inventory_requisition_items").delete().eq("requisition_id", id);
+      const { error } = await db.from("inventory_requisitions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] }),
+  });
+
   const convertToPO = useMutation({
     mutationFn: async (requisitionId: string) => {
-      const { data: req } = await db.from("inventory_requisitions").select("*, items:inventory_requisition_items(*, item:inventory_items(*))").eq("id", requisitionId).single();
+      const { data: req, error: fetchError } = await db.from("inventory_requisitions").select("*, items:inventory_requisition_items(*, item:inventory_items(*))").eq("id", requisitionId).single();
+      if (fetchError) throw fetchError;
+      if (!req) throw new Error("Requisition not found");
+
       const supplierMap = new Map<string, any[]>();
       req.items.forEach((ri: any) => {
         const supplierId = ri.item?.supplier_id || "none";
         if (!supplierMap.has(supplierId)) supplierMap.set(supplierId, []);
         supplierMap.get(supplierId)?.push(ri);
       });
+
       for (const [supplierId, items] of supplierMap.entries()) {
-        const { data: po } = await db.from("purchase_orders").insert({
+        const subtotal = items.reduce((sum, i) => sum + (i.quantity * (i.item?.cost_price || 0)), 0);
+        const { data: po, error: poError } = await db.from("purchase_orders").insert({
           order_number: `PO-REQ-${generateSecureNumericString(8)}`,
           supplier_id: supplierId === "none" ? null : supplierId,
           status: "draft",
           order_date: new Date().toISOString().split("T")[0],
-          total: items.reduce((sum, i) => sum + (i.quantity * (i.item?.cost_price || 0)), 0)
+          subtotal: subtotal,
+          tax_amount: subtotal * 0.13,
+          total: subtotal * 1.13,
+          notes: `Auto-generated from Requisition ${req.requisition_number}`
         }).select().single();
+
+        if (poError) throw poError;
+        if (!po) throw new Error("Failed to create PO from requisition");
+
         const poItems = items.map((i) => ({ purchase_order_id: po.id, item_id: i.item_id, quantity: i.quantity, unit_price: i.item?.cost_price || 0 }));
-        await db.from("purchase_order_items").insert(poItems);
+        const { error: itemsError } = await db.from("purchase_order_items").insert(poItems);
+        if (itemsError) throw itemsError;
       }
-      await db.from("inventory_requisitions").update({ status: "completed" }).eq("id", requisitionId);
+
+      const { error: finalError } = await db.from("inventory_requisitions").update({ status: "completed" }).eq("id", requisitionId);
+      if (finalError) throw finalError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] });
@@ -380,7 +543,7 @@ export function useInventoryRequisitions(status?: string) {
     },
   });
 
-  return { ...query, createRequisition, updateRequisitionStatus, convertToPO };
+  return { ...query, createRequisition, updateRequisitionStatus, deleteRequisition, convertToPO };
 }
 
 // ============= Stats & Reports =============
@@ -434,7 +597,9 @@ export function useInventoryReportData() {
 }
 
 export function useStockMovements(filters?: { itemId?: string; type?: string; department?: string }) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["stock-movements", filters],
     queryFn: async () => {
       let q = db.from("stock_movements").select(`*, item:inventory_items(name, sku)`).order("created_at", { ascending: false }).limit(100);
@@ -446,4 +611,16 @@ export function useStockMovements(filters?: { itemId?: string; type?: string; de
       return data as StockMovement[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("stock-movements-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "stock_movements" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  return query;
 }
