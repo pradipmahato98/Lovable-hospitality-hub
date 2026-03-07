@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Camera, Plus, Edit, Trash2 } from "lucide-react";
+import { Camera, Plus, Edit, Trash2, QrCode } from "lucide-react";
 import { InventoryItem, InventoryCategory, InventoryLocation } from "@/hooks/useInventory";
+import { toast } from "sonner";
 
 interface ItemDialogProps {
   open: boolean;
