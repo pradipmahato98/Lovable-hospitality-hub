@@ -17,11 +17,7 @@ import {
   BookOpen,
   Wallet,
   ArrowUpRight,
-  ArrowDownRight,
-  Users,
-  Building,
-  HardDrive,
-  Moon
+  ArrowDownRight
 } from "lucide-react";
 
 // Primary Services for simplified layout
@@ -29,11 +25,6 @@ import { ChartOfAccountsService } from "@/components/finance/setup/ChartOfAccoun
 import { JournalManagementService } from "@/components/finance/transactions/JournalManagementService";
 import { FinancialReportingService } from "@/components/finance/reporting/FinancialReportingService";
 import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
-import { ARManagement } from "@/components/finance/transactions/ARManagement";
-import { APManagement } from "@/components/finance/transactions/APManagement";
-import { FixedAssetsManagement } from "@/components/finance/setup/FixedAssetsManagement";
-import { NightAuditService } from "@/lib/finance/NightAuditService";
-import { ARAgingReport } from "@/components/finance/reporting/ARAgingReport";
 
 import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
 import { useBusinessDate } from "@/hooks/useSettings";
@@ -132,35 +123,7 @@ export default function Finance() {
                 className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
               >
                 <RefreshCw className="h-4 w-4" />
-                Journal
-              </TabsTrigger>
-              <TabsTrigger
-                value="ar"
-                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
-              >
-                <Users className="h-4 w-4" />
-                AR
-              </TabsTrigger>
-              <TabsTrigger
-                value="ap"
-                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
-              >
-                <Building className="h-4 w-4" />
-                AP
-              </TabsTrigger>
-              <TabsTrigger
-                value="fixed-assets"
-                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
-              >
-                <HardDrive className="h-4 w-4" />
-                Assets
-              </TabsTrigger>
-              <TabsTrigger
-                value="night-audit"
-                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
-              >
-                <Moon className="h-4 w-4" />
-                Night Audit
+                Journal Entries
               </TabsTrigger>
               <TabsTrigger
                 value="reports"
@@ -174,7 +137,7 @@ export default function Finance() {
                 className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
               >
                 <Server className="h-4 w-4" />
-                System
+                Infrastructure
               </TabsTrigger>
             </TabsList>
           </div>
@@ -290,51 +253,6 @@ export default function Finance() {
               isReadOnly={journalPermission === 'view'}
               onEditorToggle={setIsJournalEditorOpen}
             />
-          </TabsContent>
-
-          <TabsContent value="ar" className="mt-4">
-            <Tabs defaultValue="management">
-              <TabsList className="mb-4">
-                <TabsTrigger value="management">Customer Management</TabsTrigger>
-                <TabsTrigger value="aging">AR Aging Report</TabsTrigger>
-              </TabsList>
-              <TabsContent value="management">
-                <ARManagement />
-              </TabsContent>
-              <TabsContent value="aging">
-                <ARAgingReport />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="ap" className="mt-4">
-            <APManagement />
-          </TabsContent>
-
-          <TabsContent value="fixed-assets" className="mt-4">
-            <FixedAssetsManagement />
-          </TabsContent>
-
-          <TabsContent value="night-audit" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Execute Night Audit</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  Running the night audit will post all room charges, taxes, and close the business day.
-                </p>
-                <div className="flex gap-4">
-                  <Button
-                    onClick={() => NightAuditService.runNightAudit(businessDate || "")}
-                    className="gap-2"
-                  >
-                    <Moon className="h-4 w-4" />
-                    Start Night Audit
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="reports" className="mt-4">
