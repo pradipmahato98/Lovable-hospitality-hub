@@ -261,15 +261,6 @@ const adminNavItems: NavItem[] = [
     ]
   },
   {
-    icon: Database,
-    label: "Database",
-    path: "/database",
-    permission: "all",
-    subItems: [
-      { label: "Schema Explorer", path: "/database" },
-    ]
-  },
-  {
     icon: Settings,
     label: "Settings",
     path: "/settings",
@@ -308,15 +299,14 @@ const adminNavItems: NavItem[] = [
 ];
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
-  const { collapsed, toggleCollapsed, isMobile } = useSidebar();
+  const { collapsed, toggleCollapsed, isMobile, openGroups, setOpenGroups, toggleGroup } = useSidebar();
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { data: permissions } = usePermissions();
   const { data: uiPrefs } = useUIPreferences();
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
 
-  // Auto-open the active group only on initial load
+  // Auto-open the active group when navigation changes
   useEffect(() => {
     const allGroups = [...navItems, ...operationsNavItems, ...adminNavItems];
     const currentPath = location.pathname;
@@ -344,15 +334,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         setOpenGroups(prev => prev.includes(group.label) ? prev : [...prev, group.label]);
       }
     });
-  }, []); // Only run once on mount
-
-  const toggleGroup = (label: string) => {
-    setOpenGroups(prev =>
-      prev.includes(label)
-        ? prev.filter(l => l !== label)
-        : [...prev, label]
-    );
-  };
+  }, [location.pathname, location.search]);
 
   const hasPermission = (permission?: string) => {
     if (import.meta.env.DEV) return true;

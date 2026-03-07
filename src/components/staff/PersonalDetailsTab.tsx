@@ -27,7 +27,7 @@ import {
 import { format } from "date-fns";
 
 export const PersonalDetailsTab = () => {
-  const { profile, updateProfile } = useAuth();
+  const { profile, user, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -167,6 +167,31 @@ export const PersonalDetailsTab = () => {
 
       <Card className="md:col-span-2">
         <CardHeader>
+          <CardTitle>Account Information</CardTitle>
+          <CardDescription>Your account details and security settings</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-6">
+          <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">User ID</Label>
+            <p className="text-xs font-mono truncate" title={user?.id || profile?.user_id || ""}>
+              {user?.id || profile?.user_id || "N/A"}
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Account Created</Label>
+            <p className="text-xs font-bold">
+              {user?.created_at ? format(new Date(user.created_at), "MM/dd/yyyy") : "N/A"}
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Last Sign In</Label>
+            <p className="text-xs font-bold">
+              {user?.last_sign_in_at ? format(new Date(user.last_sign_in_at), "M/d/yyyy, h:mm:ss a") : "N/A"}
+            </p>
+          </div>
+        </CardContent>
+
+        <CardHeader className="border-t pt-6">
           <CardTitle>Personal Information</CardTitle>
           <CardDescription>Update your personal details and contact information.</CardDescription>
         </CardHeader>
