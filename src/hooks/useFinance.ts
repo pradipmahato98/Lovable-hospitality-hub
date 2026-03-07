@@ -189,10 +189,6 @@ export function useJournalEntries(filters?: {
         .from("journal_entries")
         .select(`
           *,
-          created_by_profile:profiles!journal_entries_created_by_fkey (
-            first_name,
-            last_name
-          ),
           journal_lines (
             *,
             account:accounts (*)
