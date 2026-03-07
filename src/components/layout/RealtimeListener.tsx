@@ -2,9 +2,13 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCOGSEngine } from "@/hooks/useCOGSEngine";
 
 export const RealtimeListener = () => {
   const queryClient = useQueryClient();
+
+  // Initialize Automated Accounting Engines
+  useCOGSEngine();
 
   useEffect(() => {
     // Global channel for system settings
