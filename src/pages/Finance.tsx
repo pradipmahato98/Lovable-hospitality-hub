@@ -98,6 +98,10 @@ export default function Finance() {
   const infrastructurePermission = checkPermission("4.1 Event Bus");
 
   const { totalDebits, totalCredits, isBalanced, totalAssets, totalLiabilities, netIncome } = useMemo(() => {
+    if (!trialBalance || trialBalance.length === 0) {
+      return { totalDebits: 0, totalCredits: 0, isBalanced: true, totalAssets: 0, totalLiabilities: 0, netIncome: 0 };
+    }
+
     const debits = trialBalance.reduce((sum, t) => sum + (t.totalDebit || 0), 0);
     const credits = trialBalance.reduce((sum, t) => sum + (t.totalCredit || 0), 0);
 
@@ -352,9 +356,8 @@ export default function Finance() {
         )}
 
         {isJournalEditorOpen && (
-          <JournalManagementService
-            isReadOnly={journalPermission === 'view'}
-            onEditorToggle={setIsJournalEditorOpen}
+          <JournalEntryEditor
+            onClose={() => setIsJournalEditorOpen(false)}
           />
         )}
       </div>

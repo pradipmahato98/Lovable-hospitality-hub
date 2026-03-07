@@ -267,8 +267,9 @@ export function JournalEntryEditor({ onClose }: JournalEntryEditorProps) {
           if (field === "currency") {
               newLine.exchange_rate = CURRENCIES.find(c => c.code === value)?.rate || 1;
           }
-          newLine.base_debit = (newLine.debit || 0) * newLine.exchange_rate;
-          newLine.base_credit = (newLine.credit || 0) * newLine.exchange_rate;
+          // Convert from local currency to USD (base) by dividing by the rate
+          newLine.base_debit = (newLine.debit || 0) / newLine.exchange_rate;
+          newLine.base_credit = (newLine.credit || 0) / newLine.exchange_rate;
       }
       return newLine;
     }));
