@@ -88,7 +88,10 @@ const AdminConsole = () => {
   const activeTab = searchParams.get("tab") || "overview";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const navigate = useNavigate();

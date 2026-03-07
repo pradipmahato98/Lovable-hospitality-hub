@@ -35,7 +35,10 @@ const Reservations = () => {
   const activeTab = searchParams.get("tab") || "list";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const [searchQuery, setSearchQuery] = useState("");

@@ -73,7 +73,10 @@ export default function Finance() {
   const [activeService, setActiveService] = useState<string | null>(null);
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
   const [isJournalEditorOpen, setIsJournalEditorOpen] = useState(false);
 

@@ -16,7 +16,10 @@ const UserManagement = () => {
   const activeTab = searchParams.get("tab") || "users";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const [searchQuery, setSearchQuery] = useState("");

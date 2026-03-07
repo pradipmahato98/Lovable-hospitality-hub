@@ -316,19 +316,17 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { data: uiPrefs } = useUIPreferences();
   const [openGroups, setOpenGroups] = useState<string[]>([]);
 
-  // Auto-open the active group on load and navigation
+  // Auto-open the active group only on initial load
   useEffect(() => {
     const allGroups = [...navItems, ...operationsNavItems, ...adminNavItems];
     const currentPath = location.pathname;
     const currentSearch = location.search;
 
     allGroups.forEach(group => {
-      const isMainMatch = group.path === currentPath;
       const isSubMatch = group.subItems?.some(sub => {
-        const subUrl = new URL(sub.path, "http://localhost"); // Dummy base for URL parsing
+        const subUrl = new URL(sub.path, "http://localhost");
         if (subUrl.pathname !== currentPath) return false;
 
-        // If subItem has search params, they must match
         if (subUrl.search) {
           const subParams = new URLSearchParams(subUrl.search);
           const currentParams = new URLSearchParams(currentSearch);
@@ -342,11 +340,11 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         return true;
       });
 
-      if (isMainMatch || isSubMatch) {
+      if (isSubMatch) {
         setOpenGroups(prev => prev.includes(group.label) ? prev : [...prev, group.label]);
       }
     });
-  }, [location.pathname, location.search]);
+  }, []); // Only run once on mount
 
   const toggleGroup = (label: string) => {
     setOpenGroups(prev =>
@@ -382,15 +380,16 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           onOpenChange={() => toggleGroup(item.label)}
           className="w-full"
         >
-          <div className="flex items-center w-full gap-0.5">
+          <div className={cn(
+            "flex items-center w-full gap-0.5 rounded-lg transition-all duration-200",
+            isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent"
+          )}>
             <Link
               to={item.path}
               onClick={onNavClick}
               className={cn(
-                "flex-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-accent text-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+                "flex-1 flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive ? "text-primary" : "text-sidebar-foreground hover:text-foreground",
               )}
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
@@ -401,8 +400,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-10 w-8 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground shrink-0",
-                  isActive && "text-primary"
+                  "h-10 w-8 rounded-lg shrink-0",
+                  isActive ? "text-primary" : "text-sidebar-foreground hover:text-foreground"
                 )}
               >
                 <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
@@ -420,8 +419,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                   className={cn(
                     "block px-3 py-1.5 text-xs rounded-md transition-colors",
                     isSubActive
-                      ? "text-primary font-bold bg-primary/5"
-                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                      ? "text-primary font-medium bg-primary/5 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
                   )}
                 >
                   {sub.label}
