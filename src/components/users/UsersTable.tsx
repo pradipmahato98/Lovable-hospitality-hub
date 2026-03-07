@@ -16,13 +16,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users, Eye, ShieldAlert } from "lucide-react";
-import { UserWithRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
+import { Search, Users, Eye, ShieldAlert, CheckSquare, Square, MoreHorizontal, UserCheck, UserX, Trash2 } from "lucide-react";
+import { UserWithRole, AppRole, roleConfig, useUpdateUserStatus } from "@/hooks/useUsersWithRoles";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { UserProfileModal } from "./UserProfileModal";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UsersTableProps {
   users: UserWithRole[] | undefined;
@@ -43,20 +52,57 @@ export const UsersTable = ({
 }: UsersTableProps) => {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const updateUserStatus = useUpdateUserStatus();
 
   const handleViewUser = (user: UserWithRole) => {
     setSelectedUser(user);
     setModalOpen(true);
   };
 
-  const filteredUsers = users?.filter((user) => {
+  const filteredUsers = useMemo(() => users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
       user.email?.toLowerCase().includes(searchLower) ||
       user.first_name?.toLowerCase().includes(searchLower) ||
       user.last_name?.toLowerCase().includes(searchLower)
     );
-  });
+  }), [users, searchQuery]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredUsers?.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredUsers?.map(u => u.user_id) || []);
+    }
+  };
+
+  const toggleSelectUser = (userId: string) => {
+    setSelectedIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleBulkRoleChange = (role: AppRole) => {
+    selectedIds.forEach(userId => {
+      const user = users?.find(u => u.user_id === userId);
+      if (user) onRoleChange(userId, user.role, role);
+    });
+    setSelectedIds([]);
+  };
+
+  const handleBulkStatusChange = (is_blocked: boolean) => {
+    selectedIds.forEach(userId => {
+      updateUserStatus.mutate({
+        userId,
+        is_blocked,
+        blocked_reason: is_blocked ? "Bulk status update" : null
+      });
+    });
+    setSelectedIds([]);
+  };
 
   return (
     <Card variant="elevated">
@@ -77,14 +123,45 @@ export const UsersTable = ({
               Live
             </div>
           </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9"
-            />
+
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            {selectedIds.length > 0 && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      Bulk Actions ({selectedIds.length})
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleBulkRoleChange("user")}>Set to User</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkRoleChange("staff")}>Set to Staff</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkRoleChange("manager")}>Set to Manager</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkRoleChange("admin")}>Set to Admin</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Status</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleBulkStatusChange(true)} className="text-destructive">
+                      <UserX className="h-4 w-4 mr-2" /> Block Selected
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkStatusChange(false)} className="text-success">
+                      <UserCheck className="h-4 w-4 mr-2" /> Unblock Selected
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>Clear</Button>
+              </div>
+            )}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -96,6 +173,12 @@ export const UsersTable = ({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.length === filteredUsers?.length && filteredUsers?.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Current Role</TableHead>
@@ -113,7 +196,13 @@ export const UsersTable = ({
                   </TableRow>
                 ) : (
                   filteredUsers?.map((userItem) => (
-                    <TableRow key={userItem.id}>
+                    <TableRow key={userItem.id} className={selectedIds.includes(userItem.user_id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.includes(userItem.user_id)}
+                          onCheckedChange={() => toggleSelectUser(userItem.user_id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">

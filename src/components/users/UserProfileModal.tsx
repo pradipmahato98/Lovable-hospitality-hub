@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserWithRole, useUpdateUserStatus } from "@/hooks/useUsersWithRoles";
-import { ShieldAlert, Mail, Calendar, User, UserX, UserCheck } from "lucide-react";
+import { ShieldAlert, Mail, Calendar, User, UserX, UserCheck, Phone, Save, Edit2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -27,9 +27,37 @@ interface UserProfileModalProps {
 export function UserProfileModal({ user, open, onOpenChange }: UserProfileModalProps) {
   const [blockingReason, setBlockingReason] = useState("");
   const [isBlocking, setIsBlocking] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+  });
+
   const updateUserStatus = useUpdateUserStatus();
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        phone: (user as any).phone || "",
+      });
+    }
+  }, [user]);
+
   if (!user) return null;
+
+  const handleUpdateProfile = () => {
+    updateUserStatus.mutate({
+      userId: user.user_id,
+      ...formData
+    }, {
+      onSuccess: () => {
+        setIsEditing(false);
+      }
+    });
+  };
 
   const handleToggleBlock = () => {
     if (!user.is_blocked && !blockingReason) {
@@ -63,29 +91,80 @@ export function UserProfileModal({ user, open, onOpenChange }: UserProfileModalP
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          <div className="flex items-center gap-4 p-4 rounded-lg bg-secondary/20">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="text-xl bg-primary/20 text-primary">
-                {(user.first_name?.[0] || "") + (user.last_name?.[0] || "") || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-1">
-              <h3 className="font-bold text-lg">
-                {user.first_name} {user.last_name}
-              </h3>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Mail className="h-3 w-3" /> {user.email}
-              </p>
-              <div className="flex gap-2 mt-2">
-                <Badge variant="outline" className="capitalize">{user.role}</Badge>
-                {user.is_blocked && (
-                  <Badge variant="destructive" className="gap-1">
-                    <ShieldAlert className="h-3 w-3" /> Blocked
-                  </Badge>
-                )}
+          <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/20">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarFallback className="text-xl bg-primary/20 text-primary">
+                  {(user.first_name?.[0] || "") + (user.last_name?.[0] || "") || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <h3 className="font-bold text-lg">
+                  {user.first_name} {user.last_name}
+                </h3>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Mail className="h-3 w-3" /> {user.email}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <Badge variant="outline" className="capitalize">{user.role}</Badge>
+                  {user.is_blocked && (
+                    <Badge variant="destructive" className="gap-1">
+                      <ShieldAlert className="h-3 w-3" /> Blocked
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsEditing(!isEditing)}
+              className={isEditing ? "text-primary" : ""}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
           </div>
+
+          {isEditing && (
+            <div className="grid gap-4 p-4 border rounded-lg animate-in fade-in slide-in-from-top-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    className="pl-9"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button size="sm" className="gap-2" onClick={handleUpdateProfile} disabled={updateUserStatus.isPending}>
+                  <Save className="h-4 w-4" /> Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="space-y-1">
