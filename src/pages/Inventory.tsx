@@ -40,7 +40,9 @@ import { toast } from "sonner";
 import { 
   useInventoryItems, useInventoryCategories, useSuppliers, 
   usePurchaseOrders, useStockMovements, useInventoryStats,
-  useInventoryReportData, useInventoryLocations, useInventoryRequisitions
+  useInventoryReportData, useInventoryLocations, useInventoryRequisitions,
+  useInventoryTransfers, useInventoryAudits, useInventoryRecipes,
+  useInventoryWastage
 } from "@/hooks/useInventory";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
@@ -74,6 +76,21 @@ const Inventory = () => {
   const [viewPOOpen, setViewPOOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<any>(null);
 
+  const [addTransferOpen, setAddTransferOpen] = useState(false);
+  const [viewTransferOpen, setViewTransferOpen] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<any>(null);
+
+  const [addAuditOpen, setAddAuditOpen] = useState(false);
+  const [viewAuditOpen, setViewAuditOpen] = useState(false);
+  const [selectedAudit, setSelectedAudit] = useState<any>(null);
+
+  const [addRecipeOpen, setAddRecipeOpen] = useState(false);
+  const [produceRecipeOpen, setProduceRecipeOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+
+  const [addWastageOpen, setAddWastageOpen] = useState(false);
+  const [selectedWastage, setSelectedWastage] = useState<any>(null);
+
   const [addLocationOpen, setAddLocationOpen] = useState(false);
   const [editLocationOpen, setEditLocationOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
@@ -101,6 +118,10 @@ const Inventory = () => {
   const { data: suppliers = [], createSupplier, updateSupplier, deleteSupplier } = useSuppliers({ showInactive: true });
   const { data: purchaseOrders = [], createPurchaseOrder, updatePurchaseOrderStatus } = usePurchaseOrders();
   const { data: requisitions = [], createRequisition, updateRequisitionStatus, deleteRequisition, convertToPO } = useInventoryRequisitions();
+  const { data: transfers = [], createTransfer, updateTransferStatus } = useInventoryTransfers();
+  const { data: audits = [], createAudit, reconcileAudit } = useInventoryAudits();
+  const { data: recipes = [], createRecipe, produceRecipe } = useInventoryRecipes();
+  const { data: wastage = [], recordWastage } = useInventoryWastage();
   const { data: movements = [] } = useStockMovements();
   const stats = useInventoryStats();
   const { data: reportData = [] } = useInventoryReportData();
@@ -149,6 +170,22 @@ const Inventory = () => {
     supplier_id: "", order_date: format(new Date(), "yyyy-MM-dd"), expected_delivery: "", notes: "",
     items: [] as { item_id: string; quantity: number; unit_price: number }[],
   });
+
+  const [newTransfer, setNewTransfer] = useState({
+    from_location_id: "", to_location_id: "", notes: "",
+    items: [] as { item_id: string; requested_quantity: number }[],
+  });
+
+  const [newAudit, setNewAudit] = useState({ location_id: "", item_ids: [] as string[] });
+  const [reconcileData, setReconcileData] = useState<any[]>([]);
+
+  const [newRecipe, setNewRecipe] = useState({
+    name: "", description: "", category: "F&B", yield_quantity: 1, yield_unit: "portion",
+    ingredients: [] as { item_id: string; quantity: number; unit: string }[]
+  });
+
+  const [productionQty, setProductionQty] = useState(1);
+  const [wastageForm, setWastageForm] = useState({ item_id: "", quantity: 0, reason: "Expired", notes: "" });
 
   // Handlers
   const handleCreateItem = async () => {
@@ -238,7 +275,11 @@ const Inventory = () => {
           <TabsTrigger value="orders" className="gap-2"><ShoppingCart className="h-4 w-4" />Orders</TabsTrigger>
           <TabsTrigger value="suppliers" className="gap-2"><Truck className="h-4 w-4" />Suppliers</TabsTrigger>
           <TabsTrigger value="locations" className="gap-2"><Warehouse className="h-4 w-4" />Locations</TabsTrigger>
+          <TabsTrigger value="transfers" className="gap-2"><RefreshCw className="h-4 w-4" />Transfers</TabsTrigger>
+          <TabsTrigger value="audits" className="gap-2"><CheckCircle2 className="h-4 w-4" />Audits</TabsTrigger>
+          <TabsTrigger value="recipes" className="gap-2"><Layers className="h-4 w-4" />Recipes</TabsTrigger>
           <TabsTrigger value="movements" className="gap-2"><ArrowUpDown className="h-4 w-4" />Movements</TabsTrigger>
+          <TabsTrigger value="wastage" className="gap-2"><Trash2 className="h-4 w-4" />Wastage</TabsTrigger>
           <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" />Reports</TabsTrigger>
         </TabsList>
 
@@ -291,6 +332,17 @@ const Inventory = () => {
                 </div>
               </CardContent>
             </Card>
+            <Card className="shadow-sm transition-all hover:shadow-md cursor-pointer border-l-4 border-l-destructive" onClick={() => setActiveTab("wastage")}>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Monthly Wastage</p>
+                    <p className="text-2xl font-bold text-destructive">${wastage.reduce((sum, w) => sum + (w.quantity * (w.item?.cost_price || 0)), 0).toLocaleString()}</p>
+                  </div>
+                  <Trash2 className="h-8 w-8 text-destructive/20" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -328,6 +380,29 @@ const Inventory = () => {
                     )}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Expiry Watchlist</CardTitle>
+                <CardDescription>Perishables expiring within 7 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {items.filter(i => i.expiry_date && new Date(i.expiry_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).slice(0, 5).map(item => (
+                    <div key={item.id} className="flex justify-between items-center text-xs p-2 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-bold">{item.name}</p>
+                        <p className="text-[10px] text-muted-foreground">Expires: {item.expiry_date}</p>
+                      </div>
+                      <Badge variant="destructive">{item.current_stock} {item.unit} left</Badge>
+                    </div>
+                  ))}
+                  {items.filter(i => i.expiry_date && new Date(i.expiry_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).length === 0 && (
+                    <p className="text-center py-4 text-muted-foreground italic text-xs">No imminent expirations</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -654,6 +729,134 @@ const Inventory = () => {
            </div>
         </TabsContent>
 
+        <TabsContent value="transfers" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Internal Stock Transfers</h2>
+            <Button variant="gold" className="gap-2" onClick={() => setAddTransferOpen(true)}><RefreshCw className="h-4 w-4" />New Transfer</Button>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {transfers.length === 0 ? (
+              <Card className="p-10 text-center text-muted-foreground">No active transfers</Card>
+            ) : transfers.map(trf => (
+              <Card key={trf.id} className="p-4 shadow-sm border-l-4 border-l-blue-500">
+                <div className="flex justify-between items-center">
+                   <div>
+                     <div className="flex items-center gap-2">
+                       <span className="font-bold">{trf.transfer_number}</span>
+                       <Badge>{trf.status}</Badge>
+                     </div>
+                     <p className="text-xs text-muted-foreground">{trf.from_location?.name} → {trf.to_location?.name}</p>
+                   </div>
+                   <div className="flex gap-2">
+                     {trf.status === "pending" && (
+                       <Button variant="outline" size="sm" onClick={() => updateTransferStatus.mutate({ id: trf.id, status: "sent" })}>Ship Items</Button>
+                     )}
+                     {trf.status === "sent" && (
+                       <Button variant="gold" size="sm" onClick={() => updateTransferStatus.mutate({ id: trf.id, status: "completed" })}>Confirm Receipt</Button>
+                     )}
+                     <Button variant="ghost" size="sm" onClick={() => { setSelectedTransfer(trf); setViewTransferOpen(true); }}><Eye className="h-4 w-4" /></Button>
+                   </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="audits" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Physical Inventory Audits</h2>
+            <Button variant="gold" className="gap-2" onClick={() => setAddAuditOpen(true)}><CheckCircle2 className="h-4 w-4" />Start New Audit</Button>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {audits.length === 0 ? (
+              <Card className="p-10 text-center text-muted-foreground">No audits recorded</Card>
+            ) : audits.map(audit => (
+              <Card key={audit.id} className="p-4 shadow-sm">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">{audit.audit_number}</span>
+                      <Badge variant={audit.status === "completed" ? "success" : "secondary" as any}>{audit.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Location: {audit.location?.name} • {format(new Date(audit.created_at), "MMM d, yyyy")}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {audit.status === "in_progress" ? (
+                      <Button variant="gold" size="sm" onClick={() => {
+                        setSelectedAudit(audit);
+                        setReconcileData(audit.items.map((i: any) => ({ id: i.id, item_id: i.item_id, physical_stock: i.theoretical_stock, reason: "" })));
+                        setViewAuditOpen(true);
+                      }}>Reconcile</Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedAudit(audit); setViewAuditOpen(true); }}><Eye className="h-4 w-4" /></Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="recipes" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Recipe Management & BOM</h2>
+            <Button variant="gold" className="gap-2" onClick={() => setAddRecipeOpen(true)}><Plus className="h-4 w-4" />Define Recipe</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recipes.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-muted-foreground">No recipes defined</div>
+            ) : recipes.map(recipe => (
+              <Card key={recipe.id} className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg">{recipe.name}</CardTitle>
+                  <CardDescription>{recipe.category} • Yield: {recipe.yield_quantity} {recipe.yield_unit}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <div className="text-xs space-y-1 mb-4">
+                      {recipe.ingredients?.slice(0, 3).map((ing: any) => (
+                        <div key={ing.id} className="flex justify-between">
+                          <span className="text-muted-foreground">{ing.item?.name}</span>
+                          <span className="font-medium">{ing.quantity} {ing.unit || ing.item?.unit}</span>
+                        </div>
+                      ))}
+                      {recipe.ingredients && recipe.ingredients.length > 3 && (
+                        <p className="text-[10px] text-primary">+{recipe.ingredients.length - 3} more ingredients</p>
+                      )}
+                   </div>
+                   <Button variant="outline" className="w-full h-8 text-xs" onClick={() => { setSelectedRecipe(recipe); setProductionQty(recipe.yield_quantity); setProduceRecipeOpen(true); }}>Record Production</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="wastage" className="space-y-4">
+           <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Wastage & Loss Tracking</h2>
+              <Button variant="gold" className="gap-2" onClick={() => setAddWastageOpen(true)}><Trash2 className="h-4 w-4" />Record Loss</Button>
+           </div>
+           <Card className="shadow-sm">
+             <Table>
+                <TableHeader>
+                  <TableRow><TableHead>Date</TableHead><TableHead>Item</TableHead><TableHead>Reason</TableHead><TableHead>Qty</TableHead><TableHead>Value Lost</TableHead></TableRow>
+                </TableHeader>
+                <TableBody>
+                  {wastage.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No wastage records found</TableCell></TableRow>
+                  ) : wastage.map(w => (
+                    <TableRow key={w.id}>
+                      <TableCell className="text-xs text-muted-foreground">{format(new Date(w.created_at), "MMM d, HH:mm")}</TableCell>
+                      <TableCell className="font-medium">{w.item?.name}</TableCell>
+                      <TableCell><Badge variant="outline">{w.reason}</Badge></TableCell>
+                      <TableCell className="font-bold text-destructive">-{w.quantity} {w.item?.unit}</TableCell>
+                      <TableCell className="font-mono text-sm">${(w.quantity * (w.item?.cost_price || 0)).toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+             </Table>
+           </Card>
+        </TabsContent>
+
         <TabsContent value="movements" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Stock Movements</h2>
@@ -766,6 +969,8 @@ const Inventory = () => {
             <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Cost Price ($)</Label><Input type="number" value={itemForm.cost_price} onChange={e => setItemForm({...itemForm, cost_price: Number(e.target.value)})} /></div>
             <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Reorder Point</Label><Input type="number" value={itemForm.reorder_point} onChange={e => setItemForm({...itemForm, reorder_point: Number(e.target.value)})} /></div>
             {addItemOpen && <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Initial Stock</Label><Input type="number" value={itemForm.current_stock} onChange={e => setItemForm({...itemForm, current_stock: Number(e.target.value)})} /></div>}
+            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Batch Number</Label><Input value={(itemForm as any).batch_number} onChange={e => setItemForm({...itemForm, batch_number: e.target.value} as any)} /></div>
+            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Expiry Date</Label><Input type="date" value={(itemForm as any).expiry_date} onChange={e => setItemForm({...itemForm, expiry_date: e.target.value} as any)} /></div>
             <div className="flex items-center gap-3 pt-6">
               <input type="checkbox" id="active-item" className="h-5 w-5 rounded-md border-primary text-primary focus:ring-primary" checked={itemForm.is_active} onChange={e => setItemForm({...itemForm, is_active: e.target.checked})} />
               <Label htmlFor="active-item" className="text-sm font-medium">Item is currently active</Label>
@@ -1016,6 +1221,209 @@ const Inventory = () => {
             </div>
           </div>
           <DialogFooter className="border-t pt-4"><Button onClick={handleCreatePO} disabled={!newPO.supplier_id || newPO.items.length === 0} className="w-full h-11">Issue Purchase Order</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Transfer Dialog */}
+      <Dialog open={addTransferOpen} onOpenChange={setAddTransferOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Stock Transfer Request</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">From Location</Label>
+              <Select value={newTransfer.from_location_id} onValueChange={v => setNewTransfer({...newTransfer, from_location_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
+                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">To Location</Label>
+              <Select value={newTransfer.to_location_id} onValueChange={v => setNewTransfer({...newTransfer, to_location_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Destination" /></SelectTrigger>
+                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 space-y-3">
+               <div className="flex justify-between items-center"><Label className="text-xs uppercase font-bold text-muted-foreground">Items</Label><Button variant="outline" size="sm" onClick={() => setNewTransfer({...newTransfer, items: [...newTransfer.items, {item_id: "", requested_quantity: 1}]})}>Add Item</Button></div>
+               <Table>
+                 <TableBody>
+                   {newTransfer.items.map((item, idx) => (
+                     <TableRow key={idx}>
+                       <TableCell>
+                         <Select value={item.item_id} onValueChange={v => { const a = [...newTransfer.items]; a[idx].item_id = v; setNewTransfer({...newTransfer, items: a}); }}>
+                           <SelectTrigger className="h-9"><SelectValue placeholder="Product" /></SelectTrigger>
+                           <SelectContent>{items.filter(i => i.location_id === newTransfer.from_location_id).map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+                         </Select>
+                       </TableCell>
+                       <TableCell><Input type="number" className="h-9" value={item.requested_quantity} onChange={e => { const a = [...newTransfer.items]; a[idx].requested_quantity = Number(e.target.value); setNewTransfer({...newTransfer, items: a}); }} /></TableCell>
+                       <TableCell><Button variant="ghost" size="icon" onClick={() => setNewTransfer({...newTransfer, items: newTransfer.items.filter((_, i) => i !== idx)})}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+            </div>
+          </div>
+          <DialogFooter><Button onClick={async () => { await createTransfer.mutateAsync(newTransfer as any); toast.success("Transfer created"); setAddTransferOpen(false); }} className="w-full">Create Transfer Request</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Audit Reconcile Dialog */}
+      <Dialog open={viewAuditOpen} onOpenChange={setViewAuditOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Audit Reconciliation: {selectedAudit?.audit_number}</DialogTitle></DialogHeader>
+          <Table>
+            <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>System</TableHead><TableHead className="w-24">Physical</TableHead><TableHead>Variance</TableHead><TableHead>Reason</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {selectedAudit?.items?.map((item: any, idx: number) => {
+                const reconcileItem = reconcileData.find(rd => rd.id === item.id) || { physical_stock: item.theoretical_stock, reason: "" };
+                const variance = reconcileItem.physical_stock - item.theoretical_stock;
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-xs">{item.item?.name}</TableCell>
+                    <TableCell className="text-xs font-mono">{item.theoretical_stock}</TableCell>
+                    <TableCell><Input type="number" className="h-8 text-xs" value={reconcileItem.physical_stock} onChange={e => {
+                      const newData = [...reconcileData];
+                      const idxInReconcile = newData.findIndex(rd => rd.id === item.id);
+                      if (idxInReconcile !== -1) {
+                        newData[idxInReconcile].physical_stock = Number(e.target.value);
+                        setReconcileData(newData);
+                      }
+                    }} disabled={selectedAudit.status === "completed"} /></TableCell>
+                    <TableCell className={`text-xs font-bold ${variance < 0 ? "text-destructive" : variance > 0 ? "text-success" : ""}`}>{variance > 0 ? "+" : ""}{variance}</TableCell>
+                    <TableCell><Input className="h-8 text-xs" value={reconcileItem.reason} onChange={e => {
+                      const newData = [...reconcileData];
+                      const idxInReconcile = newData.findIndex(rd => rd.id === item.id);
+                      if (idxInReconcile !== -1) {
+                        newData[idxInReconcile].reason = e.target.value;
+                        setReconcileData(newData);
+                      }
+                    }} disabled={selectedAudit.status === "completed"} /></TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewAuditOpen(false)}>Close</Button>
+            {selectedAudit?.status === "in_progress" && (
+              <Button onClick={async () => {
+                await reconcileAudit.mutateAsync({ audit_id: selectedAudit.id, items: reconcileData });
+                toast.success("Audit completed and stock reconciled");
+                setViewAuditOpen(false);
+              }}>Submit Final Reconcile</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Production Dialog */}
+      <Dialog open={produceRecipeOpen} onOpenChange={setProduceRecipeOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Recipe Production: {selectedRecipe?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5"><Label>Quantity to Produce ({selectedRecipe?.yield_unit})</Label><Input type="number" value={productionQty} onChange={e => setProductionQty(Number(e.target.value))} /></div>
+            <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+              <Label className="text-[10px] uppercase font-bold">Estimated Ingredient Usage</Label>
+              {selectedRecipe?.ingredients?.map((ing: any) => (
+                <div key={ing.id} className="flex justify-between text-xs">
+                  <span>{ing.item?.name}</span>
+                  <span className="font-mono">{ing.quantity * (productionQty / selectedRecipe.yield_quantity)} {ing.unit || ing.item?.unit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter><Button onClick={async () => { await produceRecipe.mutateAsync({ recipe_id: selectedRecipe.id, quantity: productionQty }); toast.success("Production recorded, ingredients deducted"); setProduceRecipeOpen(false); }} className="w-full">Confirm Production</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Audit Dialog */}
+      <Dialog open={addAuditOpen} onOpenChange={setAddAuditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Initiate Stock Audit</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5"><Label>Audit Location</Label>
+              <Select value={newAudit.location_id} onValueChange={v => setNewAudit({...newAudit, location_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
+                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground italic">Note: All items in this location will be included in the audit sheet for verification.</p>
+          </div>
+          <DialogFooter><Button onClick={async () => {
+            const itemIds = items.filter(i => i.location_id === newAudit.location_id).map(i => i.id);
+            if(itemIds.length === 0) return toast.error("No items in this location");
+            await createAudit.mutateAsync({ location_id: newAudit.location_id, item_ids: itemIds });
+            toast.success("Audit initiated");
+            setAddAuditOpen(false);
+          }} className="w-full">Start Audit Session</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Recipe Dialog */}
+      <Dialog open={addRecipeOpen} onOpenChange={setAddRecipeOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Define New Recipe / BOM</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+             <div className="col-span-2 space-y-1.5"><Label>Recipe Name</Label><Input value={newRecipe.name} onChange={e => setNewRecipe({...newRecipe, name: e.target.value})} /></div>
+             <div className="space-y-1.5"><Label>Yield Quantity</Label><Input type="number" value={newRecipe.yield_quantity} onChange={e => setNewRecipe({...newRecipe, yield_quantity: Number(e.target.value)})} /></div>
+             <div className="space-y-1.5"><Label>Yield Unit</Label><Input value={newRecipe.yield_unit} onChange={e => setNewRecipe({...newRecipe, yield_unit: e.target.value})} /></div>
+             <div className="col-span-2 space-y-3">
+               <div className="flex justify-between items-center"><Label>Ingredients</Label><Button variant="outline" size="sm" onClick={() => setNewRecipe({...newRecipe, ingredients: [...newRecipe.ingredients, {item_id: "", quantity: 1, unit: ""}]})}>Add Ingredient</Button></div>
+               <Table>
+                 <TableBody>
+                   {newRecipe.ingredients.map((ing, idx) => (
+                     <TableRow key={idx}>
+                       <TableCell>
+                         <Select value={ing.item_id} onValueChange={v => { const a = [...newRecipe.ingredients]; a[idx].item_id = v; setNewRecipe({...newRecipe, ingredients: a}); }}>
+                           <SelectTrigger className="h-9"><SelectValue placeholder="Ingredient" /></SelectTrigger>
+                           <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+                         </Select>
+                       </TableCell>
+                       <TableCell><Input type="number" className="h-9" value={ing.quantity} onChange={e => { const a = [...newRecipe.ingredients]; a[idx].quantity = Number(e.target.value); setNewRecipe({...newRecipe, ingredients: a}); }} /></TableCell>
+                       <TableCell><Input className="h-9" placeholder="Unit" value={ing.unit} onChange={e => { const a = [...newRecipe.ingredients]; a[idx].unit = e.target.value; setNewRecipe({...newRecipe, ingredients: a}); }} /></TableCell>
+                       <TableCell><Button variant="ghost" size="icon" onClick={() => setNewRecipe({...newRecipe, ingredients: newRecipe.ingredients.filter((_, i) => i !== idx)})}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+             </div>
+          </div>
+          <DialogFooter><Button onClick={async () => { await createRecipe.mutateAsync(newRecipe as any); toast.success("Recipe defined"); setAddRecipeOpen(false); }} className="w-full">Save Recipe</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Wastage Dialog */}
+      <Dialog open={addWastageOpen} onOpenChange={setAddWastageOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Record Inventory Loss / Wastage</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5"><Label>Product</Label>
+              <Select value={wastageForm.item_id} onValueChange={v => setWastageForm({...wastageForm, item_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5"><Label>Quantity Lost</Label><Input type="number" value={wastageForm.quantity} onChange={e => setWastageForm({...wastageForm, quantity: Number(e.target.value)})} /></div>
+              <div className="space-y-1.5"><Label>Reason</Label>
+                <Select value={wastageForm.reason} onValueChange={v => setWastageForm({...wastageForm, reason: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Expired">Expired</SelectItem>
+                    <SelectItem value="Damaged">Damaged</SelectItem>
+                    <SelectItem value="Spillage">Spillage / Breakage</SelectItem>
+                    <SelectItem value="Theft">Theft / Missing</SelectItem>
+                    <SelectItem value="QC Fail">Quality Control Fail</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5"><Label>Notes</Label><Input value={wastageForm.notes} onChange={e => setWastageForm({...wastageForm, notes: e.target.value})} placeholder="Describe details..." /></div>
+          </div>
+          <DialogFooter><Button variant="destructive" onClick={async () => {
+            if(!wastageForm.item_id || !wastageForm.quantity) return toast.error("Complete all fields");
+            await recordWastage.mutateAsync(wastageForm as any);
+            toast.success("Wastage recorded");
+            setAddWastageOpen(false);
+          }} className="w-full">Confirm Stock Deduction</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
