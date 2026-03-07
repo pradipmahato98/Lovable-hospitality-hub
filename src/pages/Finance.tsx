@@ -82,6 +82,11 @@ export default function Finance() {
   const { data: trialBalance } = useTrialBalance();
   const { data: businessDate } = useBusinessDate();
 
+  const coaPermission = checkPermission("1.1 Chart of Accounts Service");
+  const journalPermission = checkPermission("2.1 Journal Management Service");
+  const reportingPermission = checkPermission("3.1 Financial Reporting Service");
+  const infrastructurePermission = checkPermission("4.1 Event Bus");
+
   const { totalDebits, totalCredits, isBalanced, totalAssets, totalLiabilities, netIncome } = useMemo(() => {
     const debits = trialBalance.reduce((sum, t) => sum + (t.totalDebit || 0), 0);
     const credits = trialBalance.reduce((sum, t) => sum + (t.totalCredit || 0), 0);
