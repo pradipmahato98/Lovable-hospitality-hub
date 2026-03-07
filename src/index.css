@@ -163,6 +163,22 @@
     box-shadow: var(--shadow-elevated);
   }
 
+  .shadow-3d {
+    box-shadow:
+      0 1px 1px hsl(var(--foreground) / 0.1),
+      0 2px 2px hsl(var(--foreground) / 0.1),
+      0 4px 4px hsl(var(--foreground) / 0.1),
+      0 8px 8px hsl(var(--foreground) / 0.1);
+  }
+
+  .shadow-3d-gold {
+    box-shadow:
+      0 1px 1px hsl(38 92% 50% / 0.2),
+      0 2px 2px hsl(38 92% 50% / 0.2),
+      0 4px 4px hsl(38 92% 50% / 0.2),
+      0 8px 8px hsl(38 92% 50% / 0.2);
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
   }

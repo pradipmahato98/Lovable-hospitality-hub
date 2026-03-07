@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, Menu, Moon, Sun, User, X, LogOut, Settings } from "lucide-react";
+import { Bell, Search, Menu, Moon, Sun, User, X, LogOut, Settings, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
@@ -215,10 +215,14 @@ export function Header({ title, subtitle, headerActions }: HeaderProps) {
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <div className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center">
+              <Button variant="ghost" className="gap-2 px-2 hover:bg-secondary/50 rounded-full transition-all">
+                <div className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center shadow-3d-gold transform hover:scale-105 transition-transform">
                   <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
                 </div>
+                <span className="hidden md:inline-block text-sm font-medium text-foreground">
+                  {profile?.first_name || "User"}
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:block" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -238,7 +242,7 @@ export function Header({ title, subtitle, headerActions }: HeaderProps) {
               <DropdownMenuItem asChild>
                 <Link to="/staff?tab=about&sub=preferences" className="flex items-center gap-2 cursor-pointer">
                   <Settings className="h-4 w-4" />
-                  Sidebar Preferences
+                  Preferences
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
