@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -33,13 +32,14 @@ import {
 import { 
   Search, Plus, Package, AlertTriangle, TrendingUp, TrendingDown,
   Warehouse, Truck, ArrowUpDown, RefreshCw, Loader2, DollarSign,
-  PieChart as PieChartIcon, FileDown, Layers, Settings2, BarChart3
+  PieChart as PieChartIcon, FileDown, Layers, Settings2, BarChart3,
+  QrCode, ClipboardList, CheckCircle2, XCircle, Camera, LayoutDashboard, ShoppingCart
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
   useInventoryItems, useInventoryCategories, useSuppliers, 
   usePurchaseOrders, useStockMovements, useInventoryStats,
-  useInventoryReportData
+  useInventoryReportData, useInventoryLocations, useInventoryRequisitions
 } from "@/hooks/useInventory";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
@@ -49,48 +49,48 @@ import {
 } from "recharts";
 
 const Inventory = () => {
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
+
   const [addItemOpen, setAddItemOpen] = useState(false);
-  const [editItemOpen, setEditItemOpen] = useState(false);
   const [adjustStockOpen, setAdjustStockOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [addSupplierOpen, setAddSupplierOpen] = useState(false);
-  const [editSupplierOpen, setEditSupplierOpen] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+
+  const [addReqOpen, setAddReqOpen] = useState(false);
+
   const [addPOOpen, setAddPOOpen] = useState(false);
   const [viewPOOpen, setViewPOOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<any>(null);
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
-  const [movementFilters, setMovementFilters] = useState({ itemId: "all", type: "all" });
-  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
-  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [bulkAdjustOpen, setBulkAdjustOpen] = useState(false);
 
-  const { data: items = [], isLoading, createItem, updateItem, deleteItem, adjustStock, bulkAdjustStock } = useInventoryItems({
+  const [addLocationOpen, setAddLocationOpen] = useState(false);
+  const [stockOutOpen, setStockOutOpen] = useState(false);
+
+  const { data: items = [], isLoading, createItem, adjustStock } = useInventoryItems({
+    search: searchQuery,
     category: categoryFilter !== "all" ? categoryFilter : undefined,
     lowStock: showLowStock,
     showInactive: true
   });
 
-  const departments = Array.from(new Set(items.map(i => i.department).filter(Boolean)));
-  const { data: categories = [], createCategory, updateCategory, deleteCategory } = useInventoryCategories();
-  const { data: suppliers = [], createSupplier, updateSupplier, deleteSupplier } = useSuppliers({ showInactive: true });
-  const { data: purchaseOrders = [], createPurchaseOrder, updatePurchaseOrderStatus, deletePurchaseOrder } = usePurchaseOrders();
-  const { data: movements = [], refetch: refetchMovements } = useStockMovements({
-    itemId: movementFilters.itemId !== "all" ? movementFilters.itemId : undefined,
-    type: movementFilters.type !== "all" ? movementFilters.type : undefined
-  });
+  const { data: categories = [] } = useInventoryCategories();
+  const { data: locations = [], createLocation } = useInventoryLocations();
+  const { data: suppliers = [], createSupplier } = useSuppliers({ showInactive: true });
+  const { data: purchaseOrders = [], createPurchaseOrder, updatePurchaseOrderStatus } = usePurchaseOrders();
+  const { data: requisitions = [], createRequisition, updateRequisitionStatus, convertToPO } = useInventoryRequisitions();
+  const { data: movements = [] } = useStockMovements();
   const stats = useInventoryStats();
   const { data: reportData = [] } = useInventoryReportData();
 
   const [newItem, setNewItem] = useState({
     name: "",
     sku: "",
+    barcode: "",
+    image_url: "",
     category_id: "",
     supplier_id: "",
+    location_id: "",
     unit: "pieces",
     current_stock: 0,
     min_stock: 0,
@@ -100,21 +100,18 @@ const Inventory = () => {
     is_active: true,
   });
 
-  const [newSupplier, setNewSupplier] = useState({
-    name: "",
-    contact_person: "",
-    email: "",
-    phone: "",
-    address: "",
-    payment_terms: "",
-    notes: "",
-    is_active: true,
-  });
-
   const [stockAdjustment, setStockAdjustment] = useState({
     quantity: 0,
     type: "in" as "in" | "out" | "adjustment",
     notes: "",
+    department: "",
+    locationId: "",
+  });
+
+  const [newReq, setNewReq] = useState({
+    department: "",
+    notes: "",
+    items: [] as { item_id: string; quantity: number }[],
   });
 
   const [newPO, setNewPO] = useState({
@@ -125,61 +122,15 @@ const Inventory = () => {
     items: [] as { item_id: string; quantity: number; unit_price: number }[],
   });
 
-  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
-  const [bulkAdjustments, setBulkAdjustments] = useState<any[]>([]);
-
-  const filteredItems = items.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || item.category_id === categoryFilter;
-    const matchesDept = departmentFilter === "all" || item.department === departmentFilter;
-    return matchesSearch && matchesCategory && matchesDept;
-  });
+  const [newLocation, setNewLocation] = useState({ name: "", description: "" });
 
   const handleCreateItem = async () => {
     try {
       await createItem.mutateAsync(newItem as any);
       toast.success("Item created successfully");
       setAddItemOpen(false);
-      setNewItem({ name: "", sku: "", category_id: "", supplier_id: "", unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "", is_active: true });
     } catch (error) {
       toast.error("Failed to create item");
-    }
-  };
-
-  const handleUpdateItem = async () => {
-    if (!selectedItemId) return;
-    try {
-      const { current_stock, ...updates } = newItem;
-      await updateItem.mutateAsync({ id: selectedItemId, ...updates } as any);
-      toast.success("Item updated successfully");
-      setEditItemOpen(false);
-      setSelectedItemId(null);
-    } catch (error) {
-      toast.error("Failed to update item");
-    }
-  };
-
-  const handleCreateSupplier = async () => {
-    try {
-      await createSupplier.mutateAsync(newSupplier as any);
-      toast.success("Supplier added successfully");
-      setAddSupplierOpen(false);
-      setNewSupplier({ name: "", contact_person: "", email: "", phone: "", address: "", payment_terms: "", notes: "", is_active: true });
-    } catch (error) {
-      toast.error("Failed to add supplier");
-    }
-  };
-
-  const handleUpdateSupplier = async () => {
-    if (!selectedSupplierId) return;
-    try {
-      await updateSupplier.mutateAsync({ id: selectedSupplierId, ...newSupplier } as any);
-      toast.success("Supplier updated successfully");
-      setEditSupplierOpen(false);
-      setSelectedSupplierId(null);
-    } catch (error) {
-      toast.error("Failed to update supplier");
     }
   };
 
@@ -189,76 +140,64 @@ const Inventory = () => {
       await adjustStock.mutateAsync({ itemId: selectedItemId, ...stockAdjustment });
       toast.success("Stock adjusted successfully");
       setAdjustStockOpen(false);
-      setSelectedItemId(null);
-      setStockAdjustment({ quantity: 0, type: "in", notes: "" });
     } catch (error) {
       toast.error("Failed to adjust stock");
     }
   };
 
+  const handleCreateRequisition = async () => {
+    try {
+      if (newReq.items.length === 0) return toast.error("Add at least one item");
+      await createRequisition.mutateAsync(newReq as any);
+      toast.success("Requisition submitted for approval");
+      setAddReqOpen(false);
+      setNewReq({ department: "", notes: "", items: [] });
+    } catch (error) {
+      toast.error("Failed to submit requisition");
+    }
+  };
+
+  const handleApproveReq = async (id: string) => {
+    try {
+      await updateRequisitionStatus.mutateAsync({ id, status: "approved" });
+      toast.success("Requisition approved");
+    } catch (error) {
+      toast.error("Failed to approve");
+    }
+  };
+
   const handleCreatePO = async () => {
     try {
-      if (newPO.items.length === 0) {
-        toast.error("Add at least one item to the order");
-        return;
-      }
-      const subtotal = newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+      if (newPO.items.length === 0) return toast.error("Add items to order");
+      const subtotal = newPO.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
       await createPurchaseOrder.mutateAsync({
         ...newPO,
         subtotal,
-        tax_amount: subtotal * 0.13, // 13% VAT
+        tax_amount: subtotal * 0.13,
         total: subtotal * 1.13,
-        status: "sent",
+        status: "sent"
       } as any);
       toast.success("Purchase order created");
       setAddPOOpen(false);
-      setNewPO({ supplier_id: "", order_date: format(new Date(), "yyyy-MM-dd"), expected_delivery: "", notes: "", items: [] });
     } catch (error) {
-      toast.error("Failed to create purchase order");
+      toast.error("Failed to create PO");
     }
   };
 
-  const handleReceivePO = async (id: string) => {
+  const handleStockOut = async () => {
+    if (!selectedItemId) return;
     try {
-      await updatePurchaseOrderStatus.mutateAsync({ id, status: "received" });
-      toast.success("Purchase order received and stock updated");
-      setViewPOOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to receive order");
-    }
-  };
-
-  const handleCreateCategory = async () => {
-    try {
-      await createCategory.mutateAsync(newCategory);
-      toast.success("Category created");
-      setAddCategoryOpen(false);
-      setNewCategory({ name: "", description: "" });
+      await adjustStock.mutateAsync({
+        itemId: selectedItemId,
+        quantity: stockAdjustment.quantity,
+        type: "out",
+        notes: stockAdjustment.notes,
+        department: stockAdjustment.department
+      });
+      toast.success("Consumption recorded");
+      setStockOutOpen(false);
     } catch (error) {
-      toast.error("Failed to create category");
-    }
-  };
-
-  const handleUpdateCategory = async () => {
-    if (!selectedCategoryId) return;
-    try {
-      await updateCategory.mutateAsync({ id: selectedCategoryId, ...newCategory });
-      toast.success("Category updated");
-      setEditCategoryOpen(false);
-      setSelectedCategoryId(null);
-    } catch (error) {
-      toast.error("Failed to update category");
-    }
-  };
-
-  const handleBulkAdjust = async () => {
-    try {
-      await bulkAdjustStock.mutateAsync(bulkAdjustments);
-      toast.success("Bulk adjustment completed");
-      setBulkAdjustOpen(false);
-      setBulkAdjustments([]);
-    } catch (error) {
-      toast.error("Bulk adjustment failed");
+      toast.error("Failed to record consumption");
     }
   };
 
@@ -269,1400 +208,637 @@ const Inventory = () => {
     XLSX.writeFile(wb, `${fileName}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
   };
 
-  const getStockStatus = (current: number, min: number, reorder: number, active: boolean) => {
-    if (!active) return { label: "Inactive", color: "bg-muted text-muted-foreground" };
-    if (current === 0) return { label: "Out of Stock", color: "bg-destructive/20 text-destructive" };
-    if (current <= reorder) return { label: "Low Stock", color: "bg-amber-500/20 text-amber-400" };
-    return { label: "In Stock", color: "bg-success/20 text-success" };
-  };
-
   return (
-    <MainLayout title="Inventory Management" subtitle="Track stock, suppliers, and purchase orders">
-      <Tabs defaultValue="items" className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-2">
-          <TabsTrigger value="items" className="gap-2">
-            <Package className="h-4 w-4" />
-            Items
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-2">
-            <Layers className="h-4 w-4" />
-            Categories
-          </TabsTrigger>
-          <TabsTrigger value="suppliers" className="gap-2">
-            <Truck className="h-4 w-4" />
-            Suppliers
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="gap-2">
-            <Warehouse className="h-4 w-4" />
-            Purchase Orders
-          </TabsTrigger>
-          <TabsTrigger value="movements" className="gap-2">
-            <ArrowUpDown className="h-4 w-4" />
-            Movements
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Reports
-          </TabsTrigger>
+    <MainLayout title="Inventory Management" subtitle="Comprehensive stock tracking and procurement">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</TabsTrigger>
+          <TabsTrigger value="items" className="gap-2"><Package className="h-4 w-4" />Items</TabsTrigger>
+          <TabsTrigger value="requisitions" className="gap-2"><ClipboardList className="h-4 w-4" />Requisitions</TabsTrigger>
+          <TabsTrigger value="orders" className="gap-2"><ShoppingCart className="h-4 w-4" />Orders</TabsTrigger>
+          <TabsTrigger value="suppliers" className="gap-2"><Truck className="h-4 w-4" />Suppliers</TabsTrigger>
+          <TabsTrigger value="locations" className="gap-2"><Warehouse className="h-4 w-4" />Locations</TabsTrigger>
+          <TabsTrigger value="movements" className="gap-2"><ArrowUpDown className="h-4 w-4" />Movements</TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" />Reports</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="items" className="space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+        <TabsContent value="dashboard" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-primary/5 border-primary/20 shadow-sm">
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Items</p>
-                    <p className="text-2xl font-bold">{stats.totalItems}</p>
-                  </div>
-                  <Package className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer hover:border-amber-500/50" onClick={() => setShowLowStock(!showLowStock)}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Low Stock</p>
-                    <p className="text-2xl font-bold text-amber-500">{stats.lowStock}</p>
-                  </div>
-                  <AlertTriangle className="h-8 w-8 text-amber-500" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Out of Stock</p>
-                    <p className="text-2xl font-bold text-destructive">{stats.outOfStock}</p>
-                  </div>
-                  <TrendingDown className="h-8 w-8 text-destructive" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Value</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Inventory Value</p>
                     <p className="text-2xl font-bold text-primary">${stats.totalValue.toLocaleString()}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-primary" />
+                  <DollarSign className="h-8 w-8 text-primary/40" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={`shadow-sm ${stats.lowStock > 0 ? "bg-amber-500/5 border-amber-500/20" : ""}`}>
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Low Stock Alerts</p>
+                    <p className={`text-2xl font-bold ${stats.lowStock > 0 ? "text-amber-500" : ""}`}>{stats.lowStock}</p>
+                  </div>
+                  <AlertTriangle className={`h-8 w-8 ${stats.lowStock > 0 ? "text-amber-500/40" : "text-muted-foreground/20"}`} />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pending Requisitions</p>
+                    <p className="text-2xl font-bold">{requisitions.filter(r => r.status === "pending").length}</p>
+                  </div>
+                  <ClipboardList className="h-8 w-8 text-muted-foreground/20" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active POs</p>
+                    <p className="text-2xl font-bold">{purchaseOrders.filter(o => o.status === "sent").length}</p>
+                  </div>
+                  <ShoppingCart className="h-8 w-8 text-muted-foreground/20" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Filters & Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <div className="flex flex-wrap gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-48"
-                />
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept!}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button 
-                variant={showLowStock ? "secondary" : "outline"} 
-                size="sm"
-                onClick={() => setShowLowStock(!showLowStock)}
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Low Stock Only
-              </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => exportToExcel(items, "Inventory_Items")}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-            </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="gap-2" onClick={() => {
-                  setBulkAdjustments(items.map(i => ({ itemId: i.id, quantity: 0, type: "adjustment", notes: "" })));
-                  setBulkAdjustOpen(true);
-                }}>
-                  <Settings2 className="h-4 w-4" />
-                  Bulk Adjust
-                </Button>
-                <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
-              <DialogTrigger asChild>
-                <Button variant="gold" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Item
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Add Inventory Item</DialogTitle>
-                  <DialogDescription>Add a new item to your inventory</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Name *</Label>
-                    <Input value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>SKU</Label>
-                    <Input value={newItem.sku} onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Select value={newItem.category_id} onValueChange={(v) => setNewItem({ ...newItem, category_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Supplier</Label>
-                    <Select value={newItem.supplier_id} onValueChange={(v) => setNewItem({ ...newItem, supplier_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Unit</Label>
-                    <Input value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Initial Stock</Label>
-                    <Input type="number" value={newItem.current_stock} onChange={(e) => setNewItem({ ...newItem, current_stock: Number(e.target.value) })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Min Stock</Label>
-                    <Input type="number" value={newItem.min_stock} onChange={(e) => setNewItem({ ...newItem, min_stock: Number(e.target.value) })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Reorder Point</Label>
-                    <Input type="number" value={newItem.reorder_point} onChange={(e) => setNewItem({ ...newItem, reorder_point: Number(e.target.value) })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cost Price</Label>
-                    <Input type="number" value={newItem.cost_price} onChange={(e) => setNewItem({ ...newItem, cost_price: Number(e.target.value) })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Department</Label>
-                    <Input value={newItem.department} onChange={(e) => setNewItem({ ...newItem, department: e.target.value })} />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCreateItem} disabled={!newItem.name || createItem.isPending}>
-                    {createItem.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Add Item
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-          {/* Items Table */}
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Low Stock Items</CardTitle>
+                <CardDescription>Items below reorder point requiring attention</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Item</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Cost</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Current</TableHead>
+                      <TableHead>Reorder</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                          No items found
+                    {items.filter(i => i.current_stock <= i.reorder_point).slice(0, 5).map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-destructive font-bold">{item.current_stock} {item.unit}</TableCell>
+                        <TableCell>{item.reorder_point}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setNewReq({ department: "General", notes: "Auto-generated from low stock alert", items: [{ item_id: item.id, quantity: item.reorder_point * 2 }] });
+                            setAddReqOpen(true);
+                          }}>Restock</Button>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredItems.map((item) => {
-                        const status = getStockStatus(item.current_stock, item.min_stock, item.reorder_point, item.is_active);
-                        return (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{item.name}</p>
-                                <p className="text-xs text-muted-foreground">{item.sku || "No SKU"}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>{item.category?.name || "-"}</TableCell>
-                            <TableCell>
-                              <span className="font-semibold">{item.current_stock}</span>
-                              <span className="text-muted-foreground text-sm ml-1">{item.unit}</span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={status.color}>{status.label}</Badge>
-                            </TableCell>
-                            <TableCell>${item.cost_price.toFixed(2)}</TableCell>
-                            <TableCell className="font-medium">${(item.current_stock * item.cost_price).toFixed(2)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => { setSelectedItemId(item.id); setAdjustStockOpen(true); }}
-                                >
-                                  <ArrowUpDown className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedItemId(item.id);
-                                    setNewItem({
-                                      name: item.name,
-                                      sku: item.sku || "",
-                                      category_id: item.category_id || "",
-                                      supplier_id: item.supplier_id || "",
-                                      unit: item.unit,
-                                      current_stock: item.current_stock,
-                                      min_stock: item.min_stock,
-                                      reorder_point: item.reorder_point,
-                                      cost_price: item.cost_price,
-                                      department: item.department || "",
-                                      is_active: item.is_active,
-                                    });
-                                    setEditItemOpen(true);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                    ))}
+                    {items.filter(i => i.current_stock <= i.reorder_point).length === 0 && (
+                      <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">All stock levels are healthy</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Edit Item Dialog */}
-          <Dialog open={editItemOpen} onOpenChange={setEditItemOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Edit Inventory Item</DialogTitle>
-                <DialogDescription>Update item details</DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Name *</Label>
-                  <Input value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>SKU</Label>
-                  <Input value={newItem.sku} onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={newItem.category_id} onValueChange={(v) => setNewItem({ ...newItem, category_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Supplier</Label>
-                  <Select value={newItem.supplier_id} onValueChange={(v) => setNewItem({ ...newItem, supplier_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Unit</Label>
-                  <Input value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Min Stock</Label>
-                  <Input type="number" value={newItem.min_stock} onChange={(e) => setNewItem({ ...newItem, min_stock: Number(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Reorder Point</Label>
-                  <Input type="number" value={newItem.reorder_point} onChange={(e) => setNewItem({ ...newItem, reorder_point: Number(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cost Price</Label>
-                  <Input type="number" value={newItem.cost_price} onChange={(e) => setNewItem({ ...newItem, cost_price: Number(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Input value={newItem.department} onChange={(e) => setNewItem({ ...newItem, department: e.target.value })} />
-                </div>
-                <div className="space-y-2 flex items-center gap-2 pt-8">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={newItem.is_active}
-                    onChange={(e) => setNewItem({ ...newItem, is_active: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <Label htmlFor="is_active">Active Item</Label>
-                </div>
-              </div>
-              <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    if (window.confirm("Are you sure you want to delete this item?")) {
-                      try {
-                        await deleteItem.mutateAsync(selectedItemId!);
-                        toast.success("Item deleted");
-                        setEditItemOpen(false);
-                      } catch (e) {
-                        toast.error("Failed to delete item");
-                      }
-                    }
-                  }}
-                >
-                  Delete
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-2">
+                <Button variant="outline" className="justify-start gap-3" onClick={() => setAddItemOpen(true)}>
+                  <Plus className="h-4 w-4" /> Add New Item
                 </Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setEditItemOpen(false)}>Cancel</Button>
-                  <Button onClick={handleUpdateItem} disabled={!newItem.name || updateItem.isPending}>
-                    {updateItem.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Save Changes
-                  </Button>
-                </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Adjust Stock Dialog */}
-          <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adjust Stock</DialogTitle>
-                <DialogDescription>Record a stock adjustment</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={stockAdjustment.type} onValueChange={(v: "in" | "out" | "adjustment") => setStockAdjustment({ ...stockAdjustment, type: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="in">Stock In (Received)</SelectItem>
-                      <SelectItem value="out">Stock Out (Used)</SelectItem>
-                      <SelectItem value="adjustment">Adjustment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Quantity</Label>
-                  <Input type="number" value={stockAdjustment.quantity} onChange={(e) => setStockAdjustment({ ...stockAdjustment, quantity: Number(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Input value={stockAdjustment.notes} onChange={(e) => setStockAdjustment({ ...stockAdjustment, notes: e.target.value })} placeholder="Reason for adjustment..." />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAdjustStockOpen(false)}>Cancel</Button>
-                <Button onClick={handleAdjustStock} disabled={adjustStock.isPending}>
-                  {adjustStock.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Save
+                <Button variant="outline" className="justify-start gap-3" onClick={() => setAddReqOpen(true)}>
+                  <ClipboardList className="h-4 w-4" /> Submit Requisition
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <Button variant="outline" className="justify-start gap-3" onClick={() => setActiveTab("movements")}>
+                  <ArrowUpDown className="h-4 w-4" /> Record Movement
+                </Button>
+                <Button variant="outline" className="justify-start gap-3" onClick={() => exportToExcel(items, "Inventory_Report")}>
+                  <FileDown className="h-4 w-4" /> Export Stock List
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
-        <TabsContent value="categories">
-          <div className="flex justify-end mb-4">
-            <Button variant="gold" onClick={() => setAddCategoryOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Category
-            </Button>
+        <TabsContent value="items" className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="flex gap-2 w-full md:w-auto">
+              <div className="relative flex-1 md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search name, SKU, or barcode..." className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              </div>
+              <Button variant="outline" size="icon"><QrCode className="h-4 w-4" /></Button>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="gold" onClick={() => setAddItemOpen(true)} className="gap-2"><Plus className="h-4 w-4" />Add Item</Button>
+            </div>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Inventory Categories</CardTitle>
-              <CardDescription>Organize your items into categories</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+
+          <Card className="shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Item Details</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Stock Level</TableHead>
+                  <TableHead>Unit Cost</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                ) : items.map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" className="h-8 w-8 rounded object-cover" />
+                      ) : (
+                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center"><Package className="h-4 w-4 text-muted-foreground" /></div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{item.name}</span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-mono">{item.sku}</span>
+                          {item.barcode && <span className="flex items-center gap-1"><QrCode className="h-3 w-3" />{item.barcode}</span>}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="outline">{item.category?.name || "Uncategorized"}</Badge></TableCell>
+                    <TableCell className="text-sm">{item.location?.name || "No Location"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <span className={`font-bold ${item.current_stock <= item.reorder_point ? "text-amber-500" : ""}`}>
+                          {item.current_stock} {item.unit}
+                        </span>
+                        <div className="h-1 w-20 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${item.current_stock <= item.reorder_point ? "bg-amber-500" : "bg-success"}`}
+                            style={{ width: `${Math.min(100, (item.current_stock / (item.reorder_point * 2)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>${item.cost_price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedItemId(item.id); setStockOutOpen(true); }} title="Record Consumption"><TrendingDown className="h-4 w-4 text-destructive" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedItemId(item.id); setAdjustStockOpen(true); }} title="Adjust Stock"><Plus className="h-4 w-4 text-success" /></Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((cat) => (
-                    <TableRow key={cat.id}>
-                      <TableCell className="font-medium">{cat.name}</TableCell>
-                      <TableCell>{cat.description || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedCategoryId(cat.id);
-                            setNewCategory({ name: cat.name, description: cat.description || "" });
-                            setEditCategoryOpen(true);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
+                ))}
+              </TableBody>
+            </Table>
           </Card>
-
-          <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Category</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Input value={newCategory.description} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateCategory} disabled={!newCategory.name}>Add Category</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={editCategoryOpen} onOpenChange={setEditCategoryOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Category</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Input value={newCategory.description} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} />
-                </div>
-              </div>
-              <DialogFooter className="flex justify-between w-full">
-                <Button variant="destructive" onClick={() => {
-                  if (confirm("Delete category?")) {
-                    deleteCategory.mutate(selectedCategoryId!);
-                    setEditCategoryOpen(false);
-                  }
-                }}>Delete</Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setEditCategoryOpen(false)}>Cancel</Button>
-                  <Button onClick={handleUpdateCategory} disabled={!newCategory.name}>Save</Button>
-                </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </TabsContent>
 
-        <TabsContent value="suppliers">
-          <div className="flex justify-end mb-4">
-            <Button variant="gold" onClick={() => setAddSupplierOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Supplier
-            </Button>
+        <TabsContent value="requisitions" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Internal Requisitions</h2>
+            <Button variant="gold" className="gap-2" onClick={() => setAddReqOpen(true)}><Plus className="h-4 w-4" />New Requisition</Button>
           </div>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Suppliers</CardTitle>
-                  <CardDescription>{suppliers.length} suppliers registered</CardDescription>
+          <div className="grid grid-cols-1 gap-4">
+            {requisitions.length === 0 ? (
+              <Card className="p-10 text-center text-muted-foreground">No active requisitions</Card>
+            ) : requisitions.map(req => (
+              <Card key={req.id} className="overflow-hidden shadow-sm">
+                <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-primary/10 text-primary"><ClipboardList className="h-6 w-6" /></div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg">{req.requisition_number}</span>
+                        <Badge className={
+                          req.status === "approved" ? "bg-success/20 text-success" :
+                          req.status === "pending" ? "bg-amber-500/20 text-amber-500" :
+                          req.status === "completed" ? "bg-blue-500/20 text-blue-500" :
+                          "bg-muted text-muted-foreground"
+                        }>{req.status}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Dept: {req.department} • Requested by {req.requested_by_name || "Staff"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right hidden md:block">
+                      <p className="text-xs text-muted-foreground">{format(new Date(req.created_at), "MMM d, yyyy")}</p>
+                      <p className="text-sm font-medium">{req.items?.length || 0} items requested</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {req.status === "pending" && (
+                        <Button variant="outline" size="sm" className="text-success gap-2" onClick={() => handleApproveReq(req.id)}><CheckCircle2 className="h-4 w-4" />Approve</Button>
+                      )}
+                      {req.status === "approved" && (
+                        <Button variant="gold" size="sm" className="gap-2" onClick={() => convertToPO.mutate(req.id)}><ShoppingCart className="h-4 w-4" />Generate PO</Button>
+                      )}
+                      <Button variant="ghost" size="sm">Details</Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="orders" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Purchase Orders</h2>
+            <Button variant="gold" className="gap-2" onClick={() => setAddPOOpen(true)}><Plus className="h-4 w-4" />New Order</Button>
+          </div>
+          <Card className="shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order #</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {purchaseOrders.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No purchase orders found</TableCell></TableRow>
+                ) : purchaseOrders.map(po => (
+                  <TableRow key={po.id}>
+                    <TableCell className="font-mono">{po.order_number}</TableCell>
+                    <TableCell>{po.supplier?.name || "-"}</TableCell>
+                    <TableCell>{format(new Date(po.order_date), "MMM d, yyyy")}</TableCell>
+                    <TableCell>
+                      <Badge className={
+                        po.status === "received" ? "bg-success/20 text-success" :
+                        po.status === "sent" ? "bg-blue-500/20 text-blue-400" :
+                        "bg-muted text-muted-foreground"
+                      }>{po.status}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">${po.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPO(po); setViewPOOpen(true); }}>View</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="suppliers" className="space-y-4">
+           <div className="flex justify-end">
+              <Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />Add Supplier</Button>
+           </div>
+           <Card className="shadow-sm">
+             <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliers.map((s) => (
+                  {suppliers.map(s => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">{s.name}</TableCell>
                       <TableCell>{s.contact_person || "-"}</TableCell>
                       <TableCell>{s.email || "-"}</TableCell>
                       <TableCell>{s.phone || "-"}</TableCell>
-                      <TableCell>
-                        <Badge className={s.is_active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}>
-                          {s.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedSupplierId(s.id);
-                            setNewSupplier({
-                              name: s.name,
-                              contact_person: s.contact_person || "",
-                              email: s.email || "",
-                              phone: s.phone || "",
-                              address: s.address || "",
-                              payment_terms: s.payment_terms || "",
-                              notes: s.notes || "",
-                              is_active: s.is_active,
-                            });
-                            setEditSupplierOpen(true);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </TableCell>
+                      <TableCell className="text-right"><Button variant="ghost" size="sm">Edit</Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Add Supplier Dialog */}
-          <Dialog open={addSupplierOpen} onOpenChange={setAddSupplierOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Supplier</DialogTitle>
-                <DialogDescription>Add a new supplier to your directory</DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2 col-span-2">
-                  <Label>Supplier Name *</Label>
-                  <Input value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contact Person</Label>
-                  <Input value={newSupplier.contact_person} onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={newSupplier.email} onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Payment Terms</Label>
-                  <Input value={newSupplier.payment_terms} onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })} placeholder="e.g. Net 30" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Address</Label>
-                  <Input value={newSupplier.address} onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })} />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Notes</Label>
-                  <Input value={newSupplier.notes} onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAddSupplierOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateSupplier} disabled={!newSupplier.name || createSupplier.isPending}>
-                  {createSupplier.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Add Supplier
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Edit Supplier Dialog */}
-          <Dialog open={editSupplierOpen} onOpenChange={setEditSupplierOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Supplier</DialogTitle>
-                <DialogDescription>Update supplier information</DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2 col-span-2">
-                  <Label>Supplier Name *</Label>
-                  <Input value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contact Person</Label>
-                  <Input value={newSupplier.contact_person} onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={newSupplier.email} onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Payment Terms</Label>
-                  <Input value={newSupplier.payment_terms} onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })} />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Address</Label>
-                  <Input value={newSupplier.address} onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })} />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Notes</Label>
-                  <Input value={newSupplier.notes} onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })} />
-                </div>
-                <div className="space-y-2 flex items-center gap-2 pt-4">
-                  <input
-                    type="checkbox"
-                    id="supplier_active"
-                    checked={newSupplier.is_active}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, is_active: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <Label htmlFor="supplier_active">Active Supplier</Label>
-                </div>
-              </div>
-              <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    if (window.confirm("Are you sure you want to delete this supplier?")) {
-                      try {
-                        await deleteSupplier.mutateAsync(selectedSupplierId!);
-                        toast.success("Supplier deleted");
-                        setEditSupplierOpen(false);
-                      } catch (e) {
-                        toast.error("Failed to delete supplier");
-                      }
-                    }
-                  }}
-                >
-                  Delete
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setEditSupplierOpen(false)}>Cancel</Button>
-                  <Button onClick={handleUpdateSupplier} disabled={!newSupplier.name || updateSupplier.isPending}>
-                    {updateSupplier.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Save Changes
-                  </Button>
-                </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+             </Table>
+           </Card>
         </TabsContent>
 
-        <TabsContent value="orders">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Purchase Orders</CardTitle>
-                  <CardDescription>{purchaseOrders.length} orders</CardDescription>
-                </div>
-                <Button variant="gold" className="gap-2" onClick={() => setAddPOOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  New Order
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {purchaseOrders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No purchase orders yet
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    purchaseOrders.map((po) => (
-                      <TableRow key={po.id}>
-                        <TableCell className="font-mono">{po.order_number}</TableCell>
-                        <TableCell>{po.supplier?.name || "-"}</TableCell>
-                        <TableCell>{format(new Date(po.order_date), "MMM d, yyyy")}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            po.status === "received" ? "bg-success/20 text-success" :
-                            po.status === "sent" ? "bg-blue-500/20 text-blue-400" :
-                            "bg-muted text-muted-foreground"
-                          }>
-                            {po.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">${po.total.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPO(po);
-                              setViewPOOpen(true);
-                            }}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* New Purchase Order Dialog */}
-          <Dialog open={addPOOpen} onOpenChange={setAddPOOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>New Purchase Order</DialogTitle>
-                <DialogDescription>Create a new order for items</DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Supplier *</Label>
-                  <Select value={newPO.supplier_id} onValueChange={(v) => setNewPO({ ...newPO, supplier_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Expected Delivery</Label>
-                  <Input type="date" value={newPO.expected_delivery} onChange={(e) => setNewPO({ ...newPO, expected_delivery: e.target.value })} />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Notes</Label>
-                  <Input value={newPO.notes} onChange={(e) => setNewPO({ ...newPO, notes: e.target.value })} />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Order Items</h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setNewPO({
-                      ...newPO,
-                      items: [...newPO.items, { item_id: "", quantity: 1, unit_price: 0 }]
-                    })}
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Add Item
-                  </Button>
-                </div>
-
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-24">Quantity</TableHead>
-                        <TableHead className="w-32">Unit Price</TableHead>
-                        <TableHead className="w-32">Total</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {newPO.items.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-xs">
-                            No items added yet. Click 'Add Item' to start.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        newPO.items.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              <Select
-                                value={item.item_id}
-                                onValueChange={(v) => {
-                                  const updatedItems = [...newPO.items];
-                                  const selectedItem = items.find(i => i.id === v);
-                                  updatedItems[index] = {
-                                    ...item,
-                                    item_id: v,
-                                    unit_price: selectedItem?.cost_price || 0
-                                  };
-                                  setNewPO({ ...newPO, items: updatedItems });
-                                }}
-                              >
-                                <SelectTrigger><SelectValue placeholder="Select Item" /></SelectTrigger>
-                                <SelectContent>
-                                  {items.map((i) => (
-                                    <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => {
-                                  const updatedItems = [...newPO.items];
-                                  updatedItems[index].quantity = Number(e.target.value);
-                                  setNewPO({ ...newPO, items: updatedItems });
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.unit_price}
-                                onChange={(e) => {
-                                  const updatedItems = [...newPO.items];
-                                  updatedItems[index].unit_price = Number(e.target.value);
-                                  setNewPO({ ...newPO, items: updatedItems });
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              ${(item.quantity * item.unit_price).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={() => {
-                                  const updatedItems = newPO.items.filter((_, i) => i !== index);
-                                  setNewPO({ ...newPO, items: updatedItems });
-                                }}
-                              >
-                                &times;
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                <div className="flex flex-col items-end gap-1 px-4 py-2 bg-muted/50 rounded-lg">
-                  <div className="text-sm flex justify-between w-48">
-                    <span>Subtotal:</span>
-                    <span>${newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0).toFixed(2)}</span>
-                  </div>
-                  <div className="text-sm flex justify-between w-48">
-                    <span>Tax (13%):</span>
-                    <span>${(newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 0.13).toFixed(2)}</span>
-                  </div>
-                  <div className="text-lg font-bold flex justify-between w-48 border-t mt-1 pt-1">
-                    <span>Total:</span>
-                    <span>${(newPO.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 1.13).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAddPOOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreatePO} disabled={!newPO.supplier_id || createPurchaseOrder.isPending}>
-                  {createPurchaseOrder.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create Order
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* View Purchase Order Dialog */}
-          <Dialog open={viewPOOpen} onOpenChange={setViewPOOpen}>
-            <DialogContent className="max-w-3xl">
-              {selectedPO && (
-                <>
-                  <DialogHeader>
-                    <div className="flex justify-between items-start w-full">
-                      <div>
-                        <DialogTitle>Order {selectedPO.order_number}</DialogTitle>
-                        <DialogDescription>
-                          From {selectedPO.supplier?.name} on {format(new Date(selectedPO.order_date), "MMM d, yyyy")}
-                        </DialogDescription>
-                      </div>
-                      <Badge className={
-                        selectedPO.status === "received" ? "bg-success/20 text-success" :
-                        selectedPO.status === "sent" ? "bg-blue-500/20 text-blue-400" :
-                        "bg-muted text-muted-foreground"
-                      }>
-                        {selectedPO.status}
-                      </Badge>
+        <TabsContent value="locations" className="space-y-4">
+           <div className="flex justify-end">
+              <Button variant="gold" className="gap-2" onClick={() => setAddLocationOpen(true)}><Plus className="h-4 w-4" />Add Location</Button>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {locations.map(loc => (
+                <Card key={loc.id} className="shadow-sm border-l-4 border-l-primary">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2"><Warehouse className="h-5 w-5 text-primary" />{loc.name}</CardTitle>
+                    <CardDescription>{loc.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Items stored:</span>
+                      <span className="font-bold">{items.filter(i => i.location_id === loc.id).length}</span>
                     </div>
-                  </DialogHeader>
-
-                  <div className="py-4 space-y-6">
-                    <div className="grid grid-cols-2 gap-8 text-sm">
-                      <div>
-                        <h4 className="font-semibold mb-1">Supplier Info</h4>
-                        <p>{selectedPO.supplier?.name}</p>
-                        <p className="text-muted-foreground">{selectedPO.supplier?.contact_person}</p>
-                        <p className="text-muted-foreground">{selectedPO.supplier?.email}</p>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-1">Shipping Info</h4>
-                        <p>Expected: {selectedPO.expected_delivery ? format(new Date(selectedPO.expected_delivery), "MMM d, yyyy") : "Not specified"}</p>
-                        {selectedPO.received_date && (
-                          <p>Received: {format(new Date(selectedPO.received_date), "MMM d, yyyy")}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Item</TableHead>
-                            <TableHead className="text-right">Quantity</TableHead>
-                            <TableHead className="text-right">Unit Price</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {selectedPO.items?.map((item: any) => (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.item?.name}</TableCell>
-                              <TableCell className="text-right">{item.quantity}</TableCell>
-                              <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">${(item.quantity * item.unit_price).toFixed(2)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    <div className="flex flex-col items-end text-sm space-y-1">
-                      <div className="flex justify-between w-48">
-                        <span className="text-muted-foreground">Subtotal:</span>
-                        <span>${selectedPO.subtotal?.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between w-48">
-                        <span className="text-muted-foreground">Tax:</span>
-                        <span>${selectedPO.tax_amount?.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between w-48 font-bold text-lg pt-1 border-t">
-                        <span>Total:</span>
-                        <span>${selectedPO.total?.toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    {selectedPO.notes && (
-                      <div className="bg-muted p-3 rounded-md text-sm">
-                        <span className="font-semibold block mb-1">Notes:</span>
-                        {selectedPO.notes}
-                      </div>
-                    )}
-                  </div>
-
-                  <DialogFooter className="flex justify-between sm:justify-between w-full border-t pt-4">
-                    <Button
-                      variant="destructive"
-                      onClick={async () => {
-                        if (window.confirm("Delete this purchase order?")) {
-                          await deletePurchaseOrder.mutateAsync(selectedPO.id);
-                          toast.success("Order deleted");
-                          setViewPOOpen(false);
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setViewPOOpen(false)}>Close</Button>
-                      {selectedPO.status !== "received" && (
-                        <Button
-                          variant="gold"
-                          onClick={() => handleReceivePO(selectedPO.id)}
-                          disabled={updatePurchaseOrderStatus.isPending}
-                        >
-                          {updatePurchaseOrderStatus.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                          Mark as Received
-                        </Button>
-                      )}
-                    </div>
-                  </DialogFooter>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
+                  </CardContent>
+                </Card>
+              ))}
+           </div>
         </TabsContent>
 
-        <TabsContent value="movements">
-          <div className="flex flex-wrap gap-4 mb-4 items-end">
-            <div className="w-64">
-              <Label className="text-xs mb-1 block">Filter by Item</Label>
-              <Select value={movementFilters.itemId} onValueChange={(v) => setMovementFilters({ ...movementFilters, itemId: v })}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Items</SelectItem>
-                  {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-40">
-              <Label className="text-xs mb-1 block">Movement Type</Label>
-              <Select value={movementFilters.type} onValueChange={(v) => setMovementFilters({ ...movementFilters, type: v })}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="in">Stock In</SelectItem>
-                  <SelectItem value="out">Stock Out</SelectItem>
-                  <SelectItem value="adjustment">Adjustment</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setMovementFilters({ itemId: "all", type: "all" })}>
-              Clear Filters
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => exportToExcel(movements, "Stock_Movements")} className="ml-auto">
-              <FileDown className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Stock Movements</CardTitle>
-                  <CardDescription>Recent inventory changes</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => refetchMovements()}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
+        <TabsContent value="movements" className="space-y-4">
+           <Card className="shadow-sm">
+             <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Quantity</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>Dept/Note</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {movements.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No movements recorded
+                    <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No recent movements</TableCell></TableRow>
+                  ) : movements.map(m => (
+                    <TableRow key={m.id}>
+                      <TableCell className="text-xs">{format(new Date(m.created_at), "MMM d, HH:mm")}</TableCell>
+                      <TableCell className="font-medium">{(m.item as any)?.name}</TableCell>
+                      <TableCell>
+                        <Badge className={
+                          m.movement_type === "in" ? "bg-success/20 text-success" :
+                          m.movement_type === "out" ? "bg-destructive/20 text-destructive" :
+                          "bg-muted text-muted-foreground"
+                        }>{m.movement_type}</Badge>
                       </TableCell>
+                      <TableCell className="font-bold">{m.quantity}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{m.department || m.notes || "-"}</TableCell>
                     </TableRow>
-                  ) : (
-                    movements.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell>{format(new Date(m.created_at), "MMM d, HH:mm")}</TableCell>
-                        <TableCell>{(m.item as any)?.name || "-"}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            m.movement_type === "in" ? "bg-success/20 text-success" :
-                            m.movement_type === "out" ? "bg-destructive/20 text-destructive" :
-                            "bg-muted text-muted-foreground"
-                          }>
-                            {m.movement_type === "in" ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                            {m.movement_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{m.quantity}</TableCell>
-                        <TableCell className="text-muted-foreground">{m.notes || "-"}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+             </Table>
+           </Card>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Stock Value Trend</CardTitle>
-                <CardDescription>Inventory valuation over the last 30 days</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center">
-                {reportData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={reportData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                      <XAxis
-                        dataKey="date"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        interval={4}
-                      />
-                      <YAxis
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `$${value}`}
-                      />
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          borderColor: "hsl(var(--border))",
-                          fontSize: "12px"
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#EAB308"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
-                    <BarChart3 className="h-8 w-8 opacity-20" />
-                    No data available for the last 30 days
-                  </div>
-                )}
+            <Card className="shadow-sm">
+              <CardHeader><CardTitle className="text-lg">Inventory Valuation Trend</CardTitle></CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={reportData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                    <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} interval={4} />
+                    <YAxis fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                    <RechartsTooltip />
+                    <Line type="monotone" dataKey="value" stroke="#EAB308" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Distribution</CardTitle>
-                <CardDescription>Stock value by category</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center">
-                {Object.keys(stats.categoryDistribution || {}).length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={Object.entries(stats.categoryDistribution || {}).map(([name, value]) => ({ name, value }))}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {Object.entries(stats.categoryDistribution || {}).map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={[`#EAB308`, `#3B82F6`, `#10B981`, `#F59E0B`, `#6366F1`][index % 5]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, "Value"]}
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          borderColor: "hsl(var(--border))",
-                          fontSize: "12px"
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
-                    <PieChartIcon className="h-8 w-8 opacity-20" />
-                    No category data available
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Movement Volume</CardTitle>
-                <CardDescription>Daily Stock In vs Stock Out</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center">
-                {reportData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={reportData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                      <XAxis
-                        dataKey="date"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        interval={4}
-                      />
-                      <YAxis
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          borderColor: "hsl(var(--border))",
-                          fontSize: "12px"
-                        }}
-                      />
-                      <Bar dataKey="in" fill="#10B981" name="Stock In" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="out" fill="#EF4444" name="Stock Out" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
-                    <RefreshCw className="h-8 w-8 opacity-20" />
-                    No movement data recorded recently
-                  </div>
-                )}
+            <Card className="shadow-sm">
+              <CardHeader><CardTitle className="text-lg">Category Distribution</CardTitle></CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={Object.entries(stats.categoryDistribution || {}).map(([name, value]) => ({ name, value }))} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                      {Object.entries(stats.categoryDistribution || {}).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={[`#EAB308`, `#3B82F6`, `#10B981`, `#F59E0B`, `#6366F1`][index % 5]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(value: number) => [`$${value.toFixed(2)}`, "Value"]} />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
 
-      {/* Bulk Adjustment Dialog */}
-      <Dialog open={bulkAdjustOpen} onOpenChange={setBulkAdjustOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Bulk Stock Adjustment</DialogTitle>
-            <DialogDescription>Update stock levels for multiple items at once</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Current</TableHead>
-                  <TableHead className="w-32">Type</TableHead>
-                  <TableHead className="w-24">Value</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bulkAdjustments.map((adj, index) => {
-                  const item = items.find(i => i.id === adj.itemId);
-                  return (
-                    <TableRow key={adj.itemId}>
-                      <TableCell className="font-medium">{item?.name}</TableCell>
-                      <TableCell>{item?.current_stock}</TableCell>
-                      <TableCell>
-                        <Select value={adj.type} onValueChange={(v: any) => {
-                          const newAdjs = [...bulkAdjustments];
-                          newAdjs[index].type = v;
-                          setBulkAdjustments(newAdjs);
-                        }}>
-                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="in">In (+)</SelectItem>
-                            <SelectItem value="out">Out (-)</SelectItem>
-                            <SelectItem value="adjustment">Set (=)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          className="h-8"
-                          value={adj.quantity}
-                          onChange={(e) => {
-                            const newAdjs = [...bulkAdjustments];
-                            newAdjs[index].quantity = Number(e.target.value);
-                            setBulkAdjustments(newAdjs);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          className="h-8"
-                          placeholder="Reason..."
-                          value={adj.notes}
-                          onChange={(e) => {
-                            const newAdjs = [...bulkAdjustments];
-                            newAdjs[index].notes = e.target.value;
-                            setBulkAdjustments(newAdjs);
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+      {/* Dialogs */}
+      <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Add Inventory Item</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="col-span-2 flex justify-center py-4 bg-muted/30 rounded-lg border-2 border-dashed border-muted cursor-pointer hover:bg-muted/50 transition-colors">
+               <div className="flex flex-col items-center gap-2">
+                  <Camera className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Click to upload item image</span>
+               </div>
+            </div>
+            <div className="space-y-2"><Label>Name *</Label><Input value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Barcode / GTIN</Label><Input value={newItem.barcode} onChange={e => setNewItem({...newItem, barcode: e.target.value})} placeholder="Scan or enter barcode" /></div>
+            <div className="space-y-2"><Label>SKU</Label><Input value={newItem.sku} onChange={e => setNewItem({...newItem, sku: e.target.value})} /></div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={newItem.category_id} onValueChange={v => setNewItem({...newItem, category_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Warehouse Location</Label>
+              <Select value={newItem.location_id} onValueChange={v => setNewItem({...newItem, location_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Initial Stock</Label><Input type="number" value={newItem.current_stock} onChange={e => setNewItem({...newItem, current_stock: Number(e.target.value)})} /></div>
+            <div className="space-y-2"><Label>Reorder Point</Label><Input type="number" value={newItem.reorder_point} onChange={e => setNewItem({...newItem, reorder_point: Number(e.target.value)})} /></div>
+            <div className="space-y-2"><Label>Unit Cost</Label><Input type="number" value={newItem.cost_price} onChange={e => setNewItem({...newItem, cost_price: Number(e.target.value)})} /></div>
+            <div className="space-y-2"><Label>Unit (e.g. Kg, Pcs)</Label><Input value={newItem.unit} onChange={e => setNewItem({...newItem, unit: e.target.value})} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkAdjustOpen(false)}>Cancel</Button>
-            <Button onClick={handleBulkAdjust} disabled={bulkAdjustStock.isPending}>
-              {bulkAdjustStock.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save All Adjustments
-            </Button>
+            <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateItem}>Save Item</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={stockOutOpen} onOpenChange={setStockOutOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Record Consumption</DialogTitle><DialogDescription>Deduct stock for internal use</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Consuming Department</Label>
+              <Select value={stockAdjustment.department} onValueChange={v => setStockAdjustment({...stockAdjustment, department: v})}>
+                <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Housekeeping">Housekeeping</SelectItem>
+                  <SelectItem value="Kitchen">Kitchen</SelectItem>
+                  <SelectItem value="Bar">Bar</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Quantity to Remove</Label><Input type="number" value={stockAdjustment.quantity} onChange={e => setStockAdjustment({...stockAdjustment, quantity: Number(e.target.value)})} /></div>
+            <div className="space-y-2"><Label>Reason/Notes</Label><Input value={stockAdjustment.notes} onChange={e => setStockAdjustment({...stockAdjustment, notes: e.target.value})} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStockOutOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleStockOut}>Record Out</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addReqOpen} onOpenChange={setAddReqOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>New Internal Requisition</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2"><Label>Department</Label><Input value={newReq.department} onChange={e => setNewReq({...newReq, department: e.target.value})} /></div>
+            <div className="col-span-2 space-y-4">
+              <Label>Items Requested</Label>
+              <Table className="border rounded-md">
+                <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="w-24">Qty</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {newReq.items.map((item, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <Select value={item.item_id} onValueChange={v => {
+                          const updatedReqItems = [...newReq.items];
+                          updatedReqItems[idx].item_id = v;
+                          setNewReq({...newReq, items: updatedReqItems});
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="Select Item" /></SelectTrigger>
+                          <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell><Input type="number" value={item.quantity} onChange={e => {
+                        const updatedReqItems = [...newReq.items];
+                        updatedReqItems[idx].quantity = Number(e.target.value);
+                        setNewReq({...newReq, items: updatedReqItems});
+                      }} /></TableCell>
+                      <TableCell><Button variant="ghost" size="sm" onClick={() => setNewReq({...newReq, items: newReq.items.filter((_, i) => i !== idx)})}>&times;</Button></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Button variant="outline" size="sm" onClick={() => setNewReq({...newReq, items: [...newReq.items, {item_id: "", quantity: 1}]})}><Plus className="h-4 w-4 mr-2" />Add Item</Button>
+            </div>
+          </div>
+          <DialogFooter><Button onClick={handleCreateRequisition}>Submit Requisition</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PO View Dialog */}
+      <Dialog open={viewPOOpen} onOpenChange={setViewPOOpen}>
+        <DialogContent className="max-w-3xl">
+          {selectedPO && (
+            <>
+              <DialogHeader>
+                <div className="flex justify-between items-center w-full">
+                  <DialogTitle>Order {selectedPO.order_number}</DialogTitle>
+                  <Badge>{selectedPO.status}</Badge>
+                </div>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                  <div><Label className="text-muted-foreground">Supplier</Label><p className="font-medium">{selectedPO.supplier?.name}</p></div>
+                  <div><Label className="text-muted-foreground">Date</Label><p>{format(new Date(selectedPO.order_date), "MMM d, yyyy")}</p></div>
+                </div>
+                <Table>
+                  <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>Unit</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {selectedPO.items?.map((i: any) => (
+                      <TableRow key={i.id}>
+                        <TableCell>{i.item?.name}</TableCell>
+                        <TableCell>{i.quantity}</TableCell>
+                        <TableCell>${i.unit_price}</TableCell>
+                        <TableCell className="text-right">${(i.quantity * i.unit_price).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="text-right mt-4 font-bold text-lg">Total: ${selectedPO.total.toFixed(2)}</div>
+              </div>
+              <DialogFooter>
+                {selectedPO.status === "sent" && (
+                  <Button variant="gold" onClick={() => updatePurchaseOrderStatus.mutate({ id: selectedPO.id, status: "received" })}>Mark Received</Button>
+                )}
+                <Button variant="outline" onClick={() => setViewPOOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New PO Dialog */}
+      <Dialog open={addPOOpen} onOpenChange={setAddPOOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>New Purchase Order</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+              <Select value={newPO.supplier_id} onValueChange={v => setNewPO({...newPO, supplier_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger>
+                <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Expected Date</Label><Input type="date" value={newPO.expected_delivery} onChange={e => setNewPO({...newPO, expected_delivery: e.target.value})} /></div>
+            <div className="col-span-2">
+              <Label>Items</Label>
+              <Table className="mt-2">
+                <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>Price</TableHead><TableHead></TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {newPO.items.map((item, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <Select value={item.item_id} onValueChange={v => {
+                           const updatedPOItems = [...newPO.items];
+                           const selectedMasterItem = items.find(i => i.id === v);
+                           updatedPOItems[idx].item_id = v;
+                           updatedPOItems[idx].unit_price = selectedMasterItem?.cost_price || 0;
+                           setNewPO({...newPO, items: updatedPOItems});
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell><Input type="number" value={item.quantity} onChange={e => {
+                        const updatedPOItems = [...newPO.items];
+                        updatedPOItems[idx].quantity = Number(e.target.value);
+                        setNewPO({...newPO, items: updatedPOItems});
+                      }} /></TableCell>
+                      <TableCell><Input type="number" value={item.unit_price} onChange={e => {
+                        const updatedPOItems = [...newPO.items];
+                        updatedPOItems[idx].unit_price = Number(e.target.value);
+                        setNewPO({...newPO, items: updatedPOItems});
+                      }} /></TableCell>
+                      <TableCell><Button variant="ghost" size="sm" onClick={() => setNewPO({...newPO, items: newPO.items.filter((_, i) => i !== idx)})}>&times;</Button></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => setNewPO({...newPO, items: [...newPO.items, {item_id: "", quantity: 1, unit_price: 0}]})}><Plus className="h-4 w-4 mr-2" />Add Item</Button>
+            </div>
+          </div>
+          <DialogFooter><Button onClick={handleCreatePO}>Create PO</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addLocationOpen} onOpenChange={setAddLocationOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Warehouse Location</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Location Name</Label><Input value={newLocation.name} onChange={e => setNewLocation({...newLocation, name: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Description</Label><Input value={newLocation.description} onChange={e => setNewLocation({...newLocation, description: e.target.value})} /></div>
+          </div>
+          <DialogFooter><Button onClick={async () => {
+             await createLocation.mutateAsync(newLocation);
+             toast.success("Location added");
+             setAddLocationOpen(false);
+          }}>Add Location</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>
