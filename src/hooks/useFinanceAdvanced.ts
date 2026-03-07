@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
-import { toast } from "sonner";
 
 // ============= Types =============
 
@@ -20,6 +18,8 @@ export interface FixedAsset {
   location: string | null;
   status: 'active' | 'disposed' | 'fully_depreciated';
   last_depreciation_date: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Budget {
@@ -29,9 +29,11 @@ export interface Budget {
   budget_amount: number;
   actual_amount: number;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
   account?: {
-    code: string;
-    name: string;
+      code: string;
+      name: string;
   };
 }
 
@@ -44,14 +46,8 @@ export interface BankAccount {
   gl_account_id: string | null;
   current_balance: number;
   is_active: boolean;
-}
-
-export interface COGSConfig {
-  id: string;
-  inventory_category_id: string;
-  inventory_asset_account_id: string;
-  cogs_expense_account_id: string;
-  auto_post: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FinancialPeriod {
@@ -61,6 +57,9 @@ export interface FinancialPeriod {
   end_date: string;
   fiscal_year: string;
   status: 'open' | 'locked' | 'closed';
+  locked_at: string | null;
+  locked_by: string | null;
+  created_at: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,92 +79,16 @@ export function useFixedAssets() {
     },
   });
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("fixed-assets-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "fixed_assets" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["fixed-assets"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
-  return query;
-}
-
-export function useCreateFixedAsset() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (asset: Omit<FixedAsset, "id" | "accumulated_depreciation" | "current_value">) => {
-      const { data, error } = await db.from("fixed_assets").insert({
-        ...asset,
-        current_value: asset.purchase_cost,
-        accumulated_depreciation: 0
-      }).select().single();
-      if (error) throw error;
-      return data as FixedAsset;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fixed-assets"] });
-      toast.success("Fixed asset registered successfully");
-    },
-  });
-}
-
-// ============= Automated Rules =============
-
-export function useCOGSConfigs() {
-  return useQuery({
-    queryKey: ["cogs-configs"],
-    queryFn: async () => {
-      const { data, error } = await db.from("cogs_configurations").select("*");
-      if (error) throw error;
-      return data as COGSConfig[];
-    },
-  });
-}
-
-export function useFinancialPeriods() {
-  const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: ["financial-periods"],
-    queryFn: async () => {
-      const { data, error } = await db.from("financial_periods").select("*").order("start_date", { ascending: false });
-      if (error) throw error;
-      return data as FinancialPeriod[];
-    },
-  });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("periods-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "financial_periods" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["financial-periods"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
-  return query;
-}
-
-export function useLockPeriod() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { data, error } = await db.from("financial_periods").update({
-        status: 'locked',
-        locked_at: new Date().toISOString(),
-        locked_by: (await supabase.auth.getUser()).data.user?.id
-      }).eq("id", id).select().single();
+  const createAsset = useMutation({
+    mutationFn: async (asset: Omit<FixedAsset, "id" | "created_at" | "updated_at">) => {
+      const { data, error } = await db.from("fixed_assets").insert(asset).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["financial-periods"] });
-      toast.success("Financial period locked successfully");
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fixed-assets"] }),
   });
+
+  return { ...query, createAsset };
 }
 
 // ============= Budgets =============
@@ -184,32 +107,16 @@ export function useBudgets(fiscalYear?: string) {
     },
   });
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("budgets-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "budgets" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
-  return query;
-}
-
-export function useUpdateBudget() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Budget> }) => {
+  const updateBudget = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Budget> & { id: string }) => {
       const { data, error } = await db.from("budgets").update(updates).eq("id", id).select().single();
       if (error) throw error;
-      return data as Budget;
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      toast.success("Budget updated");
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets"] }),
   });
+
+  return { ...query, updateBudget };
 }
 
 // ============= Bank Accounts =============
@@ -226,30 +133,53 @@ export function useBankAccounts() {
     },
   });
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("bank-accounts-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "bank_accounts" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
+  const createBankAccount = useMutation({
+    mutationFn: async (account: Omit<BankAccount, "id" | "created_at" | "updated_at">) => {
+      const { data, error } = await db.from("bank_accounts").insert(account).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bank-accounts"] }),
+  });
 
-  return query;
+  return { ...query, createBankAccount };
 }
 
-export function useCreateBankAccount() {
+// ============= Financial Periods =============
+
+export function useFinancialPeriods() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (bankAccount: Omit<BankAccount, "id">) => {
-      const { data, error } = await db.from("bank_accounts").insert(bankAccount).select().single();
+
+  const query = useQuery({
+    queryKey: ["financial-periods"],
+    queryFn: async () => {
+      const { data, error } = await db.from("financial_periods").select("*").order("start_date", { ascending: false });
       if (error) throw error;
-      return data as BankAccount;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
-      toast.success("Bank account added");
+      return data as FinancialPeriod[];
     },
   });
+
+  const updatePeriodStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: FinancialPeriod['status'] }) => {
+      const updates: any = { status };
+      if (status === 'locked') {
+        updates.locked_at = new Date().toISOString();
+        updates.locked_by = (await supabase.auth.getUser()).data.user?.id;
+      }
+      const { data, error } = await db.from("financial_periods").update(updates).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["financial-periods"] }),
+  });
+
+  return { ...query, updatePeriodStatus };
+}
+
+export function useLockPeriod() {
+  const { updatePeriodStatus } = useFinancialPeriods();
+  return {
+    ...updatePeriodStatus,
+    mutateAsync: (id: string) => updatePeriodStatus.mutateAsync({ id, status: 'locked' })
+  };
 }
