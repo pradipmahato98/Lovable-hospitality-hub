@@ -11,15 +11,16 @@ export function setupRealtime(httpServer: HttpServer) {
     },
   });
 
+  // Track online users
+  const presenceMap = new Map<string, string>(); // userId -> socketId
+
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
-    if (!token) {
-      return next(new Error("Authentication error"));
-    }
+    if (!token) return next(new Error("Authentication error"));
 
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET);
-      (socket as any).user = decoded;
+      const decoded = jwt.verify(token, env.JWT_PUBLIC_KEY, { algorithms: ["RS256"] }) as { sub: string };
+      (socket as any).userId = decoded.sub;
       next();
     } catch (err) {
       next(new Error("Authentication error"));
@@ -27,15 +28,23 @@ export function setupRealtime(httpServer: HttpServer) {
   });
 
   io.on("connection", (socket) => {
-    console.log(`📡 New connection: ${socket.id}`);
+    const userId = (socket as any).userId;
+    presenceMap.set(userId, socket.id);
+
+    // Broadcast presence
+    io.emit("presence:online", { userId });
 
     socket.on("subscribe", (room) => {
       socket.join(room);
-      console.log(`👤 Socket ${socket.id} joined room ${room}`);
+    });
+
+    socket.on("typing", (data) => {
+      socket.to(data.room).emit("user:typing", { userId, ...data });
     });
 
     socket.on("disconnect", () => {
-      console.log(`🔌 Disconnected: ${socket.id}`);
+      presenceMap.delete(userId);
+      io.emit("presence:offline", { userId });
     });
   });
 
