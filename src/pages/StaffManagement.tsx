@@ -29,15 +29,23 @@ const StaffManagement = () => {
   const subTab = searchParams.get("sub") || "details";
 
   const handleTabChange = (value: string) => {
-    if (value === "about") {
-      setSearchParams({ tab: "about", sub: subTab });
-    } else {
-      setSearchParams({ tab: value });
-    }
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      if (value === "about") {
+        prev.set("sub", subTab);
+      } else {
+        prev.delete("sub");
+      }
+      return prev;
+    });
   };
 
   const handleSubTabChange = (value: string) => {
-    setSearchParams({ tab: "about", sub: value });
+    setSearchParams(prev => {
+      prev.set("tab", "about");
+      prev.set("sub", value);
+      return prev;
+    });
   };
 
   if (loadingAdmin || loadingManager) {

@@ -105,7 +105,10 @@ export default function Banquet() {
   const activeTab = searchParams.get("tab") || "events";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const queryClient = useQueryClient();

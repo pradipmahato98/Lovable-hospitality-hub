@@ -64,7 +64,10 @@ const Housekeeping = () => {
   const activeTab = searchParams.get("tab") || "rooms";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const [filterStatus, setFilterStatus] = useState<string>("all");

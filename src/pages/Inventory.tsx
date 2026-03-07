@@ -78,7 +78,10 @@ const Inventory = () => {
   const activeTab = searchParams.get("tab") || "dashboard";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   // Filter States

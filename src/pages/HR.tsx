@@ -55,11 +55,18 @@ const HR = () => {
   const empSubTab = searchParams.get("sub") || "directory";
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const setEmpSubTab = (sub: string) => {
-    setSearchParams({ tab: activeTab, sub });
+    setSearchParams(prev => {
+      prev.set("tab", activeTab);
+      prev.set("sub", sub);
+      return prev;
+    });
   };
 
   const { isAdmin, isLoading } = useIsAdmin();

@@ -72,7 +72,10 @@ const Reports = () => {
   const activeReportTab = searchParams.get("tab") || "overview";
 
   const setActiveReportTab = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
   };
 
   const handleExportPDF = (reportTitle: string) => {
