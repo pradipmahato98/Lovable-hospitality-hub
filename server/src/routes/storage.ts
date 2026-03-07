@@ -1,18 +1,19 @@
 import { Hono } from "hono";
-import { env } from "@/config/env";
+import { getPresignedUrl } from "@/services/storage";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 const storage = new Hono();
 
-storage.get("/presigned-url/:bucket/:key", async (c) => {
-  const { bucket, key } = c.req.param();
+const bucketSchema = z.enum(["avatars", "documents", "media", "private", "temp"]);
 
-  // Real implementation would use S3/MinIO SDK here to generate a signed URL
-  const expires = 3600; // 1 hour
-  const signedUrl = `http://${env.STORAGE_ENDPOINT}:9000/${bucket}/${key}?X-Amz-Expires=${expires}&...`;
-
-  return c.json({ url: signedUrl, expires });
+storage.get("/signed-url/:bucket/:key", zValidator("param", z.object({
+  bucket: bucketSchema,
+  key: z.string(),
+})), async (c) => {
+  const { bucket, key } = c.req.valid("param");
+  const url = await getPresignedUrl(bucket, key);
+  return c.json({ url });
 });
 
 export default storage;
