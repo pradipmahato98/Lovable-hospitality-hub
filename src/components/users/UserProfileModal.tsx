@@ -41,7 +41,7 @@ export function UserProfileModal({ user, open, onOpenChange }: UserProfileModalP
       setFormData({
         first_name: user.first_name || "",
         last_name: user.last_name || "",
-        phone: (user as any).phone || "",
+        phone: user.phone || "",
       });
     }
   }, [user]);

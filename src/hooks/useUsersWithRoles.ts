@@ -30,6 +30,7 @@ export interface UserWithRole {
   role: AppRole;
   allRoles: AppRole[];
   hasMultipleRoles: boolean;
+  phone: string | null;
   is_blocked: boolean | null;
   blocked_reason: string | null;
   created_at: string;
@@ -60,7 +61,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
     queryFn: async () => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, user_id, email, first_name, last_name, is_blocked, blocked_reason, created_at");
+        .select("id, user_id, email, first_name, last_name, phone, is_blocked, blocked_reason, created_at");
 
       if (profilesError) {
         console.error("Profiles fetch error:", profilesError);
@@ -91,6 +92,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
           email: profile.email,
           first_name: profile.first_name,
           last_name: profile.last_name,
+          phone: profile.phone,
           role: highestRole,
           allRoles,
           hasMultipleRoles,
@@ -103,6 +105,42 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
       return usersWithRoles;
     },
     enabled,
+  });
+};
+
+export const useSyncPermissions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      // 1. Delete all existing permissions
+      const { error: deleteError } = await supabase
+        .from("role_permissions")
+        .delete()
+        .neq("role", "admin" as AppRole); // Keep admin if any, though usually handled by 'all'
+
+      if (deleteError) throw deleteError;
+
+      // 2. Prepare default permissions for insertion
+      const roles = Object.keys(DEFAULT_PERMISSIONS) as AppRole[];
+      const inserts = roles.flatMap(role =>
+        DEFAULT_PERMISSIONS[role].map(permission => ({ role, permission }))
+      );
+
+      // 3. Insert defaults
+      const { error: insertError } = await supabase
+        .from("role_permissions")
+        .insert(inserts);
+
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
+      toast.success("Permissions synced with system defaults");
+    },
+    onError: (error: any) => {
+      toast.error("Failed to sync permissions: " + error.message);
+    },
   });
 };
 
@@ -143,8 +181,8 @@ export const useRolePermissions = (enabled: boolean = true) => {
           .from("role_permissions")
           .select("*");
 
-        if (error) {
-          console.warn("Could not fetch permissions table, using default mapping:", error.message);
+        if (error || !data || data.length === 0) {
+          console.warn("Permissions table empty or error, providing default mapping:", error?.message);
           const roles = Object.keys(DEFAULT_PERMISSIONS) as AppRole[];
           return roles.flatMap(role =>
             DEFAULT_PERMISSIONS[role].map(perm => ({ id: `${role}-${perm}`, role, permission: perm }))

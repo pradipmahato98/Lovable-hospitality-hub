@@ -1,10 +1,11 @@
-import { useRolePermissions, useUpdateRolePermission, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
+import { useRolePermissions, useUpdateRolePermission, useSyncPermissions, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Shield, Loader2, Info } from "lucide-react";
+import { Shield, Loader2, Info, RefreshCw } from "lucide-react";
 import { RoleBadge } from "./RoleBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 const ALL_PERMISSIONS = [
   "guests:view", "guests:manage", "reservations:view", "reservations:manage",
@@ -19,6 +20,7 @@ const ALL_PERMISSIONS = [
 export const PermissionsTab = () => {
   const { data: permissions, isLoading } = useRolePermissions();
   const updatePermission = useUpdateRolePermission();
+  const syncPermissions = useSyncPermissions();
 
   const hasPermission = (role: AppRole, permission: string) => {
     if (role === 'admin') return true;
@@ -54,14 +56,30 @@ export const PermissionsTab = () => {
       </Alert>
 
       <Card variant="elevated">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Role Permissions Matrix
-          </CardTitle>
-          <CardDescription>
-            Configure granular access for each system role
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="space-y-1.5">
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Role Permissions Matrix
+            </CardTitle>
+            <CardDescription>
+              Configure granular access for each system role
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => syncPermissions.mutate()}
+            disabled={syncPermissions.isPending}
+          >
+            {syncPermissions.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Sync Defaults
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-border overflow-hidden">
