@@ -1,53 +1,37 @@
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import authRoutes from './routes/auth';
-import databaseRoutes from './routes/database';
-import storageRoutes from './routes/storage';
-import { errorHandler } from './middleware/errorHandler';
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
+import { prettyJSON } from "hono/pretty-json";
+import { env } from "./config/env";
+import authRoutes from "./routes/auth";
 
-dotenv.config();
+const app = new Hono();
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
-
-const PORT = process.env.PORT || 3001;
-
-app.use(cors());
-app.use(express.json());
+// Middleware
+app.use("*", logger());
+app.use("*", prettyJSON());
+app.use("*", cors({
+  origin: "*", // Configurable via env in production
+  allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+}));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/database', databaseRoutes);
-app.use('/api/storage', storageRoutes);
+app.route("/api/v1/auth", authRoutes);
 
-// Real-time communication
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-
-  socket.on('subscribe', (channel) => {
-    socket.join(channel);
-    console.log(`User ${socket.id} subscribed to ${channel}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+app.get("/health", (c) => {
+  return c.json({
+    status: "ok",
+    version: "1.0.0",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Global error handler
-app.use(errorHandler);
+const port = Number(env.PORT);
+console.log(`🚀 Server is running on port ${port}`);
 
-server.listen(PORT, () => {
-  console.log(`LuxeStay Custom Backend running on port ${PORT}`);
+serve({
+  fetch: app.fetch,
+  port,
 });
-
-export { io };
