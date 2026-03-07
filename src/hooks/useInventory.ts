@@ -695,39 +695,102 @@ export function useInventoryTransfers() {
 
       if (status === "completed" && transfer.status !== "completed") {
         for (const tItem of transfer.items) {
-          // Deduct from source
-          const { data: fromItem } = await db.from("inventory_items").select("current_stock").eq("id", tItem.item_id).single();
-          await db.from("inventory_items").update({ current_stock: (fromItem?.current_stock || 0) - tItem.requested_quantity }).eq("id", tItem.item_id);
+          // 1. Get Source Item Details
+          const { data: sourceItem, error: sourceError } = await db.from("inventory_items").select("*").eq("id", tItem.item_id).single();
+          if (sourceError || !sourceItem) continue;
 
+          if (sourceItem.current_stock < tItem.requested_quantity) {
+            console.warn(`Insufficient stock for item ${sourceItem.name} at source location`);
+          }
+
+          // 2. Deduct from Source
+          const newSourceStock = (sourceItem.current_stock || 0) - tItem.requested_quantity;
+          const { error: updateSourceError } = await db.from("inventory_items").update({ current_stock: newSourceStock }).eq("id", sourceItem.id);
+          if (updateSourceError) throw updateSourceError;
+
+          // 3. Log Outward Movement
           await db.from("stock_movements").insert({
-            item_id: tItem.item_id,
+            item_id: sourceItem.id,
             movement_type: "out",
             quantity: tItem.requested_quantity,
             from_location_id: transfer.from_location_id,
             to_location_id: transfer.to_location_id,
-            notes: `Transfer ${transfer.transfer_number} - Out`,
+            notes: `Transfer ${transfer.transfer_number} - Outbound`,
             reference_type: "transfer",
             reference_id: transfer.id
           });
 
-          // In this simple model, we assume items are transferred between locations.
-          // If we had per-location stock tracking we would increment destination here.
-          // Since we have a flat item table where item has a single location_id,
-          // a transfer might mean CHANGING the location_id or just moving physical stock.
-          // For hospitality store-to-kitchen, it usually means moving stock to a different 'department' item.
-          // For now, let's just log the movements and update the main stock if it's the same global item.
-          // If the item location changes:
-          await db.from("inventory_items").update({ location_id: transfer.to_location_id, current_stock: (fromItem?.current_stock || 0) }).eq("id", tItem.item_id);
-          // Wait, if it's the SAME item, the total stock doesn't change globally, just its location.
-          // But usually, store items and kitchen items are separate records if tracked separately.
-          // If it's a "Store to Kitchen" transfer, we decrement "Store Item" and increment "Kitchen Item".
+          // 4. Handle Destination
+          // Check if same item exists at destination
+          let destQuery = db.from("inventory_items").select("*").eq("location_id", transfer.to_location_id);
+          if (sourceItem.sku) {
+            destQuery = destQuery.eq("sku", sourceItem.sku);
+          } else {
+            destQuery = destQuery.eq("name", sourceItem.name);
+          }
+
+          const { data: destItems } = await destQuery;
+          const destItem = destItems?.[0];
+
+          if (destItem) {
+            // Update existing destination item
+            const newDestStock = (destItem.current_stock || 0) + tItem.requested_quantity;
+            const { error: updateDestError } = await db.from("inventory_items").update({ current_stock: newDestStock }).eq("id", destItem.id);
+            if (updateDestError) throw updateDestError;
+
+            // Log Inward Movement for destination item
+            await db.from("stock_movements").insert({
+              item_id: destItem.id,
+              movement_type: "in",
+              quantity: tItem.requested_quantity,
+              from_location_id: transfer.from_location_id,
+              to_location_id: transfer.to_location_id,
+              notes: `Transfer ${transfer.transfer_number} - Inbound`,
+              reference_type: "transfer",
+              reference_id: transfer.id
+            });
+          } else {
+            // Create new item at destination
+            const { data: newItem, error: createError } = await db.from("inventory_items").insert({
+              name: sourceItem.name,
+              sku: sourceItem.sku,
+              barcode: sourceItem.barcode,
+              image_url: sourceItem.image_url,
+              category_id: sourceItem.category_id,
+              supplier_id: sourceItem.supplier_id,
+              location_id: transfer.to_location_id,
+              unit: sourceItem.unit,
+              current_stock: tItem.requested_quantity,
+              min_stock: sourceItem.min_stock,
+              reorder_point: sourceItem.reorder_point,
+              cost_price: sourceItem.cost_price,
+              department: sourceItem.department,
+              is_active: true
+            }).select().single();
+
+            if (createError) throw createError;
+
+            if (newItem) {
+              await db.from("stock_movements").insert({
+                item_id: newItem.id,
+                movement_type: "in",
+                quantity: tItem.requested_quantity,
+                from_location_id: transfer.from_location_id,
+                to_location_id: transfer.to_location_id,
+                notes: `Transfer ${transfer.transfer_number} - Inbound (New Item created)`,
+                reference_type: "transfer",
+                reference_id: transfer.id
+              });
+            }
+          }
         }
       }
 
-      const { data, error } = await db.from("inventory_transfers").update({
-        status,
-        received_at: status === "completed" ? new Date().toISOString() : undefined
-      }).eq("id", id).select().single();
+      const updates: any = { status };
+      if (status === "sent") updates.shipped_at = new Date().toISOString();
+      if (status === "completed") updates.received_at = new Date().toISOString();
+
+      const { data, error } = await db.from("inventory_transfers").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -858,8 +921,10 @@ export function useInventoryRecipes() {
         .select(`*, ingredients:inventory_recipe_ingredients(*)`)
         .eq("id", recipe_id).single();
 
+      const yieldMultiplier = quantity / (recipe.yield_quantity || 1);
+
       for (const ing of recipe.ingredients) {
-        const totalNeeded = ing.quantity * quantity;
+        const totalNeeded = ing.quantity * yieldMultiplier;
         const { data: item } = await db.from("inventory_items").select("current_stock").eq("id", ing.item_id).single();
         await db.from("inventory_items").update({ current_stock: (item?.current_stock || 0) - totalNeeded }).eq("id", ing.item_id);
 
@@ -894,10 +959,12 @@ export function useInventoryWastage() {
 
   const recordWastage = useMutation({
     mutationFn: async ({ item_id, quantity, reason, notes }: Omit<InventoryWastage, "id" | "created_at">) => {
-      const { data: item } = await db.from("inventory_items").select("current_stock").eq("id", item_id).single();
-      const newStock = (item?.current_stock || 0) - quantity;
+      const { data: item, error: fetchError } = await db.from("inventory_items").select("current_stock").eq("id", item_id).single();
+      if (fetchError) throw fetchError;
 
-      await db.from("inventory_items").update({ current_stock: newStock }).eq("id", item_id);
+      const newStock = (item?.current_stock || 0) - quantity;
+      const { error: updateError } = await db.from("inventory_items").update({ current_stock: newStock }).eq("id", item_id);
+      if (updateError) throw updateError;
 
       const { data, error } = await db.from("inventory_wastage").insert({ item_id, quantity, reason, notes }).select().single();
       if (error) throw error;
