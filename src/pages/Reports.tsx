@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,12 @@ const reportTypes = [
 ];
 
 const Reports = () => {
-  const [activeReportTab, setActiveReportTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeReportTab = searchParams.get("tab") || "overview";
+
+  const setActiveReportTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
 
   const handleExportPDF = (reportTitle: string) => {
     toast.success(`${reportTitle} exported as PDF`);
@@ -80,7 +86,7 @@ const Reports = () => {
   return (
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
 
-      <Tabs defaultValue="overview" className="space-y-8" onValueChange={setActiveReportTab}>
+      <Tabs value={activeReportTab} className="space-y-8" onValueChange={setActiveReportTab}>
         <div className="flex justify-between items-center">
           <TabsList className="bg-secondary/50 p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>

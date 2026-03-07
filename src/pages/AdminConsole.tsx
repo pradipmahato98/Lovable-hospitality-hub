@@ -29,7 +29,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -84,7 +84,13 @@ const AdminConsole = () => {
   }, []);
 
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);

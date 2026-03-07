@@ -87,6 +87,8 @@ export interface UIPreferences {
   animation_preset: "linear" | "smooth" | "spring" | "none";
   // Localization
   date_separator: "/" | "-";
+  // Navigation
+  sidebar_dropdowns_enabled: boolean;
   // Release Management
   is_staged: boolean;
   last_published_at?: string;
@@ -188,6 +190,7 @@ const defaultUIPreferences: UIPreferences = {
   saturation: 1.2,
   animation_preset: "spring",
   date_separator: "/",
+  sidebar_dropdowns_enabled: true,
   is_staged: false,
 };
 

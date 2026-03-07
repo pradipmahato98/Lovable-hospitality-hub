@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,15 @@ const statusColors: Record<string, string> = {
 
 const Reservations = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "list";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("list");
   const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);

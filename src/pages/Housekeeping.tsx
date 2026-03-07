@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,13 @@ const taskStatusConfig: Record<string, { label: string; color: string }> = {
 };
 
 const Housekeeping = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "rooms";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterFloor, setFilterFloor] = useState<string>("all");
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -143,7 +151,7 @@ const Housekeeping = () => {
 
   return (
     <MainLayout title="Housekeeping" subtitle="Room cleaning, tasks, and lost & found management">
-      <Tabs defaultValue="rooms" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />

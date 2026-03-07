@@ -288,7 +288,13 @@ const Guests = () => {
     }
   };
 
-  const [activeMainTab, setActiveMainTab] = useState("guests");
+  const activeMainTab = searchParams.get("tab") || "guests";
+  const setActiveMainTab = (tab: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
+  };
 
   return (
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
