@@ -51,6 +51,27 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 
+// Modularized Components
+import { ItemsTab } from "@/components/inventory/ItemsTab";
+import { StatsCards } from "@/components/inventory/StatsCards";
+import { TransferDialog } from "@/components/inventory/TransferDialog";
+import { RequisitionsTab } from "@/components/inventory/RequisitionsTab";
+import { OrdersTab } from "@/components/inventory/OrdersTab";
+import { SuppliersTab } from "@/components/inventory/SuppliersTab";
+import { CategoriesTab } from "@/components/inventory/CategoriesTab";
+import { LocationsTab } from "@/components/inventory/LocationsTab";
+import { TransfersTab } from "@/components/inventory/TransfersTab";
+import { AuditsTab } from "@/components/inventory/AuditsTab";
+import { RecipesTab } from "@/components/inventory/RecipesTab";
+import { WastageTab } from "@/components/inventory/WastageTab";
+import { MovementsTab } from "@/components/inventory/MovementsTab";
+import { ReportsTab } from "@/components/inventory/ReportsTab";
+import { ItemDialog } from "@/components/inventory/ItemDialog";
+import { AdjustStockDialog } from "@/components/inventory/AdjustStockDialog";
+import { StockOutDialog } from "@/components/inventory/StockOutDialog";
+import { WastageDialog } from "@/components/inventory/WastageDialog";
+import { BulkAdjustDialog } from "@/components/inventory/BulkAdjustDialog";
+
 const Inventory = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
@@ -62,8 +83,8 @@ const Inventory = () => {
   const [showLowStock, setShowLowStock] = useState(false);
 
   // Dialog States
-  const [addItemOpen, setAddItemOpen] = useState(false);
-  const [editItemOpen, setEditItemOpen] = useState(false);
+  const [itemDialogOpen, setItemDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [adjustStockOpen, setAdjustStockOpen] = useState(false);
   const [bulkAdjustOpen, setBulkAdjustOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -126,6 +147,10 @@ const Inventory = () => {
   const stats = useInventoryStats();
   const { data: reportData = [] } = useInventoryReportData();
 
+  const expiryWatchlist = useMemo(() => {
+    return items.filter(i => i.expiry_date && new Date(i.expiry_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  }, [items]);
+
   // Filtered Items for Display (applying location and department client-side)
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -141,7 +166,7 @@ const Inventory = () => {
   }, [items]);
 
   const masterItems = useMemo(() => {
-    // We could fetch non-filtered here but for now using items from hook is fine if we want dropdowns to match
+    // We fetch all active items for dropdowns to ensure selection works even if filtering is active
     return items;
   }, [items]);
 
@@ -149,6 +174,7 @@ const Inventory = () => {
   const [itemForm, setItemForm] = useState({
     name: "", sku: "", barcode: "", image_url: "", category_id: "", supplier_id: "", location_id: "",
     unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "", is_active: true,
+    batch_number: "", expiry_date: "", is_perishable: false
   });
 
   const [supplierForm, setSupplierForm] = useState({
@@ -187,25 +213,14 @@ const Inventory = () => {
   const [productionQty, setProductionQty] = useState(1);
   const [wastageForm, setWastageForm] = useState({ item_id: "", quantity: 0, reason: "Expired", notes: "" });
 
+  const resetForms = () => {
+    setNewTransfer({ from_location_id: "", to_location_id: "", notes: "", items: [] });
+    setNewRecipe({ name: "", description: "", category: "F&B", yield_quantity: 1, yield_unit: "portion", ingredients: [] });
+    setNewAudit({ location_id: "", item_ids: [] });
+    setWastageForm({ item_id: "", quantity: 0, reason: "Expired", notes: "" });
+  };
+
   // Handlers
-  const handleCreateItem = async () => {
-    try {
-      await createItem.mutateAsync(itemForm as any);
-      toast.success("Item created");
-      setAddItemOpen(false);
-    } catch (e) { toast.error("Error creating item"); }
-  };
-
-  const handleUpdateItem = async () => {
-    if (!selectedItemId) return;
-    try {
-      const { current_stock, ...updates } = itemForm;
-      await updateItem.mutateAsync({ id: selectedItemId, ...updates } as any);
-      toast.success("Item updated");
-      setEditItemOpen(false);
-    } catch (e) { toast.error("Error updating item"); }
-  };
-
   const handleAdjustStock = async () => {
     if (!selectedItemId) return;
     try {
@@ -218,7 +233,10 @@ const Inventory = () => {
   const handleCreateRequisition = async () => {
     try {
       if (newReq.items.length === 0) return toast.error("Add at least one item");
-      await createRequisition.mutateAsync(newReq as any);
+      const cleanItems = newReq.items.filter(i => i.item_id && i.quantity > 0);
+      if (cleanItems.length === 0) return toast.error("Items must have valid product and quantity");
+
+      await createRequisition.mutateAsync({ ...newReq, items: cleanItems } as any);
       toast.success("Requisition submitted");
       setAddReqOpen(false);
       setNewReq({ department: "", notes: "", items: [] });
@@ -234,10 +252,13 @@ const Inventory = () => {
 
   const handleCreatePO = async () => {
     try {
-      if (newPO.items.length === 0) return toast.error("Add items to order");
-      const subtotal = newPO.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+      const cleanItems = newPO.items.filter(i => i.item_id && i.quantity > 0);
+      if (cleanItems.length === 0) return toast.error("Add valid items to order");
+
+      const subtotal = cleanItems.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
       await createPurchaseOrder.mutateAsync({
         ...newPO,
+        items: cleanItems,
         subtotal,
         tax_amount: subtotal * 0.13,
         total: subtotal * 1.13,
@@ -245,6 +266,7 @@ const Inventory = () => {
       } as any);
       toast.success("Purchase order created");
       setAddPOOpen(false);
+      setNewPO({ supplier_id: "", order_date: format(new Date(), "yyyy-MM-dd"), expected_delivery: "", notes: "", items: [] });
     } catch (e) { toast.error("Error creating PO"); }
   };
 
@@ -266,84 +288,63 @@ const Inventory = () => {
 
   return (
     <MainLayout title="Inventory Management" subtitle="Comprehensive stock tracking and procurement">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</TabsTrigger>
-          <TabsTrigger value="items" className="gap-2"><Package className="h-4 w-4" />Items</TabsTrigger>
-          <TabsTrigger value="categories" className="gap-2"><Layers className="h-4 w-4" />Categories</TabsTrigger>
-          <TabsTrigger value="requisitions" className="gap-2"><ClipboardList className="h-4 w-4" />Requisitions</TabsTrigger>
-          <TabsTrigger value="orders" className="gap-2"><ShoppingCart className="h-4 w-4" />Orders</TabsTrigger>
-          <TabsTrigger value="suppliers" className="gap-2"><Truck className="h-4 w-4" />Suppliers</TabsTrigger>
-          <TabsTrigger value="locations" className="gap-2"><Warehouse className="h-4 w-4" />Locations</TabsTrigger>
-          <TabsTrigger value="transfers" className="gap-2"><RefreshCw className="h-4 w-4" />Transfers</TabsTrigger>
-          <TabsTrigger value="audits" className="gap-2"><CheckCircle2 className="h-4 w-4" />Audits</TabsTrigger>
-          <TabsTrigger value="recipes" className="gap-2"><Layers className="h-4 w-4" />Recipes</TabsTrigger>
-          <TabsTrigger value="movements" className="gap-2"><ArrowUpDown className="h-4 w-4" />Movements</TabsTrigger>
-          <TabsTrigger value="wastage" className="gap-2"><Trash2 className="h-4 w-4" />Wastage</TabsTrigger>
-          <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" />Reports</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" orientation="vertical">
+        <div className="flex flex-col md:flex-row gap-6 min-h-[calc(100vh-12rem)]">
+          <div className="md:w-56 flex flex-col gap-6 shrink-0">
+            <TabsList className="flex flex-col h-auto bg-muted/30 p-1.5 gap-6 border rounded-xl shadow-none items-stretch">
+              <div className="space-y-1">
+                <h3 className="text-[10px] uppercase font-bold text-muted-foreground mb-2 px-3 tracking-widest">General</h3>
+                <TabsTrigger value="dashboard" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><LayoutDashboard className="h-4 w-4" />Dashboard</TabsTrigger>
+                <TabsTrigger value="reports" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><BarChart3 className="h-4 w-4" />Reports</TabsTrigger>
 
-        <TabsContent value="dashboard" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-primary/5 border-primary/20 shadow-sm transition-all hover:shadow-md">
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Inventory Value</p>
-                    <p className="text-2xl font-bold text-primary">${stats.totalValue.toLocaleString()}</p>
+                <h3 className="text-[10px] uppercase font-bold text-muted-foreground mt-4 mb-2 px-3 tracking-widest">Inventory Control</h3>
+                <TabsTrigger value="items" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Package className="h-4 w-4" />Items</TabsTrigger>
+                <TabsTrigger value="categories" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Layers className="h-4 w-4" />Categories</TabsTrigger>
+                <TabsTrigger value="locations" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Warehouse className="h-4 w-4" />Locations</TabsTrigger>
+                <TabsTrigger value="movements" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ArrowUpDown className="h-4 w-4" />Movements</TabsTrigger>
+
+                <h3 className="text-[10px] uppercase font-bold text-muted-foreground mt-4 mb-2 px-3 tracking-widest">Procurement</h3>
+                <TabsTrigger value="requisitions" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ClipboardList className="h-4 w-4" />Requisitions</TabsTrigger>
+                <TabsTrigger value="orders" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ShoppingCart className="h-4 w-4" />Orders</TabsTrigger>
+                <TabsTrigger value="suppliers" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Truck className="h-4 w-4" />Suppliers</TabsTrigger>
+
+                <h3 className="text-[10px] uppercase font-bold text-muted-foreground mt-4 mb-2 px-3 tracking-widest">Logistics & Quality</h3>
+                <TabsTrigger value="transfers" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><RefreshCw className="h-4 w-4" />Transfers</TabsTrigger>
+                <TabsTrigger value="audits" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><CheckCircle2 className="h-4 w-4" />Audits</TabsTrigger>
+                <TabsTrigger value="recipes" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Layers className="h-4 w-4" />Recipes</TabsTrigger>
+                <TabsTrigger value="wastage" className="w-full justify-start gap-3 py-2 px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Trash2 className="h-4 w-4" />Wastage</TabsTrigger>
+              </div>
+            </TabsList>
+
+            <div className="hidden md:block mt-auto">
+              <Card className="bg-primary/5 border-primary/10">
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-bold">System Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Low Stock Items</span>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">{stats.lowStock}</Badge>
                   </div>
-                  <DollarSign className="h-8 w-8 text-primary/40" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card
-              className={`shadow-sm transition-all hover:shadow-md cursor-pointer ${stats.lowStock > 0 ? "bg-amber-500/5 border-amber-500/20" : ""}`}
-              onClick={() => { setShowLowStock(true); setActiveTab("items"); }}
-            >
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Low Stock Alerts</p>
-                    <p className={`text-2xl font-bold ${stats.lowStock > 0 ? "text-amber-500" : ""}`}>{stats.lowStock}</p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Pending Reqs</span>
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">{requisitions.filter(r => r.status === "pending").length}</Badge>
                   </div>
-                  <AlertTriangle className={`h-8 w-8 ${stats.lowStock > 0 ? "text-amber-500/40" : "text-muted-foreground/20"}`} />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm transition-all hover:shadow-md cursor-pointer" onClick={() => setActiveTab("requisitions")}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pending Reqs</p>
-                    <p className="text-2xl font-bold">{requisitions.filter(r => r.status === "pending").length}</p>
-                  </div>
-                  <ClipboardList className="h-8 w-8 text-muted-foreground/20" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm transition-all hover:shadow-md cursor-pointer" onClick={() => setActiveTab("orders")}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active POs</p>
-                    <p className="text-2xl font-bold">{purchaseOrders.filter(o => o.status === "sent").length}</p>
-                  </div>
-                  <ShoppingCart className="h-8 w-8 text-muted-foreground/20" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm transition-all hover:shadow-md cursor-pointer border-l-4 border-l-destructive" onClick={() => setActiveTab("wastage")}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Monthly Wastage</p>
-                    <p className="text-2xl font-bold text-destructive">${wastage.reduce((sum, w) => sum + (w.quantity * (w.item?.cost_price || 0)), 0).toLocaleString()}</p>
-                  </div>
-                  <Trash2 className="h-8 w-8 text-destructive/20" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
+
+          <div className="flex-1 space-y-6">
+            <TabsContent value="dashboard" className="space-y-6 mt-0">
+              <StatsCards
+                stats={stats}
+                requisitions={requisitions}
+                purchaseOrders={purchaseOrders}
+                wastage={wastage}
+                onTabChange={setActiveTab}
+                onShowLowStock={() => { setShowLowStock(true); setActiveTab("items"); }}
+              />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2 shadow-sm">
@@ -390,7 +391,7 @@ const Inventory = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {items.filter(i => i.expiry_date && new Date(i.expiry_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).slice(0, 5).map(item => (
+                  {expiryWatchlist.slice(0, 5).map(item => (
                     <div key={item.id} className="flex justify-between items-center text-xs p-2 bg-muted/30 rounded-lg">
                       <div>
                         <p className="font-bold">{item.name}</p>
@@ -399,7 +400,7 @@ const Inventory = () => {
                       <Badge variant="destructive">{item.current_stock} {item.unit} left</Badge>
                     </div>
                   ))}
-                  {items.filter(i => i.expiry_date && new Date(i.expiry_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).length === 0 && (
+                  {expiryWatchlist.length === 0 && (
                     <p className="text-center py-4 text-muted-foreground italic text-xs">No imminent expirations</p>
                   )}
                 </div>
@@ -412,8 +413,8 @@ const Inventory = () => {
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-2">
                 <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => {
-                  setItemForm({ name: "", sku: "", barcode: "", image_url: "", category_id: "", supplier_id: "", location_id: "", unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "", is_active: true });
-                  setAddItemOpen(true);
+                  setSelectedItem(null);
+                  setItemDialogOpen(true);
                 }}>
                   <Plus className="h-4 w-4" /> Add New Item
                 </Button>
@@ -435,646 +436,189 @@ const Inventory = () => {
         </TabsContent>
 
         <TabsContent value="items" className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-            <div className="flex flex-wrap gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search items..." className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-36"><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger className="w-36"><SelectValue placeholder="Location" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="icon" onClick={() => setShowLowStock(!showLowStock)} className={showLowStock ? "bg-amber-500/10 text-amber-600 border-amber-500/50" : ""} title="Low Stock Only">
-                <AlertTriangle className="h-4 w-4" />
-              </Button>
-              {(searchQuery || categoryFilter !== "all" || locationFilter !== "all" || showLowStock) && (
-                <Button variant="ghost" size="icon" onClick={clearFilters} title="Clear Filters"><FilterX className="h-4 w-4" /></Button>
-              )}
-            </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <Button variant="outline" onClick={() => handleExport(items, "Items")}><FileDown className="h-4 w-4 mr-2" />Export</Button>
-              <Button variant="gold" onClick={() => {
-                setItemForm({ name: "", sku: "", barcode: "", image_url: "", category_id: "", supplier_id: "", location_id: "", unit: "pieces", current_stock: 0, min_stock: 0, reorder_point: 0, cost_price: 0, department: "", is_active: true });
-                setAddItemOpen(true);
-              }} className="gap-2"><Plus className="h-4 w-4" />Add Item</Button>
-            </div>
-          </div>
-
-          <Card className="shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead>Item Details</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Stock Level</TableHead>
-                  <TableHead>Unit Cost</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-20"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary/50" /></TableCell></TableRow>
-                ) : filteredItems.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No items match your filters</TableCell></TableRow>
-                ) : filteredItems.map(item => (
-                  <TableRow key={item.id} className={item.is_active ? "" : "opacity-50"}>
-                    <TableCell>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="" className="h-8 w-8 rounded object-cover shadow-sm" />
-                      ) : (
-                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center"><Package className="h-4 w-4 text-muted-foreground" /></div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{item.name}</span>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                          <span className="font-mono bg-muted px-1 rounded">{item.sku || "NO-SKU"}</span>
-                          {item.barcode && <span className="flex items-center gap-0.5"><QrCode className="h-2.5 w-2.5" />{item.barcode}</span>}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge variant="outline" className="font-normal text-[10px]">{item.category?.name || "Uncategorized"}</Badge></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{item.location?.name || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className={`text-xs font-bold ${item.current_stock <= item.reorder_point ? "text-amber-500" : ""}`}>
-                          {item.current_stock} {item.unit}
-                        </span>
-                        <div className="h-1 w-20 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-500 ${item.current_stock <= item.reorder_point ? "bg-amber-500" : "bg-success"}`}
-                            style={{ width: `${Math.min(100, (item.current_stock / (Math.max(item.reorder_point, 1) * 2)) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm font-medium">${item.cost_price.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-0.5">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedItemId(item.id); setStockAdjustment({ ...stockAdjustment, type: "out", quantity: 0, department: item.department || "" }); setStockOutOpen(true); }} title="Record Consumption"><TrendingDown className="h-4 w-4 text-destructive" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedItemId(item.id); setStockAdjustment({ ...stockAdjustment, type: "in", quantity: 0 }); setAdjustStockOpen(true); }} title="Adjust Stock"><Plus className="h-4 w-4 text-success" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                          setSelectedItemId(item.id);
-                          setItemForm({ ...item, sku: item.sku || "", barcode: item.barcode || "", image_url: item.image_url || "", category_id: item.category_id || "", supplier_id: item.supplier_id || "", location_id: item.location_id || "", department: item.department || "" });
-                          setEditItemOpen(true);
-                        }} title="Edit"><Edit className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+          <ItemsTab
+            items={items}
+            categories={categories}
+            locations={locations}
+            isLoading={isLoading}
+            onAddItem={() => {
+              setSelectedItem(null);
+              setItemDialogOpen(true);
+            }}
+            onEditItem={(item) => {
+              setSelectedItem(item);
+              setItemDialogOpen(true);
+            }}
+            onAdjustStock={(itemId, type) => {
+              setSelectedItemId(itemId);
+              if (type === "out") {
+                const item = items.find(i => i.id === itemId);
+                setStockAdjustment({ ...stockAdjustment, type: "out", quantity: 0, department: item?.department || "" });
+                setStockOutOpen(true);
+              } else {
+                setStockAdjustment({ ...stockAdjustment, type: "in", quantity: 0 });
+                setAdjustStockOpen(true);
+              }
+            }}
+            onExport={handleExport}
+          />
         </TabsContent>
 
         <TabsContent value="categories" className="space-y-4">
-           <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Item Categories</h2>
-              <Button variant="gold" onClick={() => { setCategoryForm({ name: "", description: "" }); setAddCategoryOpen(true); }} className="gap-2"><Plus className="h-4 w-4" />Add Category</Button>
-           </div>
-           <Card className="shadow-sm">
-             <Table>
-                <TableHeader>
-                  <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground">No categories defined</TableCell></TableRow>
-                  ) : categories.map(c => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{c.description || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => { setSelectedCategoryId(c.id); setCategoryForm({ name: c.name, description: c.description || "" }); setEditCategoryOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { if (confirm("Delete category?")) deleteCategory.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-             </Table>
-           </Card>
+          <CategoriesTab
+            categories={categories}
+            onAddCategory={() => { setCategoryForm({ name: "", description: "" }); setAddCategoryOpen(true); }}
+            onEditCategory={(c) => { setSelectedCategoryId(c.id); setCategoryForm({ name: c.name, description: c.description || "" }); setEditCategoryOpen(true); }}
+            onDeleteCategory={(id) => { if (confirm("Delete category?")) deleteCategory.mutate(id); }}
+          />
         </TabsContent>
 
         <TabsContent value="requisitions" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Internal Requisitions</h2>
-            <Button variant="gold" className="gap-2" onClick={() => setAddReqOpen(true)}><Plus className="h-4 w-4" />New Requisition</Button>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            {requisitions.length === 0 ? (
-              <Card className="p-10 text-center text-muted-foreground">No active requisitions</Card>
-            ) : requisitions.map(req => (
-              <Card key={req.id} className="overflow-hidden shadow-sm border-l-4 border-l-primary hover:shadow-md transition-shadow">
-                <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-primary/10 text-primary"><ClipboardList className="h-6 w-6" /></div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg">{req.requisition_number}</span>
-                        <Badge className={
-                          req.status === "approved" ? "bg-success/20 text-success" :
-                          req.status === "pending" ? "bg-amber-500/20 text-amber-500" :
-                          req.status === "completed" ? "bg-blue-500/20 text-blue-500" :
-                          "bg-muted text-muted-foreground"
-                        }>{req.status}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-tight">Dept: {req.department} • {format(new Date(req.created_at), "MMM d, yyyy HH:mm")}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right hidden md:block mr-4">
-                      <p className="text-sm font-medium">{req.items?.length || 0} items requested</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {req.status === "pending" && (
-                        <Button variant="outline" size="sm" className="text-success gap-2 hover:bg-success hover:text-white" onClick={() => handleApproveReq(req.id)}><CheckCircle2 className="h-4 w-4" />Approve</Button>
-                      )}
-                      {req.status === "approved" && (
-                        <Button variant="gold" size="sm" className="gap-2" onClick={() => convertToPO.mutate(req.id)}><ShoppingCart className="h-4 w-4" />Generate PO</Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedReq(req); setViewReqOpen(true); }}><Eye className="h-4 w-4 mr-2" />Details</Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("Cancel requisition?")) deleteRequisition.mutate(req.id); }}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <RequisitionsTab
+            requisitions={requisitions}
+            onAddRequisition={() => setAddReqOpen(true)}
+            onApprove={handleApproveReq}
+            onConvertToPO={(id) => convertToPO.mutate(id)}
+            onViewDetails={(req) => { setSelectedReq(req); setViewReqOpen(true); }}
+            onDelete={(id) => { if (confirm("Cancel requisition?")) deleteRequisition.mutate(id); }}
+          />
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Purchase Orders</h2>
-            <Button variant="gold" className="gap-2" onClick={() => setAddPOOpen(true)}><Plus className="h-4 w-4" />New Order</Button>
-          </div>
-          <Card className="shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {purchaseOrders.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground">No purchase orders found</TableCell></TableRow>
-                ) : purchaseOrders.map(po => (
-                  <TableRow key={po.id}>
-                    <TableCell className="font-mono text-xs font-bold">{po.order_number}</TableCell>
-                    <TableCell className="text-sm">{po.supplier?.name || "-"}</TableCell>
-                    <TableCell className="text-sm">{format(new Date(po.order_date), "MMM d, yyyy")}</TableCell>
-                    <TableCell>
-                      <Badge className={
-                        po.status === "received" ? "bg-success/20 text-success border-success/30" :
-                        po.status === "sent" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
-                        "bg-muted text-muted-foreground"
-                      }>{po.status}</Badge>
-                    </TableCell>
-                    <TableCell className="font-bold text-sm">${po.total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPO(po); setViewPOOpen(true); }} className="h-8 gap-1"><Eye className="h-3.5 w-3.5" />View</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+          <OrdersTab
+            purchaseOrders={purchaseOrders}
+            onAddPO={() => setAddPOOpen(true)}
+            onViewDetails={(po) => { setSelectedPO(po); setViewPOOpen(true); }}
+          />
         </TabsContent>
 
         <TabsContent value="suppliers" className="space-y-4">
-           <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Suppliers</h2>
-              <Button variant="gold" className="gap-2" onClick={() => { setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "", payment_terms: "", notes: "", is_active: true }); setAddSupplierOpen(true); }}><Plus className="h-4 w-4" />Add Supplier</Button>
-           </div>
-           <Card className="shadow-sm">
-             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {suppliers.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No suppliers registered</TableCell></TableRow>
-                  ) : suppliers.map(s => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">{s.name}</TableCell>
-                      <TableCell className="text-sm">{s.contact_person || "-"}</TableCell>
-                      <TableCell className="text-sm">{s.email || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          setSelectedSupplierId(s.id);
-                          setSupplierForm({ ...s, contact_person: s.contact_person || "", email: s.email || "", phone: s.phone || "", address: s.address || "", payment_terms: s.payment_terms || "", notes: s.notes || "" });
-                          setEditSupplierOpen(true);
-                        }}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { if (confirm("Delete supplier?")) deleteSupplier.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-             </Table>
-           </Card>
+          <SuppliersTab
+            suppliers={suppliers}
+            onAddSupplier={() => { setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "", payment_terms: "", notes: "", is_active: true }); setAddSupplierOpen(true); }}
+            onEditSupplier={(s) => {
+              setSelectedSupplierId(s.id);
+              setSupplierForm({ ...s, contact_person: s.contact_person || "", email: s.email || "", phone: s.phone || "", address: s.address || "", payment_terms: s.payment_terms || "", notes: s.notes || "" });
+              setEditSupplierOpen(true);
+            }}
+            onDeleteSupplier={(id) => { if (confirm("Delete supplier?")) deleteSupplier.mutate(id); }}
+          />
         </TabsContent>
 
         <TabsContent value="locations" className="space-y-4">
-           <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Warehouse Locations</h2>
-              <Button variant="gold" className="gap-2" onClick={() => { setLocationForm({ name: "", description: "" }); setAddLocationOpen(true); }}><Plus className="h-4 w-4" />Add Location</Button>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {locations.length === 0 ? (
-                <div className="col-span-full py-20 text-center text-muted-foreground">No storage locations configured</div>
-              ) : locations.map(loc => (
-                <Card key={loc.id} className="shadow-sm border-l-4 border-l-primary relative group hover:shadow-md transition-all">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2"><Warehouse className="h-5 w-5 text-primary/70" />{loc.name}</CardTitle>
-                    <CardDescription className="text-[10px] line-clamp-1">{loc.description || "No description"}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center text-sm mb-4">
-                      <span className="text-muted-foreground">Stored Items:</span>
-                      <span className="font-bold">{items.filter(i => i.location_id === loc.id).length}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-muted/50">
-                      <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2" onClick={() => { setLocationFilter(loc.id); setActiveTab("items"); }}>View Stock</Button>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedLocationId(loc.id); setLocationForm({ name: loc.name, description: loc.description || "" }); setEditLocationOpen(true); }}><Edit className="h-3 w-3" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Delete location?")) deleteLocation.mutate(loc.id); }}><Trash2 className="h-3 w-3" /></Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-           </div>
+          <LocationsTab
+            locations={locations}
+            items={items}
+            onAddLocation={() => { setLocationForm({ name: "", description: "" }); setAddLocationOpen(true); }}
+            onEditLocation={(loc) => { setSelectedLocationId(loc.id); setLocationForm({ name: loc.name, description: loc.description || "" }); setEditLocationOpen(true); }}
+            onDeleteLocation={(id) => { if (confirm("Delete location?")) deleteLocation.mutate(id); }}
+            onViewStock={(id) => { setLocationFilter(id); setActiveTab("items"); }}
+          />
         </TabsContent>
 
         <TabsContent value="transfers" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Internal Stock Transfers</h2>
-            <Button variant="gold" className="gap-2" onClick={() => setAddTransferOpen(true)}><RefreshCw className="h-4 w-4" />New Transfer</Button>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            {transfers.length === 0 ? (
-              <Card className="p-10 text-center text-muted-foreground">No active transfers</Card>
-            ) : transfers.map(trf => (
-              <Card key={trf.id} className="p-4 shadow-sm border-l-4 border-l-blue-500">
-                <div className="flex justify-between items-center">
-                   <div>
-                     <div className="flex items-center gap-2">
-                       <span className="font-bold">{trf.transfer_number}</span>
-                       <Badge>{trf.status}</Badge>
-                     </div>
-                     <p className="text-xs text-muted-foreground">{trf.from_location?.name} → {trf.to_location?.name}</p>
-                   </div>
-                   <div className="flex gap-2">
-                     {trf.status === "pending" && (
-                       <Button variant="outline" size="sm" onClick={() => updateTransferStatus.mutate({ id: trf.id, status: "sent" })}>Ship Items</Button>
-                     )}
-                     {trf.status === "sent" && (
-                       <Button variant="gold" size="sm" onClick={() => updateTransferStatus.mutate({ id: trf.id, status: "completed" })}>Confirm Receipt</Button>
-                     )}
-                     <Button variant="ghost" size="sm" onClick={() => { setSelectedTransfer(trf); setViewTransferOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <TransfersTab
+            transfers={transfers}
+            onAddTransfer={() => setAddTransferOpen(true)}
+            onUpdateStatus={(id, status) => updateTransferStatus.mutate({ id, status })}
+            onViewDetails={(trf) => { setSelectedTransfer(trf); setViewTransferOpen(true); }}
+          />
         </TabsContent>
 
         <TabsContent value="audits" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Physical Inventory Audits</h2>
-            <Button variant="gold" className="gap-2" onClick={() => setAddAuditOpen(true)}><CheckCircle2 className="h-4 w-4" />Start New Audit</Button>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            {audits.length === 0 ? (
-              <Card className="p-10 text-center text-muted-foreground">No audits recorded</Card>
-            ) : audits.map(audit => (
-              <Card key={audit.id} className="p-4 shadow-sm">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold">{audit.audit_number}</span>
-                      <Badge variant={audit.status === "completed" ? "success" : "secondary" as any}>{audit.status}</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Location: {audit.location?.name} • {format(new Date(audit.created_at), "MMM d, yyyy")}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {audit.status === "in_progress" ? (
-                      <Button variant="gold" size="sm" onClick={() => {
-                        setSelectedAudit(audit);
-                        setReconcileData(audit.items.map((i: any) => ({ id: i.id, item_id: i.item_id, physical_stock: i.theoretical_stock, reason: "" })));
-                        setViewAuditOpen(true);
-                      }}>Reconcile</Button>
-                    ) : (
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedAudit(audit); setViewAuditOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <AuditsTab
+            audits={audits}
+            onAddAudit={() => setAddAuditOpen(true)}
+            onReconcile={(audit) => {
+              setSelectedAudit(audit);
+              setReconcileData(audit.items.map((i: any) => ({ id: i.id, item_id: i.item_id, physical_stock: i.theoretical_stock, reason: "" })));
+              setViewAuditOpen(true);
+            }}
+            onViewDetails={(audit) => { setSelectedAudit(audit); setViewAuditOpen(true); }}
+          />
         </TabsContent>
 
         <TabsContent value="recipes" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Recipe Management & BOM</h2>
-            <Button variant="gold" className="gap-2" onClick={() => setAddRecipeOpen(true)}><Plus className="h-4 w-4" />Define Recipe</Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recipes.length === 0 ? (
-              <div className="col-span-full py-20 text-center text-muted-foreground">No recipes defined</div>
-            ) : recipes.map(recipe => (
-              <Card key={recipe.id} className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg">{recipe.name}</CardTitle>
-                  <CardDescription>{recipe.category} • Yield: {recipe.yield_quantity} {recipe.yield_unit}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <div className="text-xs space-y-1 mb-4">
-                      {recipe.ingredients?.slice(0, 3).map((ing: any) => (
-                        <div key={ing.id} className="flex justify-between">
-                          <span className="text-muted-foreground">{ing.item?.name}</span>
-                          <span className="font-medium">{ing.quantity} {ing.unit || ing.item?.unit}</span>
-                        </div>
-                      ))}
-                      {recipe.ingredients && recipe.ingredients.length > 3 && (
-                        <p className="text-[10px] text-primary">+{recipe.ingredients.length - 3} more ingredients</p>
-                      )}
-                   </div>
-                   <Button variant="outline" className="w-full h-8 text-xs" onClick={() => { setSelectedRecipe(recipe); setProductionQty(recipe.yield_quantity); setProduceRecipeOpen(true); }}>Record Production</Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <RecipesTab
+            recipes={recipes}
+            onAddRecipe={() => setAddRecipeOpen(true)}
+            onProduce={(recipe) => { setSelectedRecipe(recipe); setProductionQty(recipe.yield_quantity); setProduceRecipeOpen(true); }}
+          />
         </TabsContent>
 
         <TabsContent value="wastage" className="space-y-4">
-           <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Wastage & Loss Tracking</h2>
-              <Button variant="gold" className="gap-2" onClick={() => setAddWastageOpen(true)}><Trash2 className="h-4 w-4" />Record Loss</Button>
-           </div>
-           <Card className="shadow-sm">
-             <Table>
-                <TableHeader>
-                  <TableRow><TableHead>Date</TableHead><TableHead>Item</TableHead><TableHead>Reason</TableHead><TableHead>Qty</TableHead><TableHead>Value Lost</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {wastage.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No wastage records found</TableCell></TableRow>
-                  ) : wastage.map(w => (
-                    <TableRow key={w.id}>
-                      <TableCell className="text-xs text-muted-foreground">{format(new Date(w.created_at), "MMM d, HH:mm")}</TableCell>
-                      <TableCell className="font-medium">{w.item?.name}</TableCell>
-                      <TableCell><Badge variant="outline">{w.reason}</Badge></TableCell>
-                      <TableCell className="font-bold text-destructive">-{w.quantity} {w.item?.unit}</TableCell>
-                      <TableCell className="font-mono text-sm">${(w.quantity * (w.item?.cost_price || 0)).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-             </Table>
-           </Card>
+          <WastageTab
+            wastage={wastage}
+            onAddWastage={() => setAddWastageOpen(true)}
+          />
         </TabsContent>
 
         <TabsContent value="movements" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Stock Movements</h2>
-            <Button variant="outline" onClick={() => handleExport(movements, "Stock_Movements")}><FileDown className="h-4 w-4 mr-2" />Export Log</Button>
-          </div>
-           <Card className="shadow-sm">
-             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Reference/Dept</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movements.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No recent inventory changes recorded</TableCell></TableRow>
-                  ) : movements.map(m => (
-                    <TableRow key={m.id}>
-                      <TableCell className="text-[10px] text-muted-foreground">{format(new Date(m.created_at), "MMM d, HH:mm:ss")}</TableCell>
-                      <TableCell className="font-medium text-sm">{(m.item as any)?.name || "Unknown Item"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-[10px] font-normal ${
-                          m.movement_type === "in" ? "bg-success/10 text-success border-success/30" :
-                          m.movement_type === "out" ? "bg-destructive/10 text-destructive border-destructive/30" :
-                          "bg-muted text-muted-foreground"
-                        }`}>{m.movement_type.toUpperCase()}</Badge>
-                      </TableCell>
-                      <TableCell className="font-bold text-sm">{m.movement_type === "out" ? "-" : "+"}{m.quantity}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]">{m.department || m.notes || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-             </Table>
-           </Card>
+          <MovementsTab
+            movements={movements}
+            onExport={handleExport}
+          />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="shadow-sm border-t-4 border-t-amber-500">
-              <CardHeader><CardTitle className="text-lg">Inventory Valuation Trend</CardTitle><CardDescription>30-day cumulative value</CardDescription></CardHeader>
-              <CardContent className="h-[300px]">
-                {reportData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={reportData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                      <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} interval={4} />
-                      <YAxis fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
-                      <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
-                      <Line type="monotone" dataKey="value" name="Value" stroke="#EAB308" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 4 }} animationDuration={1000} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground italic">Insufficient data for trend analysis</div>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border-t-4 border-t-primary">
-              <CardHeader><CardTitle className="text-lg">Value by Category</CardTitle><CardDescription>Total value distribution</CardDescription></CardHeader>
-              <CardContent className="h-[300px]">
-                {Object.keys(stats.categoryDistribution || {}).length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={Object.entries(stats.categoryDistribution || {}).map(([name, value]) => ({ name, value }))} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value" labelLine={false} animationDuration={1000}>
-                        {Object.entries(stats.categoryDistribution || {}).map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={[`#EAB308`, `#3B82F6`, `#10B981`, `#F59E0B`, `#6366F1`, `#EC4899`][index % 6]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip formatter={(v: number) => [`$${v.toLocaleString()}`, "Value"]} contentStyle={{ borderRadius: '8px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground italic">No category data available</div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <ReportsTab
+            reportData={reportData}
+            stats={stats}
+          />
         </TabsContent>
-      </Tabs>
 
-      {/* Item Dialogs (Add/Edit) */}
-      <Dialog open={addItemOpen || editItemOpen} onOpenChange={(v) => { if(!v) { setAddItemOpen(false); setEditItemOpen(false); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="flex items-center gap-2">{addItemOpen ? <Plus className="h-5 w-5" /> : <Edit className="h-5 w-5" />}{addItemOpen ? "Add New Item" : "Modify Item Details"}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="md:col-span-2 flex justify-center py-6 bg-muted/30 rounded-xl border-2 border-dashed border-muted hover:border-primary/30 transition-colors cursor-pointer group">
-               <div className="flex flex-col items-center gap-2">
-                  <Camera className="h-10 w-10 text-muted-foreground group-hover:text-primary/50 transition-colors" />
-                  <span className="text-xs text-muted-foreground">Click to upload product photo</span>
-               </div>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Product Name *</Label><Input value={itemForm.name} onChange={e => setItemForm({...itemForm, name: e.target.value})} placeholder="e.g. Bed Linen King Size" /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">SKU / ID</Label><Input value={itemForm.sku} onChange={e => setItemForm({...itemForm, sku: e.target.value})} placeholder="INTERNAL-ID-123" /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Barcode / GTIN</Label><Input value={itemForm.barcode} onChange={e => setItemForm({...itemForm, barcode: e.target.value})} placeholder="Scan barcode here" /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Category</Label>
-              <Select value={itemForm.category_id} onValueChange={v => setItemForm({...itemForm, category_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Categorize item" /></SelectTrigger>
-                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Storage Location</Label>
-              <Select value={itemForm.location_id} onValueChange={v => setItemForm({...itemForm, location_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Primary warehouse" /></SelectTrigger>
-                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Unit Type</Label><Input value={itemForm.unit} onChange={e => setItemForm({...itemForm, unit: e.target.value})} placeholder="pcs, kg, liters, etc." /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Cost Price ($)</Label><Input type="number" value={itemForm.cost_price} onChange={e => setItemForm({...itemForm, cost_price: Number(e.target.value)})} /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Reorder Point</Label><Input type="number" value={itemForm.reorder_point} onChange={e => setItemForm({...itemForm, reorder_point: Number(e.target.value)})} /></div>
-            {addItemOpen && <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Initial Stock</Label><Input type="number" value={itemForm.current_stock} onChange={e => setItemForm({...itemForm, current_stock: Number(e.target.value)})} /></div>}
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Batch Number</Label><Input value={(itemForm as any).batch_number} onChange={e => setItemForm({...itemForm, batch_number: e.target.value} as any)} /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Expiry Date</Label><Input type="date" value={(itemForm as any).expiry_date} onChange={e => setItemForm({...itemForm, expiry_date: e.target.value} as any)} /></div>
-            <div className="flex items-center gap-3 pt-6">
-              <input type="checkbox" id="active-item" className="h-5 w-5 rounded-md border-primary text-primary focus:ring-primary" checked={itemForm.is_active} onChange={e => setItemForm({...itemForm, is_active: e.target.checked})} />
-              <Label htmlFor="active-item" className="text-sm font-medium">Item is currently active</Label>
-            </div>
-          </div>
-          <DialogFooter className="flex justify-between w-full border-t pt-4">
-            {editItemOpen && <Button variant="destructive" size="sm" onClick={() => { if(confirm("Are you sure? This item will be permanently removed.")) { deleteItem.mutate(selectedItemId!); setEditItemOpen(false); } }}><Trash2 className="h-4 w-4 mr-2" />Delete Item</Button>}
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => { setAddItemOpen(false); setEditItemOpen(false); }}>Cancel</Button>
-              <Button onClick={addItemOpen ? handleCreateItem : handleUpdateItem} disabled={!itemForm.name}>{addItemOpen ? "Create Product" : "Save Changes"}</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ItemDialog
+        open={itemDialogOpen}
+        onOpenChange={setItemDialogOpen}
+        item={selectedItem}
+        categories={categories}
+        locations={locations}
+        onSave={async (data) => {
+          if (selectedItem) {
+            const { current_stock, ...updates } = data;
+            await updateItem.mutateAsync({ id: selectedItem.id, ...updates } as any);
+            toast.success("Item updated");
+          } else {
+            await createItem.mutateAsync(data as any);
+            toast.success("Item created");
+          }
+          setItemDialogOpen(false);
+        }}
+        onDelete={(id) => deleteItem.mutate(id)}
+      />
 
-      {/* Adjust Stock Dialog */}
-      <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><ArrowUpDown className="h-5 w-5" />Manual Stock Adjustment</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase font-bold text-muted-foreground">Adjustment Type</Label>
-              <Select value={stockAdjustment.type} onValueChange={(v:any) => setStockAdjustment({...stockAdjustment, type: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in">Restock / Return (+)</SelectItem>
-                  <SelectItem value="out">Lost / Damaged (-)</SelectItem>
-                  <SelectItem value="adjustment">Inventory Correction (=)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Quantity</Label><Input type="number" value={stockAdjustment.quantity} onChange={e => setStockAdjustment({...stockAdjustment, quantity: Number(e.target.value)})} /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Reason / Reference</Label><Input value={stockAdjustment.notes} onChange={e => setStockAdjustment({...stockAdjustment, notes: e.target.value})} placeholder="e.g. Annual stock take" /></div>
-          </div>
-          <DialogFooter><Button onClick={handleAdjustStock} className="w-full">Update Stock Level</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdjustStockDialog
+        open={adjustStockOpen}
+        onOpenChange={setAdjustStockOpen}
+        onAdjust={async (data) => {
+          if (!selectedItemId) return;
+          await adjustStock.mutateAsync({ itemId: selectedItemId, ...data });
+          toast.success("Stock adjusted");
+        }}
+      />
 
-      {/* Bulk Adjust Dialog */}
-      <Dialog open={bulkAdjustOpen} onOpenChange={setBulkAdjustOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Bulk Inventory Update</DialogTitle><DialogDescription>Adjust multiple items in a single action</DialogDescription></DialogHeader>
-          <Table className="mt-4">
-            <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="w-32">Type</TableHead><TableHead className="w-24">Value</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {bulkAdjustments.map((adj, idx) => (
-                <TableRow key={adj.itemId}>
-                  <TableCell className="font-medium text-xs truncate max-w-[150px]">{items.find(i => i.id === adj.itemId)?.name}</TableCell>
-                  <TableCell>
-                    <Select value={adj.type} onValueChange={v => { const a = [...bulkAdjustments]; a[idx].type = v; setBulkAdjustments(a); }}>
-                      <SelectTrigger className="h-8 text-[10px]"><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="in">In (+)</SelectItem><SelectItem value="out">Out (-)</SelectItem><SelectItem value="adjustment">Set (=)</SelectItem></SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell><Input type="number" className="h-8 text-xs" value={adj.quantity} onChange={e => { const a = [...bulkAdjustments]; a[idx].quantity = Number(e.target.value); setBulkAdjustments(a); }} /></TableCell>
-                  <TableCell><Input className="h-8 text-xs" placeholder="..." value={adj.notes} onChange={e => { const a = [...bulkAdjustments]; a[idx].notes = e.target.value; setBulkAdjustments(a); }} /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setBulkAdjustOpen(false)}>Cancel</Button>
-            <Button onClick={async () => {
-              for (const adj of bulkAdjustments) {
-                if (adj.quantity > 0 || adj.type === 'adjustment') {
-                  await adjustStock.mutateAsync(adj);
-                }
-              }
-              toast.success("Bulk adjustment completed");
-              setBulkAdjustOpen(false);
-            }}>Apply All Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BulkAdjustDialog
+        open={bulkAdjustOpen}
+        onOpenChange={setBulkAdjustOpen}
+        items={items}
+        onApply={async (adjustments) => {
+          for (const adj of adjustments) {
+            await adjustStock.mutateAsync(adj);
+          }
+          toast.success("Bulk adjustment completed");
+        }}
+      />
 
-      {/* Stock Out Dialog */}
-      <Dialog open={stockOutOpen} onOpenChange={setStockOutOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-destructive" />Internal Consumption</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase font-bold text-muted-foreground">Issuing to Department</Label>
-              <Select value={stockAdjustment.department} onValueChange={v => setStockAdjustment({...stockAdjustment, department: v})}>
-                <SelectTrigger><SelectValue placeholder="Select receiver" /></SelectTrigger>
-                <SelectContent>
-                  {["Housekeeping", "Kitchen", "Bar", "Maintenance", "Front Desk", "Engineering", "Admin"].map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Quantity Removed</Label><Input type="number" value={stockAdjustment.quantity} onChange={e => setStockAdjustment({...stockAdjustment, quantity: Number(e.target.value)})} /></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Reason</Label><Input value={stockAdjustment.notes} onChange={e => setStockAdjustment({...stockAdjustment, notes: e.target.value})} placeholder="e.g. Room 301 setup" /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStockOutOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={async () => {
-              if(!stockAdjustment.department) return toast.error("Specify department");
-              if(!stockAdjustment.quantity) return toast.error("Specify quantity");
-              await adjustStock.mutateAsync({ itemId: selectedItemId!, ...stockAdjustment, type: "out" });
-              toast.success("Consumption logged");
-              setStockOutOpen(false);
-            }}>Confirm Issue</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StockOutDialog
+        open={stockOutOpen}
+        onOpenChange={setStockOutOpen}
+        initialDepartment={items.find(i => i.id === selectedItemId)?.department || ""}
+        onConfirm={async (data) => {
+          if (!selectedItemId) return;
+          await adjustStock.mutateAsync({ itemId: selectedItemId, ...data, type: "out" });
+          toast.success("Consumption logged");
+        }}
+      />
 
       {/* Requisition Details */}
       <Dialog open={viewReqOpen} onOpenChange={setViewReqOpen}>
@@ -1224,46 +768,16 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
 
-      {/* New Transfer Dialog */}
-      <Dialog open={addTransferOpen} onOpenChange={setAddTransferOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>Stock Transfer Request</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">From Location</Label>
-              <Select value={newTransfer.from_location_id} onValueChange={v => setNewTransfer({...newTransfer, from_location_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
-                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">To Location</Label>
-              <Select value={newTransfer.to_location_id} onValueChange={v => setNewTransfer({...newTransfer, to_location_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Destination" /></SelectTrigger>
-                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-3">
-               <div className="flex justify-between items-center"><Label className="text-xs uppercase font-bold text-muted-foreground">Items</Label><Button variant="outline" size="sm" onClick={() => setNewTransfer({...newTransfer, items: [...newTransfer.items, {item_id: "", requested_quantity: 1}]})}>Add Item</Button></div>
-               <Table>
-                 <TableBody>
-                   {newTransfer.items.map((item, idx) => (
-                     <TableRow key={idx}>
-                       <TableCell>
-                         <Select value={item.item_id} onValueChange={v => { const a = [...newTransfer.items]; a[idx].item_id = v; setNewTransfer({...newTransfer, items: a}); }}>
-                           <SelectTrigger className="h-9"><SelectValue placeholder="Product" /></SelectTrigger>
-                           <SelectContent>{items.filter(i => i.location_id === newTransfer.from_location_id).map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
-                         </Select>
-                       </TableCell>
-                       <TableCell><Input type="number" className="h-9" value={item.requested_quantity} onChange={e => { const a = [...newTransfer.items]; a[idx].requested_quantity = Number(e.target.value); setNewTransfer({...newTransfer, items: a}); }} /></TableCell>
-                       <TableCell><Button variant="ghost" size="icon" onClick={() => setNewTransfer({...newTransfer, items: newTransfer.items.filter((_, i) => i !== idx)})}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                     </TableRow>
-                   ))}
-                 </TableBody>
-               </Table>
-            </div>
-          </div>
-          <DialogFooter><Button onClick={async () => { await createTransfer.mutateAsync(newTransfer as any); toast.success("Transfer created"); setAddTransferOpen(false); }} className="w-full">Create Transfer Request</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <TransferDialog
+        open={addTransferOpen}
+        onOpenChange={setAddTransferOpen}
+        locations={locations}
+        items={items}
+        onCreate={async (data) => {
+          await createTransfer.mutateAsync(data as any);
+          toast.success("Transfer created");
+        }}
+      />
 
       {/* Audit Reconcile Dialog */}
       <Dialog open={viewAuditOpen} onOpenChange={setViewAuditOpen}>
@@ -1390,43 +904,19 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Wastage Dialog */}
-      <Dialog open={addWastageOpen} onOpenChange={setAddWastageOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Record Inventory Loss / Wastage</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5"><Label>Product</Label>
-              <Select value={wastageForm.item_id} onValueChange={v => setWastageForm({...wastageForm, item_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label>Quantity Lost</Label><Input type="number" value={wastageForm.quantity} onChange={e => setWastageForm({...wastageForm, quantity: Number(e.target.value)})} /></div>
-              <div className="space-y-1.5"><Label>Reason</Label>
-                <Select value={wastageForm.reason} onValueChange={v => setWastageForm({...wastageForm, reason: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Expired">Expired</SelectItem>
-                    <SelectItem value="Damaged">Damaged</SelectItem>
-                    <SelectItem value="Spillage">Spillage / Breakage</SelectItem>
-                    <SelectItem value="Theft">Theft / Missing</SelectItem>
-                    <SelectItem value="QC Fail">Quality Control Fail</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5"><Label>Notes</Label><Input value={wastageForm.notes} onChange={e => setWastageForm({...wastageForm, notes: e.target.value})} placeholder="Describe details..." /></div>
-          </div>
-          <DialogFooter><Button variant="destructive" onClick={async () => {
-            if(!wastageForm.item_id || !wastageForm.quantity) return toast.error("Complete all fields");
-            await recordWastage.mutateAsync(wastageForm as any);
-            toast.success("Wastage recorded");
-            setAddWastageOpen(false);
-          }} className="w-full">Confirm Stock Deduction</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <WastageDialog
+        open={addWastageOpen}
+        onOpenChange={setAddWastageOpen}
+        items={items}
+        onConfirm={async (data) => {
+          await recordWastage.mutateAsync(data as any);
+          toast.success("Wastage recorded");
+        }}
+      />
 
+          </div>
+        </div>
+      </Tabs>
     </MainLayout>
   );
 };
