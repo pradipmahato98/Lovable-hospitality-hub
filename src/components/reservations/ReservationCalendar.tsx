@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfWeek, eachDayOfInterval, isSameDay, isWithinInterval, parseISO, startOfDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 import { CheckInOutDialog } from "./CheckInOutDialog";
 
 interface Reservation {
