@@ -123,7 +123,10 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
   }, [filteredEntries, currentPage, pageSize]);
 
   // Reset page on filter change
-  useMemo(() => { setCurrentPage(1); }, [searchText, dateFilter, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [searchText, dateFilter, pageSize]);
+
+  // Keep date filter aligned with selected calendar mode
+  useEffect(() => { setDateFilter(null); }, [searchMode]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
