@@ -28,7 +28,7 @@ export function BudgetForecastReportingService({ isReadOnly }: { isReadOnly?: bo
     const variance = totalBudgeted > 0 ? ((totalActual - totalBudgeted) / totalBudgeted) * 100 : 0;
 
     return { linesByBudget, totalBudgeted, totalActual, variance, activeBudgets };
-  }, [budgets, budgetLines]);
+  }, [budgets]);
 
   const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
