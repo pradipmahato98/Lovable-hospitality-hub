@@ -163,7 +163,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
         <body style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Voucher: ${entry.reference || entry.entry_number}</h2>
           <p><strong>Date (AD):</strong> ${entry.date}</p>
-          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "long")}</p>
+          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "short")}</p>
           <p><strong>Description:</strong> ${entry.description || "-"}</p>
           <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
             <thead>
