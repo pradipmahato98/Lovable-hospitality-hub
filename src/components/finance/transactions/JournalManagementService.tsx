@@ -438,44 +438,93 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
 
       {/* View Dialog */}
       <Dialog open={!!viewEntry} onOpenChange={open => !open && setViewEntry(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-sm">
-              Voucher: {viewEntry?.reference || viewEntry?.entry_number}
+            <DialogTitle className="text-base flex items-center gap-2">
+              Voucher: <span className="font-mono text-primary">{viewEntry?.reference || viewEntry?.entry_number}</span>
+              {viewEntry?.is_posted ? (
+                <Badge className="text-[10px]">Posted</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] bg-warning/20 text-warning">Draft</Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
           {viewEntry && (
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div><span className="text-muted-foreground">Date (AD):</span> {viewEntry.date}</div>
-                <div><span className="text-muted-foreground">मिति (BS):</span> {formatISOasBS(viewEntry.date, "long")}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Description:</span> {viewEntry.description}</div>
-                <div><span className="text-muted-foreground">Status:</span> {viewEntry.is_posted ? "Posted" : "Draft"}</div>
+            <div className="space-y-4">
+              {/* Header Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/30 border">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Date (AD)</p>
+                  <p className="text-sm font-medium">{viewEntry.date}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">मिति (BS)</p>
+                  <p className="text-sm font-medium text-primary">{formatISOasBS(viewEntry.date, "long")}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Status</p>
+                  <p className="text-sm font-medium">{viewEntry.is_posted ? "Posted" : "Draft"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Created</p>
+                  <p className="text-sm font-medium">{viewEntry.created_at ? new Date(viewEntry.created_at).toLocaleDateString() : "—"}</p>
+                </div>
               </div>
+
+              {/* Description */}
+              <div className="p-3 rounded-lg border">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Narration / Description</p>
+                <p className="text-sm">{viewEntry.description || "—"}</p>
+              </div>
+
+              {/* Lines Table */}
               {viewEntry.lines && viewEntry.lines.length > 0 && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Account</TableHead>
-                      <TableHead className="text-xs text-right">Debit</TableHead>
-                      <TableHead className="text-xs text-right">Credit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {viewEntry.lines.map((line: any) => (
-                      <TableRow key={line.id}>
-                        <TableCell className="text-xs">{line.account?.name || getAccountName(line.account_id)}</TableCell>
-                        <TableCell className="text-xs text-right font-mono">{(line.debit || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-xs text-right font-mono">{(line.credit || 0).toFixed(2)}</TableCell>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="text-xs font-semibold">Account</TableHead>
+                        <TableHead className="text-xs font-semibold text-right w-[120px]">Debit</TableHead>
+                        <TableHead className="text-xs font-semibold text-right w-[120px]">Credit</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {viewEntry.lines.map((line: any) => (
+                        <TableRow key={line.id}>
+                          <TableCell className="text-xs py-2">
+                            <span className="font-medium">{line.account?.name || getAccountName(line.account_id)}</span>
+                            {line.description && <span className="block text-[10px] text-muted-foreground mt-0.5">{line.description}</span>}
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-mono py-2">{(line.debit || 0) > 0 ? (line.debit || 0).toFixed(2) : "—"}</TableCell>
+                          <TableCell className="text-xs text-right font-mono py-2">{(line.credit || 0) > 0 ? (line.credit || 0).toFixed(2) : "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Totals row */}
+                      <TableRow className="border-t-2 bg-muted/20">
+                        <TableCell className="text-xs font-bold py-2">Total</TableCell>
+                        <TableCell className="text-xs text-right font-mono font-bold py-2">
+                          {viewEntry.lines.reduce((s: number, l: any) => s + (l.debit || 0), 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-mono font-bold py-2">
+                          {viewEntry.lines.reduce((s: number, l: any) => s + (l.credit || 0), 0).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button size="sm" variant="outline" onClick={() => setViewEntry(null)}>Close</Button>
+          <DialogFooter className="gap-2">
+            {!isReadOnly && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setViewEntry(null); navigate(`/finance/journal/new?edit=${viewEntry?.id}`); }}>
+                <Pencil className="h-3 w-3" /> Edit
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { if (viewEntry) handlePrint(viewEntry); }}>
+              <Printer className="h-3 w-3" /> Print
+            </Button>
+            <Button size="sm" onClick={() => setViewEntry(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
