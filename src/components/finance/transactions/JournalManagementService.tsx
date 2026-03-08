@@ -236,14 +236,8 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               Clear Filter
             </Button>
           )}
-        </div>
-          <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
-          {dateFilter && (
-            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setDateFilter(null)}>
-              Clear Filter
-            </Button>
-          )}
-        </div>
+
+
 
         {/* Table */}
         <CardContent className="p-0">
