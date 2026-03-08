@@ -456,7 +456,7 @@ export default function NewJournalEntry() {
           generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
         }
       } else {
-        navigate("/finance");
+        navigate("/finance?tab=transactions");
       }
     } catch {
       toast.error("Failed to save entry");
