@@ -132,9 +132,6 @@ export function LedgerTransactionService() {
   const handleSearch = () => setApplied(true);
   const handleCancel = () => {
     setShowFilter(false);
-    setApplied(false);
-    setSelectedAccount("none");
-    setLinkedLedger("none");
   };
 
   return (
