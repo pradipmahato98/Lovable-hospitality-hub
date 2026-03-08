@@ -268,10 +268,6 @@ export default function Finance() {
             <SubTabPanel tabs={reportSubTabs} />
           </TabsContent>
 
-          {/* ========== INFRASTRUCTURE ========== */}
-          <TabsContent value="infrastructure" className="mt-4">
-            <SubTabPanel tabs={infraSubTabs} />
-          </TabsContent>
         </Tabs>
       </div>
     </MainLayout>

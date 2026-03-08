@@ -1,29 +1,47 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  BarChart3,
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  Download,
-  Calendar
-} from "lucide-react";
+import { BarChart3, TrendingUp, ArrowUpRight, Download, Calendar } from "lucide-react";
+import { usePayments, useExpenses } from "@/hooks/useFinanceExtended";
+import { format } from "date-fns";
 
 export function CashBankReportingService({ isReadOnly }: { isReadOnly?: boolean }) {
-  const bankMovements = [
-    { date: "2023-11-06", desc: "Guest Receipt - R-502", in: "$1,250.00", out: "-", balance: "$45,200.00" },
-    { date: "2023-11-06", desc: "Vendor Pmt - Sysco", in: "-", out: "$3,400.00", balance: "$41,800.00" },
-    { date: "2023-11-05", desc: "Cash Collection Post", in: "$5,100.00", out: "-", balance: "$45,200.00" },
-  ];
+  const { data: payments } = usePayments();
+  const { data: expenses } = useExpenses({ status: "paid" });
+
+  const { movements, totalInflow, totalOutflow, balance } = useMemo(() => {
+    type Movement = { date: string; desc: string; inflow: number; outflow: number; balance: number };
+    const all: Movement[] = [];
+
+    (payments || []).forEach((p) => {
+      all.push({ date: p.payment_date, desc: `Payment ${p.payment_number} (${p.payment_method})`, inflow: p.amount, outflow: 0, balance: 0 });
+    });
+
+    (expenses || []).forEach((e) => {
+      all.push({ date: e.expense_date, desc: `${e.description} - ${e.vendor || e.category}`, inflow: 0, outflow: e.amount, balance: 0 });
+    });
+
+    all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const inf = all.reduce((s, m) => s + m.inflow, 0);
+    const out = all.reduce((s, m) => s + m.outflow, 0);
+
+    // Running balance from oldest to newest
+    const sorted = [...all].reverse();
+    let running = 0;
+    sorted.forEach((m) => {
+      running += m.inflow - m.outflow;
+      m.balance = running;
+    });
+
+    return { movements: all.slice(0, 20), totalInflow: inf, totalOutflow: out, balance: running };
+  }, [payments, expenses]);
+
+  const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
   return (
     <div className="space-y-6">
@@ -32,97 +50,74 @@ export function CashBankReportingService({ isReadOnly }: { isReadOnly?: boolean 
           <h2 className="text-xl font-bold font-display flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" /> Cash & Bank Reporting
           </h2>
-          <p className="text-muted-foreground text-sm">Monitor liquidity, bank movement, and reconciliation performance.</p>
+          <p className="text-muted-foreground text-sm">Liquidity monitoring from actual payment and expense records.</p>
         </div>
-        <div className="flex gap-2">
-           <Button variant="outline" size="sm" className="gap-2">
-              <Calendar className="h-4 w-4" /> This Month
-           </Button>
-           <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" /> Export CSV
-           </Button>
-        </div>
+        <Button variant="outline" size="sm" className="gap-2"><Download className="h-4 w-4" /> Export CSV</Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
-             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-success" /> Liquidity Snapshot
-             </CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-success" /> Net Cash Position
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 pt-2">
-             <div className="flex justify-between items-end">
-                <div>
-                   <p className="text-3xl font-bold">$124,500.22</p>
-                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Cash on Hand</p>
-                </div>
-                <div className="flex items-center gap-1 text-success font-bold text-sm">
-                   <ArrowUpRight className="h-4 w-4" /> 12%
-                </div>
-             </div>
-             <div className="grid grid-cols-2 gap-2">
-                <div className="p-2 border rounded bg-secondary/10">
-                   <p className="text-[10px] text-muted-foreground uppercase">Bank Balance</p>
-                   <p className="text-sm font-bold">$118,200.00</p>
-                </div>
-                <div className="p-2 border rounded bg-secondary/10">
-                   <p className="text-[10px] text-muted-foreground uppercase">Petty Cash</p>
-                   <p className="text-sm font-bold">$6,300.22</p>
-                </div>
-             </div>
+          <CardContent>
+            <p className="text-3xl font-bold">{fmt(balance)}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Running balance</p>
           </CardContent>
         </Card>
-
-        <Card>
-           <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Reconciliation Status</CardTitle>
-           </CardHeader>
-           <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                 <span>Chase Operating</span>
-                 <Badge variant="outline" className="text-success border-success/20">Reconciled</Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                 <span>Wells Fargo Payroll</span>
-                 <Badge variant="outline" className="text-warning border-warning/20">Pending (3 items)</Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                 <span>Main Safe</span>
-                 <Badge variant="outline" className="text-success border-success/20">Reconciled</Badge>
-              </div>
-              <Button variant="ghost" size="sm" className="w-full text-xs" disabled={isReadOnly}>
-                 Run Reconciliation Tool
-              </Button>
-           </CardContent>
+        <Card className="bg-success/5 border-success/10">
+          <CardContent className="pt-4">
+            <p className="text-[10px] text-muted-foreground uppercase">Total Inflows</p>
+            <p className="text-xl font-bold text-success">{fmt(totalInflow)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-destructive/5 border-destructive/10">
+          <CardContent className="pt-4">
+            <p className="text-[10px] text-muted-foreground uppercase">Total Outflows</p>
+            <p className="text-xl font-bold text-destructive">{fmt(totalOutflow)}</p>
+          </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Recent Bank Movements</CardTitle>
+          <CardTitle className="text-lg">Recent Cash Movements</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Inflow</TableHead>
-                <TableHead>Outflow</TableHead>
-                <TableHead className="text-right">Running Balance</TableHead>
+                <TableHead className="text-right">Inflow</TableHead>
+                <TableHead className="text-right">Outflow</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bankMovements.map((m, i) => (
-                <TableRow key={i}>
-                  <TableCell className="text-xs">{m.date}</TableCell>
-                  <TableCell className="font-medium">{m.desc}</TableCell>
-                  <TableCell className="text-success">{m.in}</TableCell>
-                  <TableCell className="text-destructive">{m.out}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{m.balance}</TableCell>
+              {movements.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No cash movements recorded yet
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                movements.map((m, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-xs">{m.date}</TableCell>
+                    <TableCell className="font-medium text-sm">{m.desc}</TableCell>
+                    <TableCell className="text-right text-success font-mono text-xs">
+                      {m.inflow > 0 ? fmt(m.inflow) : "-"}
+                    </TableCell>
+                    <TableCell className="text-right text-destructive font-mono text-xs">
+                      {m.outflow > 0 ? fmt(m.outflow) : "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">{fmt(m.balance)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
