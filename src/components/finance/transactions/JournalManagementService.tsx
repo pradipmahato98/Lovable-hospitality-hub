@@ -62,7 +62,12 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
   const filteredEntries = useMemo(() => {
     let entries = journalEntries || [];
     if (dateFilter) {
-      entries = entries.filter(e => e.date >= dateFilter.from && e.date <= dateFilter.to);
+      if (searchMode === "AD") {
+        entries = entries.filter(e => e.date >= dateFilter.from && e.date <= dateFilter.to);
+      } else {
+        // Convert filter AD dates to BS, then compare entry BS dates
+        entries = entries.filter(e => e.date >= dateFilter.from && e.date <= dateFilter.to);
+      }
     }
     if (searchText) {
       const q = searchText.toLowerCase();
@@ -78,7 +83,9 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           e.description?.toLowerCase().includes(q) ||
           e.entry_number?.toLowerCase().includes(q) ||
           e.reference?.toLowerCase().includes(q) ||
-          formatISOasBS(e.date, "long").toLowerCase().includes(q)
+          formatISOasBS(e.date, "long").toLowerCase().includes(q) ||
+          formatISOasBS(e.date, "short").toLowerCase().includes(q) ||
+          formatISOasBS(e.date, "nepali").toLowerCase().includes(q)
         );
       }
     }
@@ -191,12 +198,12 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           )}
         </div>
 
-        {/* Row 2: Search, AD/BS toggle, From (BS), To (BS), Search btn, Clear */}
+        {/* Row 2: Search + AD/BS toggle + Date filters */}
         <div className="flex items-end gap-2 px-5 pb-3 flex-wrap">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder={`Search entries (${searchMode})...`}
+              placeholder={searchMode === "AD" ? "Search by AD date..." : "Search by BS मिति..."}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
               className="pl-8 h-9 text-sm w-[180px]"
@@ -211,7 +218,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               )}
               onClick={() => setSearchMode("AD")}
             >
-              AD
+              AD Select
             </button>
             <button
               className={cn(
@@ -220,7 +227,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               )}
               onClick={() => setSearchMode("BS")}
             >
-              BS
+              BS Select
             </button>
           </div>
           <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
@@ -230,6 +237,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
             </Button>
           )}
         </div>
+
 
         {/* Table */}
         <CardContent className="p-0">
@@ -242,24 +250,24 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">Action</TableHead>
-                    <TableHead className="w-[90px] cursor-pointer select-none" onClick={() => toggleSort("reference")}>
+                    <TableHead className="w-[44px] px-1">Action</TableHead>
+                    <TableHead className="w-[80px] px-1 cursor-pointer select-none" onClick={() => toggleSort("reference")}>
                       <span className="flex items-center">Voucher # <SortIcon field="reference" /></span>
                     </TableHead>
-                    <TableHead className="w-[95px] cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                    <TableHead className="w-[82px] px-1 cursor-pointer select-none" onClick={() => toggleSort("date")}>
                       <span className="flex items-center">Date (AD) <SortIcon field="date" /></span>
                     </TableHead>
-                    <TableHead className="w-[110px]">मिति (BS)</TableHead>
-                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("description")}>
+                    <TableHead className="w-[90px] px-1">मिति (BS)</TableHead>
+                    <TableHead className="px-1 cursor-pointer select-none" onClick={() => toggleSort("description")}>
                       <span className="flex items-center">Description <SortIcon field="description" /></span>
                     </TableHead>
-                    <TableHead className="text-right w-[90px] cursor-pointer select-none" onClick={() => toggleSort("debit")}>
+                    <TableHead className="text-right w-[80px] px-1 cursor-pointer select-none" onClick={() => toggleSort("debit")}>
                       <span className="flex items-center justify-end">Debit <SortIcon field="debit" /></span>
                     </TableHead>
-                    <TableHead className="text-right w-[90px] cursor-pointer select-none" onClick={() => toggleSort("credit")}>
+                    <TableHead className="text-right w-[80px] px-1 cursor-pointer select-none" onClick={() => toggleSort("credit")}>
                       <span className="flex items-center justify-end">Credit <SortIcon field="credit" /></span>
                     </TableHead>
-                    <TableHead className="w-[90px]">Posted By</TableHead>
+                    <TableHead className="w-[80px] px-1">Posted By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -268,11 +276,11 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                     const c = entry.lines?.reduce((s: number, l: any) => s + (l.credit || 0), 0) || 0;
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell className="py-1.5 px-2">
+                        <TableCell className="py-1 px-1">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreHorizontal className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-32">
@@ -300,13 +308,13 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-primary py-1.5 px-2">{entry.reference || entry.entry_number}</TableCell>
-                        <TableCell className="text-xs py-1.5 px-2">{entry.date}</TableCell>
-                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "long")}</TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate py-1.5">{entry.description}</TableCell>
-                        <TableCell className="text-right font-mono text-xs py-1.5">{d.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-xs py-1.5">{c.toFixed(2)}</TableCell>
-                        <TableCell className="py-1.5">
+                        <TableCell className="font-mono text-[11px] text-primary py-1 px-1">{entry.reference || entry.entry_number}</TableCell>
+                        <TableCell className="text-[11px] py-1 px-1">{entry.date}</TableCell>
+                        <TableCell className="text-[11px] text-primary font-medium py-1 px-1">{formatISOasBS(entry.date, "long")}</TableCell>
+                        <TableCell className="text-[11px] max-w-[140px] truncate py-1 px-1">{entry.description}</TableCell>
+                        <TableCell className="text-right font-mono text-[11px] py-1 px-1">{d.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-[11px] py-1 px-1">{c.toFixed(2)}</TableCell>
+                        <TableCell className="py-1 px-1">
                           {entry.is_posted ? (
                             formatPostedInfo(entry)
                           ) : (
@@ -387,45 +395,94 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* View Dialog */}
+      {/* View Dialog - Enhanced like new entry */}
       <Dialog open={!!viewEntry} onOpenChange={open => !open && setViewEntry(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-sm">
+            <DialogTitle className="text-sm flex items-center gap-2">
               Voucher: {viewEntry?.reference || viewEntry?.entry_number}
+              {viewEntry?.is_posted ? (
+                <Badge className="text-[10px] bg-primary/20 text-primary">Posted</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] bg-warning/20 text-warning">Draft</Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
           {viewEntry && (
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div><span className="text-muted-foreground">Date (AD):</span> {viewEntry.date}</div>
-                <div><span className="text-muted-foreground">मिति (BS):</span> {formatISOasBS(viewEntry.date, "long")}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Description:</span> {viewEntry.description}</div>
-                <div><span className="text-muted-foreground">Status:</span> {viewEntry.is_posted ? "Posted" : "Draft"}</div>
+            <div className="space-y-4 text-xs">
+              {/* Header info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/50 rounded-lg p-3">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Voucher #</span>
+                  <span className="font-medium text-primary">{viewEntry.reference || viewEntry.entry_number}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Date (AD)</span>
+                  <span className="font-medium">{viewEntry.date}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">मिति (BS)</span>
+                  <span className="font-medium text-primary">{formatISOasBS(viewEntry.date, "long")}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">Status</span>
+                  <span className="font-medium">{viewEntry.is_posted ? "Posted" : "Draft"}</span>
+                </div>
               </div>
+
+              {/* Description / Narration */}
+              <div className="bg-muted/30 rounded-lg p-3">
+                <span className="text-muted-foreground text-[10px] uppercase tracking-wider block mb-1">Narration / Description</span>
+                <p className="text-foreground">{viewEntry.description}</p>
+              </div>
+
+              {/* Entries table */}
               {viewEntry.lines && viewEntry.lines.length > 0 && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Account</TableHead>
-                      <TableHead className="text-xs text-right">Debit</TableHead>
-                      <TableHead className="text-xs text-right">Credit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {viewEntry.lines.map((line: any) => (
-                      <TableRow key={line.id}>
-                        <TableCell className="text-xs">{line.account?.name || getAccountName(line.account_id)}</TableCell>
-                        <TableCell className="text-xs text-right font-mono">{(line.debit || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-xs text-right font-mono">{(line.credit || 0).toFixed(2)}</TableCell>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-muted/50 px-3 py-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Entries</span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs w-[30px]">#</TableHead>
+                        <TableHead className="text-xs">Ledger Account</TableHead>
+                        <TableHead className="text-xs text-right w-[100px]">Debit</TableHead>
+                        <TableHead className="text-xs text-right w-[100px]">Credit</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {viewEntry.lines.map((line: any, idx: number) => (
+                        <TableRow key={line.id}>
+                          <TableCell className="text-xs text-muted-foreground">{idx + 1}</TableCell>
+                          <TableCell className="text-xs font-medium">{line.account?.name || getAccountName(line.account_id)}</TableCell>
+                          <TableCell className="text-xs text-right font-mono">{(line.debit || 0) > 0 ? (line.debit || 0).toFixed(2) : "—"}</TableCell>
+                          <TableCell className="text-xs text-right font-mono">{(line.credit || 0) > 0 ? (line.credit || 0).toFixed(2) : "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Totals row */}
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell />
+                        <TableCell className="text-xs">Total</TableCell>
+                        <TableCell className="text-xs text-right font-mono">
+                          {viewEntry.lines.reduce((s: number, l: any) => s + (l.debit || 0), 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-mono">
+                          {viewEntry.lines.reduce((s: number, l: any) => s + (l.credit || 0), 0).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="gap-2">
+            {viewEntry && !viewEntry.is_posted && !isReadOnly && (
+              <Button size="sm" variant="outline" onClick={() => { setViewEntry(null); navigate(`/finance/journal/new?edit=${viewEntry.id}`); }}>
+                <Pencil className="h-3 w-3 mr-1.5" /> Edit
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setViewEntry(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>

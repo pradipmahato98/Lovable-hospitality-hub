@@ -238,18 +238,24 @@ export function NepaliDateSearch({ onSearch, className }: NepaliDateSearchProps)
 
   return (
     <div className={cn("flex flex-col sm:flex-row items-end gap-2", className)}>
-      <NepaliDateInput
-        label="From / देखि (BS)"
-        value={fromDate}
-        onChange={setFromDate}
-        showDual={false}
-      />
-      <NepaliDateInput
-        label="To / सम्म (BS)"
-        value={toDate}
-        onChange={setToDate}
-        showDual={false}
-      />
+      <div className="space-y-0.5">
+        <NepaliDateInput
+          label="From / देखि"
+          value={fromDate}
+          onChange={setFromDate}
+          showDual={false}
+        />
+        <span className="text-[9px] text-muted-foreground">मिति (BS)</span>
+      </div>
+      <div className="space-y-0.5">
+        <NepaliDateInput
+          label="To / सम्म"
+          value={toDate}
+          onChange={setToDate}
+          showDual={false}
+        />
+        <span className="text-[9px] text-muted-foreground">मिति (BS)</span>
+      </div>
       <Button
         size="sm"
         className="h-9 px-4"
