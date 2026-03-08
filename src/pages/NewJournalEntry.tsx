@@ -444,7 +444,7 @@ export default function NewJournalEntry() {
 
       if (andNew) {
         setLines([]);
-        setEditLines([emptyLine(), emptyLine()]);
+        setEditLines([emptyLine()]);
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
