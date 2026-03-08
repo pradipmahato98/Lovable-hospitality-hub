@@ -42,6 +42,7 @@ export function NepaliDateInput({
   disabled = false,
   hideModeLabel = false,
 }: NepaliDateInputProps) {
+  const todayISO = new Date().toISOString().slice(0, 10);
   const bsDate = useMemo(() => {
     if (!value) return todayBS();
     const [y, m, d] = value.split("-").map(Number);
