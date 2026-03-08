@@ -34,13 +34,7 @@ export const LogsReportTab = () => {
     queryFn: async () => {
       let query = supabase
         .from("audit_log")
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (staffFilter !== "all") {
@@ -67,9 +61,15 @@ export const LogsReportTab = () => {
     },
   });
 
+  const getStaffName = (userId: string | null) => {
+    if (!userId) return "System";
+    const staff = staffMembers?.find(s => s.user_id === userId);
+    return staff ? `${staff.first_name} ${staff.last_name}` : "Unknown";
+  };
+
   const filteredLogs = logs?.filter(log =>
     log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (log.profiles?.first_name + " " + log.profiles?.last_name).toLowerCase().includes(searchTerm.toLowerCase())
+    getStaffName(log.user_id).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -141,7 +141,7 @@ export const LogsReportTab = () => {
                   <TableRow key={log.id}>
                     <TableCell className="font-medium">{log.action}</TableCell>
                     <TableCell>
-                      {log.profiles?.first_name} {log.profiles?.last_name}
+                      {getStaffName(log.user_id)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">

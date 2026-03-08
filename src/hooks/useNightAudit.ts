@@ -11,7 +11,7 @@ export const useNightAudit = () => {
   const { data: businessDate, isLoading: isDateLoading } = useQuery({
     queryKey: ["settings", "business_date"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("settings")
         .select("value")
         .eq("key", "business_date")
@@ -65,7 +65,7 @@ export const useNightAudit = () => {
   // 4. Mutation: Post Daily Room Charges
   const postCharges = useMutation({
     mutationFn: async (date: string) => {
-      const { data, error } = await supabase.rpc('post_daily_room_charges', {
+      const { data, error } = await (supabase as any).rpc('post_daily_room_charges', {
         v_business_date: date
       });
       if (error) throw error;
@@ -83,7 +83,7 @@ export const useNightAudit = () => {
       const nextDate = format(addDays(parseISO(currentDate), 1), "yyyy-MM-dd");
 
       // Update business date in settings
-      const { error: settingsError } = await supabase
+      const { error: settingsError } = await (supabase as any)
         .from("settings")
         .update({ value: nextDate })
         .eq("key", "business_date");
@@ -91,7 +91,7 @@ export const useNightAudit = () => {
       if (settingsError) throw settingsError;
 
       // Create Audit Log
-      const { error: logError } = await supabase
+      const { error: logError } = await (supabase as any)
         .from("night_audit_logs")
         .insert([{
           business_date: currentDate,

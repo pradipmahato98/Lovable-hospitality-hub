@@ -5,13 +5,14 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 import { useUIPreferences } from "@/hooks/useSettings";
 
-interface MainLayoutProps {
+export interface MainLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
+  actions?: ReactNode;
 }
 
-export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
+export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
 
   return (

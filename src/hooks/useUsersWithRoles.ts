@@ -124,7 +124,7 @@ export const useRolePermissions = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["role-permissions"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("role_permissions")
         .select("*");
 
@@ -154,7 +154,7 @@ export const useOTASyncLogs = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["ota-sync-logs"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("ota_sync_logs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -200,12 +200,12 @@ export const useUpdateRolePermission = () => {
   return useMutation({
     mutationFn: async ({ role, permission, action }: { role: AppRole; permission: string; action: 'add' | 'remove' }) => {
       if (action === 'add') {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("role_permissions")
           .insert({ role, permission });
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("role_permissions")
           .delete()
           .eq("role", role)

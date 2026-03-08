@@ -182,7 +182,7 @@ const POSTerminal = () => {
       }
 
       // Insert transaction into database
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("pos_transactions")
         .insert({
           transaction_number: `POS-${Date.now()}`,
