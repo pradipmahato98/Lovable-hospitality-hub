@@ -294,6 +294,7 @@ export default function NewJournalEntry() {
       setNarration(data.description || "");
       setVoucherNo(referenceValue);
       if (detectedType) setVoucherType(detectedType);
+      else setVoucherType("journal");
       setLines(
         (data.journal_lines || []).map((line: any) => ({
           id: line.id,
