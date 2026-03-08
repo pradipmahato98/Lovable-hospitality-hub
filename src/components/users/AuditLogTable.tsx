@@ -19,7 +19,7 @@ import { Search, History, Filter, Calendar, Clock } from "lucide-react";
 import { RoleChangeAudit, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { RoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 interface AuditLogTableProps {
   logs: RoleChangeAudit[] | undefined;
