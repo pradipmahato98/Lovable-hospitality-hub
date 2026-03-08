@@ -11,6 +11,8 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { todayBS, formatBSDate } from "@/lib/nepaliDate";
+import { format } from "date-fns";
 
 const Index = () => {
   const { data: stats, isLoading } = useDashboardStats();
