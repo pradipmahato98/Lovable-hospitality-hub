@@ -21,8 +21,17 @@ const db = supabase as any;
 
 export function RoomUpgradeManager() {
   const { data: rooms = [] } = useRooms();
-  const { reservations = [] } = useReservations();
-  const queryClient = useQueryClient();
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["reservations-full"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("reservations")
+        .select("*, guests(first_name, last_name), rooms(room_number, room_type)")
+        .order("check_in_date", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
   const [selectedRes, setSelectedRes] = useState<any>(null);
   const [targetRoomId, setTargetRoomId] = useState("");
   const [isUpgrading, setIsUpgrading] = useState(false);
