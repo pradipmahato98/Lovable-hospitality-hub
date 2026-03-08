@@ -287,20 +287,40 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     return acc ? `${acc.code} - ${acc.name}` : id;
   };
 
+  // ─── Tab state ─────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"new" | "register">("new");
+
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* Page Header */}
+      {/* Page Header with Tab Switcher */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold font-display">Journal & Voucher Entry</h2>
           <p className="text-muted-foreground text-sm">Create journal, receipt, payment & contra vouchers</p>
         </div>
-        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-          <ShieldCheck className="h-3 w-3 mr-1" /> Audit Ready
-        </Badge>
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+          <Button
+            variant={activeTab === "new" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("new")}
+          >
+            <FilePlus className="h-3.5 w-3.5" /> New Journal Entries
+          </Button>
+          <Button
+            variant={activeTab === "register" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("register")}
+          >
+            <BookOpen className="h-3.5 w-3.5" /> Journal Register
+          </Button>
+        </div>
       </div>
 
+      {activeTab === "new" && (
+      <>
       {/* ═══ CARD 1: Voucher Header ═══ */}
       <Card>
         <CardHeader className="pb-3">
