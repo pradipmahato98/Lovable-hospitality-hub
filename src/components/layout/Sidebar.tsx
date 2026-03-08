@@ -1,17 +1,17 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   CalendarDays,
+  Calendar,
   Users,
   BedDouble,
+  Receipt,
   Package,
   BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Hotel,
   LogOut,
   UserCog,
@@ -24,6 +24,7 @@ import {
   DollarSign,
   PartyPopper,
   ShieldCheck,
+  Terminal,
   Moon,
   Lock,
 } from "lucide-react";
@@ -32,64 +33,28 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
-interface NavItem {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  path: string;
-}
-
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
-
-const standaloneItems: NavItem[] = [
+const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: CalendarDays, label: "Reservations", path: "/reservations" },
+  { icon: Users, label: "Guests", path: "/guests" },
+  { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
+  { icon: Wrench, label: "Engineering", path: "/engineering" },
+  { icon: ShoppingCart, label: "POS", path: "/pos" },
+  { icon: Package, label: "Inventory", path: "/inventory" },
+  { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance" },
+  { icon: PartyPopper, label: "Banquet", path: "/banquet" },
+  { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
 
-const moduleGroups: NavGroup[] = [
-  {
-    label: "Front Office",
-    items: [
-      { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-      { icon: Users, label: "Guests", path: "/guests" },
-      { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
-      { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-      { icon: Wrench, label: "Engineering", path: "/engineering" },
-      { icon: Package, label: "Inventory", path: "/inventory" },
-    ],
-  },
-  {
-    label: "Revenue",
-    items: [
-      { icon: ShoppingCart, label: "POS", path: "/pos" },
-      { icon: DollarSign, label: "Finance/Account", path: "/finance" },
-      { icon: PartyPopper, label: "Banquet", path: "/banquet" },
-    ],
-  },
-  {
-    label: "Audit & Reports",
-    items: [
-      { icon: Moon, label: "Night Audit", path: "/night-audit" },
-      { icon: Lock, label: "Day Close", path: "/day-close" },
-      { icon: BarChart3, label: "Reports", path: "/reports" },
-    ],
-  },
+const operationsNavItems = [
+  { icon: Moon, label: "Night Audit", path: "/night-audit" },
+  { icon: Lock, label: "Day Close", path: "/day-close" },
 ];
 
-const adminNavItems: NavItem[] = [
+const adminNavItems = [
   { icon: UserCog, label: "User Management", path: "/users" },
   { icon: Users, label: "Staff Management", path: "/staff" },
   { icon: UserCheck, label: "HR", path: "/hr" },
@@ -103,25 +68,6 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
-  const showLabels = !collapsed || isMobile;
-
-  // Auto-open groups containing the active route
-  const activeGroups = moduleGroups
-    .filter((g) => g.items.some((i) => location.pathname === i.path))
-    .map((g) => g.label);
-
-  const [openGroups, setOpenGroups] = useState<Set<string>>(
-    new Set([...activeGroups, "Admin"])
-  );
-
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
-  };
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -129,7 +75,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
   };
 
-  const renderNavItem = (item: NavItem) => {
+  const renderNavItem = (item: typeof navItems[0]) => {
     const isActive = location.pathname === item.path;
     return (
       <Link
@@ -137,60 +83,16 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         to={item.path}
         onClick={onNavClick}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
           isActive
             ? "bg-sidebar-accent text-primary shadow-glow"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
           collapsed && !isMobile && "justify-center px-2"
         )}
       >
-        <item.icon className={cn("h-4 w-4 flex-shrink-0", isActive && "text-primary")} />
-        {showLabels && <span>{item.label}</span>}
+        <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+        {(!collapsed || isMobile) && <span>{item.label}</span>}
       </Link>
-    );
-  };
-
-  const renderGroup = (group: NavGroup) => {
-    const isOpen = openGroups.has(group.label);
-    const hasActive = group.items.some((i) => location.pathname === i.path);
-
-    if (!showLabels) {
-      // Collapsed: just show icons
-      return (
-        <div key={group.label} className="space-y-0.5">
-          {group.items.map(renderNavItem)}
-        </div>
-      );
-    }
-
-    return (
-      <Collapsible
-        key={group.label}
-        open={isOpen}
-        onOpenChange={() => toggleGroup(group.label)}
-      >
-        <CollapsibleTrigger asChild>
-          <button
-            className={cn(
-              "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
-              hasActive
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <span>{group.label}</span>
-            <ChevronDown
-              className={cn(
-                "h-3.5 w-3.5 transition-transform duration-200",
-                isOpen && "rotate-180"
-              )}
-            />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-0.5 pl-1">
-          {group.items.map(renderNavItem)}
-        </CollapsibleContent>
-      </Collapsible>
     );
   };
 
@@ -202,7 +104,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
             <Hotel className="h-5 w-5 text-primary-foreground" />
           </div>
-          {showLabels && (
+          {(!collapsed || isMobile) && (
             <span className="font-display text-xl font-semibold text-gradient-gold">
               LuxeStay
             </span>
@@ -221,54 +123,55 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-0.5 p-3 overflow-y-auto">
-        {standaloneItems.map(renderNavItem)}
+      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
+        {navItems.map(renderNavItem)}
 
-        <div className="mt-2 space-y-1">
-          {moduleGroups.map(renderGroup)}
-        </div>
-
+        {/* Operations Section */}
+        {(!collapsed || isMobile) && (
+          <div className="mt-4 mb-2 px-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Operations
+            </p>
+          </div>
+        )}
+        {operationsNavItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={onNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-sidebar-accent text-primary shadow-glow"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+                collapsed && !isMobile && "justify-center px-2"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+              {(!collapsed || isMobile) && <span>{item.label}</span>}
+            </Link>
+          );
+        })}
+        
         {/* Admin Section */}
         {isAdmin && (
-          <div className="mt-2">
-            {showLabels ? (
-              <Collapsible
-                open={openGroups.has("Admin")}
-                onOpenChange={() => toggleGroup("Admin")}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
-                      adminNavItems.some((i) => location.pathname === i.path)
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <span>Admin</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 transition-transform duration-200",
-                        openGroups.has("Admin") && "rotate-180"
-                      )}
-                    />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-0.5 pl-1">
-                  {adminNavItems.map(renderNavItem)}
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <div className="space-y-0.5">
-                {adminNavItems.map(renderNavItem)}
+          <>
+            {(!collapsed || isMobile) && (
+              <div className="mt-4 mb-2 px-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Admin
+                </p>
               </div>
             )}
-          </div>
+            {adminNavItems.map(renderNavItem)}
+          </>
         )}
       </nav>
 
       {/* User Section */}
-      {showLabels && (
+      {(!collapsed || isMobile) && (
         <div className="p-4 border-t border-sidebar-border mt-auto">
           <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
             <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0">
@@ -306,6 +209,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 export function Sidebar() {
   const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
 
+  // Mobile: Sheet overlay
   if (isMobile) {
     return (
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -316,6 +220,7 @@ export function Sidebar() {
     );
   }
 
+  // Desktop: Fixed sidebar
   return (
     <aside
       className={cn(
