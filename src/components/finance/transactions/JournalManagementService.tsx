@@ -67,12 +67,19 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     if (searchText) {
       const q = searchText.toLowerCase();
       if (searchMode === "AD") {
-        entries = entries.filter(e =>
-          e.date?.toLowerCase().includes(q) ||
-          e.description?.toLowerCase().includes(q) ||
-          e.entry_number?.toLowerCase().includes(q) ||
-          e.reference?.toLowerCase().includes(q)
-        );
+        entries = entries.filter(e => {
+          const adIso = (e.date || "").toLowerCase();
+          const adFormatted = e.date
+            ? new Date(`${e.date}T00:00:00`).toLocaleDateString("en-GB").toLowerCase()
+            : "";
+          return (
+            adIso.includes(q) ||
+            adFormatted.includes(q) ||
+            e.description?.toLowerCase().includes(q) ||
+            e.entry_number?.toLowerCase().includes(q) ||
+            e.reference?.toLowerCase().includes(q)
+          );
+        });
       } else {
         entries = entries.filter(e =>
           e.description?.toLowerCase().includes(q) ||
