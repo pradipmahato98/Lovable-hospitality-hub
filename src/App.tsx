@@ -46,6 +46,7 @@ const Housekeeping = lazy(() => import("./pages/Housekeeping"));
 const Engineering = lazy(() => import("./pages/Engineering"));
 const StaffManagement = lazy(() => import("./pages/StaffManagement"));
 const Finance = lazy(() => import("./pages/Finance"));
+const NewJournalEntry = lazy(() => import("./pages/NewJournalEntry"));
 const Payments = lazy(() => import("./pages/Payments"));
 const Banquet = lazy(() => import("./pages/Banquet"));
 
