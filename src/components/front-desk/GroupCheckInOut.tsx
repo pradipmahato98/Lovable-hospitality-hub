@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useReservations } from "@/hooks/useReservations";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRooms } from "@/hooks/useRooms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,22 @@ import {
 import { Users, LogIn, LogOut, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
 const db = supabase as any;
 
 export function GroupCheckInOut() {
-  const { reservations = [] } = useReservations();
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["reservations-full"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("reservations")
+        .select("*, guests(first_name, last_name), rooms(room_number, room_type)")
+        .order("check_in_date", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
   const { data: rooms = [] } = useRooms();
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
