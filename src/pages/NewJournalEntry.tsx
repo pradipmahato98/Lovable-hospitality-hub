@@ -253,7 +253,7 @@ export default function NewJournalEntry() {
 
   useEffect(() => {
     if (voucherType) {
-      setVoucherNo(generateVoucherNo(voucherType as VoucherType, fiscalYear));
+      generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
     }
   }, [voucherType, fiscalYear]);
 
