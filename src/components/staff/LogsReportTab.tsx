@@ -61,9 +61,15 @@ export const LogsReportTab = () => {
     },
   });
 
+  const getStaffName = (userId: string | null) => {
+    if (!userId) return "System";
+    const staff = staffMembers?.find(s => s.user_id === userId);
+    return staff ? `${staff.first_name} ${staff.last_name}` : "Unknown";
+  };
+
   const filteredLogs = logs?.filter(log =>
     log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (log.profiles?.first_name + " " + log.profiles?.last_name).toLowerCase().includes(searchTerm.toLowerCase())
+    getStaffName(log.user_id).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
