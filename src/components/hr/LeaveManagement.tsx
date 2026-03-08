@@ -37,6 +37,7 @@ import {
   FileText,
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface LeaveRequest {
