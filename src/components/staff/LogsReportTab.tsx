@@ -141,7 +141,7 @@ export const LogsReportTab = () => {
                   <TableRow key={log.id}>
                     <TableCell className="font-medium">{log.action}</TableCell>
                     <TableCell>
-                      {log.profiles?.first_name} {log.profiles?.last_name}
+                      {getStaffName(log.user_id)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
