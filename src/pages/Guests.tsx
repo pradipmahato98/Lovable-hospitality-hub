@@ -208,7 +208,7 @@ const Guests = () => {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-              <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
+              <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewGuestOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Add Guest
               </Button>

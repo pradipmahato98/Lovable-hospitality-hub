@@ -104,10 +104,19 @@ const Reservations = () => {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Filter className="h-4 w-4" />
-                    <span className="hidden sm:inline">Filter</span>
-                  </Button>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[140px] bg-secondary">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allStatuses.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s === "all" ? "All Statuses" : s.charAt(0).toUpperCase() + s.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent className="p-0 sm:p-6">
