@@ -194,7 +194,7 @@ export function FinanceInvoicesTab() {
                           <TableCell className="font-mono text-primary">{inv.invoice_number}</TableCell>
                           <TableCell>{inv.guest ? `${inv.guest.first_name} ${inv.guest.last_name}` : "-"}</TableCell>
                           <TableCell className="text-sm">{inv.invoice_date}</TableCell>
-                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(inv.invoice_date, "long")}</TableCell>
+                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(inv.invoice_date, "short")}</TableCell>
                           <TableCell className="text-right font-mono">${inv.total.toFixed(2)}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">${inv.balance_due.toFixed(2)}</TableCell>
                           <TableCell><Badge variant="outline" className={statusColors[inv.status] || ""}>{inv.status}</Badge></TableCell>
