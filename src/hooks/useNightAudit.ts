@@ -11,7 +11,7 @@ export const useNightAudit = () => {
   const { data: businessDate, isLoading: isDateLoading } = useQuery({
     queryKey: ["settings", "business_date"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("settings")
         .select("value")
         .eq("key", "business_date")
