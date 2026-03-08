@@ -419,6 +419,7 @@ export function NewReservationDialog({
                       mode="single"
                       selected={formData.checkInDate}
                       onSelect={(date) => date && setFormData({ ...formData, checkInDate: date })}
+                      disabled={(date) => date > new Date()}
                       initialFocus
                       className={cn("p-3 pointer-events-auto")}
                     />
