@@ -13,6 +13,7 @@ import { Users, LogIn, LogOut, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 const db = supabase as any;
 
