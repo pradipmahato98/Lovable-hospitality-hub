@@ -233,28 +233,46 @@ interface NepaliDateSearchProps {
   /** Callback with from/to AD ISO strings */
   onSearch: (fromDate: string, toDate: string) => void;
   className?: string;
+  mode?: "AD" | "BS";
 }
 
-/** Search bar with BS date range pickers */
-export function NepaliDateSearch({ onSearch, className }: NepaliDateSearchProps) {
+/** Search bar with AD/BS date range pickers */
+export function NepaliDateSearch({ onSearch, className, mode = "BS" }: NepaliDateSearchProps) {
   const today = new Date().toISOString().split("T")[0];
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
 
   return (
     <div className={cn("flex flex-col sm:flex-row items-end gap-2", className)}>
-      <NepaliDateInput
-        label="From / देखि (BS)"
-        value={fromDate}
-        onChange={setFromDate}
-        showDual={false}
-      />
-      <NepaliDateInput
-        label="To / सम्म (BS)"
-        value={toDate}
-        onChange={setToDate}
-        showDual={false}
-      />
+      {mode === "AD" ? (
+        <>
+          <div className="space-y-1">
+            <Label className="text-xs">From (AD)</Label>
+            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">To (AD)</Label>
+            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 text-sm" />
+          </div>
+        </>
+      ) : (
+        <>
+          <NepaliDateInput
+            label="From (BS)"
+            value={fromDate}
+            onChange={setFromDate}
+            showDual={false}
+            hideModeLabel
+          />
+          <NepaliDateInput
+            label="To (BS)"
+            value={toDate}
+            onChange={setToDate}
+            showDual={false}
+            hideModeLabel
+          />
+        </>
+      )}
       <Button
         size="sm"
         className="h-9 px-4"
