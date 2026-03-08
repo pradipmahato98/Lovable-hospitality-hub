@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { formatISOasBS, todayBS, bsToAD, adToBS } from "@/lib/nepaliDate";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
