@@ -201,7 +201,7 @@ export default function Finance() {
   }, [trialBalance]);
 
   const tabTriggerClass =
-    "gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all";
+    "gap-1.5 sm:gap-2 h-10 sm:h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 sm:px-4 text-xs sm:text-sm transition-all";
 
   return (
     <MainLayout
