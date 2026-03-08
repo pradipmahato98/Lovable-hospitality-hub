@@ -62,7 +62,12 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
   const filteredEntries = useMemo(() => {
     let entries = journalEntries || [];
     if (dateFilter) {
-      entries = entries.filter(e => e.date >= dateFilter.from && e.date <= dateFilter.to);
+      if (searchMode === "AD") {
+        entries = entries.filter(e => e.date >= dateFilter.from && e.date <= dateFilter.to);
+      } else {
+        // Convert filter AD dates to BS, then compare entry BS dates
+        entries = entries.filter(e => e.date >= dateFilter.from && e.date <= dateFilter.to);
+      }
     }
     if (searchText) {
       const q = searchText.toLowerCase();
@@ -78,7 +83,9 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           e.description?.toLowerCase().includes(q) ||
           e.entry_number?.toLowerCase().includes(q) ||
           e.reference?.toLowerCase().includes(q) ||
-          formatISOasBS(e.date, "long").toLowerCase().includes(q)
+          formatISOasBS(e.date, "long").toLowerCase().includes(q) ||
+          formatISOasBS(e.date, "short").toLowerCase().includes(q) ||
+          formatISOasBS(e.date, "nepali").toLowerCase().includes(q)
         );
       }
     }
