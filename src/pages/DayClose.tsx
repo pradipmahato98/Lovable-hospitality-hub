@@ -5,36 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-  DollarSign,
-  BarChart3,
-  TrendingUp,
-  Lock,
-  Unlock,
-  Receipt,
-  Utensils,
-  Bed,
-  Sparkles,
-  ChevronRight,
-  Printer
+  DollarSign, BarChart3, TrendingUp, Lock, Unlock, Receipt,
+  Utensils, Bed, Sparkles, ChevronRight, Printer
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNightAudit } from "@/hooks/useNightAudit";
+import { useReportStats } from "@/hooks/useReportStats";
 import { format, parseISO } from "date-fns";
-
-const departmentRevenue = [
-  { id: 1, name: "Rooms & Lodging", code: "ROOM", amount: 4250.00, transactions: 45, icon: Bed, color: "text-blue-500" },
-  { id: 2, name: "Restaurant (POS)", code: "REST", amount: 1280.50, transactions: 82, icon: Utensils, color: "text-orange-500" },
-  { id: 3, name: "Spa & Wellness", code: "SPA", amount: 650.00, transactions: 12, icon: Sparkles, color: "text-purple-500" },
-  { id: 4, name: "Minibar & Other", code: "MISC", amount: 245.25, transactions: 28, icon: Receipt, color: "text-green-500" },
-];
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DayClose() {
   const { businessDate } = useNightAudit();
