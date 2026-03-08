@@ -215,7 +215,7 @@ export default function POSHistory() {
   const exportToExcel = () => {
     const data = filteredTransactions.map((t) => ({
       "Transaction #": t.transaction_number,
-      Date: formatDateSafe(t.created_at, "yyyy-MM-dd HH:mm:ss"),
+      Date: formatDateSafe(t.created_at, "dd/MM/yyyy HH:mm:ss"),
       Table: t.table_number,
       Customer: t.customer_name || "-",
       Company: t.company_name || "-",
