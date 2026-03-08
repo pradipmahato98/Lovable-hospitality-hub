@@ -170,8 +170,12 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
 
 export default function Finance() {
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") || "dashboard";
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const tabFromUrl = searchParams.get("tab") || "dashboard";
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
 
   const { data: accounts } = useAccounts();
   const { data: journalEntries } = useJournalEntries();
