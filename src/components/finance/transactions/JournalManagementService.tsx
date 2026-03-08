@@ -236,7 +236,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               Clear Filter
             </Button>
           )}
-
+        </div>
 
 
         {/* Table */}
