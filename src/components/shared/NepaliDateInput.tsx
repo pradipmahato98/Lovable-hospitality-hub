@@ -193,13 +193,16 @@ export function NepaliDateInput({
                       {day ? (
                         <button
                           type="button"
+                          disabled={isFuture(day)}
                           onClick={() => {
                             handleBSChange(bsYear, bsMonth, day);
                             setCalendarOpen(false);
                           }}
                           className={cn(
                             "h-7 w-7 rounded-md text-xs font-medium transition-colors",
-                            isSelected(day)
+                            isFuture(day)
+                              ? "text-muted-foreground/40 cursor-not-allowed"
+                              : isSelected(day)
                               ? "bg-primary text-primary-foreground"
                               : isToday(day)
                               ? "bg-accent text-accent-foreground font-bold"
