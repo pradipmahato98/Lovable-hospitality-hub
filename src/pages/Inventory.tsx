@@ -525,7 +525,7 @@ const Inventory = () => {
                   ) : (
                     movements.map((m) => (
                       <TableRow key={m.id}>
-                        <TableCell>{format(new Date(m.created_at), "MMM d, HH:mm")}</TableCell>
+                        <TableCell>{formatAD(new Date(m.created_at), "time")}</TableCell>
                         <TableCell>{(m.item as any)?.name || "-"}</TableCell>
                         <TableCell>
                           <Badge className={

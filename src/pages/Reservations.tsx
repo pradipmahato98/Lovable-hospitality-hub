@@ -134,10 +134,10 @@ const Reservations = () => {
                                 {reservation.room ? `${reservation.room.room_number} - ${reservation.room.room_type}` : "N/A"}
                               </TableCell>
                               <TableCell className="hidden lg:table-cell">
-                                {format(new Date(reservation.check_in_date), "MMM dd, yyyy")}
+                                {formatAD(new Date(reservation.check_in_date))}
                               </TableCell>
                               <TableCell className="hidden lg:table-cell">
-                                {format(new Date(reservation.check_out_date), "MMM dd, yyyy")}
+                                {formatAD(new Date(reservation.check_out_date))}
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={statusColors[reservation.status] || statusColors.pending}>

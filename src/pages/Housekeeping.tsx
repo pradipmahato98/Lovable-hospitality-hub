@@ -565,7 +565,7 @@ const Housekeeping = () => {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.item_description}</TableCell>
                         <TableCell>{item.found_location}</TableCell>
-                        <TableCell>{format(new Date(item.found_date), "MMM d, yyyy")}</TableCell>
+                        <TableCell>{formatAD(new Date(item.found_date))}</TableCell>
                         <TableCell className="capitalize">{item.category || "-"}</TableCell>
                         <TableCell>
                           <Badge className={
