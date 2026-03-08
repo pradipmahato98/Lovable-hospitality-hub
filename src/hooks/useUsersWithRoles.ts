@@ -200,12 +200,12 @@ export const useUpdateRolePermission = () => {
   return useMutation({
     mutationFn: async ({ role, permission, action }: { role: AppRole; permission: string; action: 'add' | 'remove' }) => {
       if (action === 'add') {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("role_permissions")
           .insert({ role, permission });
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("role_permissions")
           .delete()
           .eq("role", role)

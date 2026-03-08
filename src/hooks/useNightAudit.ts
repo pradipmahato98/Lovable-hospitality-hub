@@ -91,7 +91,7 @@ export const useNightAudit = () => {
       if (settingsError) throw settingsError;
 
       // Create Audit Log
-      const { error: logError } = await supabase
+      const { error: logError } = await (supabase as any)
         .from("night_audit_logs")
         .insert([{
           business_date: currentDate,
