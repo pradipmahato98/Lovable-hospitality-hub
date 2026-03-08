@@ -466,20 +466,21 @@ const DevPanel = () => {
                     </p>
                   </div>
                   <Switch 
-                    checked={emailConfig.enabled} 
+                    checked={currentEmailConfig.enabled} 
                     onCheckedChange={handleEmailToggle}
+                    disabled={updateEmailConfig.isPending}
                   />
                 </div>
 
-                {emailConfig.enabled && (
+                {currentEmailConfig.enabled && (
                   <>
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="provider">Email Provider</Label>
                         <Input 
                           id="provider" 
-                          value={emailConfig.provider} 
-                          onChange={(e) => setEmailConfig({ ...emailConfig, provider: e.target.value })}
+                          value={currentEmailConfig.provider} 
+                          onChange={(e) => updateEmailConfig.mutate({ ...currentEmailConfig, provider: e.target.value })}
                           placeholder="e.g., resend, sendgrid"
                         />
                         <p className="text-xs text-muted-foreground">
@@ -497,9 +498,9 @@ const DevPanel = () => {
                           <span className="text-sm">Role Change Notifications</span>
                         </div>
                         <Switch 
-                          checked={emailConfig.roleChangeNotifications}
+                          checked={currentEmailConfig.roleChangeNotifications}
                           onCheckedChange={(checked) => 
-                            setEmailConfig({ ...emailConfig, roleChangeNotifications: checked })
+                            updateEmailConfig.mutate({ ...currentEmailConfig, roleChangeNotifications: checked })
                           }
                         />
                       </div>
@@ -510,9 +511,9 @@ const DevPanel = () => {
                           <span className="text-sm">Booking Notifications</span>
                         </div>
                         <Switch 
-                          checked={emailConfig.bookingNotifications}
+                          checked={currentEmailConfig.bookingNotifications}
                           onCheckedChange={(checked) => 
-                            setEmailConfig({ ...emailConfig, bookingNotifications: checked })
+                            updateEmailConfig.mutate({ ...currentEmailConfig, bookingNotifications: checked })
                           }
                         />
                       </div>
@@ -523,15 +524,15 @@ const DevPanel = () => {
                           <span className="text-sm">System Alerts</span>
                         </div>
                         <Switch 
-                          checked={emailConfig.systemAlerts}
+                          checked={currentEmailConfig.systemAlerts}
                           onCheckedChange={(checked) => 
-                            setEmailConfig({ ...emailConfig, systemAlerts: checked })
+                            updateEmailConfig.mutate({ ...currentEmailConfig, systemAlerts: checked })
                           }
                         />
                       </div>
                     </div>
 
-                    <Button onClick={handleSaveEmailConfig} className="w-full">
+                    <Button onClick={handleSaveEmailConfig} className="w-full" disabled={updateEmailConfig.isPending}>
                       Save Configuration
                     </Button>
                   </>
