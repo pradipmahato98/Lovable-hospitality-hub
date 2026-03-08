@@ -36,11 +36,6 @@ export function usePermissions() {
   return useQuery({
     queryKey: ["user-permissions", user?.id],
     queryFn: async () => {
-      // In development, if no user is found, provide a full permission set
-      if (!user && import.meta.env.DEV) {
-        return [{ role: "admin" as AppRole, permission: "all" }];
-      }
-
       if (!user) return [];
 
       const { data: roles, error: rolesError } = await supabase
@@ -48,10 +43,12 @@ export function usePermissions() {
         .select("role")
         .eq("user_id", user.id);
 
-      const userRoles = roles?.map(r => r.role) || [];
+      if (rolesError || !roles || roles.length === 0) return [];
+
+      const userRoles = roles.map(r => r.role);
       const isAdmin = userRoles.includes("admin");
 
-      if (isAdmin || (import.meta.env.DEV && userRoles.length === 0)) {
+      if (isAdmin) {
         return [{ role: "admin" as AppRole, permission: "all" }];
       }
 

@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users, Eye, ShieldAlert, CheckSquare, Square, MoreHorizontal, UserCheck, UserX, Trash2, Loader2 } from "lucide-react";
+import { Search, Users, Eye, ShieldAlert, CheckSquare, Square, MoreHorizontal, UserCheck, UserX, Trash2 } from "lucide-react";
 import { UserWithRole, AppRole, roleConfig, useUpdateUserStatus } from "@/hooks/useUsersWithRoles";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
@@ -189,7 +189,14 @@ export const UsersTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers?.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm text-muted-foreground mt-2">Loading users...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredUsers?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                       <div className="flex flex-col items-center gap-2">
