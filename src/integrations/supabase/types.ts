@@ -1994,6 +1994,51 @@ export type Database = {
           },
         ]
       }
+      maintenance_requests: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          issue: string
+          priority: string
+          request_number: string
+          room: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          issue: string
+          priority?: string
+          request_number: string
+          room: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          issue?: string
+          priority?: string
+          request_number?: string
+          room?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       message_templates: {
         Row: {
           body: string
@@ -2341,6 +2386,77 @@ export type Database = {
           vat_number?: string | null
         }
         Relationships: []
+      }
+      pos_menu_categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_menu_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_available: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_available?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_available?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "pos_menu_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pos_order_items: {
         Row: {

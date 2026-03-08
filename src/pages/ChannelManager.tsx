@@ -21,11 +21,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOTAChannels, useChannelStats } from "@/hooks/useChannelManager";
+import { useReportStats } from "@/hooks/useReportStats";
 import { formatDistanceToNow } from "date-fns";
 
 const ChannelManager = () => {
   const { data: channels = [], isLoading, toggleChannel, syncChannel } = useOTAChannels();
   const stats = useChannelStats();
+  const { data: reportStats } = useReportStats();
 
   const handleSync = async (channelId: string) => {
     try {
@@ -45,8 +47,8 @@ const ChannelManager = () => {
     }
   };
 
-  const totalBookings = stats.activeChannels * 2; // Derived from active channels
-  const totalRevenue = stats.activeChannels * 410; // Estimated from active channels
+  const totalBookings = reportStats?.reservationCount || 0;
+  const totalRevenue = reportStats?.totalReservationRevenue || 0;
 
   return (
     <MainLayout title="Channel Manager" subtitle="Manage OTA connections and distribution">

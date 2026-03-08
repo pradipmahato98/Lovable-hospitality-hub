@@ -373,41 +373,50 @@ const FrontDesk = () => {
 
           <TabsContent value="billing">
             <div className="space-y-6">
-              {/* Billing Metrics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <MetricCard
-                  title="Total Revenue (MTD)"
-                  value="$124,580"
-                  change="+12.5% vs last month"
-                  changeType="positive"
-                  icon={DollarSign}
-                  delay={0}
-                />
-                <MetricCard
-                  title="Pending Payments"
-                  value="$8,240"
-                  change="12 invoices"
-                  changeType="neutral"
-                  icon={Receipt}
-                  delay={50}
-                />
-                <MetricCard
-                  title="Avg. Daily Revenue"
-                  value="$6,229"
-                  change="+8.2% vs avg"
-                  changeType="positive"
-                  icon={TrendingUp}
-                  delay={100}
-                />
-                <MetricCard
-                  title="Payment Success Rate"
-                  value="94.5%"
-                  change="+2.1% this week"
-                  changeType="positive"
-                  icon={CreditCard}
-                  delay={150}
-                />
-              </div>
+              {/* Billing Metrics - computed from real invoice data */}
+              {(() => {
+                const totalRevenue = invoices.reduce((s: number, i: any) => s + (i.total || 0), 0);
+                const pendingInvoices = invoices.filter((i: any) => i.status === "pending" || i.status === "partial");
+                const pendingAmount = pendingInvoices.reduce((s: number, i: any) => s + (i.balance_due || 0), 0);
+                const paidCount = invoices.filter((i: any) => i.status === "paid").length;
+                const successRate = invoices.length > 0 ? ((paidCount / invoices.length) * 100).toFixed(1) : "0";
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <MetricCard
+                      title="Total Invoiced"
+                      value={`$${totalRevenue.toLocaleString()}`}
+                      change={`${invoices.length} invoices`}
+                      changeType="neutral"
+                      icon={DollarSign}
+                      delay={0}
+                    />
+                    <MetricCard
+                      title="Pending Payments"
+                      value={`$${pendingAmount.toLocaleString()}`}
+                      change={`${pendingInvoices.length} invoices`}
+                      changeType="neutral"
+                      icon={Receipt}
+                      delay={50}
+                    />
+                    <MetricCard
+                      title="Paid Invoices"
+                      value={`${paidCount}`}
+                      change={`of ${invoices.length} total`}
+                      changeType="positive"
+                      icon={TrendingUp}
+                      delay={100}
+                    />
+                    <MetricCard
+                      title="Payment Success Rate"
+                      value={`${successRate}%`}
+                      change="based on paid/total"
+                      changeType="positive"
+                      icon={CreditCard}
+                      delay={150}
+                    />
+                  </div>
+                );
+              })()}
 
               {/* Invoices Table */}
               <Card variant="elevated" className="animate-fade-in overflow-hidden">

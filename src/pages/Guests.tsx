@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
 import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
 import { GuestMergeTool } from "@/components/guests/GuestMergeTool";
+import { NewGuestDialog } from "@/components/quick-actions/NewGuestDialog";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -83,6 +84,7 @@ const Guests = () => {
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [newGuestOpen, setNewGuestOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
 
   const [newFeedback, setNewFeedback] = useState({
@@ -206,7 +208,7 @@ const Guests = () => {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-              <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
+              <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewGuestOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Add Guest
               </Button>
@@ -551,6 +553,7 @@ const Guests = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <NewGuestDialog open={newGuestOpen} onOpenChange={setNewGuestOpen} />
       </ErrorBoundary>
     </MainLayout>
   );

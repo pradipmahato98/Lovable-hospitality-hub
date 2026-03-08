@@ -114,7 +114,9 @@ export default function DayClose() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">ADR (Avg Daily Rate)</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">$142.50</p>
+                <p className="text-2xl font-bold">
+                  {statsLoading ? <Skeleton className="h-8 w-24" /> : `$${((reportStats?.totalReservationRevenue || 0) / Math.max(reportStats?.reservationCount || 1, 1)).toFixed(2)}`}
+                </p>
                 <div className="flex items-center text-xs text-success mt-1">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   <span>+5.2% from yesterday</span>
@@ -127,7 +129,9 @@ export default function DayClose() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">RevPAR</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">$124.80</p>
+                <p className="text-2xl font-bold">
+                  {statsLoading ? <Skeleton className="h-8 w-24" /> : `$${((reportStats?.totalReservationRevenue || 0) * ((reportStats?.occupancyRate || 0) / 100)).toFixed(2)}`}
+                </p>
                 <div className="flex items-center text-xs text-success mt-1">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   <span>+2.1% from target</span>
