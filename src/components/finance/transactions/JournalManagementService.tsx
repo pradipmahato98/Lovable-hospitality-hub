@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Plus, Pencil, Trash2, Save, FilePlus, Paperclip, Eye, X, Lock, ShieldCheck, Search, Check, Send,
+  Plus, Pencil, Trash2, Save, FilePlus, Paperclip, Eye, X, Lock, ShieldCheck, Search, Check, Send, BookOpen,
 } from "lucide-react";
 import {
   useJournalEntries, useCreateJournalEntry, usePostJournalEntry, useAccounts, JournalEntry,
