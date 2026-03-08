@@ -46,6 +46,9 @@ import { BudgetExecutionService } from "@/components/finance/transactions/Budget
 import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
 import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
 import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
+import { LedgerTransactionService } from "@/components/finance/transactions/LedgerTransactionService";
+import { DayBookService } from "@/components/finance/transactions/DayBookService";
+import { CashBankReconcileService } from "@/components/finance/transactions/CashBankReconcileService";
 import { FinanceInvoicesTab } from "@/components/finance/tabs/InvoicesTab";
 import { FinanceExpensesTab } from "@/components/finance/tabs/ExpensesTab";
 
@@ -90,6 +93,9 @@ const setupSubTabs: SubTabDef[] = [
 
 const transactionSubTabs: SubTabDef[] = [
   { id: "journals", label: "Journal Entries", component: JournalManagementService },
+  { id: "ledger-tx", label: "Ledger", component: LedgerTransactionService },
+  { id: "day-book", label: "Day Book", component: DayBookService },
+  { id: "cash-bank-reconcile", label: "Cash & Bank Reconcile", component: CashBankReconcileService },
   { id: "invoices", label: "Invoices & Payments", component: FinanceInvoicesTab as any },
   { id: "expenses", label: "Expenses", component: FinanceExpensesTab as any },
   { id: "ar", label: "Accounts Receivable", component: ARTransactionService },
