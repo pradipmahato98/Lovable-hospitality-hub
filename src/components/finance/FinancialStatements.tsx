@@ -286,6 +286,7 @@ export function FinancialStatements({
               <Input
                 type="date"
                 value={asOfDate}
+                max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setAsOfDate(e.target.value)}
                 className="w-40"
               />

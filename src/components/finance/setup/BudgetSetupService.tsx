@@ -65,8 +65,8 @@ export function BudgetSetupService({ isReadOnly }: { isReadOnly?: boolean }) {
                   <div><Label>Fiscal Year</Label><Input value={form.fiscal_year} onChange={e => setForm(p => ({ ...p, fiscal_year: e.target.value }))} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Start Date</Label><Input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} /></div>
-                  <div><Label>End Date</Label><Input type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} /></div>
+                  <div><Label>Start Date</Label><Input type="date" value={form.start_date} max={new Date().toISOString().slice(0, 10)} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} /></div>
+                  <div><Label>End Date</Label><Input type="date" value={form.end_date} max={new Date().toISOString().slice(0, 10)} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} /></div>
                 </div>
                 <div><Label>Total Amount</Label><Input type="number" value={form.total_amount} onChange={e => setForm(p => ({ ...p, total_amount: e.target.value }))} /></div>
                 <Button onClick={handleCreate} disabled={!form.name || createBudget.isPending} className="w-full">
