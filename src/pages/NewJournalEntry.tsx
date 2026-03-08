@@ -305,7 +305,7 @@ export default function NewJournalEntry() {
           remarks: line.description || "",
         }))
       );
-      setEditLines([emptyLine(), emptyLine()]);
+      setEditLines([emptyLine()]);
       setEditingLineId(null);
     };
 
