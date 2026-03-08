@@ -53,6 +53,7 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
           data: {
             first_name: "",
             last_name: "",
+            invited_role: role,
           }
         }
       });

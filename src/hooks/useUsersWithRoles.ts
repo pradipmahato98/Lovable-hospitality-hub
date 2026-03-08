@@ -30,6 +30,7 @@ export interface UserWithRole {
   role: AppRole;
   allRoles: AppRole[];
   hasMultipleRoles: boolean;
+  phone: string | null;
   is_blocked: boolean | null;
   blocked_reason: string | null;
   created_at: string;
@@ -66,6 +67,7 @@ export const useUsersWithRoles = (enabled: boolean = true) => {
           email: profile.email,
           first_name: profile.first_name,
           last_name: profile.last_name,
+          phone: profile.phone,
           role: highestRole,
           allRoles,
           hasMultipleRoles: allRoles.length > 1,
