@@ -14,6 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { usePOSTransactions } from "@/hooks/usePOS";
 import { format, subHours, subDays } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { ThreeDBar, ThreeDLineChart, ThreeDTableMap } from "@/components/pos";
 
 export function POSDashboard() {
