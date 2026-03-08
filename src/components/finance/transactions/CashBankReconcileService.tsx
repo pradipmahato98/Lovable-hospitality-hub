@@ -85,7 +85,6 @@ export function CashBankReconcileService() {
   };
   const handleCancel = () => {
     setShowFilter(false);
-    setApplied(false);
   };
 
   return (
