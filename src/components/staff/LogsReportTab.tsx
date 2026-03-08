@@ -34,13 +34,7 @@ export const LogsReportTab = () => {
     queryFn: async () => {
       let query = supabase
         .from("audit_log")
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (staffFilter !== "all") {
