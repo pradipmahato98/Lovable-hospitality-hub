@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOTAChannels, useChannelStats } from "@/hooks/useChannelManager";
+import { useReportStats } from "@/hooks/useReportStats";
 import { formatDistanceToNow } from "date-fns";
 
 const ChannelManager = () => {
