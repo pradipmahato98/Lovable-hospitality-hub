@@ -251,45 +251,6 @@ export default function Finance() {
               </Button>
             </div>
 
-            {/* Infrastructure status cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-primary/5 border-primary/10">
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <Zap className="h-8 w-8 text-primary" />
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Event Bus</p>
-                    <p className="text-sm font-bold">Operational</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-success/5 border-success/10">
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <ShieldCheck className="h-8 w-8 text-success" />
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Security Layer</p>
-                    <p className="text-sm font-bold">100% Policy Match</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-blue-500/10" style={{ backgroundColor: "hsl(var(--primary) / 0.05)" }}>
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <Server className="h-8 w-8 text-primary" />
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">API Gateway</p>
-                    <p className="text-sm font-bold">24ms Avg Latency</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-accent/10" style={{ backgroundColor: "hsl(var(--accent) / 0.05)" }}>
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <Database className="h-8 w-8 text-accent-foreground" />
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Data Lake</p>
-                    <p className="text-sm font-bold">85% Optimization</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
 
           {/* ========== SETUP ========== */}
