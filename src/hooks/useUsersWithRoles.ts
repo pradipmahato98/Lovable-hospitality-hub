@@ -154,7 +154,7 @@ export const useOTASyncLogs = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["ota-sync-logs"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("ota_sync_logs")
         .select("*")
         .order("created_at", { ascending: false })
