@@ -6,9 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Filter, Search, X, BookOpen } from "lucide-react";
+import { Filter, Search, X, BookOpen, ChevronRight } from "lucide-react";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
-import { useAccounts, useLedger } from "@/hooks/useFinance";
+import { useAccounts, useLedger, useJournalEntries } from "@/hooks/useFinance";
 import { formatISOasBS } from "@/lib/nepaliDate";
 import { TableSkeleton } from "@/components/skeletons";
 
@@ -19,7 +19,6 @@ const FISCAL_YEARS = [
   { value: "2078", label: "2078/79" },
 ];
 
-// Fiscal year date ranges (approximate AD equivalents)
 const FY_RANGES: Record<string, { start: string; end: string }> = {
   "2081": { start: "2024-07-16", end: "2025-07-15" },
   "2080": { start: "2023-07-16", end: "2024-07-15" },
@@ -44,20 +43,51 @@ export function LedgerTransactionService() {
     applied ? { startDate: fromDate, endDate: toDate } : undefined
   );
 
-  // Get linked ledger options: accounts that appear in entries alongside selected account
+  // Fetch journal entries with lines to find linked accounts
+  const { data: journalEntries } = useJournalEntries(
+    applied && accountId ? { startDate: fromDate, endDate: toDate } : undefined
+  );
+
+  // Compute truly linked accounts: accounts that share journal entries with selected account
   const linkedAccounts = useMemo(() => {
-    if (!accountId || !ledgerEntries.length) return [];
-    const entryIds = new Set(ledgerEntries.map((e) => e.journal_entry_id));
-    // Return all accounts that share journal entries with the selected one
-    return accounts.filter((a) => a.id !== accountId);
-  }, [accountId, ledgerEntries, accounts]);
+    if (!accountId || !journalEntries.length) return [];
+
+    // Find journal entry IDs that contain the selected account
+    const matchingEntryIds = new Set<string>();
+    journalEntries.forEach((je) => {
+      const hasAccount = (je.lines || []).some((line) => line.account_id === accountId);
+      if (hasAccount) matchingEntryIds.add(je.id);
+    });
+
+    // Collect all OTHER account IDs from those entries
+    const linkedAccountIds = new Set<string>();
+    journalEntries.forEach((je) => {
+      if (!matchingEntryIds.has(je.id)) return;
+      (je.lines || []).forEach((line) => {
+        if (line.account_id !== accountId) {
+          linkedAccountIds.add(line.account_id);
+        }
+      });
+    });
+
+    return accounts.filter((a) => linkedAccountIds.has(a.id));
+  }, [accountId, journalEntries, accounts]);
 
   // Filter by linked ledger
   const filteredEntries = useMemo(() => {
-    if (linkedLedger === "none" || !applied) return ledgerEntries;
-    // This would need cross-referencing journal lines, for now show all
-    return ledgerEntries;
-  }, [ledgerEntries, linkedLedger, applied]);
+    if (!applied) return ledgerEntries;
+    if (linkedLedger === "none") return ledgerEntries;
+
+    // Find journal entry IDs that contain both selected account AND linked ledger
+    const matchingEntryIds = new Set<string>();
+    journalEntries.forEach((je) => {
+      const hasSelected = (je.lines || []).some((l) => l.account_id === accountId);
+      const hasLinked = (je.lines || []).some((l) => l.account_id === linkedLedger);
+      if (hasSelected && hasLinked) matchingEntryIds.add(je.id);
+    });
+
+    return ledgerEntries.filter((e) => matchingEntryIds.has(e.journal_entry_id));
+  }, [ledgerEntries, linkedLedger, applied, journalEntries, accountId]);
 
   // Summary aggregation
   const summary = useMemo(() => {
@@ -66,6 +96,30 @@ export function LedgerTransactionService() {
     const closingBalance = filteredEntries.length > 0 ? filteredEntries[filteredEntries.length - 1]?.running_balance || 0 : 0;
     return { totalDebit, totalCredit, closingBalance };
   }, [filteredEntries]);
+
+  // For summary mode: group by journal entry with narration
+  const summaryGrouped = useMemo(() => {
+    if (showMode !== "summary") return [];
+    const map = new Map<string, { entryNumber: string; date: string; description: string; debit: number; credit: number; lines: typeof filteredEntries }>();
+    filteredEntries.forEach((entry) => {
+      const existing = map.get(entry.journal_entry_id);
+      if (existing) {
+        existing.debit += entry.debit;
+        existing.credit += entry.credit;
+        existing.lines.push(entry);
+      } else {
+        map.set(entry.journal_entry_id, {
+          entryNumber: entry.entry_number,
+          date: entry.date,
+          description: entry.description,
+          debit: entry.debit,
+          credit: entry.credit,
+          lines: [entry],
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [filteredEntries, showMode]);
 
   const handleFYChange = (fy: string) => {
     setFiscalYear(fy);
@@ -84,11 +138,22 @@ export function LedgerTransactionService() {
   };
 
   return (
-    <div className="flex gap-0 h-full">
+    <div className="flex gap-0 h-full relative">
+      {/* Collapsed toggle */}
+      {!showFilter && (
+        <button
+          onClick={() => setShowFilter(true)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-6 h-16 rounded-r-md border border-l-0 border-border bg-muted/60 hover:bg-muted transition-colors"
+          title="Open Filter"
+        >
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+      )}
+
       {/* Filter Sidebar */}
       {showFilter && (
-        <div className="w-72 shrink-0 border-r border-border bg-muted/30 p-4 space-y-4 overflow-y-auto">
-          <div className="flex items-center justify-between">
+        <div className="w-64 shrink-0 border-r border-border bg-muted/30 p-3 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Filter className="h-4 w-4" /> Filter
             </h3>
@@ -96,13 +161,13 @@ export function LedgerTransactionService() {
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <Separator />
+          <Separator className="mb-3" />
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 flex-1">
             <div>
               <Label className="text-xs">Fiscal Year</Label>
               <Select value={fiscalYear} onValueChange={handleFYChange}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -118,8 +183,8 @@ export function LedgerTransactionService() {
 
             <div>
               <Label className="text-xs">Ledger Account</Label>
-              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+              <Select value={selectedAccount} onValueChange={(v) => { setSelectedAccount(v); setLinkedLedger("none"); }}>
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue placeholder="Choose Ledger" />
                 </SelectTrigger>
                 <SelectContent>
@@ -136,7 +201,7 @@ export function LedgerTransactionService() {
             <div>
               <Label className="text-xs">Show</Label>
               <Select value={showMode} onValueChange={(v) => setShowMode(v as "details" | "summary")}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -148,28 +213,34 @@ export function LedgerTransactionService() {
 
             <div>
               <Label className="text-xs">Linked Ledger</Label>
-              <Select value={linkedLedger} onValueChange={setLinkedLedger}>
-                <SelectTrigger className="h-8 text-xs mt-1">
-                  <SelectValue placeholder="Choose Linked" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">-- None --</SelectItem>
-                  {linkedAccounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.code} - {acc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {selectedAccount === "none" ? (
+                <p className="text-[10px] text-muted-foreground mt-1 italic">Select a ledger first</p>
+              ) : applied && linkedAccounts.length === 0 ? (
+                <p className="text-[10px] text-destructive mt-1 italic">Not Found</p>
+              ) : (
+                <Select value={linkedLedger} onValueChange={setLinkedLedger} disabled={!applied || linkedAccounts.length === 0}>
+                  <SelectTrigger className="h-7 text-xs mt-0.5">
+                    <SelectValue placeholder="Choose Linked" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">-- None --</SelectItem>
+                    {linkedAccounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-2" />
           <div className="flex gap-2">
-            <Button size="sm" className="flex-1 text-xs h-8" onClick={handleSearch}>
+            <Button size="sm" className="flex-1 text-xs h-7" onClick={handleSearch}>
               <Search className="h-3.5 w-3.5 mr-1" /> Search
             </Button>
-            <Button size="sm" variant="outline" className="flex-1 text-xs h-8" onClick={handleCancel}>
+            <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={handleCancel}>
               Cancel
             </Button>
           </div>
@@ -177,14 +248,9 @@ export function LedgerTransactionService() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 p-4 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className={`flex-1 min-w-0 p-4 space-y-4 ${!showFilter ? "ml-6" : ""}`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            {!showFilter && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilter(true)}>
-                <Filter className="h-4 w-4 mr-1" /> Filter
-              </Button>
-            )}
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <BookOpen className="h-5 w-5" /> Ledger
             </h2>
@@ -213,6 +279,7 @@ export function LedgerTransactionService() {
         ) : isLoading ? (
           <TableSkeleton columns={7} rows={8} />
         ) : showMode === "details" ? (
+          /* Details Mode: Journal-entry style view */
           <div className="rounded-lg border border-border overflow-hidden">
             <Table>
               <TableHeader>
@@ -256,32 +323,75 @@ export function LedgerTransactionService() {
             </Table>
           </div>
         ) : (
-          /* Summary Mode */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Total Debits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold font-mono">{summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Total Credits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold font-mono">{summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Closing Balance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold font-mono">{summary.closingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              </CardContent>
-            </Card>
+          /* Summary Mode: Grouped by journal entry with narration */
+          <div className="space-y-3">
+            {summaryGrouped.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No entries found
+                </CardContent>
+              </Card>
+            ) : (
+              summaryGrouped.map((group) => (
+                <Card key={group.entryNumber} className="overflow-hidden">
+                  <CardHeader className="py-2.5 px-4 bg-muted/40">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-xs font-mono">{group.entryNumber}</Badge>
+                        <span className="text-xs text-muted-foreground">{group.date}</span>
+                        <span className="text-xs text-muted-foreground">{formatISOasBS(group.date, "short")} BS</span>
+                      </div>
+                      <div className="flex gap-4 text-xs">
+                        <span>Dr: <strong className="font-mono">{group.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                        <span>Cr: <strong className="font-mono">{group.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-[11px] h-8">Account</TableHead>
+                          <TableHead className="text-[11px] h-8">Narration</TableHead>
+                          <TableHead className="text-[11px] h-8 text-right">Debit</TableHead>
+                          <TableHead className="text-[11px] h-8 text-right">Credit</TableHead>
+                          <TableHead className="text-[11px] h-8 text-right">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.lines.map((line) => (
+                          <TableRow key={line.id}>
+                            <TableCell className="text-xs py-1.5">
+                              <span className="font-mono text-muted-foreground mr-1">{line.account_code}</span>
+                              {line.account_name}
+                            </TableCell>
+                            <TableCell className="text-xs py-1.5 text-muted-foreground italic max-w-[180px] truncate">
+                              {line.description || "—"}
+                            </TableCell>
+                            <TableCell className="text-xs py-1.5 text-right font-mono">
+                              {line.debit > 0 ? line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "-"}
+                            </TableCell>
+                            <TableCell className="text-xs py-1.5 text-right font-mono">
+                              {line.credit > 0 ? line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "-"}
+                            </TableCell>
+                            <TableCell className="text-xs py-1.5 text-right font-mono font-semibold">
+                              {line.running_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {group.description && (
+                      <div className="px-4 py-2 border-t border-border bg-muted/20">
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground">Narration:</span> {group.description}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         )}
       </div>
