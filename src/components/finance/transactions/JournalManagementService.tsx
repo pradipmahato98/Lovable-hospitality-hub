@@ -282,11 +282,11 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                     const c = entry.lines?.reduce((s: number, l: any) => s + (l.credit || 0), 0) || 0;
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell className="py-1.5 px-2">
+                        <TableCell className="py-1 px-1">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreHorizontal className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-32">
@@ -314,13 +314,13 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-primary py-1.5 px-2">{entry.reference || entry.entry_number}</TableCell>
-                        <TableCell className="text-xs py-1.5 px-2">{entry.date}</TableCell>
-                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "long")}</TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate py-1.5">{entry.description}</TableCell>
-                        <TableCell className="text-right font-mono text-xs py-1.5">{d.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-xs py-1.5">{c.toFixed(2)}</TableCell>
-                        <TableCell className="py-1.5">
+                        <TableCell className="font-mono text-[11px] text-primary py-1 px-1">{entry.reference || entry.entry_number}</TableCell>
+                        <TableCell className="text-[11px] py-1 px-1">{entry.date}</TableCell>
+                        <TableCell className="text-[11px] text-primary font-medium py-1 px-1">{formatISOasBS(entry.date, "long")}</TableCell>
+                        <TableCell className="text-[11px] max-w-[140px] truncate py-1 px-1">{entry.description}</TableCell>
+                        <TableCell className="text-right font-mono text-[11px] py-1 px-1">{d.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-[11px] py-1 px-1">{c.toFixed(2)}</TableCell>
+                        <TableCell className="py-1 px-1">
                           {entry.is_posted ? (
                             formatPostedInfo(entry)
                           ) : (
