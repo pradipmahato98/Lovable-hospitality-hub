@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { formatISOasBS, todayBS, bsToAD, adToBS } from "@/lib/nepaliDate";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -74,11 +75,31 @@ function getCurrentNepaliFiscalYear() {
   return `${bs.year - 1}/${bs.year.toString().slice(-2)}`;
 }
 
-function generateVoucherNo(voucherType: VoucherType, fiscalYear: string) {
+async function generateVoucherNo(voucherType: VoucherType, fiscalYear: string): Promise<string> {
   const prefix = VOUCHER_PREFIXES[voucherType];
   const fyShort = fiscalYear.replace("/", "-");
-  const seq = String(Math.floor(Math.random() * 9999) + 1).padStart(4, "0");
-  return `${prefix}-${fyShort}-${seq}`;
+  const pattern = `${prefix}-${fyShort}-%`;
+
+  // Query for existing entries with this prefix pattern to find next sequence
+  const { data } = await supabase
+    .from("journal_entries")
+    .select("reference, entry_number")
+    .or(`reference.like.${pattern},entry_number.like.${pattern}`)
+    .order("created_at", { ascending: false });
+
+  let maxSeq = 0;
+  const regex = new RegExp(`${prefix}-${fyShort.replace(/[-/]/g, "[-/]?")}-(\\d+)$`);
+  (data || []).forEach((row: any) => {
+    const ref = row.reference || row.entry_number || "";
+    const match = ref.match(regex);
+    if (match) {
+      const n = parseInt(match[1]);
+      if (n > maxSeq) maxSeq = n;
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(4, "0");
+  return `${prefix}-${fyShort}-${nextSeq}`;
 }
 
 /** Get AD date range for a Nepali fiscal year string like "2082/83" */
@@ -232,7 +253,7 @@ export default function NewJournalEntry() {
 
   useEffect(() => {
     if (voucherType) {
-      setVoucherNo(generateVoucherNo(voucherType as VoucherType, fiscalYear));
+      generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
     }
   }, [voucherType, fiscalYear]);
 
@@ -321,7 +342,7 @@ export default function NewJournalEntry() {
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
-        setVoucherNo(generateVoucherNo(voucherType as VoucherType, fiscalYear));
+        generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
       } else {
         navigate("/finance");
       }
