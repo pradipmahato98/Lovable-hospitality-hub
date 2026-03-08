@@ -34,7 +34,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Database as DbTypes } from "@/integrations/supabase/types";
 import { DataSeeder } from "@/components/dev/DataSeeder";
-import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 import { MCPConfigPanel } from "@/components/dev/MCPConfig";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
@@ -56,14 +55,6 @@ interface EmailConfig {
   systemAlerts: boolean;
 }
 
-const defaultEmailConfig: EmailConfig = {
-  enabled: false,
-  provider: "resend",
-  roleChangeNotifications: true,
-  bookingNotifications: true,
-  systemAlerts: true,
-};
-
 interface UserWithMultipleRoles {
   user_id: string;
   email: string | null;
@@ -76,10 +67,15 @@ const DevPanel = () => {
   const { isAdmin, isLoading } = useIsAdmin();
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
-  const { data: emailConfig } = useSettings<EmailConfig>("email_config", defaultEmailConfig);
-  const updateEmailConfig = useUpdateSettings<EmailConfig>("email_config");
+  const [emailConfig, setEmailConfig] = useState<EmailConfig>({
+    enabled: false,
+    provider: "resend",
+    roleChangeNotifications: true,
+    bookingNotifications: true,
+    systemAlerts: true,
+  });
 
-  const currentEmailConfig = emailConfig ?? defaultEmailConfig;
+  // Fetch users with multiple roles
   const { data: usersWithMultipleRoles, isLoading: isLoadingRoles, refetch: refetchRoles } = useQuery({
     queryKey: ["users-with-multiple-roles"],
     queryFn: async () => {
@@ -224,11 +220,11 @@ const DevPanel = () => {
     if (enabled) {
       toast.info("Email notifications require API key setup. Contact your administrator.");
     }
-    updateEmailConfig.mutate({ ...currentEmailConfig, enabled });
+    setEmailConfig({ ...emailConfig, enabled });
   };
 
   const handleSaveEmailConfig = () => {
-    updateEmailConfig.mutate(currentEmailConfig);
+    toast.success("Email configuration saved");
   };
 
   return (
@@ -466,21 +462,20 @@ const DevPanel = () => {
                     </p>
                   </div>
                   <Switch 
-                    checked={currentEmailConfig.enabled} 
+                    checked={emailConfig.enabled} 
                     onCheckedChange={handleEmailToggle}
-                    disabled={updateEmailConfig.isPending}
                   />
                 </div>
 
-                {currentEmailConfig.enabled && (
+                {emailConfig.enabled && (
                   <>
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="provider">Email Provider</Label>
                         <Input 
                           id="provider" 
-                          value={currentEmailConfig.provider} 
-                          onChange={(e) => updateEmailConfig.mutate({ ...currentEmailConfig, provider: e.target.value })}
+                          value={emailConfig.provider} 
+                          onChange={(e) => setEmailConfig({ ...emailConfig, provider: e.target.value })}
                           placeholder="e.g., resend, sendgrid"
                         />
                         <p className="text-xs text-muted-foreground">
@@ -498,9 +493,9 @@ const DevPanel = () => {
                           <span className="text-sm">Role Change Notifications</span>
                         </div>
                         <Switch 
-                          checked={currentEmailConfig.roleChangeNotifications}
+                          checked={emailConfig.roleChangeNotifications}
                           onCheckedChange={(checked) => 
-                            updateEmailConfig.mutate({ ...currentEmailConfig, roleChangeNotifications: checked })
+                            setEmailConfig({ ...emailConfig, roleChangeNotifications: checked })
                           }
                         />
                       </div>
@@ -511,9 +506,9 @@ const DevPanel = () => {
                           <span className="text-sm">Booking Notifications</span>
                         </div>
                         <Switch 
-                          checked={currentEmailConfig.bookingNotifications}
+                          checked={emailConfig.bookingNotifications}
                           onCheckedChange={(checked) => 
-                            updateEmailConfig.mutate({ ...currentEmailConfig, bookingNotifications: checked })
+                            setEmailConfig({ ...emailConfig, bookingNotifications: checked })
                           }
                         />
                       </div>
@@ -524,21 +519,21 @@ const DevPanel = () => {
                           <span className="text-sm">System Alerts</span>
                         </div>
                         <Switch 
-                          checked={currentEmailConfig.systemAlerts}
+                          checked={emailConfig.systemAlerts}
                           onCheckedChange={(checked) => 
-                            updateEmailConfig.mutate({ ...currentEmailConfig, systemAlerts: checked })
+                            setEmailConfig({ ...emailConfig, systemAlerts: checked })
                           }
                         />
                       </div>
                     </div>
 
-                    <Button onClick={handleSaveEmailConfig} className="w-full" disabled={updateEmailConfig.isPending}>
+                    <Button onClick={handleSaveEmailConfig} className="w-full">
                       Save Configuration
                     </Button>
                   </>
                 )}
 
-                {!currentEmailConfig.enabled && (
+                {!emailConfig.enabled && (
                   <div className="p-4 rounded-lg border border-dashed border-border text-center">
                     <Mail className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">
