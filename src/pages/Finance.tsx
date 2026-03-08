@@ -46,6 +46,9 @@ import { BudgetExecutionService } from "@/components/finance/transactions/Budget
 import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
 import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
 import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
+import { LedgerTransactionService } from "@/components/finance/transactions/LedgerTransactionService";
+import { DayBookService } from "@/components/finance/transactions/DayBookService";
+import { CashBankReconcileService } from "@/components/finance/transactions/CashBankReconcileService";
 import { FinanceInvoicesTab } from "@/components/finance/tabs/InvoicesTab";
 import { FinanceExpensesTab } from "@/components/finance/tabs/ExpensesTab";
 
