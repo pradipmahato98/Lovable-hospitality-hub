@@ -197,7 +197,7 @@ export default function POSHistory() {
 
     filteredTransactions.slice(0, 30).forEach((t) => {
       doc.text((t.transaction_number || "").slice(-8), 14, y);
-      doc.text(formatDateSafe(t.created_at, "MM/dd HH:mm"), 50, y);
+      doc.text(formatDateSafe(t.created_at, "dd/MM HH:mm"), 50, y);
       doc.text(`T${t.table_number || ""}`, 90, y);
       doc.text(paymentMethodLabels[t.payment_method] || t.payment_method || "", 110, y);
       doc.text(`$${(t.total || 0).toFixed(2)}`, 150, y);
