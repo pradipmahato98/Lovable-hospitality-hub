@@ -198,12 +198,12 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           )}
         </div>
 
-        {/* Row 2: Search, AD/BS toggle, From (BS), To (BS), Search btn, Clear */}
+        {/* Row 2: Search + AD/BS toggle + Date filters */}
         <div className="flex items-end gap-2 px-5 pb-3 flex-wrap">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder={`Search entries (${searchMode})...`}
+              placeholder={searchMode === "AD" ? "Search by AD date..." : "Search by BS मिति..."}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
               className="pl-8 h-9 text-sm w-[180px]"
@@ -218,7 +218,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               )}
               onClick={() => setSearchMode("AD")}
             >
-              AD
+              AD Select
             </button>
             <button
               className={cn(
@@ -227,9 +227,16 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               )}
               onClick={() => setSearchMode("BS")}
             >
-              BS
+              BS Select
             </button>
           </div>
+          <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
+          {dateFilter && (
+            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setDateFilter(null)}>
+              Clear Filter
+            </Button>
+          )}
+        </div>
           <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
           {dateFilter && (
             <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setDateFilter(null)}>
