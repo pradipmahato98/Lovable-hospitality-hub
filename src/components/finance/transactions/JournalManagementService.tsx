@@ -327,23 +327,21 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-32">
-                              <DropdownMenuItem className="text-xs gap-2" onClick={() => setViewEntry(entry)}>
+                              <DropdownMenuItem className="text-xs gap-2" onSelect={() => setViewEntry(entry)}>
                                 <Eye className="h-3 w-3" /> View
                               </DropdownMenuItem>
                               {!entry.is_posted && !isReadOnly && (
-                                <DropdownMenuItem className="text-xs gap-2" onClick={() => navigate(`/finance/journal/new?edit=${entry.id}`)}>
+                                <DropdownMenuItem className="text-xs gap-2" onSelect={() => navigate(`/finance/journal/new?edit=${entry.id}`)}>
                                   <Pencil className="h-3 w-3" /> Edit
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-xs gap-2" onClick={() => {
-                                toast.info("Print feature coming soon");
-                              }}>
+                              <DropdownMenuItem className="text-xs gap-2" onSelect={() => handlePrint(entry)}>
                                 <Printer className="h-3 w-3" /> Print
                               </DropdownMenuItem>
                               {!entry.is_posted && !isReadOnly && (
                                 <DropdownMenuItem
                                   className="text-xs gap-2 text-destructive focus:text-destructive"
-                                  onClick={() => setDeleteId(entry.id)}
+                                  onSelect={() => setDeleteId(entry.id)}
                                 >
                                   <Trash2 className="h-3 w-3" /> Delete
                                 </DropdownMenuItem>
