@@ -60,7 +60,7 @@ export function FinanceExpensesTab() {
         e.description?.toLowerCase().includes(q) ||
         e.vendor?.toLowerCase().includes(q) ||
         e.category?.toLowerCase().includes(q) ||
-        formatISOasBS(e.expense_date, "long").toLowerCase().includes(q)
+        formatISOasBS(e.expense_date, "short").toLowerCase().includes(q)
       );
     }
     return items;
