@@ -451,6 +451,38 @@ const Guests = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents" className="space-y-6">
+            {selectedGuest ? (
+              <GuestDocuments guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
+            ) : (
+              <Card><CardContent className="py-12 text-center text-muted-foreground">
+                Select a guest from the Guests tab to view their documents. Click the "Feedback" button on any guest card first.
+              </CardContent></Card>
+            )}
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history" className="space-y-6">
+            {selectedGuest ? (
+              <GuestHistoryTimeline guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
+            ) : (
+              <Card><CardContent className="py-12 text-center text-muted-foreground">
+                Select a guest from the Guests tab to view their history timeline.
+              </CardContent></Card>
+            )}
+          </TabsContent>
+
+          {/* Messaging Tab */}
+          <TabsContent value="messaging" className="space-y-6">
+            <AutomatedMessaging />
+          </TabsContent>
+
+          {/* De-dup Tab */}
+          <TabsContent value="dedup" className="space-y-6">
+            <GuestMergeTool />
+          </TabsContent>
         </Tabs>
 
         {/* Feedback Dialog */}
