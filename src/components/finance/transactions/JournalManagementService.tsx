@@ -142,6 +142,47 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     postJournalEntry.mutate(id);
   };
 
+  const handlePrint = (entry: any) => {
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) {
+      toast.error("Please allow popups to print voucher");
+      return;
+    }
+
+    const rows = (entry.lines || []).map((line: any) => `
+      <tr>
+        <td style="padding:6px;border:1px solid #ddd;">${line.account?.name || getAccountName(line.account_id)}</td>
+        <td style="padding:6px;border:1px solid #ddd;text-align:right;">${(line.debit || 0).toFixed(2)}</td>
+        <td style="padding:6px;border:1px solid #ddd;text-align:right;">${(line.credit || 0).toFixed(2)}</td>
+      </tr>
+    `).join("");
+
+    win.document.write(`
+      <html>
+        <head><title>Voucher ${entry.reference || entry.entry_number}</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Voucher: ${entry.reference || entry.entry_number}</h2>
+          <p><strong>Date (AD):</strong> ${entry.date}</p>
+          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "long")}</p>
+          <p><strong>Description:</strong> ${entry.description || "-"}</p>
+          <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
+            <thead>
+              <tr>
+                <th style="padding:6px;border:1px solid #ddd;text-align:left;">Account</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">Debit</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">Credit</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
+
   const handlePageSizeManual = () => {
     const val = parseInt(pageSizeInput);
     if (val > 0 && val <= 500) { setPageSize(val); setPageSizeInput(""); }
