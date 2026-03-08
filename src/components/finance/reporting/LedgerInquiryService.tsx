@@ -33,8 +33,8 @@ export function LedgerInquiryService({ isReadOnly }: LedgerInquiryServiceProps) 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex-1 max-w-sm">
           <Select
-            value={selectedAccountId || ""}
-            onValueChange={(v) => setSelectedAccountId(v || null)}
+            value={selectedAccountId || "all"}
+            onValueChange={(v) => setSelectedAccountId(v === "all" ? null : v)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select account to view ledger" />
