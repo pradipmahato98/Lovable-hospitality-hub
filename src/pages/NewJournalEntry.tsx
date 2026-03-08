@@ -98,7 +98,7 @@ async function generateVoucherNo(voucherType: VoucherType, fiscalYear: string): 
     }
   });
 
-  const nextSeq = String(maxSeq + 1).padStart(4, "0");
+  const nextSeq = String(maxSeq + 1).padStart(2, "0");
   return `${prefix}-${fyShort}-${nextSeq}`;
 }
 
