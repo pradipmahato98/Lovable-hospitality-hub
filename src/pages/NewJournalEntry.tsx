@@ -342,7 +342,7 @@ export default function NewJournalEntry() {
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
-        setVoucherNo(generateVoucherNo(voucherType as VoucherType, fiscalYear));
+        generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
       } else {
         navigate("/finance");
       }
