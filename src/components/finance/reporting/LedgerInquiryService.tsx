@@ -40,7 +40,7 @@ export function LedgerInquiryService({ isReadOnly }: LedgerInquiryServiceProps) 
               <SelectValue placeholder="Select account to view ledger" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Accounts</SelectItem>
+              <SelectItem value="all">All Accounts</SelectItem>
               {accounts.map((acc) => (
                 <SelectItem key={acc.id} value={acc.id}>
                   {acc.code} - {acc.name}
