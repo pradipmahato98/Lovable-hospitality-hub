@@ -555,7 +555,7 @@ export default function NewJournalEntry() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Voucher Details</CardTitle>
+              <CardTitle className="text-base">{isEditMode ? "Edit Voucher" : "Voucher Details"}</CardTitle>
               <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => navigate("/finance")}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to Journal Register
               </Button>
