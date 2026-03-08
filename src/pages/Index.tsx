@@ -28,8 +28,10 @@ const Index = () => {
     );
   }
 
+  const bsToday = formatBSDate(todayBS(), "long");
+
   return (
-    <MainLayout title="Dashboard" subtitle="Property real-time overview and analytics.">
+    <MainLayout title="Dashboard" subtitle={`${format(new Date(), "MMM dd, yyyy")} • ${bsToday} BS`}>
       {/* Security Alert */}
       {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
         <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">
