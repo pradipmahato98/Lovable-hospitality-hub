@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAdminAuditLogs } from "@/hooks/useUsersWithRoles";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function AuditReportingService({ isReadOnly }: { isReadOnly?: boolean }) {
