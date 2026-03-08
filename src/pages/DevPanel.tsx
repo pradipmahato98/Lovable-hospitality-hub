@@ -34,6 +34,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Database as DbTypes } from "@/integrations/supabase/types";
 import { DataSeeder } from "@/components/dev/DataSeeder";
+import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 import { MCPConfigPanel } from "@/components/dev/MCPConfig";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
