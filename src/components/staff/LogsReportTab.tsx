@@ -150,7 +150,7 @@ export const LogsReportTab = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(log.created_at), "MMM d, h:mm a")}
+                      {formatAD(new Date(log.created_at), "time")}
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-muted-foreground">
                       {log.new_values ? JSON.stringify(log.new_values) : "-"}

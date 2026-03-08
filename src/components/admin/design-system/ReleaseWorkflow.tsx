@@ -29,7 +29,7 @@ export const ReleaseWorkflow = ({ livePrefs, stagedPrefs, onPublish }: ReleaseWo
             {livePrefs?.last_published_at && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {format(new Date(livePrefs.last_published_at), "MMM d, HH:mm")}
+                {formatAD(new Date(livePrefs.last_published_at), "time")}
               </span>
             )}
           </div>

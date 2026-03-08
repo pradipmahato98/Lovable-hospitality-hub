@@ -186,7 +186,7 @@ export function KeyCardManagement() {
                       {log.reason && <span className="text-[10px] block text-muted-foreground">{log.reason}</span>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{log.issued_by || "-"}</TableCell>
-                    <TableCell className="text-sm">{format(new Date(log.created_at), "MMM d, HH:mm")}</TableCell>
+                    <TableCell className="text-sm">{formatAD(new Date(log.created_at), "time")}</TableCell>
                     <TableCell className="text-right">
                       {log.action === "issued" && !log.returned_at && (
                         <div className="flex justify-end gap-1">

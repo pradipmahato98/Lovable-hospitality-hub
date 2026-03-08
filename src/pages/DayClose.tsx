@@ -60,7 +60,7 @@ export default function DayClose() {
                 Accounting Status: {isClosed ? "Closed" : "Open"}
               </CardTitle>
               <CardDescription>
-                Business Date: {businessDate ? format(parseISO(businessDate), "PP") : "---"}
+                Business Date: {businessDate ? formatAD(parseISO(businessDate)) : "---"}
               </CardDescription>
             </div>
             {isClosed ? (

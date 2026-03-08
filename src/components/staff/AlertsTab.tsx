@@ -47,7 +47,7 @@ export const AlertsTab = () => {
                     <div className="flex items-center justify-between">
                       <p className="font-semibold">{notification.title}</p>
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(notification.created_at), "MMM d, h:mm a")}
+                        {formatAD(new Date(notification.created_at), "time")}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>

@@ -472,7 +472,7 @@ export function CheckInOutDialog({
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(formData.checkOutDate, "PPP")}
+                        {formatAD(formData.checkOutDate)}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">

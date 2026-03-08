@@ -467,7 +467,7 @@ export default function POSHistory() {
                 <div>
                   <p className="text-muted-foreground">Date & Time</p>
                   <p className="font-medium">
-                    {formatDateSafe(selectedTransaction.created_at, "PPpp")}
+                    {formatDateSafe(selectedTransaction.created_at, "dd/MM/yyyy HH:mm:ss")}
                   </p>
                 </div>
                 <div>

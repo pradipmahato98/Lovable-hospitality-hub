@@ -442,7 +442,7 @@ const Guests = () => {
                           </TableCell>
                           <TableCell className="font-semibold">{m.points_balance.toLocaleString()}</TableCell>
                           <TableCell>{m.lifetime_points.toLocaleString()}</TableCell>
-                          <TableCell>{format(new Date(m.join_date), "MMM d, yyyy")}</TableCell>
+                          <TableCell>{formatAD(new Date(m.join_date))}</TableCell>
                         </TableRow>
                       ))
                     )}

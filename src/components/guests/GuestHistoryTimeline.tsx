@@ -134,7 +134,7 @@ export function GuestHistoryTimeline({ guestId, guestName }: GuestHistoryTimelin
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(event.date), "MMM d, yyyy")}
+                      {formatAD(new Date(event.date))}
                     </span>
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {event.type}

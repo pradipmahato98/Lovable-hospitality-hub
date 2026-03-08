@@ -254,7 +254,7 @@ export default function POSReports() {
     doc.text("POS Sales Report", 14, 22);
     doc.setFontSize(10);
     doc.text(`Period: ${dateRange.start} to ${dateRange.end}`, 14, 30);
-    doc.text(`Generated: ${format(new Date(), "PPpp")}`, 14, 36);
+    doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 36);
 
     doc.setFontSize(14);
     doc.text("Summary", 14, 50);
