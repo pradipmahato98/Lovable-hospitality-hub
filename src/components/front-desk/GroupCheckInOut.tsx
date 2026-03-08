@@ -35,11 +35,11 @@ export function GroupCheckInOut() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const pendingCheckIns = useMemo(() => {
-    return reservations.filter((r: any) => r.status === "confirmed");
+    return reservations.filter((r) => r.status === "confirmed");
   }, [reservations]);
 
   const checkedInGuests = useMemo(() => {
-    return reservations.filter((r: any) => r.status === "checked_in");
+    return reservations.filter((r) => r.status === "checked_in");
   }, [reservations]);
 
   const filteredCheckIns = useMemo(() => {
