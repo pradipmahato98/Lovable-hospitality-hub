@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useNotifications } from "@/hooks/useNotifications";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { Bell, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
