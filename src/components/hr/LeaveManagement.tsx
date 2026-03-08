@@ -251,6 +251,7 @@ export function LeaveManagement() {
                       id="startDate"
                       type="date"
                       value={formData.startDate}
+                      max={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                       required
                     />
@@ -261,6 +262,7 @@ export function LeaveManagement() {
                       id="endDate"
                       type="date"
                       value={formData.endDate}
+                      max={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                       min={formData.startDate}
                       required

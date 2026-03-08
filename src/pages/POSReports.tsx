@@ -348,6 +348,7 @@ export default function POSReports() {
                     <Input
                       type="date"
                       value={startDate}
+                      max={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setStartDate(e.target.value)}
                     />
                   </div>
@@ -356,6 +357,7 @@ export default function POSReports() {
                     <Input
                       type="date"
                       value={endDate}
+                      max={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setEndDate(e.target.value)}
                     />
                   </div>

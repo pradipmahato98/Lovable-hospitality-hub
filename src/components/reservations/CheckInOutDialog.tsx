@@ -460,6 +460,7 @@ export function CheckInOutDialog({
                         mode="single"
                         selected={formData.checkInDate}
                         onSelect={(date) => date && setFormData({ ...formData, checkInDate: date })}
+                        disabled={(date) => date > new Date()}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />
@@ -480,7 +481,7 @@ export function CheckInOutDialog({
                         mode="single"
                         selected={formData.checkOutDate}
                         onSelect={(date) => date && setFormData({ ...formData, checkOutDate: date })}
-                        disabled={(date) => date <= formData.checkInDate}
+                        disabled={(date) => date <= formData.checkInDate || date > new Date()}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />

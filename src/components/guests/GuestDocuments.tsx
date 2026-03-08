@@ -108,11 +108,11 @@ export function GuestDocuments({ guestId, guestName }: GuestDocumentsProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Issue Date</Label>
-                  <Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} />
+                  <Input type="date" value={form.issue_date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Expiry Date</Label>
-                  <Input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} />
+                  <Input type="date" value={form.expiry_date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">

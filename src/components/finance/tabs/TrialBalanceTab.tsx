@@ -42,7 +42,7 @@ export function FinanceTrialBalanceTab() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-2">
           <Label>As of Date</Label>
-          <Input type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} className="w-44" />
+          <Input type="date" value={asOfDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setAsOfDate(e.target.value)} className="w-44" />
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className={isBalanced ? "bg-success/10 text-success border-success/20 gap-1.5" : "bg-destructive/10 text-destructive border-destructive/20 gap-1.5"}>

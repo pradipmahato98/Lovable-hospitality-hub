@@ -734,6 +734,7 @@ export default function Banquet() {
                 <Input
                   type="date"
                   value={newEvent.event_date}
+                  max={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setNewEvent((p) => ({ ...p, event_date: e.target.value }))}
                 />
               </div>

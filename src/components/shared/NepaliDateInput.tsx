@@ -42,6 +42,7 @@ export function NepaliDateInput({
   disabled = false,
   hideModeLabel = false,
 }: NepaliDateInputProps) {
+  const todayISO = new Date().toISOString().slice(0, 10);
   const bsDate = useMemo(() => {
     if (!value) return todayBS();
     const [y, m, d] = value.split("-").map(Number);
@@ -86,6 +87,12 @@ export function NepaliDateInput({
   const today = todayBS();
   const isToday = (d: number) => d === today.day && bsMonth === today.month && bsYear === today.year;
   const isSelected = (d: number) => d === bsDate.day && bsMonth === bsDate.month && bsYear === bsDate.year;
+  const isFuture = (d: number) => {
+    if (bsYear > today.year) return true;
+    if (bsYear === today.year && bsMonth > today.month) return true;
+    if (bsYear === today.year && bsMonth === today.month && d > today.day) return true;
+    return false;
+  };
 
   const navigateMonth = (delta: number) => {
     let newMonth = bsMonth + delta;
@@ -111,6 +118,7 @@ export function NepaliDateInput({
             <Input
               type="date"
               value={value}
+              max={todayISO}
               onChange={(e) => handleADChange(e.target.value)}
               disabled={disabled}
               className="h-9 text-sm"
@@ -185,13 +193,16 @@ export function NepaliDateInput({
                       {day ? (
                         <button
                           type="button"
+                          disabled={isFuture(day)}
                           onClick={() => {
                             handleBSChange(bsYear, bsMonth, day);
                             setCalendarOpen(false);
                           }}
                           className={cn(
                             "h-7 w-7 rounded-md text-xs font-medium transition-colors",
-                            isSelected(day)
+                            isFuture(day)
+                              ? "text-muted-foreground/40 cursor-not-allowed"
+                              : isSelected(day)
                               ? "bg-primary text-primary-foreground"
                               : isToday(day)
                               ? "bg-accent text-accent-foreground font-bold"
@@ -248,11 +259,11 @@ export function NepaliDateSearch({ onSearch, className, mode = "BS" }: NepaliDat
         <>
           <div className="space-y-1">
             <Label className="text-xs">From (AD)</Label>
-            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 text-sm" />
+            <Input type="date" value={fromDate} max={today} onChange={(e) => setFromDate(e.target.value)} className="h-9 text-sm" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">To (AD)</Label>
-            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 text-sm" />
+            <Input type="date" value={toDate} max={today} onChange={(e) => setToDate(e.target.value)} className="h-9 text-sm" />
           </div>
         </>
       ) : (

@@ -111,7 +111,7 @@ export function WakeUpCallScheduler() {
                 </div>
                 <div className="space-y-2">
                   <Label>Call Date</Label>
-                  <Input type="date" value={form.call_date} onChange={(e) => setForm({ ...form, call_date: e.target.value })} />
+                  <Input type="date" value={form.call_date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, call_date: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">
