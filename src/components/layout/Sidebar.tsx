@@ -44,49 +44,24 @@ interface NavItem {
   path: string;
 }
 
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
-
 const standaloneItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
 ];
 
-const moduleGroups: NavGroup[] = [
-  {
-    label: "Front Office",
-    items: [
-      { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-      { icon: Users, label: "Guests", path: "/guests" },
-      { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
-      { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-      { icon: Wrench, label: "Engineering", path: "/engineering" },
-      { icon: Package, label: "Inventory", path: "/inventory" },
-    ],
-  },
-  {
-    label: "Revenue",
-    items: [
-      { icon: ShoppingCart, label: "POS", path: "/pos" },
-      { icon: DollarSign, label: "Finance/Account", path: "/finance" },
-      { icon: PartyPopper, label: "Banquet", path: "/banquet" },
-    ],
-  },
-  {
-    label: "Audit & Reports",
-    items: [
-      { icon: Moon, label: "Night Audit", path: "/night-audit" },
-      { icon: Lock, label: "Day Close", path: "/day-close" },
-      { icon: BarChart3, label: "Reports", path: "/reports" },
-    ],
-  },
+const moduleItems: NavItem[] = [
+  { icon: CalendarDays, label: "Reservations", path: "/reservations" },
+  { icon: Users, label: "Guests", path: "/guests" },
+  { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
+  { icon: Wrench, label: "Engineering", path: "/engineering" },
+  { icon: ShoppingCart, label: "POS", path: "/pos" },
+  { icon: Package, label: "Inventory", path: "/inventory" },
+  { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance" },
+  { icon: PartyPopper, label: "Banquet", path: "/banquet" },
+  { icon: Moon, label: "Night Audit", path: "/night-audit" },
+  { icon: Lock, label: "Day Close", path: "/day-close" },
+  { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -105,13 +80,14 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { isAdmin } = useIsAdmin();
   const showLabels = !collapsed || isMobile;
 
-  // Auto-open groups containing the active route
-  const activeGroups = moduleGroups
-    .filter((g) => g.items.some((i) => location.pathname === i.path))
-    .map((g) => g.label);
+  const modulesHasActive = moduleItems.some((i) => location.pathname === i.path);
+  const adminHasActive = adminNavItems.some((i) => location.pathname === i.path);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(
-    new Set([...activeGroups, "Admin"])
+    new Set([
+      ...(modulesHasActive ? ["Modules"] : []),
+      ...(adminHasActive ? ["Admin"] : []),
+    ])
   );
 
   const toggleGroup = (label: string) => {
@@ -150,25 +126,15 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     );
   };
 
-  const renderGroup = (group: NavGroup) => {
-    const isOpen = openGroups.has(group.label);
-    const hasActive = group.items.some((i) => location.pathname === i.path);
+  const renderCollapsibleGroup = (label: string, items: NavItem[], hasActive: boolean) => {
+    const isOpen = openGroups.has(label);
 
     if (!showLabels) {
-      // Collapsed: just show icons
-      return (
-        <div key={group.label} className="space-y-0.5">
-          {group.items.map(renderNavItem)}
-        </div>
-      );
+      return <div className="space-y-0.5">{items.map(renderNavItem)}</div>;
     }
 
     return (
-      <Collapsible
-        key={group.label}
-        open={isOpen}
-        onOpenChange={() => toggleGroup(group.label)}
-      >
+      <Collapsible open={isOpen} onOpenChange={() => toggleGroup(label)}>
         <CollapsibleTrigger asChild>
           <button
             className={cn(
@@ -178,7 +144,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <span>{group.label}</span>
+            <span>{label}</span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 transition-transform duration-200",
@@ -188,7 +154,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-0.5 pl-1">
-          {group.items.map(renderNavItem)}
+          {items.map(renderNavItem)}
         </CollapsibleContent>
       </Collapsible>
     );
@@ -225,44 +191,13 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {standaloneItems.map(renderNavItem)}
 
         <div className="mt-2 space-y-1">
-          {moduleGroups.map(renderGroup)}
+          {renderCollapsibleGroup("Modules", moduleItems, modulesHasActive)}
         </div>
 
         {/* Admin Section */}
         {isAdmin && (
-          <div className="mt-2">
-            {showLabels ? (
-              <Collapsible
-                open={openGroups.has("Admin")}
-                onOpenChange={() => toggleGroup("Admin")}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
-                      adminNavItems.some((i) => location.pathname === i.path)
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <span>Admin</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 transition-transform duration-200",
-                        openGroups.has("Admin") && "rotate-180"
-                      )}
-                    />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-0.5 pl-1">
-                  {adminNavItems.map(renderNavItem)}
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <div className="space-y-0.5">
-                {adminNavItems.map(renderNavItem)}
-              </div>
-            )}
+          <div className="mt-1">
+            {renderCollapsibleGroup("Admin", adminNavItems, adminHasActive)}
           </div>
         )}
       </nav>
