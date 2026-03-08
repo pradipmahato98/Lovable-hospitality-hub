@@ -363,7 +363,7 @@ const Guests = () => {
                               {f.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>{format(new Date(f.created_at), "MMM d")}</TableCell>
+                          <TableCell>{formatAD(new Date(f.created_at))}</TableCell>
                           <TableCell>
                             {f.status === "pending" && (
                               <Button variant="ghost" size="sm" onClick={() => updateStatus.mutate({ id: f.id, status: "resolved" })}>
