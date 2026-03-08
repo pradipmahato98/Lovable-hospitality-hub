@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 
 export function BudgetForecastReportingService({ isReadOnly }: { isReadOnly?: boolean }) {
-  const { budgets, budgetLines, isLoading } = useBudgets();
+  const { data: budgets, isLoading } = useBudgets();
 
   const analysis = useMemo(() => {
     const activeBudgets = (budgets || []).filter((b) => b.status === "active" || b.status === "approved");
