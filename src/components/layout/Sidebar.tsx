@@ -196,39 +196,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
         {/* Admin Section */}
         {isAdmin && (
-          <div className="mt-2">
-            {showLabels ? (
-              <Collapsible
-                open={openGroups.has("Admin")}
-                onOpenChange={() => toggleGroup("Admin")}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
-                      adminNavItems.some((i) => location.pathname === i.path)
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <span>Admin</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 transition-transform duration-200",
-                        openGroups.has("Admin") && "rotate-180"
-                      )}
-                    />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-0.5 pl-1">
-                  {adminNavItems.map(renderNavItem)}
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <div className="space-y-0.5">
-                {adminNavItems.map(renderNavItem)}
-              </div>
-            )}
+          <div className="mt-1">
+            {renderCollapsibleGroup("Admin", adminNavItems, adminHasActive)}
           </div>
         )}
       </nav>
