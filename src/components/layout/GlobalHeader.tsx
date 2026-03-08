@@ -7,7 +7,7 @@ import { HeaderSearch } from "./header/HeaderSearch";
 import { HeaderNotifications } from "./header/HeaderNotifications";
 import { HeaderUserMenu } from "./header/HeaderUserMenu";
 import { todayBS, formatBSDate } from "@/lib/nepaliDate";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HeaderProps {
