@@ -60,7 +60,7 @@ export function FinanceExpensesTab() {
         e.description?.toLowerCase().includes(q) ||
         e.vendor?.toLowerCase().includes(q) ||
         e.category?.toLowerCase().includes(q) ||
-        formatISOasBS(e.expense_date, "long").toLowerCase().includes(q)
+        formatISOasBS(e.expense_date, "short").toLowerCase().includes(q)
       );
     }
     return items;
@@ -147,7 +147,7 @@ export function FinanceExpensesTab() {
                     <TableRow key={exp.id}>
                       <TableCell className="font-mono text-primary">{exp.expense_number}</TableCell>
                       <TableCell className="text-sm">{exp.expense_date}</TableCell>
-                      <TableCell className="text-sm text-primary font-medium">{formatISOasBS(exp.expense_date, "long")}</TableCell>
+                      <TableCell className="text-sm text-primary font-medium">{formatISOasBS(exp.expense_date, "short")}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{exp.category}</Badge></TableCell>
                       <TableCell>{exp.description}</TableCell>
                       <TableCell className="text-muted-foreground">{exp.vendor || "-"}</TableCell>

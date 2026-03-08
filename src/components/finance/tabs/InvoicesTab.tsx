@@ -73,7 +73,7 @@ export function FinanceInvoicesTab() {
       const q = searchText.toLowerCase();
       items = items.filter(i =>
         i.invoice_number?.toLowerCase().includes(q) ||
-        formatISOasBS(i.invoice_date, "long").toLowerCase().includes(q) ||
+        formatISOasBS(i.invoice_date, "short").toLowerCase().includes(q) ||
         (i.guest && `${i.guest.first_name} ${i.guest.last_name}`.toLowerCase().includes(q))
       );
     }
@@ -89,7 +89,7 @@ export function FinanceInvoicesTab() {
       const q = searchText.toLowerCase();
       items = items.filter(p =>
         p.payment_number?.toLowerCase().includes(q) ||
-        formatISOasBS(p.payment_date, "long").toLowerCase().includes(q)
+        formatISOasBS(p.payment_date, "short").toLowerCase().includes(q)
       );
     }
     return items;
@@ -194,7 +194,7 @@ export function FinanceInvoicesTab() {
                           <TableCell className="font-mono text-primary">{inv.invoice_number}</TableCell>
                           <TableCell>{inv.guest ? `${inv.guest.first_name} ${inv.guest.last_name}` : "-"}</TableCell>
                           <TableCell className="text-sm">{inv.invoice_date}</TableCell>
-                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(inv.invoice_date, "long")}</TableCell>
+                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(inv.invoice_date, "short")}</TableCell>
                           <TableCell className="text-right font-mono">${inv.total.toFixed(2)}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">${inv.balance_due.toFixed(2)}</TableCell>
                           <TableCell><Badge variant="outline" className={statusColors[inv.status] || ""}>{inv.status}</Badge></TableCell>
@@ -245,7 +245,7 @@ export function FinanceInvoicesTab() {
                         <TableRow key={pay.id}>
                           <TableCell className="font-mono text-primary">{pay.payment_number}</TableCell>
                           <TableCell className="text-sm">{pay.payment_date}</TableCell>
-                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(pay.payment_date, "long")}</TableCell>
+                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(pay.payment_date, "short")}</TableCell>
                           <TableCell className="capitalize">{pay.payment_method}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">${pay.amount.toFixed(2)}</TableCell>
                           <TableCell className="text-muted-foreground">{pay.reference_number || "-"}</TableCell>

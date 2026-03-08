@@ -85,7 +85,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           e.description?.toLowerCase().includes(q) ||
           e.entry_number?.toLowerCase().includes(q) ||
           e.reference?.toLowerCase().includes(q) ||
-          formatISOasBS(e.date, "long").toLowerCase().includes(q)
+          formatISOasBS(e.date, "short").toLowerCase().includes(q)
         );
       }
     }
@@ -163,7 +163,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
         <body style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Voucher: ${entry.reference || entry.entry_number}</h2>
           <p><strong>Date (AD):</strong> ${entry.date}</p>
-          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "long")}</p>
+          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "short")}</p>
           <p><strong>Description:</strong> ${entry.description || "-"}</p>
           <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
             <thead>
@@ -351,7 +351,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                         </TableCell>
                         <TableCell className="font-mono text-xs text-primary py-1.5 px-2">{entry.reference || entry.entry_number}</TableCell>
                         <TableCell className="text-xs py-1.5 px-2">{entry.date}</TableCell>
-                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "long")}</TableCell>
+                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "short")}</TableCell>
                         <TableCell className="text-xs max-w-[200px] truncate py-1.5">{entry.description}</TableCell>
                         <TableCell className="text-right font-mono text-xs py-1.5">{d.toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-xs py-1.5">{c.toFixed(2)}</TableCell>
@@ -459,7 +459,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">मिति (BS)</p>
-                  <p className="text-sm font-medium text-primary">{formatISOasBS(viewEntry.date, "long")}</p>
+                  <p className="text-sm font-medium text-primary">{formatISOasBS(viewEntry.date, "short")}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Status</p>

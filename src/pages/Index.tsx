@@ -28,7 +28,7 @@ const Index = () => {
     );
   }
 
-  const bsToday = formatBSDate(todayBS(), "long");
+  const bsToday = formatBSDate(todayBS(), "short");
 
   return (
     <MainLayout title="Dashboard" subtitle={`${formatAD(new Date())} • ${bsToday} BS`}>

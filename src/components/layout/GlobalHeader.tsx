@@ -29,7 +29,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   };
 
   const bsToday = todayBS();
-  const bsFormatted = formatBSDate(bsToday, "long");
+  const bsFormatted = formatBSDate(bsToday, "short");
   const adFormatted = formatAD(new Date());
 
   return (
