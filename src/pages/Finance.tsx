@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatISOasBS } from "@/lib/nepaliDate";
@@ -168,7 +169,9 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
 }
 
 export default function Finance() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "dashboard";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const { data: accounts } = useAccounts();
   const { data: journalEntries } = useJournalEntries();

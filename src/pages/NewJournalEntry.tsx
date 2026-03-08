@@ -456,7 +456,7 @@ export default function NewJournalEntry() {
           generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
         }
       } else {
-        navigate("/finance");
+        navigate("/finance?tab=transactions");
       }
     } catch {
       toast.error("Failed to save entry");
@@ -557,7 +557,7 @@ export default function NewJournalEntry() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">{isEditMode ? "Edit Voucher" : "Voucher Details"}</CardTitle>
-              <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => navigate("/finance")}>
+              <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => navigate("/finance?tab=transactions")}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to Journal Register
               </Button>
             </div>
