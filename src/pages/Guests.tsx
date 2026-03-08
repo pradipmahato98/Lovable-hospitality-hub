@@ -84,6 +84,7 @@ const Guests = () => {
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [newGuestOpen, setNewGuestOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
 
   const [newFeedback, setNewFeedback] = useState({
