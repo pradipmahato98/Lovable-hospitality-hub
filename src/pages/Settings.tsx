@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2 } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
@@ -18,10 +18,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
-  QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel,
+  QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast";
+type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
@@ -65,6 +65,7 @@ const Settings = () => {
     { id: "property" as const, icon: Hotel, label: "Property Details" },
     { id: "notifications" as const, icon: Bell, label: "Notifications" },
     { id: "broadcast" as const, icon: Megaphone, label: "Broadcasts" },
+    { id: "configure" as const, icon: Settings2, label: "Configure" },
     { id: "security" as const, icon: Shield, label: "Security" },
   ];
 
@@ -162,6 +163,7 @@ const Settings = () => {
               />
             )}
             {activeTab === "broadcast" && <BroadcastSettings />}
+            {activeTab === "configure" && <ConfigureModuleCard />}
             {activeTab === "security" && <SecuritySettingsCard />}
           </div>
         </div>
