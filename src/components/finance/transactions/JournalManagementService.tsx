@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,12 +67,19 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     if (searchText) {
       const q = searchText.toLowerCase();
       if (searchMode === "AD") {
-        entries = entries.filter(e =>
-          e.date?.toLowerCase().includes(q) ||
-          e.description?.toLowerCase().includes(q) ||
-          e.entry_number?.toLowerCase().includes(q) ||
-          e.reference?.toLowerCase().includes(q)
-        );
+        entries = entries.filter(e => {
+          const adIso = (e.date || "").toLowerCase();
+          const adFormatted = e.date
+            ? new Date(`${e.date}T00:00:00`).toLocaleDateString("en-GB").toLowerCase()
+            : "";
+          return (
+            adIso.includes(q) ||
+            adFormatted.includes(q) ||
+            e.description?.toLowerCase().includes(q) ||
+            e.entry_number?.toLowerCase().includes(q) ||
+            e.reference?.toLowerCase().includes(q)
+          );
+        });
       } else {
         entries = entries.filter(e =>
           e.description?.toLowerCase().includes(q) ||
@@ -116,7 +123,10 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
   }, [filteredEntries, currentPage, pageSize]);
 
   // Reset page on filter change
-  useMemo(() => { setCurrentPage(1); }, [searchText, dateFilter, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [searchText, dateFilter, pageSize]);
+
+  // Keep date filter aligned with selected calendar mode
+  useEffect(() => { setDateFilter(null); }, [searchMode]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -130,6 +140,47 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
 
   const handlePost = async (id: string) => {
     postJournalEntry.mutate(id);
+  };
+
+  const handlePrint = (entry: any) => {
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) {
+      toast.error("Please allow popups to print voucher");
+      return;
+    }
+
+    const rows = (entry.lines || []).map((line: any) => `
+      <tr>
+        <td style="padding:6px;border:1px solid #ddd;">${line.account?.name || getAccountName(line.account_id)}</td>
+        <td style="padding:6px;border:1px solid #ddd;text-align:right;">${(line.debit || 0).toFixed(2)}</td>
+        <td style="padding:6px;border:1px solid #ddd;text-align:right;">${(line.credit || 0).toFixed(2)}</td>
+      </tr>
+    `).join("");
+
+    win.document.write(`
+      <html>
+        <head><title>Voucher ${entry.reference || entry.entry_number}</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Voucher: ${entry.reference || entry.entry_number}</h2>
+          <p><strong>Date (AD):</strong> ${entry.date}</p>
+          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "long")}</p>
+          <p><strong>Description:</strong> ${entry.description || "-"}</p>
+          <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
+            <thead>
+              <tr>
+                <th style="padding:6px;border:1px solid #ddd;text-align:left;">Account</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">Debit</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">Credit</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
   };
 
   const handlePageSizeManual = () => {
@@ -223,7 +274,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               BS
             </button>
           </div>
-          <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
+          <NepaliDateSearch mode={searchMode} onSearch={(from, to) => setDateFilter({ from, to })} />
           {dateFilter && (
             <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setDateFilter(null)}>
               Clear Filter
@@ -276,23 +327,21 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-32">
-                              <DropdownMenuItem className="text-xs gap-2" onClick={() => setViewEntry(entry)}>
+                              <DropdownMenuItem className="text-xs gap-2" onSelect={() => setViewEntry(entry)}>
                                 <Eye className="h-3 w-3" /> View
                               </DropdownMenuItem>
                               {!entry.is_posted && !isReadOnly && (
-                                <DropdownMenuItem className="text-xs gap-2" onClick={() => navigate(`/finance/journal/new?edit=${entry.id}`)}>
+                                <DropdownMenuItem className="text-xs gap-2" onSelect={() => navigate(`/finance/journal/new?edit=${entry.id}`)}>
                                   <Pencil className="h-3 w-3" /> Edit
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-xs gap-2" onClick={() => {
-                                toast.info("Print feature coming soon");
-                              }}>
+                              <DropdownMenuItem className="text-xs gap-2" onSelect={() => handlePrint(entry)}>
                                 <Printer className="h-3 w-3" /> Print
                               </DropdownMenuItem>
                               {!entry.is_posted && !isReadOnly && (
                                 <DropdownMenuItem
                                   className="text-xs gap-2 text-destructive focus:text-destructive"
-                                  onClick={() => setDeleteId(entry.id)}
+                                  onSelect={() => setDeleteId(entry.id)}
                                 >
                                   <Trash2 className="h-3 w-3" /> Delete
                                 </DropdownMenuItem>

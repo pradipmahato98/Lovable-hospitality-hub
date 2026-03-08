@@ -30,7 +30,7 @@ import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { formatISOasBS, todayBS, bsToAD, adToBS } from "@/lib/nepaliDate";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type VoucherType = "journal" | "receipt" | "payment" | "contra";
@@ -41,6 +41,13 @@ const VOUCHER_PREFIXES: Record<VoucherType, string> = {
 
 const VOUCHER_LABELS: Record<VoucherType, string> = {
   journal: "Journal Voucher", receipt: "Receipt Voucher", payment: "Payment Voucher", contra: "Contra Voucher",
+};
+
+const PREFIX_TO_TYPE: Record<string, VoucherType> = {
+  JV: "journal",
+  RV: "receipt",
+  PV: "payment",
+  CV: "contra",
 };
 
 interface EntryLine {
@@ -98,7 +105,7 @@ async function generateVoucherNo(voucherType: VoucherType, fiscalYear: string): 
     }
   });
 
-  const nextSeq = String(maxSeq + 1).padStart(4, "0");
+  const nextSeq = String(maxSeq + 1).padStart(2, "0");
   return `${prefix}-${fyShort}-${nextSeq}`;
 }
 
@@ -199,6 +206,9 @@ function CreateLedgerDialog({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function NewJournalEntry() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editEntryId = searchParams.get("edit");
+  const isEditMode = !!editEntryId;
 
   // ── Header State ──
   const [fiscalYear, setFiscalYear] = useState(getCurrentNepaliFiscalYear());
@@ -220,6 +230,8 @@ export default function NewJournalEntry() {
 
   // ── Delete Confirmation ──
   const [deleteTarget, setDeleteTarget] = useState<{ type: "line" | "attachment"; id?: string } | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // ── Create Ledger Dialogs ──
   const [createLedgerOpen, setCreateLedgerOpen] = useState(false);
@@ -252,10 +264,65 @@ export default function NewJournalEntry() {
   }, [fiscalYear, minDate, maxDate]);
 
   useEffect(() => {
-    if (voucherType) {
+    let isMounted = true;
+
+    const loadForEdit = async () => {
+      if (!editEntryId) return;
+      setIsLoadingEdit(true);
+
+      const { data, error } = await supabase
+        .from("journal_entries")
+        .select(`
+          *,
+          journal_lines (*)
+        `)
+        .eq("id", editEntryId)
+        .single();
+
+      if (!isMounted) return;
+
+      if (error || !data) {
+        toast.error("Unable to load voucher for editing");
+        return;
+      }
+
+      const referenceValue = data.reference || data.entry_number || "";
+      const prefix = referenceValue.split("-")[0];
+      const detectedType = PREFIX_TO_TYPE[prefix as keyof typeof PREFIX_TO_TYPE];
+
+      setTransactionDate(data.date);
+      setNarration(data.description || "");
+      setVoucherNo(referenceValue);
+      if (detectedType) setVoucherType(detectedType);
+      else setVoucherType("journal");
+      setLines(
+        (data.journal_lines || []).map((line: any) => ({
+          id: line.id,
+          account_id: line.account_id,
+          sub_account: "",
+          debit: Number(line.debit) || 0,
+          credit: Number(line.credit) || 0,
+          remarks: line.description || "",
+        }))
+      );
+      setEditLines([emptyLine(), emptyLine()]);
+      setEditingLineId(null);
+    };
+
+    loadForEdit().finally(() => {
+      if (isMounted) setIsLoadingEdit(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [editEntryId]);
+
+  useEffect(() => {
+    if (voucherType && !isEditMode) {
       generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
     }
-  }, [voucherType, fiscalYear]);
+  }, [voucherType, fiscalYear, isEditMode]);
 
   // ── Add line from edit row ──
   const handleAddEditLine = (index: number) => {
@@ -321,19 +388,58 @@ export default function NewJournalEntry() {
     if (lines.length < 2) { toast.error("At least two entry lines required"); return; }
     if (!isBalanced) { toast.error("Debit and Credit must be equal"); return; }
 
+    setIsSaving(true);
     try {
-      const entry = await createJournalEntry.mutateAsync({
-        date: transactionDate,
-        description: narration,
-        reference: voucherNo || null,
-        lines: lines.map(l => ({
-          account_id: l.account_id,
-          debit: l.debit,
-          credit: l.credit,
-          description: l.remarks || null,
-        })),
-      });
-      await postJournalEntry.mutateAsync(entry.id);
+      let targetEntryId: string;
+
+      if (isEditMode && editEntryId) {
+        const { error: entryError } = await supabase
+          .from("journal_entries")
+          .update({
+            date: transactionDate,
+            description: narration,
+            reference: voucherNo || null,
+            is_posted: false,
+          })
+          .eq("id", editEntryId);
+
+        if (entryError) throw entryError;
+
+        const { error: deleteLinesError } = await supabase
+          .from("journal_lines")
+          .delete()
+          .eq("journal_entry_id", editEntryId);
+
+        if (deleteLinesError) throw deleteLinesError;
+
+        const { error: insertLinesError } = await supabase.from("journal_lines").insert(
+          lines.map((l) => ({
+            journal_entry_id: editEntryId,
+            account_id: l.account_id,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.remarks || null,
+          }))
+        );
+
+        if (insertLinesError) throw insertLinesError;
+        targetEntryId = editEntryId;
+      } else {
+        const entry = await createJournalEntry.mutateAsync({
+          date: transactionDate,
+          description: narration,
+          reference: voucherNo || null,
+          lines: lines.map(l => ({
+            account_id: l.account_id,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.remarks || null,
+          })),
+        });
+        targetEntryId = entry.id;
+      }
+
+      await postJournalEntry.mutateAsync(targetEntryId);
       toast.success(`${VOUCHER_LABELS[voucherType as VoucherType] || "Entry"} saved & posted — ${voucherNo}`);
 
       if (andNew) {
@@ -342,12 +448,20 @@ export default function NewJournalEntry() {
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
-        generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
+        setEditingLineId(null);
+
+        if (isEditMode) {
+          navigate("/finance/journal/new");
+        } else {
+          generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
+        }
       } else {
         navigate("/finance");
       }
     } catch {
       toast.error("Failed to save entry");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -442,7 +556,7 @@ export default function NewJournalEntry() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Voucher Details</CardTitle>
+              <CardTitle className="text-base">{isEditMode ? "Edit Voucher" : "Voucher Details"}</CardTitle>
               <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => navigate("/finance")}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to Journal Register
               </Button>
@@ -736,12 +850,12 @@ export default function NewJournalEntry() {
 
               {/* Save Buttons - Right aligned */}
               <div className="flex items-center gap-2 sm:pt-5 shrink-0">
-                <Button variant="outline" className="gap-2" onClick={() => handleSave(true)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
+                <Button variant="outline" className="gap-2" onClick={() => handleSave(true)} disabled={isSaving || isLoadingEdit || !isHeaderComplete}>
                   <FilePlus className="h-4 w-4" /> Save & New
                 </Button>
-                <Button className="gap-2" onClick={() => handleSave(false)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
+                <Button className="gap-2" onClick={() => handleSave(false)} disabled={isSaving || isLoadingEdit || !isHeaderComplete}>
                   <Save className="h-4 w-4" />
-                  {createJournalEntry.isPending ? "Saving..." : "Save"}
+                  {isSaving ? "Saving..." : "Save"}
                   <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-1">⌘S</kbd>
                 </Button>
               </div>
