@@ -53,40 +53,20 @@ const standaloneItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
 ];
 
-const moduleGroups: NavGroup[] = [
-  {
-    label: "Front Office",
-    items: [
-      { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-      { icon: Users, label: "Guests", path: "/guests" },
-      { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
-      { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-      { icon: Wrench, label: "Engineering", path: "/engineering" },
-      { icon: Package, label: "Inventory", path: "/inventory" },
-    ],
-  },
-  {
-    label: "Revenue",
-    items: [
-      { icon: ShoppingCart, label: "POS", path: "/pos" },
-      { icon: DollarSign, label: "Finance/Account", path: "/finance" },
-      { icon: PartyPopper, label: "Banquet", path: "/banquet" },
-    ],
-  },
-  {
-    label: "Audit & Reports",
-    items: [
-      { icon: Moon, label: "Night Audit", path: "/night-audit" },
-      { icon: Lock, label: "Day Close", path: "/day-close" },
-      { icon: BarChart3, label: "Reports", path: "/reports" },
-    ],
-  },
+const moduleItems: NavItem[] = [
+  { icon: CalendarDays, label: "Reservations", path: "/reservations" },
+  { icon: Users, label: "Guests", path: "/guests" },
+  { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
+  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
+  { icon: Wrench, label: "Engineering", path: "/engineering" },
+  { icon: ShoppingCart, label: "POS", path: "/pos" },
+  { icon: Package, label: "Inventory", path: "/inventory" },
+  { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
+  { icon: DollarSign, label: "Finance/Account", path: "/finance" },
+  { icon: PartyPopper, label: "Banquet", path: "/banquet" },
+  { icon: Moon, label: "Night Audit", path: "/night-audit" },
+  { icon: Lock, label: "Day Close", path: "/day-close" },
+  { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
 
 const adminNavItems: NavItem[] = [
