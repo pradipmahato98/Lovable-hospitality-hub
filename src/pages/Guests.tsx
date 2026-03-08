@@ -32,8 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
+import { GuestDocuments } from "@/components/guests/GuestDocuments";
+import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
+import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
+import { GuestMergeTool } from "@/components/guests/GuestMergeTool";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -173,6 +177,22 @@ const Guests = () => {
             <TabsTrigger value="loyalty" className="gap-2">
               <Award className="h-4 w-4" />
               Loyalty Program
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <Clock className="h-4 w-4" />
+              History
+            </TabsTrigger>
+            <TabsTrigger value="messaging" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Messaging
+            </TabsTrigger>
+            <TabsTrigger value="dedup" className="gap-2">
+              <GitMerge className="h-4 w-4" />
+              De-dup
             </TabsTrigger>
           </TabsList>
 
@@ -430,6 +450,38 @@ const Guests = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents" className="space-y-6">
+            {selectedGuest ? (
+              <GuestDocuments guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
+            ) : (
+              <Card><CardContent className="py-12 text-center text-muted-foreground">
+                Select a guest from the Guests tab to view their documents. Click the "Feedback" button on any guest card first.
+              </CardContent></Card>
+            )}
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history" className="space-y-6">
+            {selectedGuest ? (
+              <GuestHistoryTimeline guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
+            ) : (
+              <Card><CardContent className="py-12 text-center text-muted-foreground">
+                Select a guest from the Guests tab to view their history timeline.
+              </CardContent></Card>
+            )}
+          </TabsContent>
+
+          {/* Messaging Tab */}
+          <TabsContent value="messaging" className="space-y-6">
+            <AutomatedMessaging />
+          </TabsContent>
+
+          {/* De-dup Tab */}
+          <TabsContent value="dedup" className="space-y-6">
+            <GuestMergeTool />
           </TabsContent>
         </Tabs>
 

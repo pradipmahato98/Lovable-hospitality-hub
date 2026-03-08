@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard } from "lucide-react";
+import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard, ArrowUpCircle, AlarmClock, LogIn, Key } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
 import { QueueManager } from "@/components/front-desk/QueueManager";
 import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
+import { RoomUpgradeManager } from "@/components/front-desk/RoomUpgradeManager";
+import { WakeUpCallScheduler } from "@/components/front-desk/WakeUpCallScheduler";
+import { GroupCheckInOut } from "@/components/front-desk/GroupCheckInOut";
+import { KeyCardManagement } from "@/components/front-desk/KeyCardManagement";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -170,6 +174,22 @@ const FrontDesk = () => {
             <TabsTrigger value="messages" className="gap-2">
               <MessageSquare className="h-4 w-4" />
               Messages
+            </TabsTrigger>
+            <TabsTrigger value="upgrades" className="gap-2">
+              <ArrowUpCircle className="h-4 w-4" />
+              Upgrades
+            </TabsTrigger>
+            <TabsTrigger value="wakeup" className="gap-2">
+              <AlarmClock className="h-4 w-4" />
+              Wake-Up
+            </TabsTrigger>
+            <TabsTrigger value="group" className="gap-2">
+              <LogIn className="h-4 w-4" />
+              Group
+            </TabsTrigger>
+            <TabsTrigger value="keycards" className="gap-2">
+              <Key className="h-4 w-4" />
+              Key Cards
             </TabsTrigger>
           </TabsList>
 
@@ -335,7 +355,27 @@ const FrontDesk = () => {
             <FrontDeskMessages />
           </TabsContent>
 
-          {/* Billing Tab */}
+          {/* Upgrades Tab */}
+          <TabsContent value="upgrades">
+            <RoomUpgradeManager />
+          </TabsContent>
+
+          {/* Wake-Up Tab */}
+          <TabsContent value="wakeup">
+            <WakeUpCallScheduler />
+          </TabsContent>
+
+          {/* Group Check-In/Out Tab */}
+          <TabsContent value="group">
+            <GroupCheckInOut />
+          </TabsContent>
+
+          {/* Key Cards Tab */}
+          <TabsContent value="keycards">
+            <KeyCardManagement />
+          </TabsContent>
+
+
           <TabsContent value="billing">
             <div className="space-y-6">
               {/* Billing Metrics */}
