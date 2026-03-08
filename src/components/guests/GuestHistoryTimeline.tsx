@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, DollarSign, Bed, MessageSquare, Award, Star } from "lucide-react";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 const db = supabase as any;
 
