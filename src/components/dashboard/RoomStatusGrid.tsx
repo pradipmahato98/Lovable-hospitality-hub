@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const rooms = [
   { number: "101", status: "occupied", floor: 1 },
@@ -20,45 +22,57 @@ const rooms = [
 ];
 
 const statusStyles = {
-  occupied: "bg-primary/20 border-primary/40 text-primary",
-  available: "bg-success/20 border-success/40 text-success",
-  cleaning: "bg-warning/20 border-warning/40 text-warning",
-  maintenance: "bg-destructive/20 border-destructive/40 text-destructive",
+  occupied: "bg-primary/10 border-primary/25 text-primary",
+  available: "bg-success/10 border-success/25 text-success",
+  cleaning: "bg-warning/10 border-warning/25 text-warning",
+  maintenance: "bg-destructive/10 border-destructive/25 text-destructive",
+};
+
+const legendDots = {
+  occupied: "bg-primary",
+  available: "bg-success",
+  cleaning: "bg-warning",
+  maintenance: "bg-destructive",
 };
 
 export function RoomStatusGrid() {
   return (
-    <Card variant="elevated" className="animate-slide-up" style={{ animationDelay: "300ms" }}>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Room Status</CardTitle>
-        <a href="/rooms" className="text-sm text-primary hover:underline">
-          Manage rooms
-        </a>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
-          {rooms.map((room) => (
-            <div
-              key={room.number}
-              className={cn(
-                "flex items-center justify-center h-10 sm:h-12 rounded-lg border-2 font-medium text-xs sm:text-sm transition-all hover:scale-105 cursor-pointer",
-                statusStyles[room.status as keyof typeof statusStyles]
-              )}
-            >
-              {room.number}
-            </div>
-          ))}
-        </div>
-        {/* Legend */}
-        <div className="flex flex-wrap gap-4 pt-4 border-t border-border">
-          {Object.entries(statusStyles).map(([status, style]) => (
-            <div key={status} className="flex items-center gap-2">
-              <div className={cn("h-3 w-3 rounded-full", style.replace("text-", "bg-").split(" ")[0])} />
-              <span className="text-xs text-muted-foreground capitalize">{status}</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base">Room Status</CardTitle>
+          <Link to="/rooms" className="text-xs text-primary hover:underline font-medium">
+            Manage
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+            {rooms.map((room) => (
+              <div
+                key={room.number}
+                className={cn(
+                  "flex items-center justify-center h-10 rounded-lg border font-medium text-xs transition-all hover:scale-105 cursor-pointer",
+                  statusStyles[room.status as keyof typeof statusStyles]
+                )}
+              >
+                {room.number}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-4 pt-3 border-t border-border/60">
+            {Object.entries(legendDots).map(([status, dotClass]) => (
+              <div key={status} className="flex items-center gap-1.5">
+                <div className={cn("h-2 w-2 rounded-full", dotClass)} />
+                <span className="text-[10px] text-muted-foreground capitalize font-medium">{status}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

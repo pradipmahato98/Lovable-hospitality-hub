@@ -2,6 +2,7 @@ import { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 interface MetricCardProps {
   title: string;
@@ -23,38 +24,44 @@ export function MetricCard({
   link,
 }: MetricCardProps) {
   const content = (
-    <Card
-      variant="elevated"
-      className={cn(
-        "animate-slide-up hover:scale-[1.02] transition-transform",
-        link && "cursor-pointer hover:shadow-glow border-primary/20"
-      )}
-      style={{ animationDelay: `${delay}ms` }}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: delay / 1000, ease: [0.16, 1, 0.3, 1] }}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold font-display text-foreground">{value}</p>
-            {change && (
-              <p
-                className={cn(
-                  "text-sm font-medium",
-                  changeType === "positive" && "text-success",
-                  changeType === "negative" && "text-destructive",
-                  changeType === "neutral" && "text-muted-foreground"
-                )}
-              >
-                {change}
-              </p>
-            )}
+      <Card
+        className={cn(
+          "group relative overflow-hidden transition-all duration-300",
+          link && "cursor-pointer hover:shadow-elevated hover:border-primary/20"
+        )}
+      >
+        {/* Subtle top accent line */}
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
+              <p className="text-2xl font-bold font-display text-foreground">{value}</p>
+              {change && (
+                <p
+                  className={cn(
+                    "text-xs font-medium",
+                    changeType === "positive" && "text-success",
+                    changeType === "negative" && "text-destructive",
+                    changeType === "neutral" && "text-muted-foreground"
+                  )}
+                >
+                  {change}
+                </p>
+              )}
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/8 group-hover:bg-primary/12 transition-colors">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 
   if (link) {

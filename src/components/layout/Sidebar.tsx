@@ -1,34 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  CalendarDays,
-  Calendar,
-  Users,
-  BedDouble,
-  Receipt,
-  Package,
-  BarChart3,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Hotel,
-  LogOut,
-  UserCog,
-  Code2,
-  ShoppingCart,
-  UserCheck,
-  Globe,
-  Sparkles,
-  Wrench,
-  DollarSign,
-  PartyPopper,
-  ShieldCheck,
-  Terminal,
-  Moon,
-  Lock,
+  LayoutDashboard, CalendarDays, Users, BedDouble, Receipt, Package, BarChart3, Settings,
+  ChevronLeft, ChevronRight, Hotel, LogOut, UserCog, Code2, ShoppingCart, UserCheck,
+  Globe, Sparkles, Wrench, DollarSign, PartyPopper, ShieldCheck, Moon, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,6 +41,47 @@ const adminNavItems = [
   { icon: Code2, label: "Dev Panel", path: "/dev" },
 ];
 
+function NavItem({ item, isActive, collapsed, isMobile, onNavClick }: {
+  item: { icon: any; label: string; path: string };
+  isActive: boolean;
+  collapsed: boolean;
+  isMobile: boolean;
+  onNavClick?: () => void;
+}) {
+  const link = (
+    <Link
+      to={item.path}
+      onClick={onNavClick}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 relative",
+        isActive
+          ? "bg-sidebar-accent text-primary"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground",
+        collapsed && !isMobile && "justify-center px-2"
+      )}
+    >
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />
+      )}
+      <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", isActive && "text-primary")} />
+      {(!collapsed || isMobile) && <span>{item.label}</span>}
+    </Link>
+  );
+
+  if (collapsed && !isMobile) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8} className="text-xs">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+}
+
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { collapsed, toggleCollapsed, isMobile } = useSidebar();
   const location = useLocation();
@@ -75,37 +94,18 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
   };
 
-  const renderNavItem = (item: typeof navItems[0]) => {
-    const isActive = location.pathname === item.path;
-    return (
-      <Link
-        key={item.path}
-        to={item.path}
-        onClick={onNavClick}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-          isActive
-            ? "bg-sidebar-accent text-primary shadow-glow"
-            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-          collapsed && !isMobile && "justify-center px-2"
-        )}
-      >
-        <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-        {(!collapsed || isMobile) && <span>{item.label}</span>}
-      </Link>
-    );
-  };
+  const isItemActive = (path: string) => location.pathname === path;
 
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3" onClick={onNavClick}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-gold shadow-glow flex-shrink-0">
-            <Hotel className="h-5 w-5 text-primary-foreground" />
+      <div className="flex h-14 items-center justify-between px-4 border-b border-sidebar-border/60">
+        <Link to="/" className="flex items-center gap-2.5" onClick={onNavClick}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-gold flex-shrink-0">
+            <Hotel className="h-4 w-4 text-primary-foreground" />
           </div>
           {(!collapsed || isMobile) && (
-            <span className="font-display text-xl font-semibold text-gradient-gold">
+            <span className="font-display text-lg font-semibold text-gradient-gold">
               LuxeStay
             </span>
           )}
@@ -115,77 +115,87 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            className="h-8 w-8 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent flex-shrink-0"
+            className="h-7 w-7 text-sidebar-foreground/50 hover:text-foreground hover:bg-sidebar-accent flex-shrink-0"
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
           </Button>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
-        {navItems.map(renderNavItem)}
+      <nav className="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto">
+        {navItems.map((item) => (
+          <NavItem
+            key={item.path}
+            item={item}
+            isActive={isItemActive(item.path)}
+            collapsed={collapsed}
+            isMobile={isMobile}
+            onNavClick={onNavClick}
+          />
+        ))}
 
         {/* Operations Section */}
         {(!collapsed || isMobile) && (
-          <div className="mt-4 mb-2 px-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="mt-4 mb-1 px-3">
+            <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
               Operations
             </p>
           </div>
         )}
-        {operationsNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-accent text-primary shadow-glow"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
-                collapsed && !isMobile && "justify-center px-2"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
-              {(!collapsed || isMobile) && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+        {collapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+        {operationsNavItems.map((item) => (
+          <NavItem
+            key={item.path}
+            item={item}
+            isActive={isItemActive(item.path)}
+            collapsed={collapsed}
+            isMobile={isMobile}
+            onNavClick={onNavClick}
+          />
+        ))}
         
         {/* Admin Section */}
         {isAdmin && (
           <>
             {(!collapsed || isMobile) && (
-              <div className="mt-4 mb-2 px-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="mt-4 mb-1 px-3">
+                <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
                   Admin
                 </p>
               </div>
             )}
-            {adminNavItems.map(renderNavItem)}
+            {collapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+            {adminNavItems.map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                isActive={isItemActive(item.path)}
+                collapsed={collapsed}
+                isMobile={isMobile}
+                onNavClick={onNavClick}
+              />
+            ))}
           </>
         )}
       </nav>
 
       {/* User Section */}
       {(!collapsed || isMobile) && (
-        <div className="p-4 border-t border-sidebar-border mt-auto">
-          <Link to="/profile" onClick={onNavClick} className="flex items-center gap-3 mb-3 hover:opacity-80">
-            <div className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
+        <div className="p-3 border-t border-sidebar-border/60 mt-auto">
+          <Link to="/profile" onClick={onNavClick} className="flex items-center gap-2.5 mb-2 hover:opacity-80 transition-opacity">
+            <div className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0 ring-2 ring-primary/10">
+              <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
+              <p className="text-xs font-medium text-foreground truncate">
                 {profile?.first_name || "User"} {profile?.last_name || ""}
               </p>
-              <p className="text-xs text-muted-foreground truncate">Staff Member</p>
+              <p className="text-[10px] text-muted-foreground truncate">Staff Member</p>
             </div>
           </Link>
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground/70 hover:text-foreground text-xs h-8" onClick={signOut}>
+            <LogOut className="h-3.5 w-3.5" />
             Sign Out
           </Button>
         </div>
@@ -193,13 +203,23 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
       {/* Collapsed User Avatar */}
       {collapsed && !isMobile && (
-        <div className="p-3 border-t border-sidebar-border mt-auto flex flex-col items-center gap-2">
-          <Link to="/profile" className="h-10 w-10 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80">
-            <span className="text-sm font-semibold text-primary-foreground">{getInitials()}</span>
-          </Link>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+        <div className="p-2 border-t border-sidebar-border/60 mt-auto flex flex-col items-center gap-1.5">
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Link to="/profile" className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80 ring-2 ring-primary/10">
+                <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8} className="text-xs">Profile</TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-foreground" onClick={signOut}>
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8} className="text-xs">Sign Out</TooltipContent>
+          </Tooltip>
         </div>
       )}
     </div>
@@ -209,7 +229,6 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 export function Sidebar() {
   const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
 
-  // Mobile: Sheet overlay
   if (isMobile) {
     return (
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -220,11 +239,10 @@ export function Sidebar() {
     );
   }
 
-  // Desktop: Fixed sidebar
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300",
         collapsed ? "w-20" : "w-64"
       )}
     >
