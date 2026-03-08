@@ -443,19 +443,27 @@ const FrontDesk = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {invoices.map((invoice) => (
+                        {invoices.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No invoices found.</TableCell>
+                          </TableRow>
+                        ) : invoices.map((invoice: any) => (
                           <TableRow key={invoice.id} className="border-border hover:bg-secondary/50">
                             <TableCell className="font-mono text-sm text-primary whitespace-nowrap">
-                              {invoice.id}
+                              {invoice.invoice_number}
                             </TableCell>
-                            <TableCell className="font-medium whitespace-nowrap">{invoice.guest}</TableCell>
-                            <TableCell className="text-muted-foreground hidden md:table-cell">{invoice.reservation}</TableCell>
-                            <TableCell className="hidden lg:table-cell">{invoice.date}</TableCell>
-                            <TableCell className="font-semibold whitespace-nowrap">{invoice.amount}</TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">
+                              {invoice.guest ? `${invoice.guest.first_name} ${invoice.guest.last_name}` : "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground hidden md:table-cell">
+                              {invoice.reservation?.reservation_code || "—"}
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">{invoice.invoice_date}</TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">${(invoice.total || 0).toLocaleString()}</TableCell>
                             <TableCell>
                               <Badge
                                 variant="outline"
-                                className={invoiceStatusColors[invoice.status as keyof typeof invoiceStatusColors]}
+                                className={invoiceStatusColors[invoice.status as keyof typeof invoiceStatusColors] || ""}
                               >
                                 {invoice.status}
                               </Badge>
