@@ -256,24 +256,24 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">Action</TableHead>
-                    <TableHead className="w-[90px] cursor-pointer select-none" onClick={() => toggleSort("reference")}>
+                    <TableHead className="w-[44px] px-1">Action</TableHead>
+                    <TableHead className="w-[80px] px-1 cursor-pointer select-none" onClick={() => toggleSort("reference")}>
                       <span className="flex items-center">Voucher # <SortIcon field="reference" /></span>
                     </TableHead>
-                    <TableHead className="w-[95px] cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                    <TableHead className="w-[82px] px-1 cursor-pointer select-none" onClick={() => toggleSort("date")}>
                       <span className="flex items-center">Date (AD) <SortIcon field="date" /></span>
                     </TableHead>
-                    <TableHead className="w-[110px]">मिति (BS)</TableHead>
-                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("description")}>
+                    <TableHead className="w-[90px] px-1">मिति (BS)</TableHead>
+                    <TableHead className="px-1 cursor-pointer select-none" onClick={() => toggleSort("description")}>
                       <span className="flex items-center">Description <SortIcon field="description" /></span>
                     </TableHead>
-                    <TableHead className="text-right w-[90px] cursor-pointer select-none" onClick={() => toggleSort("debit")}>
+                    <TableHead className="text-right w-[80px] px-1 cursor-pointer select-none" onClick={() => toggleSort("debit")}>
                       <span className="flex items-center justify-end">Debit <SortIcon field="debit" /></span>
                     </TableHead>
-                    <TableHead className="text-right w-[90px] cursor-pointer select-none" onClick={() => toggleSort("credit")}>
+                    <TableHead className="text-right w-[80px] px-1 cursor-pointer select-none" onClick={() => toggleSort("credit")}>
                       <span className="flex items-center justify-end">Credit <SortIcon field="credit" /></span>
                     </TableHead>
-                    <TableHead className="w-[90px]">Posted By</TableHead>
+                    <TableHead className="w-[80px] px-1">Posted By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
