@@ -85,7 +85,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           e.description?.toLowerCase().includes(q) ||
           e.entry_number?.toLowerCase().includes(q) ||
           e.reference?.toLowerCase().includes(q) ||
-          formatISOasBS(e.date, "long").toLowerCase().includes(q)
+          formatISOasBS(e.date, "short").toLowerCase().includes(q)
         );
       }
     }
