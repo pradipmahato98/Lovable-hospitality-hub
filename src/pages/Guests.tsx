@@ -553,6 +553,7 @@ const Guests = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <NewGuestDialog open={newGuestOpen} onOpenChange={setNewGuestOpen} />
       </ErrorBoundary>
     </MainLayout>
   );
