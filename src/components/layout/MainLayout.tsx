@@ -1,9 +1,9 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./GlobalHeader";
+import { PageTransition } from "./PageTransition";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 
 export interface MainLayoutProps {
   children: ReactNode;
@@ -16,9 +16,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
   const { collapsed, isMobile } = useSidebar();
 
   return (
-    <div className={cn(
-      "min-h-screen bg-background transition-all duration-500"
-    )}>
+    <div className="min-h-screen bg-background transition-all duration-300">
       <Sidebar />
       <div 
         className={cn(
@@ -27,7 +25,9 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         )}
       >
         <Header title={title} subtitle={subtitle} />
-        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </div>
   );

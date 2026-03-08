@@ -1,0 +1,60 @@
+import { User, LogOut, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+
+export function HeaderUserMenu() {
+  const { profile, signOut } = useAuth();
+
+  const getInitials = () => {
+    const first = profile?.first_name || "";
+    const last = profile?.last_name || "";
+    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <div className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center ring-2 ring-primary/10">
+            <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
+          </div>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>
+          <div>
+            <p className="font-medium">{profile?.first_name} {profile?.last_name}</p>
+            <p className="text-xs text-muted-foreground">{profile?.email}</p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/staff?tab=about&sub=details" className="flex items-center gap-2 cursor-pointer">
+            <User className="h-4 w-4" />
+            My Account
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/staff?tab=about&sub=preferences" className="flex items-center gap-2 cursor-pointer">
+            <Settings className="h-4 w-4" />
+            Preferences
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
