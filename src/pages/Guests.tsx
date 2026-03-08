@@ -32,8 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
+import { GuestDocuments } from "@/components/guests/GuestDocuments";
+import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
+import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
+import { GuestMergeTool } from "@/components/guests/GuestMergeTool";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
