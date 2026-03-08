@@ -87,6 +87,12 @@ export function NepaliDateInput({
   const today = todayBS();
   const isToday = (d: number) => d === today.day && bsMonth === today.month && bsYear === today.year;
   const isSelected = (d: number) => d === bsDate.day && bsMonth === bsDate.month && bsYear === bsDate.year;
+  const isFuture = (d: number) => {
+    if (bsYear > today.year) return true;
+    if (bsYear === today.year && bsMonth > today.month) return true;
+    if (bsYear === today.year && bsMonth === today.month && d > today.day) return true;
+    return false;
+  };
 
   const navigateMonth = (delta: number) => {
     let newMonth = bsMonth + delta;
