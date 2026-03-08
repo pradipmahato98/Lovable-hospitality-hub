@@ -681,7 +681,7 @@ export const GuestFolioManager = () => {
                             {items.filter(i => i.reason).map((item) => (
                               <TableRow key={`audit-${item.id}`}>
                                 <TableCell className="text-xs text-muted-foreground">
-                                  {format(new Date(item.created_at), "MMM dd, HH:mm:ss")}
+                                  {formatAD(new Date(item.created_at), "seconds")}
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="text-[10px]">ADJUSTMENT</Badge>
