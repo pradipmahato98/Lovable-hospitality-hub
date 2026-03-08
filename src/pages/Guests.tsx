@@ -178,6 +178,22 @@ const Guests = () => {
               <Award className="h-4 w-4" />
               Loyalty Program
             </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <Clock className="h-4 w-4" />
+              History
+            </TabsTrigger>
+            <TabsTrigger value="messaging" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Messaging
+            </TabsTrigger>
+            <TabsTrigger value="dedup" className="gap-2">
+              <GitMerge className="h-4 w-4" />
+              De-dup
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="guests" className="space-y-6">
