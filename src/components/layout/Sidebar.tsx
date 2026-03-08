@@ -44,11 +44,6 @@ interface NavItem {
   path: string;
 }
 
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
-
 const standaloneItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
 ];
