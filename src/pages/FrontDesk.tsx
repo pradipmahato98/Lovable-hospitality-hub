@@ -175,6 +175,22 @@ const FrontDesk = () => {
               <MessageSquare className="h-4 w-4" />
               Messages
             </TabsTrigger>
+            <TabsTrigger value="upgrades" className="gap-2">
+              <ArrowUpCircle className="h-4 w-4" />
+              Upgrades
+            </TabsTrigger>
+            <TabsTrigger value="wakeup" className="gap-2">
+              <AlarmClock className="h-4 w-4" />
+              Wake-Up
+            </TabsTrigger>
+            <TabsTrigger value="group" className="gap-2">
+              <LogIn className="h-4 w-4" />
+              Group
+            </TabsTrigger>
+            <TabsTrigger value="keycards" className="gap-2">
+              <Key className="h-4 w-4" />
+              Key Cards
+            </TabsTrigger>
           </TabsList>
 
           {/* Rooms Tab */}
