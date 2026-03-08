@@ -29,6 +29,8 @@ interface NepaliDateInputProps {
   showDual?: boolean;
   /** Disabled state */
   disabled?: boolean;
+  /** Hide the internal AD/BS mode caption above picker */
+  hideModeLabel?: boolean;
 }
 
 export function NepaliDateInput({
@@ -38,6 +40,7 @@ export function NepaliDateInput({
   className,
   showDual = true,
   disabled = false,
+  hideModeLabel = false,
 }: NepaliDateInputProps) {
   const bsDate = useMemo(() => {
     if (!value) return todayBS();
