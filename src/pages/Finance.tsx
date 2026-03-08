@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatISOasBS } from "@/lib/nepaliDate";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,10 +122,26 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
   const ActiveComponent = tabs.find((t) => t.id === activeSubTab)?.component;
 
   return (
-    <div className="flex gap-4">
-      {/* Vertical scrollable sidebar tabs */}
-      <div className="w-48 shrink-0">
-        <div className="sticky top-4 max-h-[calc(100vh-12rem)] overflow-y-auto scrollbar-hide space-y-1 pr-2 border-r border-border/60">
+    <div className="flex flex-col lg:flex-row gap-4">
+      {/* Mobile: horizontal scroll tabs */}
+      <div className="lg:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+        <div className="flex gap-1.5 min-w-max pb-2">
+          {tabs.map((tab) => (
+            <Button
+              key={tab.id}
+              variant={activeSubTab === tab.id ? "default" : "outline"}
+              size="sm"
+              className="text-xs h-8 whitespace-nowrap"
+              onClick={() => setActiveSubTab(tab.id)}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {/* Desktop: vertical scrollable sidebar tabs */}
+      <div className="hidden lg:block w-44 xl:w-48 shrink-0">
+        <div className="sticky top-16 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide space-y-0.5 pr-2 border-r border-border/60">
           {tabs.map((tab) => (
             <Button
               key={tab.id}
@@ -184,16 +201,16 @@ export default function Finance() {
   }, [trialBalance]);
 
   const tabTriggerClass =
-    "gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all";
+    "gap-1.5 sm:gap-2 h-10 sm:h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 sm:px-4 text-xs sm:text-sm transition-all";
 
   return (
     <MainLayout
       title="Finance & Accounting"
-      subtitle={`Business Date: ${businessDate || "Loading..."}`}
+      subtitle={`Business Date: ${businessDate || "Loading..."} ${businessDate ? `(${formatISOasBS(businessDate, "long")} BS)` : ""}`}
       actions={
-        <Badge variant="outline" className="gap-1.5 bg-primary/10 text-primary border-primary/20">
+        <Badge variant="outline" className="hidden sm:inline-flex gap-1.5 bg-primary/10 text-primary border-primary/20 text-xs">
           <CalendarDays className="h-3 w-3" />
-          {businessDate || "Today"}
+          {businessDate ? `${businessDate} | ${formatISOasBS(businessDate, "short")} BS` : "Today"}
         </Badge>
       }
     >
