@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
 import { useCheckInSettings } from "@/hooks/useSettings";
 
