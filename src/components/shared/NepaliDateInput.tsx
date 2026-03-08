@@ -112,6 +112,7 @@ export function NepaliDateInput({
             <Input
               type="date"
               value={value}
+              max={todayISO}
               onChange={(e) => handleADChange(e.target.value)}
               disabled={disabled}
               className="h-9 text-sm"
