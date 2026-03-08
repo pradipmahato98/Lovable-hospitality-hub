@@ -124,7 +124,7 @@ export const useRolePermissions = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["role-permissions"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("role_permissions")
         .select("*");
 
