@@ -19,12 +19,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DayClose() {
   const { businessDate } = useNightAudit();
+  const { data: reportStats, isLoading: statsLoading } = useReportStats();
   const [isClosed, setIsClosed] = useState(false);
 
   const handleCloseDay = () => {
     setIsClosed(true);
     toast.success("Day has been successfully balanced and closed for accounting.");
   };
+
+  const departmentRevenue = [
+    { id: 1, name: "Rooms & Lodging", code: "ROOM", amount: reportStats?.totalReservationRevenue || 0, transactions: reportStats?.reservationCount || 0, icon: Bed, color: "text-blue-500" },
+    { id: 2, name: "Restaurant (POS)", code: "REST", amount: reportStats?.totalPOSRevenue || 0, transactions: reportStats?.posCount || 0, icon: Utensils, color: "text-orange-500" },
+    { id: 3, name: "Invoiced Revenue", code: "INV", amount: reportStats?.totalInvoiceRevenue || 0, transactions: reportStats?.invoiceCount || 0, icon: Receipt, color: "text-green-500" },
+  ];
 
   const totalRevenue = departmentRevenue.reduce((sum, dept) => sum + dept.amount, 0);
 
