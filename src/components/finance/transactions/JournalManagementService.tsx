@@ -274,7 +274,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               BS
             </button>
           </div>
-          <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
+          <NepaliDateSearch mode={searchMode} onSearch={(from, to) => setDateFilter({ from, to })} />
           {dateFilter && (
             <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setDateFilter(null)}>
               Clear Filter
