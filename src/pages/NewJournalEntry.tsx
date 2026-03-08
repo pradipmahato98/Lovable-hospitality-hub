@@ -849,12 +849,12 @@ export default function NewJournalEntry() {
 
               {/* Save Buttons - Right aligned */}
               <div className="flex items-center gap-2 sm:pt-5 shrink-0">
-                <Button variant="outline" className="gap-2" onClick={() => handleSave(true)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
+                <Button variant="outline" className="gap-2" onClick={() => handleSave(true)} disabled={isSaving || isLoadingEdit || !isHeaderComplete}>
                   <FilePlus className="h-4 w-4" /> Save & New
                 </Button>
-                <Button className="gap-2" onClick={() => handleSave(false)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
+                <Button className="gap-2" onClick={() => handleSave(false)} disabled={isSaving || isLoadingEdit || !isHeaderComplete}>
                   <Save className="h-4 w-4" />
-                  {createJournalEntry.isPending ? "Saving..." : "Save"}
+                  {isSaving ? "Saving..." : "Save"}
                   <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-1">⌘S</kbd>
                 </Button>
               </div>
