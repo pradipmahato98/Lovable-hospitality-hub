@@ -707,7 +707,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                         <TableCell className="text-right font-mono text-xs">{d.toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-xs">{c.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("text-[10px]", entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-600")}>
+                          <Badge variant="outline" className={cn("text-[10px]", entry.is_posted ? "bg-success/20 text-success" : "bg-warning/20 text-warning")}>
                             {entry.is_posted ? "Posted" : "Draft"}
                           </Badge>
                         </TableCell>
