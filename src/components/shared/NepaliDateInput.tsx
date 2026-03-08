@@ -120,9 +120,11 @@ export function NepaliDateInput({
 
         {/* BS Date Input with Calendar Picker */}
         <div className="flex-1 space-y-1">
-          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-            {showDual ? "BS मिति" : "मिति (BS)"}
-          </span>
+          {!hideModeLabel && (
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              {showDual ? "BS मिति" : "मिति (BS)"}
+            </span>
+          )}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
