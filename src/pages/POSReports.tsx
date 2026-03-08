@@ -163,7 +163,7 @@ export default function POSReports() {
         format(parseISO(t.created_at), "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
       );
       return {
-        date: format(day, "MMM d"),
+        date: format(day, "dd/MM"),
         revenue: dayTransactions.reduce((sum, t) => sum + t.total, 0),
         orders: dayTransactions.length,
       };
