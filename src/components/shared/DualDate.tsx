@@ -68,7 +68,7 @@ export function DualDateBadge({ date, className }: DualDateBadgeProps) {
   const adDate = typeof date === "string" ? new Date(date) : date;
   const bsDate = adToBS(adDate);
   const bsFormatted = formatBSDate(bsDate, "short");
-  const adFormatted = format(adDate, "yyyy/MM/dd");
+  const adFormatted = formatAD(adDate);
 
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-xs", className)}>
