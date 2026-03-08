@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Filter, Search, X, CalendarDays, FileText } from "lucide-react";
+import { Filter, Search, X, CalendarDays, FileText, ChevronRight } from "lucide-react";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { useJournalEntries } from "@/hooks/useFinance";
 import { formatISOasBS } from "@/lib/nepaliDate";
@@ -32,7 +32,6 @@ export function DayBookService() {
     applied ? { startDate: selectedDate, endDate: selectedDate } : undefined
   );
 
-  // Filter by voucher type prefix
   const filteredEntries = useMemo(() => {
     if (!applied) return [];
     if (voucherType === "all") return allEntries;
@@ -64,11 +63,22 @@ export function DayBookService() {
   };
 
   return (
-    <div className="flex gap-0 h-full">
+    <div className="flex gap-0 h-full relative">
+      {/* Collapsed toggle */}
+      {!showFilter && (
+        <button
+          onClick={() => setShowFilter(true)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-6 h-16 rounded-r-md border border-l-0 border-border bg-muted/60 hover:bg-muted transition-colors"
+          title="Open Filter"
+        >
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+      )}
+
       {/* Filter Sidebar */}
       {showFilter && (
-        <div className="w-72 shrink-0 border-r border-border bg-muted/30 p-4 space-y-4 overflow-y-auto">
-          <div className="flex items-center justify-between">
+        <div className="w-64 shrink-0 border-r border-border bg-muted/30 p-3 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Filter className="h-4 w-4" /> Filter
             </h3>
@@ -76,13 +86,13 @@ export function DayBookService() {
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <Separator />
+          <Separator className="mb-3" />
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 flex-1">
             <div>
               <Label className="text-xs">Fiscal Year</Label>
               <Select value={fiscalYear} onValueChange={setFiscalYear}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -98,7 +108,7 @@ export function DayBookService() {
             <div>
               <Label className="text-xs">Voucher Type</Label>
               <Select value={voucherType} onValueChange={setVoucherType}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -112,12 +122,12 @@ export function DayBookService() {
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-2" />
           <div className="flex gap-2">
-            <Button size="sm" className="flex-1 text-xs h-8" onClick={handleSearch}>
+            <Button size="sm" className="flex-1 text-xs h-7" onClick={handleSearch}>
               <Search className="h-3.5 w-3.5 mr-1" /> Search
             </Button>
-            <Button size="sm" variant="outline" className="flex-1 text-xs h-8" onClick={handleCancel}>
+            <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={handleCancel}>
               Cancel
             </Button>
           </div>
@@ -125,14 +135,9 @@ export function DayBookService() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 p-4 space-y-4">
+      <div className={`flex-1 min-w-0 p-4 space-y-4 ${!showFilter ? "ml-6" : ""}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {!showFilter && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilter(true)}>
-                <Filter className="h-4 w-4 mr-1" /> Filter
-              </Button>
-            )}
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <CalendarDays className="h-5 w-5" /> Day Book
             </h2>
@@ -153,7 +158,6 @@ export function DayBookService() {
           </Card>
         ) : (
           <>
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <MetricCard title="Total Entries" value={totals.count.toString()} change="For selected date" changeType="neutral" icon={FileText} delay={0} />
               <MetricCard title="Total Debits" value={totals.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })} change="Dr" changeType="neutral" icon={CalendarDays} delay={50} />

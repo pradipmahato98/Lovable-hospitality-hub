@@ -2,13 +2,12 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Filter, Search, X, Landmark, CheckCircle2 } from "lucide-react";
+import { Filter, Search, X, Landmark, CheckCircle2, ChevronRight } from "lucide-react";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { useAccounts, useLedger } from "@/hooks/useFinance";
 import { formatISOasBS } from "@/lib/nepaliDate";
@@ -42,7 +41,6 @@ export function CashBankReconcileService() {
 
   const { data: accounts } = useAccounts();
 
-  // Filter to cash/bank accounts (asset type with cash or bank in name)
   const cashBankAccounts = useMemo(
     () => accounts.filter((a) => a.type === "asset" && (/cash|bank/i.test(a.name) || /cash|bank/i.test(a.code))),
     [accounts]
@@ -69,9 +67,8 @@ export function CashBankReconcileService() {
     const bookBalance = ledgerEntries.length > 0 ? ledgerEntries[ledgerEntries.length - 1]?.running_balance || 0 : 0;
     const stmtBal = parseFloat(statementBalance) || 0;
     const reconciledCount = reconciledIds.size;
-    const unreconciledCount = ledgerEntries.length - reconciledCount;
     const difference = bookBalance - stmtBal;
-    return { totalDebit, totalCredit, bookBalance, stmtBal, reconciledCount, unreconciledCount, difference };
+    return { totalDebit, totalCredit, bookBalance, stmtBal, reconciledCount, difference };
   }, [ledgerEntries, reconciledIds, statementBalance]);
 
   const handleFYChange = (fy: string) => {
@@ -92,11 +89,22 @@ export function CashBankReconcileService() {
   };
 
   return (
-    <div className="flex gap-0 h-full">
+    <div className="flex gap-0 h-full relative">
+      {/* Collapsed toggle */}
+      {!showFilter && (
+        <button
+          onClick={() => setShowFilter(true)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-6 h-16 rounded-r-md border border-l-0 border-border bg-muted/60 hover:bg-muted transition-colors"
+          title="Open Filter"
+        >
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+      )}
+
       {/* Filter Sidebar */}
       {showFilter && (
-        <div className="w-72 shrink-0 border-r border-border bg-muted/30 p-4 space-y-4 overflow-y-auto">
-          <div className="flex items-center justify-between">
+        <div className="w-64 shrink-0 border-r border-border bg-muted/30 p-3 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Filter className="h-4 w-4" /> Filter
             </h3>
@@ -104,13 +112,13 @@ export function CashBankReconcileService() {
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <Separator />
+          <Separator className="mb-3" />
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 flex-1">
             <div>
               <Label className="text-xs">Fiscal Year</Label>
               <Select value={fiscalYear} onValueChange={handleFYChange}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,7 +132,7 @@ export function CashBankReconcileService() {
             <div>
               <Label className="text-xs">Cash/Bank Account</Label>
               <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                <SelectTrigger className="h-8 text-xs mt-1">
+                <SelectTrigger className="h-7 text-xs mt-0.5">
                   <SelectValue placeholder="Choose Account" />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,7 +154,7 @@ export function CashBankReconcileService() {
               <Label className="text-xs">Statement Balance</Label>
               <Input
                 type="number"
-                className="h-8 text-xs mt-1"
+                className="h-7 text-xs mt-0.5"
                 value={statementBalance}
                 onChange={(e) => setStatementBalance(e.target.value)}
                 placeholder="Enter statement balance"
@@ -154,12 +162,12 @@ export function CashBankReconcileService() {
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-2" />
           <div className="flex gap-2">
-            <Button size="sm" className="flex-1 text-xs h-8" onClick={handleSearch}>
+            <Button size="sm" className="flex-1 text-xs h-7" onClick={handleSearch}>
               <Search className="h-3.5 w-3.5 mr-1" /> Search
             </Button>
-            <Button size="sm" variant="outline" className="flex-1 text-xs h-8" onClick={handleCancel}>
+            <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={handleCancel}>
               Cancel
             </Button>
           </div>
@@ -167,14 +175,9 @@ export function CashBankReconcileService() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 p-4 space-y-4">
+      <div className={`flex-1 min-w-0 p-4 space-y-4 ${!showFilter ? "ml-6" : ""}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {!showFilter && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilter(true)}>
-                <Filter className="h-4 w-4 mr-1" /> Filter
-              </Button>
-            )}
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Landmark className="h-5 w-5" /> Cash & Bank Reconciliation
             </h2>
@@ -190,7 +193,6 @@ export function CashBankReconcileService() {
           </Card>
         ) : (
           <>
-            {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card>
                 <CardHeader className="pb-1 pt-3 px-3">
