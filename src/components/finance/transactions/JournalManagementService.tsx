@@ -351,7 +351,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                         </TableCell>
                         <TableCell className="font-mono text-xs text-primary py-1.5 px-2">{entry.reference || entry.entry_number}</TableCell>
                         <TableCell className="text-xs py-1.5 px-2">{entry.date}</TableCell>
-                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "long")}</TableCell>
+                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "short")}</TableCell>
                         <TableCell className="text-xs max-w-[200px] truncate py-1.5">{entry.description}</TableCell>
                         <TableCell className="text-right font-mono text-xs py-1.5">{d.toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-xs py-1.5">{c.toFixed(2)}</TableCell>

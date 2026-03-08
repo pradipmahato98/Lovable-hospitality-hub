@@ -71,7 +71,7 @@ export function NepaliDateInput({
     onChange(adIso);
   };
 
-  const bsFormatted = formatBSDate(bsDate, "long");
+  const bsFormatted = formatBSDate(bsDate, "short");
   const daysInMonth = getDaysInBSMonth(bsYear, bsMonth);
 
   // Calendar grid generation

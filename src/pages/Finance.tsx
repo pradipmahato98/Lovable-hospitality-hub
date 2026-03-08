@@ -219,7 +219,7 @@ export default function Finance() {
   return (
     <MainLayout
       title="Finance & Accounting"
-      subtitle={`Business Date: ${businessDate || "Loading..."} ${businessDate ? `(${formatISOasBS(businessDate, "long")} BS)` : ""}`}
+      subtitle={`Business Date: ${businessDate || "Loading..."} ${businessDate ? `(${formatISOasBS(businessDate, "short")} BS)` : ""}`}
       actions={
         <Badge variant="outline" className="hidden sm:inline-flex gap-1.5 bg-primary/10 text-primary border-primary/20 text-xs">
           <CalendarDays className="h-3 w-3" />

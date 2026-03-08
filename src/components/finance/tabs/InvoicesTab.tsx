@@ -245,7 +245,7 @@ export function FinanceInvoicesTab() {
                         <TableRow key={pay.id}>
                           <TableCell className="font-mono text-primary">{pay.payment_number}</TableCell>
                           <TableCell className="text-sm">{pay.payment_date}</TableCell>
-                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(pay.payment_date, "long")}</TableCell>
+                          <TableCell className="text-sm text-primary font-medium">{formatISOasBS(pay.payment_date, "short")}</TableCell>
                           <TableCell className="capitalize">{pay.payment_method}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">${pay.amount.toFixed(2)}</TableCell>
                           <TableCell className="text-muted-foreground">{pay.reference_number || "-"}</TableCell>
