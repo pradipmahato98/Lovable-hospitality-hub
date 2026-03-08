@@ -174,10 +174,10 @@ export function FinanceExpensesTab() {
             </div>
             <div className="space-y-2">
               <Label>Account (Optional)</Label>
-              <Select value={newExpense.account_id || ""} onValueChange={v => setNewExpense(p => ({ ...p, account_id: v || null }))}>
+              <Select value={newExpense.account_id || "none"} onValueChange={v => setNewExpense(p => ({ ...p, account_id: v === "none" ? null : v }))}>
                 <SelectTrigger><SelectValue placeholder="Link to account" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {accounts.filter(a => a.type === "expense").map(a => (
                     <SelectItem key={a.id} value={a.id}>{a.code} - {a.name}</SelectItem>
                   ))}
