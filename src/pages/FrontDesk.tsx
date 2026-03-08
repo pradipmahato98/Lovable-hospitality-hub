@@ -59,6 +59,7 @@ const invoiceStatusColors = {
 
 const FrontDesk = () => {
   const { data: rooms = [], isLoading } = useRooms();
+  const { data: invoices = [] } = useInvoices();
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [activeTab, setActiveTab] = useState("rooms");
