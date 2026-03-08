@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Check, DollarSign } from "lucide-react";
+import { Plus, Check, DollarSign, Search } from "lucide-react";
 import { useExpenses } from "@/hooks/useFinanceExtended";
 import { useAccounts } from "@/hooks/useFinance";
 import { toast } from "sonner";
+import { NepaliDateInput, NepaliDateSearch } from "@/components/shared/NepaliDateInput";
+import { formatISOasBS } from "@/lib/nepaliDate";
 
 const statusColors: Record<string, string> = {
   pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -29,6 +31,8 @@ const categories = ["Operations", "Maintenance", "F&B", "Housekeeping", "Marketi
 
 export function FinanceExpensesTab() {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [dateFilter, setDateFilter] = useState<{ from: string; to: string } | null>(null);
   const { data: expenses, isLoading, createExpense, approveExpense, markExpensePaid } = useExpenses();
   const { data: accounts } = useAccounts();
 
@@ -44,10 +48,26 @@ export function FinanceExpensesTab() {
     notes: null as string | null,
   });
 
-  const handleCreateExpense = async () => {
-    if (!newExpense.description || !newExpense.amount) {
-      toast.error("Description and amount are required"); return;
+  const filteredExpenses = useMemo(() => {
+    let items = expenses || [];
+    if (dateFilter) {
+      items = items.filter(e => e.expense_date >= dateFilter.from && e.expense_date <= dateFilter.to);
     }
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      items = items.filter(e =>
+        e.expense_number?.toLowerCase().includes(q) ||
+        e.description?.toLowerCase().includes(q) ||
+        e.vendor?.toLowerCase().includes(q) ||
+        e.category?.toLowerCase().includes(q) ||
+        formatISOasBS(e.expense_date, "long").toLowerCase().includes(q)
+      );
+    }
+    return items;
+  }, [expenses, dateFilter, searchText]);
+
+  const handleCreateExpense = async () => {
+    if (!newExpense.description || !newExpense.amount) { toast.error("Description and amount are required"); return; }
     try {
       await createExpense.mutateAsync(newExpense);
       toast.success("Expense recorded");
@@ -61,7 +81,7 @@ export function FinanceExpensesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground">
             Pending: <span className="font-semibold text-amber-400">${totalPending.toFixed(2)}</span>
@@ -75,6 +95,25 @@ export function FinanceExpensesTab() {
         </Button>
       </div>
 
+      {/* Search & BS Date Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-3 items-end">
+            <div className="flex-1 space-y-1">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Search (AD/BS/Text)</span>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder="Search by expense #, vendor, BS date (e.g. Falgun)..." value={searchText} onChange={(e) => setSearchText(e.target.value)} className="pl-8 h-9 text-sm" />
+              </div>
+            </div>
+            <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
+            {dateFilter && (
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setDateFilter(null)}>Clear</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -85,78 +124,80 @@ export function FinanceExpensesTab() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading expenses...</div>
-          ) : !expenses?.length ? (
-            <div className="p-8 text-center text-muted-foreground">No expenses recorded yet.</div>
+          ) : !filteredExpenses.length ? (
+            <div className="p-8 text-center text-muted-foreground">{dateFilter || searchText ? "No expenses match your search" : "No expenses recorded yet."}</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Expense #</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((exp) => (
-                  <TableRow key={exp.id}>
-                    <TableCell className="font-mono text-primary">{exp.expense_number}</TableCell>
-                    <TableCell>{exp.expense_date}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{exp.category}</Badge></TableCell>
-                    <TableCell>{exp.description}</TableCell>
-                    <TableCell className="text-muted-foreground">{exp.vendor || "-"}</TableCell>
-                    <TableCell className="text-right font-mono font-semibold">${exp.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusColors[exp.status] || ""}>{exp.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {exp.status === "pending" && (
-                          <Button variant="ghost" size="sm" onClick={() => approveExpense.mutate({ id: exp.id, approvedBy: "system" })}>
-                            <Check className="h-3 w-3 mr-1" /> Approve
-                          </Button>
-                        )}
-                        {exp.status === "approved" && (
-                          <Button variant="ghost" size="sm" onClick={() => markExpensePaid.mutate(exp.id)}>
-                            <DollarSign className="h-3 w-3 mr-1" /> Pay
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Expense #</TableHead>
+                    <TableHead>Date (AD)</TableHead>
+                    <TableHead>मिति (BS)</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredExpenses.map((exp) => (
+                    <TableRow key={exp.id}>
+                      <TableCell className="font-mono text-primary">{exp.expense_number}</TableCell>
+                      <TableCell className="text-sm">{exp.expense_date}</TableCell>
+                      <TableCell className="text-sm text-primary font-medium">{formatISOasBS(exp.expense_date, "long")}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{exp.category}</Badge></TableCell>
+                      <TableCell>{exp.description}</TableCell>
+                      <TableCell className="text-muted-foreground">{exp.vendor || "-"}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold">${exp.amount.toFixed(2)}</TableCell>
+                      <TableCell><Badge variant="outline" className={statusColors[exp.status] || ""}>{exp.status}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {exp.status === "pending" && (
+                            <Button variant="ghost" size="sm" onClick={() => approveExpense.mutate({ id: exp.id, approvedBy: "system" })}>
+                              <Check className="h-3 w-3 mr-1" /> Approve
+                            </Button>
+                          )}
+                          {exp.status === "approved" && (
+                            <Button variant="ghost" size="sm" onClick={() => markExpensePaid.mutate(exp.id)}>
+                              <DollarSign className="h-3 w-3 mr-1" /> Pay
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* New Expense Dialog */}
       <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Record Expense</DialogTitle>
             <DialogDescription>Add a new expense for tracking and approval</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={newExpense.category} onValueChange={v => setNewExpense(p => ({ ...p, category: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input type="date" value={newExpense.expense_date} onChange={e => setNewExpense(p => ({ ...p, expense_date: e.target.value }))} />
-              </div>
+              <NepaliDateInput
+                label="Expense Date"
+                value={newExpense.expense_date}
+                onChange={(d) => setNewExpense(p => ({ ...p, expense_date: d }))}
+                showDual={true}
+              />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
@@ -187,9 +228,7 @@ export function FinanceExpensesTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExpenseDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateExpense} disabled={createExpense.isPending}>
-              {createExpense.isPending ? "Recording..." : "Record Expense"}
-            </Button>
+            <Button onClick={handleCreateExpense} disabled={createExpense.isPending}>{createExpense.isPending ? "Recording..." : "Record Expense"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
