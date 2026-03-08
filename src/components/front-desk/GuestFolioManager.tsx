@@ -343,7 +343,7 @@ export const GuestFolioManager = () => {
     if (!selectedFolio || !items) return;
 
     const exportData = items.map(item => ({
-      Date: format(new Date(item.created_at), "yyyy-MM-dd HH:mm"),
+      Date: formatAD(new Date(item.created_at), "time"),
       Description: item.description,
       Source: item.source,
       Charge: item.amount > 0 ? item.amount : 0,
