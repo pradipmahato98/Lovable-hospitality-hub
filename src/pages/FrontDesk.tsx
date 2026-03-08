@@ -48,14 +48,7 @@ const amenityIcons: Record<string, React.ComponentType<{ className?: string }>> 
   jacuzzi: Bath,
 };
 
-// Sample invoice data for billing tab
-const invoices = [
-  { id: "INV-001", guest: "Sarah Johnson", reservation: "RES-001", date: "2024-12-20", amount: "$1,560", status: "paid", method: "Credit Card" },
-  { id: "INV-002", guest: "Michael Chen", reservation: "RES-002", date: "2024-12-19", amount: "$480", status: "pending", method: "-" },
-  { id: "INV-003", guest: "Emma Wilson", reservation: "RES-003", date: "2024-12-18", amount: "$360", status: "paid", method: "Cash" },
-  { id: "INV-004", guest: "James Brown", reservation: "RES-004", date: "2024-12-17", amount: "$2,400", status: "partial", method: "Credit Card" },
-  { id: "INV-005", guest: "Lisa Anderson", reservation: "RES-005", date: "2024-12-16", amount: "$520", status: "paid", method: "Bank Transfer" },
-];
+// Invoices now fetched from database via useInvoices hook in the billing tab
 
 const invoiceStatusColors = {
   paid: "bg-success/20 text-success border-success/30",
