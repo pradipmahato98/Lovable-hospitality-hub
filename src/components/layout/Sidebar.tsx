@@ -80,13 +80,14 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { isAdmin } = useIsAdmin();
   const showLabels = !collapsed || isMobile;
 
-  // Auto-open groups containing the active route
-  const activeGroups = moduleGroups
-    .filter((g) => g.items.some((i) => location.pathname === i.path))
-    .map((g) => g.label);
+  const modulesHasActive = moduleItems.some((i) => location.pathname === i.path);
+  const adminHasActive = adminNavItems.some((i) => location.pathname === i.path);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(
-    new Set([...activeGroups, "Admin"])
+    new Set([
+      ...(modulesHasActive ? ["Modules"] : []),
+      ...(adminHasActive ? ["Admin"] : []),
+    ])
   );
 
   const toggleGroup = (label: string) => {
@@ -125,25 +126,15 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     );
   };
 
-  const renderGroup = (group: NavGroup) => {
-    const isOpen = openGroups.has(group.label);
-    const hasActive = group.items.some((i) => location.pathname === i.path);
+  const renderCollapsibleGroup = (label: string, items: NavItem[], hasActive: boolean) => {
+    const isOpen = openGroups.has(label);
 
     if (!showLabels) {
-      // Collapsed: just show icons
-      return (
-        <div key={group.label} className="space-y-0.5">
-          {group.items.map(renderNavItem)}
-        </div>
-      );
+      return <div className="space-y-0.5">{items.map(renderNavItem)}</div>;
     }
 
     return (
-      <Collapsible
-        key={group.label}
-        open={isOpen}
-        onOpenChange={() => toggleGroup(group.label)}
-      >
+      <Collapsible open={isOpen} onOpenChange={() => toggleGroup(label)}>
         <CollapsibleTrigger asChild>
           <button
             className={cn(
@@ -153,7 +144,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <span>{group.label}</span>
+            <span>{label}</span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 transition-transform duration-200",
@@ -163,7 +154,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-0.5 pl-1">
-          {group.items.map(renderNavItem)}
+          {items.map(renderNavItem)}
         </CollapsibleContent>
       </Collapsible>
     );
@@ -200,7 +191,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {standaloneItems.map(renderNavItem)}
 
         <div className="mt-2 space-y-1">
-          {moduleGroups.map(renderGroup)}
+          {renderCollapsibleGroup("Modules", moduleItems, modulesHasActive)}
         </div>
 
         {/* Admin Section */}
