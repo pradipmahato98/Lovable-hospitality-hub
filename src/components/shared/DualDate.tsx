@@ -27,7 +27,7 @@ export function DualDate({
 }: DualDateProps) {
   const adDate = typeof date === "string" ? new Date(date) : date;
   const bsDate = adToBS(adDate);
-  const adFormatted = format(adDate, adFormat);
+  const adFormatted = formatAD(adDate);
   const bsFormatted = formatBSDate(bsDate, bsFormat);
 
   if (bsOnly) {
