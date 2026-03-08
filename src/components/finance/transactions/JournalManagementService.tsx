@@ -459,7 +459,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">मिति (BS)</p>
-                  <p className="text-sm font-medium text-primary">{formatISOasBS(viewEntry.date, "long")}</p>
+                  <p className="text-sm font-medium text-primary">{formatISOasBS(viewEntry.date, "short")}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Status</p>
