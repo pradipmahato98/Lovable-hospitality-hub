@@ -16,22 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users, Eye, ShieldAlert, CheckSquare, Square, MoreHorizontal, UserCheck, UserX, Trash2 } from "lucide-react";
-import { UserWithRole, AppRole, roleConfig, useUpdateUserStatus } from "@/hooks/useUsersWithRoles";
+import { Search, Users } from "lucide-react";
+import { UserWithRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
-import { Button } from "@/components/ui/button";
-import { UserProfileModal } from "./UserProfileModal";
-import { useState, useMemo } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface UsersTableProps {
   users: UserWithRole[] | undefined;
@@ -50,60 +38,14 @@ export const UsersTable = ({
   onRoleChange,
   isUpdating,
 }: UsersTableProps) => {
-  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const updateUserStatus = useUpdateUserStatus();
-
-  const handleViewUser = (user: UserWithRole) => {
-    setSelectedUser(user);
-    setModalOpen(true);
-  };
-
-  const filteredUsers = useMemo(() => users?.filter((user) => {
+  const filteredUsers = users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
-      (user.email?.toLowerCase() || "").includes(searchLower) ||
-      (user.first_name?.toLowerCase() || "").includes(searchLower) ||
-      (user.last_name?.toLowerCase() || "").includes(searchLower) ||
-      user.user_id.toLowerCase().includes(searchLower)
+      user.email?.toLowerCase().includes(searchLower) ||
+      user.first_name?.toLowerCase().includes(searchLower) ||
+      user.last_name?.toLowerCase().includes(searchLower)
     );
-  }), [users, searchQuery]);
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === filteredUsers?.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredUsers?.map(u => u.user_id) || []);
-    }
-  };
-
-  const toggleSelectUser = (userId: string) => {
-    setSelectedIds(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleBulkRoleChange = (role: AppRole) => {
-    selectedIds.forEach(userId => {
-      const user = users?.find(u => u.user_id === userId);
-      if (user) onRoleChange(userId, user.role, role);
-    });
-    setSelectedIds([]);
-  };
-
-  const handleBulkStatusChange = (is_blocked: boolean) => {
-    selectedIds.forEach(userId => {
-      updateUserStatus.mutate({
-        userId,
-        is_blocked,
-        blocked_reason: is_blocked ? "Bulk status update" : null
-      });
-    });
-    setSelectedIds([]);
-  };
+  });
 
   return (
     <Card variant="elevated">
@@ -124,45 +66,14 @@ export const UsersTable = ({
               Live
             </div>
           </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            {selectedIds.length > 0 && (
-              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      Bulk Actions ({selectedIds.length})
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleBulkRoleChange("user")}>Set to User</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkRoleChange("staff")}>Set to Staff</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkRoleChange("manager")}>Set to Manager</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkRoleChange("admin")}>Set to Admin</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Status</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange(true)} className="text-destructive">
-                      <UserX className="h-4 w-4 mr-2" /> Block Selected
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange(false)} className="text-success">
-                      <UserCheck className="h-4 w-4 mr-2" /> Unblock Selected
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>Clear</Button>
-              </div>
-            )}
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-9"
+            />
           </div>
         </div>
       </CardHeader>
@@ -174,65 +85,33 @@ export const UsersTable = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedIds.length === filteredUsers?.length && filteredUsers?.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Current Role</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Change Role</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {filteredUsers?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                      <p className="text-sm text-muted-foreground mt-2">Loading users...</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredUsers?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                      <div className="flex flex-col items-center gap-2">
-                        <Users className="h-8 w-8 opacity-20" />
-                        <p>No users found matching your search</p>
-                        {searchQuery && (
-                          <Button variant="link" onClick={() => onSearchChange("")}>
-                            Clear search
-                          </Button>
-                        )}
-                      </div>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      No users found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers?.map((userItem) => (
-                    <TableRow key={userItem.id} className={selectedIds.includes(userItem.user_id) ? "bg-primary/5" : ""}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.includes(userItem.user_id)}
-                          onCheckedChange={() => toggleSelectUser(userItem.user_id)}
-                        />
-                      </TableCell>
+                    <TableRow key={userItem.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shadow-3d-gold border border-amber-500/20">
+                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                             <span className="text-sm font-semibold text-primary">
                               {(userItem.first_name?.[0] || "") + (userItem.last_name?.[0] || "") || "U"}
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-foreground flex items-center gap-2">
+                            <p className="font-medium text-foreground">
                               {userItem.first_name || ""} {userItem.last_name || ""}
                               {!userItem.first_name && !userItem.last_name && "Unnamed User"}
-                              {userItem.is_blocked && (
-                                <ShieldAlert className="h-3 w-3 text-destructive animate-pulse" />
-                              )}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               ID: {userItem.user_id.slice(0, 8)}...
@@ -250,15 +129,6 @@ export const UsersTable = ({
                             <MultiRoleBadge count={userItem.allRoles.length} />
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {userItem.is_blocked ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <ShieldAlert className="h-3 w-3" /> Blocked
-                          </Badge>
-                        ) : (
-                          <Badge variant="success">Active</Badge>
-                        )}
                       </TableCell>
                       <TableCell>
                         <Select
@@ -279,17 +149,6 @@ export const UsersTable = ({
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => handleViewUser(userItem)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          View
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -298,12 +157,6 @@ export const UsersTable = ({
           </div>
         )}
       </CardContent>
-
-      <UserProfileModal
-        user={selectedUser}
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-      />
     </Card>
   );
 };

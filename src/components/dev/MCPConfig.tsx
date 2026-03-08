@@ -31,10 +31,9 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { api } from "@/lib/api-bridge";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
-import { supabase } from "@/integrations/supabase/client";
 
 interface BucketStatus {
   id: string;
@@ -73,7 +72,7 @@ export const MCPConfigPanel = () => {
     try {
       // 1. Check Buckets
       const requiredBuckets = ['avatars', 'property-images', 'lost-found-images'];
-      const { data: buckets, error: bucketsError } = await api.storage.listBuckets();
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
 
       if (bucketsError) throw bucketsError;
 
@@ -127,7 +126,7 @@ export const MCPConfigPanel = () => {
     setIsLoading(true);
     try {
       for (const bucketId of ['avatars', 'property-images', 'lost-found-images']) {
-        const { error } = await api.storage.createBucket(bucketId, {
+        const { error } = await supabase.storage.createBucket(bucketId, {
           public: true,
         });
         if (error && error.message !== 'Bucket already exists') {

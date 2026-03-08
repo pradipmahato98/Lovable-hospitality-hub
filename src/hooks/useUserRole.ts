@@ -3,9 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/integrations/supabase/types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 export function useUserRole() {
@@ -16,34 +13,25 @@ export function useUserRole() {
     queryFn: async () => {
       if (!user) return null;
 
-      try {
-        const { data, error } = await db
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
 
-        if (error) {
-          console.warn("User roles table not found or error, defaulting to staff for dev convenience:", error.message);
-          return "staff" as AppRole;
-        }
+      if (error) throw error;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const roles = (data ?? []).map((r: any) => r.role as AppRole);
-        if (roles.length === 0) return "staff" as AppRole;
+      const roles = (data ?? []).map((r) => r.role as AppRole);
+      if (roles.length === 0) return null;
 
-        // Pick highest role if multiple rows exist
-        const priority: Record<AppRole, number> = {
-          user: 0,
-          staff: 1,
-          manager: 2,
-          admin: 3,
-        };
+      // Pick highest role if multiple rows exist
+      const priority: Record<AppRole, number> = {
+        user: 0,
+        staff: 1,
+        manager: 2,
+        admin: 3,
+      };
 
-        return roles.reduce((best: AppRole, current: AppRole) => (priority[current] > priority[best] ? current : best));
-      } catch (err) {
-        console.warn("Exception in useUserRole, defaulting to staff");
-        return "staff" as AppRole;
-      }
+      return roles.reduce((best, current) => (priority[current] > priority[best] ? current : best));
     },
     enabled: !!user,
   });

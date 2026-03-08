@@ -4,40 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Globe, 
   Link2, 
   RefreshCw, 
   CheckCircle2,
   AlertCircle,
+  TrendingUp,
   Calendar,
   DollarSign,
   Settings,
   ExternalLink,
-  Loader2,
-  Plus
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { useOTAChannels, useChannelStats, OTAChannel } from "@/hooks/useChannelManager";
+import { useOTAChannels, useChannelStats } from "@/hooks/useChannelManager";
 import { formatDistanceToNow } from "date-fns";
-import { ChannelConfigDialog } from "@/components/channel-manager/ChannelConfigDialog";
-import { useSidebar } from "@/hooks/use-sidebar";
 
 const ChannelManager = () => {
-  const {
-    data: channels = [],
-    isLoading,
-    toggleChannel,
-    syncChannel,
-    addChannel,
-    updateChannel,
-    deleteChannel
-  } = useOTAChannels();
+  const { data: channels = [], isLoading, toggleChannel, syncChannel } = useOTAChannels();
   const stats = useChannelStats();
-  const { isMobile } = useSidebar();
-
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<OTAChannel | null>(null);
 
   const handleSync = async (channelId: string) => {
     try {
@@ -57,63 +45,11 @@ const ChannelManager = () => {
     }
   };
 
-  const handleSaveChannel = async (data: Omit<OTAChannel, "id" | "created_at" | "last_sync_at" | "sync_status">) => {
-    try {
-      if (selectedChannel) {
-        await updateChannel.mutateAsync({ id: selectedChannel.id, ...data });
-        toast.success("Channel updated successfully");
-      } else {
-        await addChannel.mutateAsync({ ...data, is_active: false });
-        toast.success("Channel added successfully");
-      }
-      setIsConfigOpen(false);
-    } catch (error) {
-      toast.error("Failed to save channel");
-    }
-  };
-
-  const handleDeleteChannel = async (id: string) => {
-    try {
-      await deleteChannel.mutateAsync(id);
-      toast.success("Channel deleted successfully");
-      setIsConfigOpen(false);
-    } catch (error) {
-      toast.error("Failed to delete channel");
-    }
-  };
-
-  const openAddDialog = () => {
-    setSelectedChannel(null);
-    setIsConfigOpen(true);
-  };
-
-  const openEditDialog = (channel: OTAChannel) => {
-    setSelectedChannel(channel);
-    setIsConfigOpen(true);
-  };
-
   const totalBookings = 6; // Mock for now as it's not in the hook
   const totalRevenue = 2460; // Mock for now
 
-  const headerActions = (
-    <Button onClick={openAddDialog}>
-      <Plus className="h-4 w-4 mr-2" />
-      Add Channel
-    </Button>
-  );
-
   return (
-    <MainLayout
-      title="Channel Manager"
-      subtitle="Manage OTA connections and distribution"
-      headerActions={headerActions}
-    >
-      {isMobile && (
-        <div className="mb-4">
-          {headerActions}
-        </div>
-      )}
-
+    <MainLayout title="Channel Manager" subtitle="Manage OTA connections and distribution">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
@@ -234,12 +170,7 @@ const ChannelManager = () => {
                         >
                           <RefreshCw className={`h-3 w-3 ${syncChannel.isPending ? 'animate-spin' : ''}`} />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2"
-                          onClick={() => openEditDialog(channel)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 px-2">
                           <Settings className="h-3 w-3" />
                         </Button>
                         <Button variant="ghost" size="sm" className="h-7 px-2">
@@ -260,14 +191,6 @@ const ChannelManager = () => {
           ))
         )}
       </div>
-
-      <ChannelConfigDialog
-        open={isConfigOpen}
-        onOpenChange={setIsConfigOpen}
-        channel={selectedChannel}
-        onSave={handleSaveChannel}
-        onDelete={handleDeleteChannel}
-      />
     </MainLayout>
   );
 };

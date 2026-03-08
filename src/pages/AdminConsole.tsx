@@ -25,11 +25,9 @@ import {
   Plus,
   Trash2,
   Layout,
-  TrendingUp,
-  LayoutDashboard,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,7 +53,6 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
-import { generateSecureAPIKey } from "@/utils/security";
 import {
   useUsersWithRoles,
   useAdminAuditLogs,
@@ -72,10 +69,6 @@ import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
-import { RoomManagement } from "@/components/admin/RoomManagement";
-import { DatabaseControlCenter } from "@/components/database/DatabaseControlCenter";
-import { BackendSyncTab } from "@/components/admin/BackendSyncTab";
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -85,16 +78,7 @@ const AdminConsole = () => {
   }, []);
 
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "overview";
-
-  const setActiveTab = (tab: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", tab);
-      return prev;
-    });
-  };
-
+  const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
@@ -230,7 +214,7 @@ const AdminConsole = () => {
   const handleAddAPIKey = () => {
     const newKey: APIKey = {
       name: "New API Key",
-      key: generateSecureAPIKey(),
+      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
       is_secret: true,
       description: "Auto-generated system key"
     };
@@ -279,17 +263,9 @@ const AdminConsole = () => {
         <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
             <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">
-              <Activity className="h-4 w-4" />
-              System Overview
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2 whitespace-nowrap flex-shrink-0">
-              <TrendingUp className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="rooms" className="gap-2 whitespace-nowrap flex-shrink-0">
-              <LayoutDashboard className="h-4 w-4" />
-              Room Management
-            </TabsTrigger>
+            <Activity className="h-4 w-4" />
+            System Overview
+          </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Users className="h-4 w-4" />
               Account Management
@@ -309,14 +285,6 @@ const AdminConsole = () => {
             <TabsTrigger value="integrations" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Globe className="h-4 w-4" />
               Integrations
-            </TabsTrigger>
-            <TabsTrigger value="database" className="gap-2 whitespace-nowrap flex-shrink-0">
-              <Database className="h-4 w-4" />
-              Database Control
-            </TabsTrigger>
-            <TabsTrigger value="backend_sync" className="gap-2 whitespace-nowrap flex-shrink-0">
-              <RefreshCw className="h-4 w-4" />
-              Backend Sync
             </TabsTrigger>
             <TabsTrigger value="design_system" className="gap-2 whitespace-nowrap flex-shrink-0">
               <Layout className="h-4 w-4" />
@@ -437,14 +405,6 @@ const AdminConsole = () => {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <AnalyticsTab />
-        </TabsContent>
-
-        <TabsContent value="rooms">
-          <RoomManagement />
         </TabsContent>
 
         <TabsContent value="users">
@@ -706,14 +666,6 @@ const AdminConsole = () => {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="database">
-          <DatabaseControlCenter />
-        </TabsContent>
-
-        <TabsContent value="backend_sync">
-          <BackendSyncTab />
         </TabsContent>
 
         <TabsContent value="design_system">

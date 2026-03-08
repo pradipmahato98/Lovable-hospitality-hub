@@ -1,9 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 export type NotificationCategory = "booking" | "checkin" | "settings" | "alert" | "info" | "role_change";
 
 export interface Notification {
@@ -23,21 +20,14 @@ export function useNotifications() {
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
-      try {
-        const { data, error } = await db
-          .from("notifications")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(50);
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-        if (error) {
-          console.warn("Notifications table issue, returning empty:", error.message);
-          return [] as Notification[];
-        }
-        return data as Notification[];
-      } catch (err) {
-        return [] as Notification[];
-      }
+      if (error) throw error;
+      return data as Notification[];
     },
   });
 
@@ -49,7 +39,7 @@ export function useNotifications() {
       category: NotificationCategory;
       user_id?: string;
     }) => {
-      const { error } = await db.from("notifications").insert(notification);
+      const { error } = await supabase.from("notifications").insert(notification);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -59,7 +49,7 @@ export function useNotifications() {
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await db
+      const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("id", notificationId);
@@ -73,7 +63,7 @@ export function useNotifications() {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      const { error } = await db
+      const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("is_read", false);

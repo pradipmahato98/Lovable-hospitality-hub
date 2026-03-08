@@ -95,24 +95,7 @@ export function useOTAChannels() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ota-channels"] }),
   });
 
-  const addChannel = useMutation({
-    mutationFn: async (newChannel: Omit<OTAChannel, "id" | "created_at" | "last_sync_at" | "sync_status">) => {
-      const { data, error } = await db.from("ota_channels").insert([newChannel]).select().single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ota-channels"] }),
-  });
-
-  const deleteChannel = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await db.from("ota_channels").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ota-channels"] }),
-  });
-
-  return { ...query, updateChannel, toggleChannel, syncChannel, addChannel, deleteChannel };
+  return { ...query, updateChannel, toggleChannel, syncChannel };
 }
 
 // ============= Rate Availability =============

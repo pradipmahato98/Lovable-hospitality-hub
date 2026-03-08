@@ -1,6 +1,6 @@
 import { Bell, Search, Plus, Menu, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlobalSearch } from "./GlobalSearch";
+import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 import {
@@ -20,7 +20,7 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-4">
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 md:flex-initial">
+      <div className="flex items-center gap-3 min-w-0">
         {/* Mobile Menu Button */}
         {isMobile && (
           <Button
@@ -33,14 +33,10 @@ export function Header({ title, subtitle }: HeaderProps) {
           </Button>
         )}
         
-        <div className="min-w-0 flex-1 md:flex-initial">
-          <h1 className="text-base sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate leading-tight">{title}</h1>
-          {subtitle && <p className="text-[10px] sm:text-sm text-muted-foreground truncate leading-tight">{subtitle}</p>}
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate">{title}</h1>
+          {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
         </div>
-      </div>
-
-      <div className="flex-1 max-w-md mx-2 sm:mx-4 min-w-0">
-        <GlobalSearch />
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -64,6 +60,15 @@ export function Header({ title, subtitle }: HeaderProps) {
             <p>Open command palette (⌘K)</p>
           </TooltipContent>
         </Tooltip>
+
+        {/* Search - hidden on small screens */}
+        <div className="relative hidden lg:block">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search guests, reservations..."
+            className="w-48 xl:w-64 pl-9 bg-secondary border-border"
+          />
+        </div>
 
         {/* Quick Action */}
         <Tooltip>

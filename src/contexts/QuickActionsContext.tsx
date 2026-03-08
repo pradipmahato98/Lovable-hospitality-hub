@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 interface QuickActionsState {
   newBookingOpen: boolean;
   newGuestOpen: boolean;
-  newStaffOpen: boolean;
   newRoomOpen: boolean;
   newMaintenanceOpen: boolean;
   commandPaletteOpen: boolean;
@@ -14,7 +13,6 @@ interface QuickActionsState {
 interface QuickActionsContextType extends QuickActionsState {
   setNewBookingOpen: (open: boolean) => void;
   setNewGuestOpen: (open: boolean) => void;
-  setNewStaffOpen: (open: boolean) => void;
   setNewRoomOpen: (open: boolean) => void;
   setNewMaintenanceOpen: (open: boolean) => void;
   setCommandPaletteOpen: (open: boolean) => void;
@@ -28,7 +26,6 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   const [state, setState] = useState<QuickActionsState>({
     newBookingOpen: false,
     newGuestOpen: false,
-    newStaffOpen: false,
     newRoomOpen: false,
     newMaintenanceOpen: false,
     commandPaletteOpen: false,
@@ -43,10 +40,6 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
 
   const setNewGuestOpen = useCallback((open: boolean) => {
     setState((prev) => ({ ...prev, newGuestOpen: open }));
-  }, []);
-
-  const setNewStaffOpen = useCallback((open: boolean) => {
-    setState((prev) => ({ ...prev, newStaffOpen: open }));
   }, []);
 
   const setNewRoomOpen = useCallback((open: boolean) => {
@@ -69,7 +62,6 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     setState({
       newBookingOpen: false,
       newGuestOpen: false,
-      newStaffOpen: false,
       newRoomOpen: false,
       newMaintenanceOpen: false,
       commandPaletteOpen: false,
@@ -144,7 +136,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
             break;
           case "o":
             e.preventDefault();
-            navigate("/front-desk");
+            navigate("/rooms");
             break;
           case "b":
             e.preventDefault();
@@ -164,8 +156,10 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      // Escape to close all dialogs is intentionally disabled to honor new project rules
-      // which require explicit closing via "X" or "Cancel" buttons.
+      // Escape to close all dialogs
+      if (e.key === "Escape") {
+        closeAll();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -178,7 +172,6 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         ...state,
         setNewBookingOpen,
         setNewGuestOpen,
-        setNewStaffOpen,
         setNewRoomOpen,
         setNewMaintenanceOpen,
         setCommandPaletteOpen,

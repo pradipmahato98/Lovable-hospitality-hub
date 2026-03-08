@@ -11,7 +11,6 @@ import {
   ListFilter
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { generateSecureNumericString } from "@/utils/security";
 
 interface EventSubscriber {
   id: string;
@@ -30,12 +29,12 @@ export function EventBusService({ isReadOnly }: { isReadOnly?: boolean }) {
   ]);
 
   const [realtimeTraffic, setRealtimeTraffic] = useState<number[]>(
-    Array.from({ length: 20 }, () => (parseInt(generateSecureNumericString(2)) % 50) + 10)
+    Array.from({ length: 20 }, () => Math.floor(Math.random() * 50) + 10)
   );
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setRealtimeTraffic(prev => [...prev.slice(1), (parseInt(generateSecureNumericString(2)) % 50) + 10]);
+      setRealtimeTraffic(prev => [...prev.slice(1), Math.floor(Math.random() * 50) + 10]);
     }, 2000);
     return () => clearInterval(interval);
   }, []);

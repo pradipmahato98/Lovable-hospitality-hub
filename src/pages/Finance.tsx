@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -12,78 +11,75 @@ import {
   RefreshCw,
   FileText,
   UserCircle,
+  ChevronRight,
+  ArrowLeft,
+  Lock,
+  Eye,
   Server,
+  ShieldCheck,
+} from "lucide-react";
+
+// Setup Layer Services
+import { ChartOfAccountsService } from "@/components/finance/setup/ChartOfAccountsService";
+import { FinancialConfigurationService } from "@/components/finance/setup/FinancialConfigurationService";
+import { CustomerMasterService } from "@/components/finance/setup/CustomerMasterService";
+import { VendorMasterService } from "@/components/finance/setup/VendorMasterService";
+import { BankCashSetupService } from "@/components/finance/setup/BankCashSetupService";
+import { AssetMasterService } from "@/components/finance/setup/AssetMasterService";
+import { TaxConfigurationService } from "@/components/finance/setup/TaxConfigurationService";
+import { BudgetSetupService } from "@/components/finance/setup/BudgetSetupService";
+import { AccessControlService } from "@/components/finance/setup/AccessControlService";
+import { FinancialStatementMappingService } from "@/components/finance/setup/FinancialStatementMappingService";
+
+// Transaction Layer Services
+import { JournalManagementService } from "@/components/finance/transactions/JournalManagementService";
+import { ARTransactionService } from "@/components/finance/transactions/ARTransactionService";
+import { APTransactionService } from "@/components/finance/transactions/APTransactionService";
+import { BankCashTransactionService } from "@/components/finance/transactions/BankCashTransactionService";
+import { AssetOperationsService } from "@/components/finance/transactions/AssetOperationsService";
+import { TaxCalculationService } from "@/components/finance/transactions/TaxCalculationService";
+import { BudgetExecutionService } from "@/components/finance/transactions/BudgetExecutionService";
+import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
+import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
+import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
+
+// Reporting Layer Services
+import { FinancialReportingService } from "@/components/finance/reporting/FinancialReportingService";
+import { LedgerInquiryService } from "@/components/finance/reporting/LedgerInquiryService";
+import { ARReportingService } from "@/components/finance/reporting/ARReportingService";
+import { APReportingService } from "@/components/finance/reporting/APReportingService";
+import { CashBankReportingService } from "@/components/finance/reporting/CashBankReportingService";
+import { FixedAssetsReportingService } from "@/components/finance/reporting/FixedAssetsReportingService";
+import { TaxReportingService } from "@/components/finance/reporting/TaxReportingService";
+import { BudgetForecastReportingService } from "@/components/finance/reporting/BudgetForecastReportingService";
+import { AuditReportingService } from "@/components/finance/reporting/AuditReportingService";
+import { ConsolidationBIService } from "@/components/finance/reporting/ConsolidationBIService";
+
+// Infrastructure Layer Services
+import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
+import { SharedDataService } from "@/components/finance/infrastructure/SharedDataService";
+import { APIGatewayService } from "@/components/finance/infrastructure/APIGatewayService";
+import { SecurityLayerService } from "@/components/finance/infrastructure/SecurityLayerService";
+
+import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
+import { useBusinessDate } from "@/hooks/useSettings";
+import { useFinancePermissions } from "@/hooks/useFinancePermissions";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import {
   TrendingUp,
   Scale,
   BookOpen,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  ChevronLeft,
-  Briefcase,
-  Building2,
-  History,
-  ShieldCheck,
-  Calculator,
-  Globe,
-  PieChart,
   Zap,
-  ArrowRight
+  Database
 } from "lucide-react";
-
-// Setup Services
-import { ChartOfAccountsService } from "@/components/finance/setup/ChartOfAccountsService";
-import { AccessControlService } from "@/components/finance/setup/AccessControlService";
-import { VendorMasterService } from "@/components/finance/setup/VendorMasterService";
-import { CustomerMasterService } from "@/components/finance/setup/CustomerMasterService";
-import { AssetMasterService } from "@/components/finance/setup/AssetMasterService";
-import { BudgetSetupService } from "@/components/finance/setup/BudgetSetupService";
-import { BankCashSetupService } from "@/components/finance/setup/BankCashSetupService";
-import { TaxConfigurationService } from "@/components/finance/setup/TaxConfigurationService";
-import { FinancialConfigurationService } from "@/components/finance/setup/FinancialConfigurationService";
-
-// Transaction Services
-import { JournalManagementService } from "@/components/finance/transactions/JournalManagementService";
-import { JournalEntryEditor } from "@/components/finance/transactions/JournalEntryEditor";
-import { APTransactionService } from "@/components/finance/transactions/APTransactionService";
-import { ARTransactionService } from "@/components/finance/transactions/ARTransactionService";
-import { BankCashTransactionService } from "@/components/finance/transactions/BankCashTransactionService";
-import { AssetOperationsService } from "@/components/finance/transactions/AssetOperationsService";
-import { BudgetExecutionService } from "@/components/finance/transactions/BudgetExecutionService";
-import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
-import { TaxCalculationService } from "@/components/finance/transactions/TaxCalculationService";
-import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
-import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
-
-// Reporting Services
-import { FinancialReportingService } from "@/components/finance/reporting/FinancialReportingService";
-import { APReportingService } from "@/components/finance/reporting/APReportingService";
-import { ARReportingService } from "@/components/finance/reporting/ARReportingService";
-import { LedgerInquiryService } from "@/components/finance/reporting/LedgerInquiryService";
-import { AuditReportingService } from "@/components/finance/reporting/AuditReportingService";
-import { BudgetForecastReportingService } from "@/components/finance/reporting/BudgetForecastReportingService";
-import { RevenueRecognitionService } from "@/components/finance/reporting/RevenueRecognitionService";
-
-// Infrastructure
-import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
-
-import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
-import { useBusinessDate } from "@/hooks/useSettings";
-import { useFinancePermissions } from "@/hooks/useFinancePermissions";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { useMemo } from "react";
 
 export default function Finance() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "dashboard";
-  const [activeService, setActiveService] = useState<string | null>(null);
-
-  const setActiveTab = (tab: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", tab);
-      return prev;
-    });
-  };
-  const [isJournalEditorOpen, setIsJournalEditorOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedService, setSelectedService] = useState<string | null>(null);
 
   const {
     activeRole,
@@ -96,18 +92,10 @@ export default function Finance() {
   const { data: trialBalance } = useTrialBalance();
   const { data: businessDate } = useBusinessDate();
 
-  const coaPermission = checkPermission("1.1 Chart of Accounts Service");
-  const journalPermission = checkPermission("2.1 Journal Management Service");
-  const reportingPermission = checkPermission("3.1 Financial Reporting Service");
-  const infrastructurePermission = checkPermission("4.1 Event Bus");
-
+  // Calculate totals and financial metrics for dashboard
   const { totalDebits, totalCredits, isBalanced, totalAssets, totalLiabilities, netIncome } = useMemo(() => {
-    if (!trialBalance || trialBalance.length === 0) {
-      return { totalDebits: 0, totalCredits: 0, isBalanced: true, totalAssets: 0, totalLiabilities: 0, netIncome: 0 };
-    }
-
-    const debits = trialBalance.reduce((sum, t) => sum + (t.totalDebit || 0), 0);
-    const credits = trialBalance.reduce((sum, t) => sum + (t.totalCredit || 0), 0);
+    const debits = trialBalance.reduce((sum, t) => sum + t.totalDebit, 0);
+    const credits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
 
     let assets = 0;
     let liabilities = 0;
@@ -115,7 +103,7 @@ export default function Finance() {
     let expenses = 0;
 
     trialBalance.forEach(item => {
-      const balance = (item.totalDebit || 0) - (item.totalCredit || 0);
+      const balance = item.totalDebit - item.totalCredit;
       const type = item.account.type;
 
       if (type === 'asset') assets += balance;
@@ -134,93 +122,120 @@ export default function Finance() {
     };
   }, [trialBalance]);
 
-  const services = {
-    setup: [
-      { id: "coa", name: "Chart of Accounts", icon: BookOpen, description: "Manage ledger structure", component: ChartOfAccountsService },
-      { id: "vendors", name: "Vendors & Suppliers", icon: Building2, description: "Payable master data", component: VendorMasterService },
-      { id: "customers", name: "Customers & Guests", icon: UserCircle, description: "Receivable master data", component: CustomerMasterService },
-      { id: "assets", name: "Fixed Asset Master", icon: Briefcase, description: "Asset registry & life-cycles", component: AssetMasterService },
-      { id: "budgets", name: "Budget Planning", icon: PieChart, description: "Fiscal year targets", component: BudgetSetupService },
-      { id: "bank", name: "Bank & Cash Setup", icon: Wallet, description: "Manage bank accounts", component: BankCashSetupService },
-      { id: "tax", name: "Tax Configuration", icon: Calculator, description: "Manage tax rates & rules", component: TaxConfigurationService },
-      { id: "config", name: "Financial Config", icon: Settings2, description: "Global posting rules", component: FinancialConfigurationService },
-      { id: "access", name: "Access Control", icon: ShieldCheck, description: "Permissions & audit locks", component: AccessControlService },
-    ],
-    transactions: [
-      { id: "journal", name: "Journal Management", icon: RefreshCw, description: "Manual & recurring journals", component: JournalManagementService },
-      { id: "ap", name: "Accounts Payable", icon: ArrowDownRight, description: "Invoices & vendor payments", component: APTransactionService },
-      { id: "ar", name: "Accounts Receivable", icon: ArrowUpRight, description: "Billing & customer receipts", component: ARTransactionService },
-      { id: "banking", name: "Bank & Cash Ops", icon: Wallet, description: "Reconciliation & transfers", component: BankCashTransactionService },
-      { id: "asset-ops", name: "Asset Operations", icon: Briefcase, description: "Depreciation & disposals", component: AssetOperationsService },
-      { id: "tax-calc", name: "Tax Calculation", icon: Calculator, description: "Automated tax computation", component: TaxCalculationService },
-      { id: "orchestrator", name: "Module Integrations", icon: Zap, description: "Sync PMS/POS revenue", component: IntegrationOrchestratorService },
-      { id: "approvals", name: "Approval Workflows", icon: ShieldCheck, description: "Maker-checker logic", component: ApprovalWorkflowService },
-      { id: "budget-exec", name: "Budget Execution", icon: PieChart, description: "Approve budget variances", component: BudgetExecutionService },
-      { id: "period-close", name: "Period End Close", icon: History, description: "Month/Year-end processing", component: FinancialPeriodCloseService },
-    ],
-    reporting: [
-      { id: "financials", name: "Financial Statements", icon: FileText, description: "P&L, Balance Sheet, Cash Flow", component: FinancialReportingService },
-      { id: "ledger-inquiry", name: "Ledger Inquiry", icon: BookOpen, description: "Detailed account analysis", component: LedgerInquiryService },
-      { id: "ap-reports", name: "AP Reports", icon: ArrowDownRight, description: "Aging & vendor statements", component: APReportingService },
-      { id: "ar-reports", name: "AR Reports", icon: ArrowUpRight, description: "Aging & guest statements", component: ARReportingService },
-      { id: "revenue-recognition", name: "Revenue Recognition", icon: TrendingUp, description: "Deferred to earned revenue", component: RevenueRecognitionService },
-      { id: "budget-variance", name: "Budget vs Actual", icon: PieChart, description: "Variance trend analysis", component: BudgetForecastReportingService },
-      { id: "audit", name: "Audit Reports", icon: ShieldCheck, description: "Trial balance & logs", component: AuditReportingService },
-    ]
-  };
+  const setupServices = [
+    { id: "coa", title: "1.1 Chart of Accounts Service", Component: ChartOfAccountsService },
+    { id: "fin-config", title: "1.2 Financial Configuration Service", Component: FinancialConfigurationService },
+    { id: "customer-master", title: "1.3 Customer Master Service", Component: CustomerMasterService },
+    { id: "vendor-master", title: "1.4 Vendor Master Service", Component: VendorMasterService },
+    { id: "bank-cash-setup", title: "1.5 Bank & Cash Setup Service", Component: BankCashSetupService },
+    { id: "asset-master", title: "1.6 Asset Master Service", Component: AssetMasterService },
+    { id: "tax-config", title: "1.7 Tax Configuration Service", Component: TaxConfigurationService },
+    { id: "budget-setup", title: "1.8 Budget Setup Service", Component: BudgetSetupService },
+    { id: "access-control", title: "1.9 Access Control & Compliance Service", Component: AccessControlService },
+    { id: "statement-mapping", title: "1.10 Financial Statement Mapping Service", Component: FinancialStatementMappingService },
+  ];
 
-  const renderServiceContent = () => {
-    if (!activeService) return null;
-    const allServices = [...services.setup, ...services.transactions, ...services.reporting, { id: "infra", component: EventBusService }];
-    const service = allServices.find(s => s.id === activeService);
-    if (!service) return null;
+  const transactionServices = [
+    { id: "journal-mgmt", title: "2.1 Journal Management Service", Component: JournalManagementService },
+    { id: "ar-transaction", title: "2.2 AR Transaction Service", Component: ARTransactionService },
+    { id: "ap-transaction", title: "2.3 AP Transaction Service", Component: APTransactionService },
+    { id: "bank-cash-trans", title: "2.4 Bank & Cash Transaction Service", Component: BankCashTransactionService },
+    { id: "asset-ops", title: "2.5 Asset Operations Service", Component: AssetOperationsService },
+    { id: "tax-calc", title: "2.6 Tax Calculation & Booking Service", Component: TaxCalculationService },
+    { id: "budget-exec", title: "2.7 Budget Execution Service", Component: BudgetExecutionService },
+    { id: "period-close", title: "2.8 Financial Period Close Service", Component: FinancialPeriodCloseService },
+    { id: "approval-workflow", title: "2.9 Approval Workflow Engine", Component: ApprovalWorkflowService },
+    { id: "integration-orchestrator", title: "2.10 Integration Orchestrator Service", Component: IntegrationOrchestratorService },
+  ];
 
-    const ServiceComponent = service.component;
+  const reportingServices = [
+    { id: "fin-reporting", title: "3.1 Financial Reporting Service", Component: FinancialReportingService },
+    { id: "ledger-inquiry", title: "3.2 Ledger & Inquiry Service", Component: LedgerInquiryService },
+    { id: "ar-reporting", title: "3.3 AR Reporting Service", Component: ARReportingService },
+    { id: "ap-reporting", title: "3.4 AP Reporting Service", Component: APReportingService },
+    { id: "cash-bank-reporting", title: "3.5 Cash & Bank Reporting Service", Component: CashBankReportingService },
+    { id: "fixed-assets-reporting", title: "3.6 Fixed Assets Reporting Service", Component: FixedAssetsReportingService },
+    { id: "tax-reporting", title: "3.7 Tax Reporting Service", Component: TaxReportingService },
+    { id: "budget-forecast-reporting", title: "3.8 Budget & Forecast Reporting Service", Component: BudgetForecastReportingService },
+    { id: "audit-reporting", title: "3.9 Audit Reporting Service", Component: AuditReportingService },
+    { id: "consolidation-bi", title: "3.10 Consolidation & BI Service", Component: ConsolidationBIService },
+  ];
+
+  const infrastructureServices = [
+    { id: "event-bus", title: "4.1 Event Bus", Component: EventBusService },
+    { id: "data-lake", title: "4.2 Shared Data Services", Component: SharedDataService },
+    { id: "api-gateway", title: "4.3 API Gateway", Component: APIGatewayService },
+    { id: "security-layer", title: "4.4 Security Layer", Component: SecurityLayerService },
+  ];
+
+  const renderServiceList = (services: any[]) => {
+    if (selectedService) {
+      const service = services.find(s => s.id === selectedService);
+      if (service) {
+        const permission = checkPermission(service.title);
+        const isReadOnly = permission === 'view';
+
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedService(null)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Microservices
+              </Button>
+              <h2 className="text-xl font-bold font-display">{service.title}</h2>
+              {isReadOnly && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
+                  <Eye className="h-3 w-3" /> View Only
+                </Badge>
+              )}
+            </div>
+            <service.Component isReadOnly={isReadOnly} />
+          </div>
+        );
+      }
+    }
+
     return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setActiveService(null)}
-          className="gap-2 mb-2"
-        >
-          <ChevronLeft className="h-4 w-4" /> Back to {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-        </Button>
-        <ServiceComponent
-          isReadOnly={false}
-          onEditorToggle={setIsJournalEditorOpen}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {services.map((service) => {
+          const permission = checkPermission(service.title);
+          const hasAccess = permission !== 'none';
+          const isReadOnly = permission === 'view';
+
+          return (
+            <Card
+              key={service.id}
+              className={cn(
+                "cursor-pointer transition-all hover:shadow-md group border-primary/10",
+                !hasAccess ? "opacity-50 grayscale pointer-events-none" : "hover:bg-secondary/50"
+              )}
+              onClick={() => setSelectedService(service.id)}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/5 rounded-lg group-hover:bg-primary/10 transition-colors">
+                    <Settings2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{service.title}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Operational Service</span>
+                  </div>
+                  {isReadOnly && <Eye className="h-3 w-3 text-amber-500" />}
+                  {!hasAccess && <Lock className="h-3 w-3 text-destructive/50" />}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     );
   };
 
-  const renderGrid = (serviceList: any[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-      {serviceList.map((service) => (
-        <Card
-          key={service.id}
-          className="group hover:border-primary/50 cursor-pointer transition-all duration-300 hover:shadow-md"
-          onClick={() => setActiveService(service.id)}
-        >
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-              <service.icon className="h-5 w-5" />
-            </div>
-            <div className="flex-1">
-              <CardTitle className="text-sm font-semibold">{service.name}</CardTitle>
-              <CardDescription className="text-xs line-clamp-1">{service.description}</CardDescription>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-          </CardHeader>
-        </Card>
-      ))}
-    </div>
-  );
-
   return (
     <MainLayout
       title="Finance & Accounting"
-      subtitle={`Business Date: ${businessDate || "Loading..."}`}
+      subtitle={`Microservices Architecture | Business Date: ${businessDate || "Loading..."}`}
       actions={
         <div className="flex items-center gap-3 bg-muted/50 px-3 py-1.5 rounded-full border border-border/50">
           <UserCircle className="h-4 w-4 text-primary" />
@@ -235,29 +250,44 @@ export default function Finance() {
       }
     >
       <div className="space-y-6">
-        {!isJournalEditorOpen && (
-        <Tabs value={activeTab} onValueChange={(v) => {
-          setActiveTab(v);
-          setActiveService(null);
-        }}>
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedService(null); }}>
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
-              {[
-                { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
-                { id: "setup", name: "Setup", icon: Settings2 },
-                { id: "transactions", name: "Transactions", icon: RefreshCw },
-                { id: "reporting", name: "Reporting", icon: FileText },
-                { id: "infrastructure", name: "Infrastructure", icon: Server },
-              ].map((tab) => (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
-                >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.name}
-                </TabsTrigger>
-              ))}
+              <TabsTrigger
+                value="dashboard"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger
+                value="setup"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
+                <Settings2 className="h-4 w-4" />
+                Setup Layer
+              </TabsTrigger>
+              <TabsTrigger
+                value="transactions"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Transaction Layer
+              </TabsTrigger>
+              <TabsTrigger
+                value="reports"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
+                <FileText className="h-4 w-4" />
+                Reporting Layer
+              </TabsTrigger>
+              <TabsTrigger
+                value="infrastructure"
+                className="gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all"
+              >
+                <Server className="h-4 w-4" />
+                Infrastructure
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -301,69 +331,142 @@ export default function Finance() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                title="Total Accounts"
+                value={accounts.length.toString()}
+                change={`${accounts.filter((a) => a.is_active).length} active`}
+                changeType="neutral"
+                icon={BookOpen}
+                delay={200}
+              />
+              <MetricCard
+                title="Journal Entries"
+                value={journalEntries.length.toString()}
+                change={`${journalEntries.filter((e) => e.is_posted).length} posted`}
+                changeType="neutral"
+                icon={FileText}
+                delay={250}
+              />
+              <MetricCard
+                title="Total Liabilities"
+                value={`$${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                change="Outstanding obligations"
+                changeType="neutral"
+                icon={Scale}
+                delay={300}
+              />
+              <MetricCard
+                title="Operational Status"
+                value="Active"
+                change="All layers functional"
+                changeType="positive"
+                icon={RefreshCw}
+                delay={350}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" /> Intelligence Dashboard
-                  </CardTitle>
-                  <CardDescription>Real-time financial health and automated audit status</CardDescription>
+                  <CardTitle className="text-lg">Microservice Health Status</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="h-[200px] flex items-center justify-center border-2 border-dashed rounded-lg bg-muted/20">
-                    <p className="text-muted-foreground text-sm">Financial Analytics Engine Active</p>
+                <CardContent className="space-y-4">
+                  {[
+                    { name: "Setup Layer Services", status: "Operational", color: "text-success" },
+                    { name: "Transaction Layer Services", status: "Operational", color: "text-success" },
+                    { name: "Reporting Layer Services", status: "Operational", color: "text-success" },
+                    { name: "Integration Gateway", status: "Connected", color: "text-primary" },
+                  ].map((s, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <Badge variant="outline" className={cn(s.color, "bg-background")}>{s.status}</Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Quick Access Architecture</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("setup")}>
+                    <Settings2 className="h-5 w-5" />
+                    Setup Layer
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
+                    <RefreshCw className="h-5 w-5" />
+                    Transactions
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
+                    <FileText className="h-5 w-5" />
+                    Reporting
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => { setActiveTab("transactions"); setSelectedService("period-close"); }}>
+                    <Lock className="h-5 w-5" />
+                    Period Close
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <Card className="bg-primary/5 border-primary/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Zap className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Event Bus</p>
+                    <p className="text-sm font-bold">12k events/hr</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Core Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">Active Accounts</span>
-                    <span className="font-bold">{accounts.length}</span>
+              <Card className="bg-success/5 border-success/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <ShieldCheck className="h-8 w-8 text-success" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Security Layer</p>
+                    <p className="text-sm font-bold">100% Policy Match</p>
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">Posted Journals</span>
-                    <span className="font-bold">{journalEntries.filter(e => e.is_posted).length}</span>
+                </CardContent>
+              </Card>
+              <Card className="bg-blue-500/5 border-blue-500/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Server className="h-8 w-8 text-blue-500" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">API Gateway</p>
+                    <p className="text-sm font-bold">24ms Avg Latency</p>
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">Sub-Ledgers</span>
-                    <span className="font-bold">24</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Audit Health</span>
-                    <Badge className="bg-success">Excellent</Badge>
+                </CardContent>
+              </Card>
+              <Card className="bg-purple-500/5 border-purple-500/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Database className="h-8 w-8 text-purple-500" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Data Lake</p>
+                    <p className="text-sm font-bold">85% Optimization</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="setup" className="mt-4">
-            {activeService ? renderServiceContent() : renderGrid(services.setup)}
+          <TabsContent value="setup" className="space-y-4 mt-4">
+            {renderServiceList(setupServices)}
           </TabsContent>
 
-          <TabsContent value="transactions" className="mt-4">
-            {activeService ? renderServiceContent() : renderGrid(services.transactions)}
+          <TabsContent value="transactions" className="space-y-4 mt-4">
+            {renderServiceList(transactionServices)}
           </TabsContent>
 
-          <TabsContent value="reporting" className="mt-4">
-            {activeService ? renderServiceContent() : renderGrid(services.reporting)}
+          <TabsContent value="reports" className="space-y-4 mt-4">
+            {renderServiceList(reportingServices)}
           </TabsContent>
 
-          <TabsContent value="infrastructure" className="mt-4">
-            <EventBusService isReadOnly={infrastructurePermission === 'view'} />
+          <TabsContent value="infrastructure" className="space-y-4 mt-4">
+            {renderServiceList(infrastructureServices)}
           </TabsContent>
         </Tabs>
-        )}
-
-        {isJournalEditorOpen && (
-          <JournalEntryEditor
-            onClose={() => setIsJournalEditorOpen(false)}
-          />
-        )}
       </div>
     </MainLayout>
   );

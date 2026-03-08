@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun, Bell, Mail, Smartphone, Zap, Layout } from "lucide-react";
+import { Moon, Sun, Bell, Mail, Smartphone, Zap } from "lucide-react";
 import { useTheme } from "next-themes";
 import { trackActivity } from "@/utils/auditLogger";
 import { useUIPreferences, useUpdateUIPreferences } from "@/hooks/useSettings";
@@ -63,23 +63,6 @@ export const PreferencesTab = () => {
             </div>
           </div>
           <Switch />
-        </div>
-
-        <div className="flex items-center justify-between p-4 border rounded-lg">
-          <div className="flex items-center gap-3">
-            <Layout className="h-5 w-5 text-primary" />
-            <div>
-              <p className="font-medium">Sidebar Dropdowns</p>
-              <p className="text-sm text-muted-foreground">Enable nested module navigation in the sidebar.</p>
-            </div>
-          </div>
-          <Switch
-            checked={uiPrefs?.sidebar_dropdowns_enabled}
-            onCheckedChange={(checked) => {
-              updateUI.mutate({ ...uiPrefs!, sidebar_dropdowns_enabled: checked });
-              trackActivity("Update UI Preferences", "preferences_update", { sidebar_dropdowns_enabled: checked });
-            }}
-          />
         </div>
 
         <div className="flex items-center justify-between p-4 border rounded-lg bg-primary/5">

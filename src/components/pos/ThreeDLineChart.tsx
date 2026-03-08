@@ -18,13 +18,13 @@ export const ThreeDLineChart: React.FC<ThreeDLineChartProps> = ({
   height = 200,
   width = 600,
 }) => {
-  if (!data || data.length === 0) return null;
+  if (data.length === 0) return null;
 
-  const maxValue = Math.max(...data.map((d) => d.value)) || 1;
+  const maxValue = Math.max(...data.map((d) => d.value));
   const padding = 40;
-  const chartWidth = Math.max(width - padding * 2, 0);
-  const chartHeight = Math.max(height - padding * 2, 0);
-  const stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+  const stepX = chartWidth / (data.length - 1);
 
   const points = data.map((d, i) => ({
     x: padding + i * stepX,
@@ -45,9 +45,7 @@ export const ThreeDLineChart: React.FC<ThreeDLineChartProps> = ({
   );
 
   // Connect the two lines to form a ribbon
-  const ribbonPath = points.length > 0
-    ? `${linePath} L ${points[points.length - 1].x + extrusionDepth} ${points[points.length - 1].y - extrusionDepth} ${extrudedPath.replace("M", "L")} L ${points[0].x} ${points[0].y} Z`
-    : "";
+  const ribbonPath = `${linePath} L ${points[points.length - 1].x + extrusionDepth} ${points[points.length - 1].y - extrusionDepth} ${extrudedPath.replace("M", "L")} L ${points[0].x} ${points[0].y} Z`;
   const id = React.useId();
   const gradientId = `ribbonGradient-${id.replace(/:/g, "")}`;
   const glowId = `glow-${id.replace(/:/g, "")}`;

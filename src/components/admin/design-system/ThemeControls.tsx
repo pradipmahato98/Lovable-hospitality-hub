@@ -3,14 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { UIPreferences } from "@/hooks/useSettings";
-import { Palette, Smartphone, Calendar } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Palette, Smartphone } from "lucide-react";
 
 interface ThemeControlsProps {
   prefs: UIPreferences;
@@ -91,36 +84,6 @@ export const ThemeControls = ({ prefs, onUpdate }: ThemeControlsProps) => {
                 />
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Regional Settings
-          </CardTitle>
-          <CardDescription>Configure date formats and separators for the system.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-secondary/5">
-            <div className="space-y-0.5">
-              <Label>Date Separator</Label>
-              <p className="text-xs text-muted-foreground">Choose the character used to separate day, month, and year.</p>
-            </div>
-            <Select
-              value={prefs.date_separator}
-              onValueChange={(val: "/" | "-") => onUpdate({ date_separator: val })}
-            >
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="/">Forward Slash (/)</SelectItem>
-                <SelectItem value="-">Dash (-)</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>

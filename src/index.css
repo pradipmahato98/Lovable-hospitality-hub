@@ -102,7 +102,7 @@
     --sidebar-foreground: 45 15% 85%;
     --sidebar-primary: 38 92% 55%;
     --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 30% 18%;
+    --sidebar-accent: 222 30% 14%;
     --sidebar-accent-foreground: 45 20% 95%;
     --sidebar-border: 222 25% 15%;
     --sidebar-ring: 38 92% 55%;
@@ -161,22 +161,6 @@
 
   .shadow-elevated {
     box-shadow: var(--shadow-elevated);
-  }
-
-  .shadow-3d {
-    box-shadow:
-      0 1px 1px hsl(var(--foreground) / 0.1),
-      0 2px 2px hsl(var(--foreground) / 0.1),
-      0 4px 4px hsl(var(--foreground) / 0.1),
-      0 8px 8px hsl(var(--foreground) / 0.1);
-  }
-
-  .shadow-3d-gold {
-    box-shadow:
-      0 1px 1px hsl(38 92% 50% / 0.2),
-      0 2px 2px hsl(38 92% 50% / 0.2),
-      0 4px 4px hsl(38 92% 50% / 0.2),
-      0 8px 8px hsl(38 92% 50% / 0.2);
   }
 
   .animate-fade-in {

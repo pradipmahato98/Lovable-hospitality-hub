@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { api } from "@/lib/api-bridge";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+ import { lovable } from "@/integrations/lovable/index";
 
 interface Profile {
   id: string;
@@ -38,7 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await (await api.from("profiles"))
+    const { data, error } = await supabase
+      .from("profiles")
       .select("*")
       .eq("user_id", userId)
       .maybeSingle();
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await api.auth.signIn({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -143,14 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await api.auth.signOut();
+    await supabase.auth.signOut();
     setProfile(null);
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error("No user logged in") };
 
-    const { error } = await (await api.from("profiles"))
+    const { error } = await supabase
+      .from("profiles")
       .update(updates)
       .eq("user_id", user.id);
 

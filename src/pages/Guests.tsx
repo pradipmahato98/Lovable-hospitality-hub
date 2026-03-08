@@ -3,12 +3,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -33,39 +32,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, MoreHorizontal, Eye, Edit, Trash } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuickActions } from "@/contexts/QuickActionsContext";
-import { GuestDetailsDialog } from "@/components/guests/GuestDetailsDialog";
+import { useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useIsAdmin } from "@/hooks/useUserRole";
-import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { useEffect } from "react";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
@@ -95,71 +70,16 @@ const getGuestStatus = (guest: Guest): "vip" | "regular" | "new" => {
 
 const Guests = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { isAdmin } = useIsAdmin();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { data: guests = [], isLoading } = useGuests();
   const { data: feedback = [], createFeedback, respondToFeedback, updateStatus } = useGuestFeedback();
   const { data: loyaltyMembers = [], enrollMember, addPoints } = useLoyaltyMembers();
   const stats = useGuestStats();
-  const { setNewGuestOpen } = useQuickActions();
 
   // Performance optimization: Use a Set for O(1) membership lookups instead of O(M) .some() calls in the list
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
-
-  const deleteGuestMutation = useMutation({
-    mutationFn: async (guestId: string) => {
-      const { error } = await supabase.from("guests").delete().eq("id", guestId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Guest profile deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
-      setDeleteDialogOpen(false);
-      setSelectedGuest(null);
-    },
-    onError: (error) => {
-      toast.error("Failed to delete guest: " + error.message);
-    },
-  });
-
-  const handleDeleteGuest = () => {
-    if (selectedGuest) {
-      deleteGuestMutation.mutate(selectedGuest.id);
-    }
-  };
-
-  const guestIdFromUrl = searchParams.get("guestId");
-
-  useEffect(() => {
-    if (guestIdFromUrl && guests.length > 0) {
-      const guest = guests.find(g => g.id === guestIdFromUrl);
-      if (guest) {
-        setSelectedGuest(guest);
-        setDetailsDialogOpen(true);
-        // Clear param
-        const newParams = new URLSearchParams(searchParams);
-        newParams.delete("guestId");
-        setSearchParams(newParams, { replace: true });
-      }
-    }
-  }, [guestIdFromUrl, guests, searchParams, setSearchParams]);
-
-  const filteredGuests = useMemo(() => {
-    if (!searchQuery.trim()) return guests;
-    const query = searchQuery.toLowerCase();
-    return guests.filter((g) =>
-      `${g.first_name} ${g.last_name}`.toLowerCase().includes(query) ||
-      g.email?.toLowerCase().includes(query) ||
-      g.phone?.toLowerCase().includes(query)
-    );
-  }, [guests, searchQuery]);
 
   const [newFeedback, setNewFeedback] = useState({
     feedback_type: "review",
@@ -171,58 +91,11 @@ const Guests = () => {
 
   const columns: Column<Guest>[] = [
     {
-      key: "actions",
-      header: "",
-      className: "w-[50px]",
-      render: (guest) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}>
-              <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-              <Receipt className="mr-2 h-4 w-4 text-muted-foreground" /> View Folio
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setSelectedGuest(guest); setFeedbackDialogOpen(true); }}>
-              <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" /> Add Feedback
-            </DropdownMenuItem>
-            {!loyaltyMemberIds.has(guest.id) && (
-              <DropdownMenuItem onClick={() => handleEnrollLoyalty(guest.id)}>
-                <Award className="mr-2 h-4 w-4 text-muted-foreground" /> Enroll Loyalty
-              </DropdownMenuItem>
-            )}
-            {isAdmin && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => { setSelectedGuest(guest); setDeleteDialogOpen(true); }}
-                >
-                  <Trash className="mr-2 h-4 w-4" /> Delete Profile
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-    {
       key: "first_name",
       header: "Guest",
       render: (guest) => (
-        <div
-          className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors"
-          onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}
-        >
+        <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={guest.image_url || guest.id_image_url || ""} className="object-cover" />
             <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
               {guest.first_name[0]}{guest.last_name[0]}
             </AvatarFallback>
@@ -246,21 +119,16 @@ const Guests = () => {
       sortable: false,
       render: (guest) => {
         const status = getGuestStatus(guest);
-        return <Badge variant="outline" className={statusColors[status]}>{status?.toUpperCase() || ""}</Badge>;
+        return <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>;
       },
     },
     {
-      key: "folio",
+      key: "id",
       header: "Folio",
       render: (guest) => (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 text-xs font-semibold h-8"
-          onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}
-        >
-          <Receipt className="h-3.5 w-3.5" />
-          FOLIO
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
+          <Receipt className="h-4 w-4 mr-1" />
+          View
         </Button>
       ),
     },
@@ -288,73 +156,40 @@ const Guests = () => {
     }
   };
 
-  const activeMainTab = searchParams.get("tab") || "guests";
-  const setActiveMainTab = (tab: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", tab);
-      return prev;
-    });
-  };
-
   return (
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full sm:w-auto">
-            <ScrollArea className="w-full whitespace-nowrap">
-              <TabsList className="w-full sm:w-auto">
-                <TabsTrigger value="guests" className="gap-2">
-                  <Users className="h-4 w-4" />
-                  Guests
-                </TabsTrigger>
-                <TabsTrigger value="feedback" className="gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Feedback
-                  {stats.pendingFeedback > 0 && <Badge variant="destructive" className="ml-1">{stats.pendingFeedback}</Badge>}
-                </TabsTrigger>
-                <TabsTrigger value="loyalty" className="gap-2">
-                  <Award className="h-4 w-4" />
-                  Loyalty Program
-                </TabsTrigger>
-              </TabsList>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </Tabs>
-
-          <Button
-            variant="gold"
-            size="sm"
-            className="gap-2 w-full sm:w-auto shadow-md hover:shadow-lg transition-all"
-            onClick={() => setNewGuestOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            New Profile
-          </Button>
-        </div>
-
-        <Tabs value={activeMainTab} className="space-y-6">
+        <Tabs defaultValue="guests" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="guests" className="gap-2">
+              <Users className="h-4 w-4" />
+              Guests
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Feedback
+              {stats.pendingFeedback > 0 && <Badge variant="destructive" className="ml-1">{stats.pendingFeedback}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="loyalty" className="gap-2">
+              <Award className="h-4 w-4" />
+              Loyalty Program
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="guests" className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4 w-full sm:w-auto">
-                <div className="flex items-center gap-2">
-                  <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                  <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}>
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="relative flex-1 sm:w-64">
-                  <Plus className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hidden" />
-                  <Input
-                    placeholder="Search profiles..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-4"
-                  />
-                </div>
+              <div className="flex items-center gap-2">
+                <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}>
+                  <List className="h-4 w-4" />
+                </Button>
               </div>
+              <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto">
+                <Plus className="h-4 w-4" />
+                Add Guest
+              </Button>
             </div>
 
             {isLoading ? (
@@ -365,34 +200,20 @@ const Guests = () => {
                   <CardTitle>All Guests</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <DataTable
-                    data={filteredGuests}
-                    columns={columns}
-                    keyExtractor={(guest) => guest.id}
-                    showSearch={false}
-                    emptyMessage="No guests found."
-                    pageSize={10}
-                  />
+                  <DataTable data={guests} columns={columns} keyExtractor={(guest) => guest.id} searchPlaceholder="Search guests..." emptyMessage="No guests found." pageSize={10} />
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {filteredGuests.map((guest, index) => {
+                {guests.map((guest, index) => {
                   const status = getGuestStatus(guest);
                   const isMember = loyaltyMemberIds.has(guest.id);
                   return (
-                    <Card
-                      key={guest.id}
-                      variant="elevated"
-                      className="animate-slide-up hover:shadow-glow transition-all cursor-pointer"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                      onClick={() => { setSelectedGuest(guest); setDetailsDialogOpen(true); }}
-                    >
+                    <Card key={guest.id} variant="elevated" className="animate-slide-up hover:shadow-glow transition-all cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-12 w-12">
-                              <AvatarImage src={guest.image_url || guest.id_image_url || ""} className="object-cover" />
                               <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">
                                 {guest.first_name[0]}{guest.last_name[0]}
                               </AvatarFallback>
@@ -402,7 +223,7 @@ const Guests = () => {
                                 {guest.first_name} {guest.last_name}
                                 {guest.is_vip && <Star className="h-4 w-4 text-primary fill-primary" />}
                               </h3>
-                              <Badge variant="outline" className={statusColors[status]}>{status?.toUpperCase() || ""}</Badge>
+                              <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>
                             </div>
                           </div>
                           {isMember && <Trophy className="h-5 w-5 text-primary" />}
@@ -430,7 +251,7 @@ const Guests = () => {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-wrap gap-2">
                           <Button variant="outline" size="sm" className="flex-1 min-w-[100px]" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
                             <Receipt className="h-4 w-4 mr-1" />
                             Folio
@@ -597,11 +418,11 @@ const Guests = () => {
                           <TableCell className="font-medium">{m.guest ? `${m.guest.first_name} ${m.guest.last_name}` : "-"}</TableCell>
                           <TableCell className="font-mono">{m.member_number}</TableCell>
                           <TableCell>
-                            <Badge className={tierColors[m.tier] || ""}>{m.tier?.toUpperCase() || ""}</Badge>
+                            <Badge className={tierColors[m.tier]}>{m.tier.toUpperCase()}</Badge>
                           </TableCell>
-                          <TableCell className="font-semibold">{(m.points_balance || 0).toLocaleString()}</TableCell>
-                          <TableCell>{(m.lifetime_points || 0).toLocaleString()}</TableCell>
-                          <TableCell>{m.join_date ? format(new Date(m.join_date), "MMM d, yyyy") : "-"}</TableCell>
+                          <TableCell className="font-semibold">{m.points_balance.toLocaleString()}</TableCell>
+                          <TableCell>{m.lifetime_points.toLocaleString()}</TableCell>
+                          <TableCell>{format(new Date(m.join_date), "MMM d, yyyy")}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -611,36 +432,6 @@ const Guests = () => {
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Guest Details Dialog */}
-        <GuestDetailsDialog
-          guest={selectedGuest}
-          open={detailsDialogOpen}
-          onOpenChange={setDetailsDialogOpen}
-        />
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the profile for
-                <strong> {selectedGuest?.first_name} {selectedGuest?.last_name}</strong> and remove all associated data.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteGuest}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={deleteGuestMutation.isPending}
-              >
-                {deleteGuestMutation.isPending ? "Deleting..." : "Delete Profile"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
 
         {/* Feedback Dialog */}
         <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>

@@ -85,10 +85,6 @@ export interface UIPreferences {
   saturation: number;
   // Animations
   animation_preset: "linear" | "smooth" | "spring" | "none";
-  // Localization
-  date_separator: "/" | "-";
-  // Navigation
-  sidebar_dropdowns_enabled: boolean;
   // Release Management
   is_staged: boolean;
   last_published_at?: string;
@@ -115,34 +111,6 @@ export interface APIKey {
 
 export interface APIKeysSettings {
   keys: APIKey[];
-}
-
-export interface InventoryUISettings {
-  barcode_show: boolean;
-  batch_number_show: boolean;
-  branchwise_product_show: boolean;
-  brand_show: boolean;
-  color_show: boolean;
-  display_name_show: boolean;
-  expiration_show: boolean;
-  inventory_item_show: boolean;
-  narcotics_show: boolean;
-  non_stock_show: boolean;
-  opening_detail_show: boolean;
-  other_identifier_show: boolean;
-  perishable_show: boolean;
-  product_desc_show: boolean;
-  product_image_show: boolean;
-  production_item_show: boolean;
-  rack_show: boolean;
-  raw_item_show: boolean;
-  re_order_show: boolean;
-  serial_number_show: boolean;
-  size_show: boolean;
-  sku_show: boolean;
-  hs_code_show: boolean;
-  category_japanese_name_show: boolean;
-  product_japanese_name_show: boolean;
 }
 
 // Default values
@@ -217,8 +185,6 @@ const defaultUIPreferences: UIPreferences = {
   background_opacity: 0.6,
   saturation: 1.2,
   animation_preset: "spring",
-  date_separator: "/",
-  sidebar_dropdowns_enabled: true,
   is_staged: false,
 };
 
@@ -250,58 +216,20 @@ const defaultAPIKeys: APIKeysSettings = {
   keys: [],
 };
 
-const defaultInventoryUISettings: InventoryUISettings = {
-  barcode_show: true,
-  batch_number_show: false,
-  branchwise_product_show: false,
-  brand_show: false,
-  color_show: false,
-  display_name_show: false,
-  expiration_show: true,
-  inventory_item_show: true,
-  narcotics_show: false,
-  non_stock_show: false,
-  opening_detail_show: false,
-  other_identifier_show: false,
-  perishable_show: false,
-  product_desc_show: false,
-  product_image_show: false,
-  production_item_show: false,
-  rack_show: false,
-  raw_item_show: false,
-  re_order_show: true,
-  serial_number_show: false,
-  size_show: false,
-  sku_show: false,
-  hs_code_show: true,
-  category_japanese_name_show: false,
-  product_japanese_name_show: false,
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 // Generic settings fetch hook
 export function useSettings<T>(key: string, defaultValue: T) {
   return useQuery({
     queryKey: ["settings", key],
     queryFn: async () => {
-      try {
-        const { data, error } = await db
-          .from("settings")
-          .select("value")
-          .eq("key", key)
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", key)
+        .maybeSingle();
 
-        if (error) {
-          console.warn(`Settings table issue for ${key}, using default:`, error.message);
-          return defaultValue;
-        }
-        if (!data) return defaultValue;
-        return data.value as unknown as T;
-      } catch (err) {
-        return defaultValue;
-      }
+      if (error) throw error;
+      if (!data) return defaultValue;
+      return data.value as unknown as T;
     },
   });
 }
@@ -312,7 +240,7 @@ export function useUpdateSettings<T>(key: string) {
 
   return useMutation({
     mutationFn: async (settings: T) => {
-      const { data: existing } = await db
+      const { data: existing } = await supabase
         .from("settings")
         .select("id")
         .eq("key", key)
@@ -321,13 +249,13 @@ export function useUpdateSettings<T>(key: string) {
       const jsonValue: Json = settings as unknown as Json;
 
       if (existing) {
-        const { error } = await db
+        const { error } = await supabase
           .from("settings")
           .update({ value: jsonValue })
           .eq("key", key);
         if (error) throw error;
       } else {
-        const { error } = await db
+        const { error } = await supabase
           .from("settings")
           .insert([{ key, value: jsonValue }]);
         if (error) throw error;
@@ -430,14 +358,6 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
-}
-
-export function useInventoryUISettings() {
-  return useSettings<InventoryUISettings>("inventory_ui_settings", defaultInventoryUISettings);
-}
-
-export function useUpdateInventoryUISettings() {
-  return useUpdateSettings<InventoryUISettings>("inventory_ui_settings");
 }
 
 export function useBusinessDate() {

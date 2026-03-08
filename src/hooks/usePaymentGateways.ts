@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
 import { loadStripe } from "@stripe/stripe-js";
-import { generateSecureNumericString } from "@/utils/security";
 
 export interface PaymentGatewayConfig {
   id: string;
@@ -265,7 +264,7 @@ export async function processPayment(
 
       return {
         success: true,
-        transactionId: `STRIPE-${generateSecureNumericString(12)}`,
+        transactionId: `STRIPE-${Date.now()}`,
         redirectUrl: `#stripe-success`,
       };
     } catch (err) {
@@ -301,7 +300,7 @@ export async function processPayment(
             toast.success("Razorpay payment successful!");
             resolve({
               success: true,
-              transactionId: response.razorpay_payment_id || `RZP-${generateSecureNumericString(12)}`,
+              transactionId: response.razorpay_payment_id || `RZP-${Date.now()}`,
             });
           },
           modal: {
@@ -331,7 +330,7 @@ export async function processPayment(
   // Fallback/National gateways simulation
   return {
     success: true,
-    transactionId: `TXN-${gatewayId.toUpperCase()}-${generateSecureNumericString(12)}`,
+    transactionId: `TXN-${gatewayId.toUpperCase()}-${Date.now()}`,
     redirectUrl: `#payment-success-${gatewayId}`,
   };
 }

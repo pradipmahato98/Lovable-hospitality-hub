@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,9 +12,8 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
-import { ReservationDetailsDialog } from "@/components/reservations/ReservationDetailsDialog";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
-import { useReservations, Reservation } from "@/hooks/useReservations";
+import { useReservations } from "@/hooks/useReservations";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -26,26 +24,14 @@ const statusColors: Record<string, string> = {
   "checked-in": "bg-primary/20 text-primary border-primary/30",
   "checked-out": "bg-muted text-muted-foreground border-border",
   cancelled: "bg-destructive/20 text-destructive border-destructive/30",
-  rejected: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const Reservations = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "list";
-
-  const setActiveTab = (tab: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", tab);
-      return prev;
-    });
-  };
-
   const [searchQuery, setSearchQuery] = useState("");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("list");
   const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [checkInOutDialog, setCheckInOutDialog] = useState<{
     open: boolean;
     mode: "check-in" | "check-out";
@@ -179,12 +165,6 @@ const Reservations = () => {
                                         <LogOut className="h-4 w-4 mr-2" />Check Out
                                       </DropdownMenuItem>
                                     )}
-                                    <DropdownMenuItem onClick={() => {
-                                      setSelectedReservation(reservation);
-                                      setDetailsOpen(true);
-                                    }}>
-                                      <Search className="h-4 w-4 mr-2" />View Details
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => navigate(`/front-desk?reservationId=${reservation.id}`)}>
                                       <Receipt className="h-4 w-4 mr-2" />View Folio
                                     </DropdownMenuItem>
@@ -220,11 +200,6 @@ const Reservations = () => {
           open={walkInDialogOpen}
           onOpenChange={setWalkInDialogOpen}
           mode="walk-in"
-        />
-        <ReservationDetailsDialog
-          open={detailsOpen}
-          onOpenChange={setDetailsOpen}
-          reservation={selectedReservation}
         />
       </ErrorBoundary>
     </MainLayout>

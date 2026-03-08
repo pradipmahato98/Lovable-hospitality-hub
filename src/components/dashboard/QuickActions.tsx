@@ -52,13 +52,13 @@ export function QuickActions() {
   ];
 
   const moduleLinks = [
-    { icon: BedDouble, label: "Rooms", to: "/front-desk", color: "text-blue-400" },
+    { icon: BedDouble, label: "Rooms", to: "/rooms", color: "text-blue-400" },
     { icon: ClipboardList, label: "Reservations", to: "/reservations", color: "text-emerald-400" },
     { icon: ShoppingCart, label: "POS", to: "/pos", color: "text-amber-400" },
     { icon: FileText, label: "Reports", to: "/reports", color: "text-accent" },
     { icon: DoorOpen, label: "Housekeeping", to: "/housekeeping", color: "text-cyan-400" },
     { icon: Users, label: "Staff", to: "/staff", color: "text-purple-400" },
-    { icon: Building2, label: "Channel Mgr", to: "/channel-manager", color: "text-pink-400" },
+    { icon: Building2, label: "Channel Mgr", to: "/channels", color: "text-pink-400" },
     { icon: LogIn, label: "Walk-in", to: "/calendar", color: "text-lime-400" },
   ];
 

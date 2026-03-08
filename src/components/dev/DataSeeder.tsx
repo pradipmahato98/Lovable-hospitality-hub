@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { generateSecureNumericString } from "@/utils/security";
 
 interface SeederModule {
   id: string;
@@ -65,7 +64,7 @@ const generateRooms = () => {
     for (let room = 1; room <= 5; room++) {
       const roomNumber = `${floor}0${room}`;
       const typeIndex = (floor + room) % roomTypes.length;
-      const statusIndex = parseInt(generateSecureNumericString(1)) % roomStatuses.length;
+      const statusIndex = Math.floor(Math.random() * roomStatuses.length);
       rooms.push({
         room_number: roomNumber,
         room_type: roomTypes[typeIndex],
@@ -175,15 +174,15 @@ export function DataSeeder() {
           const today = new Date();
           
           for (let i = 0; i < 25; i++) {
-            const checkInOffset = (parseInt(generateSecureNumericString(2)) % 30) - 15; // -15 to +15 days
-            const stayLength = (parseInt(generateSecureNumericString(1)) % 5) + 1; // 1-5 nights
+            const checkInOffset = Math.floor(Math.random() * 30) - 15; // -15 to +15 days
+            const stayLength = Math.floor(Math.random() * 5) + 1; // 1-5 nights
             const checkIn = new Date(today);
             checkIn.setDate(checkIn.getDate() + checkInOffset);
             const checkOut = new Date(checkIn);
             checkOut.setDate(checkOut.getDate() + stayLength);
 
             const statuses = ["confirmed", "checked_in", "checked_out", "cancelled"];
-            let status = statuses[parseInt(generateSecureNumericString(1)) % statuses.length];
+            let status = statuses[Math.floor(Math.random() * statuses.length)];
             
             // Adjust status based on dates
             if (checkIn > today) status = "confirmed";
@@ -195,12 +194,12 @@ export function DataSeeder() {
               room_id: rooms[i % rooms.length].id,
               check_in_date: checkIn.toISOString().slice(0, 10),
               check_out_date: checkOut.toISOString().slice(0, 10),
-              adults: (parseInt(generateSecureNumericString(1)) % 2) + 1,
-              children: (parseInt(generateSecureNumericString(1)) % 2),
+              adults: Math.floor(Math.random() * 2) + 1,
+              children: Math.floor(Math.random() * 2),
               status,
-              total_amount: (100 + (parseInt(generateSecureNumericString(3)) % 200)) * stayLength,
+              total_amount: (100 + Math.floor(Math.random() * 200)) * stayLength,
               payment_status: status === "checked_out" ? "paid" : "pending",
-              source: ["direct", "booking.com", "expedia", "phone"][parseInt(generateSecureNumericString(1)) % 4],
+              source: ["direct", "booking.com", "expedia", "phone"][Math.floor(Math.random() * 4)],
             });
           }
 

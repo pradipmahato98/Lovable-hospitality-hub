@@ -17,18 +17,3 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
-
-## 2025-05-22 - Insecure Randomness for Sensitive Identifiers
-**Vulnerability:** Use of `Math.random()` for generating API keys, reservation codes, and transaction numbers. `Math.random()` is a PRNG and not cryptographically secure, making these identifiers potentially guessable or prone to collisions.
-**Learning:** Developers often reach for `Math.random()` for quick ID generation without considering the security implications in finance or authentication contexts.
-**Prevention:** Centralize secure random generation using `window.crypto.getRandomValues()` in a utility and mandate its use for any identifier that needs to be unguessable or unique across the system.
-
-## 2026-02-12 - Predictable Identifiers via Date.now()
-**Vulnerability:** Use of `Date.now()` for generating transaction numbers, invoice IDs, and payment references. Timestamps are highly predictable and can lead to identifier enumeration or collisions in high-concurrency scenarios.
-**Learning:** Developers often substitute `Date.now()` for `Math.random()` thinking it's "unique enough," but it lacks the entropy required for security-sensitive business identifiers.
-**Prevention:** Always use cryptographically secure random numeric or alphanumeric strings for identifiers that are exposed to users or used for financial reconciliation. Ensure the same identifier is generated once and reused for linked records (e.g., payment gateway ref and local DB record).
-
-## 2026-02-15 - Hardcoded E2EE Secrets & Broken Decryption
-**Vulnerability:** The E2EE module used hardcoded master password and salt in the source code, and guest PII (id_number) was being stored encrypted but displayed in its ciphertext form in the UI. Additionally, some entry points (useAddGuestDocument) bypassed encryption entirely.
-**Learning:** Security features like E2EE are only as strong as their key management. Hardcoding keys makes the encryption trivial to bypass. Furthermore, security features must be implemented consistently across all data entry/retrieval paths.
-**Prevention:** Always use environment variables for system-wide secrets. Centralize encryption/decryption logic in an API bridge or utility layer and ensure all data hooks automatically handle the transformation to keep the UI clean and secure.

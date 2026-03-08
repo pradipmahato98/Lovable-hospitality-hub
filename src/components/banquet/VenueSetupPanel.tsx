@@ -41,9 +41,6 @@ import {
   Armchair,
   Lightbulb,
   Mic2,
-  Eye,
-  X,
-  ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -127,14 +124,8 @@ const defaultSetupChecklist: Omit<SetupItem, "id">[] = [
 
 export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [venueFilter, setVenueFilter] = useState<string>("all");
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
-  const [noSetupDialogOpen, setNoSetupDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
 
   // Local state for venue setups (would be DB in production)
@@ -151,74 +142,15 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     setupNotes: "",
   });
 
-  // Filter and Sort active events
+  // Filter active events
   const activeEvents = useMemo(() => {
-    const result = events.filter((e) => {
-      const matchesSearch =
-        e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const isConfirmed = e.status === "confirmed" || e.status === "in_progress";
-      const matchesStatus = statusFilter === "all" || e.status === statusFilter;
-      const matchesType = typeFilter === "all" || e.event_type === typeFilter;
-      const matchesVenue = venueFilter === "all" || e.venue === venueFilter;
-
-      return isConfirmed && matchesSearch && matchesStatus && matchesType && matchesVenue;
-    });
-
-    if (sortConfig) {
-      result.sort((a, b) => {
-        let aValue: string | number | null | undefined;
-        let bValue: string | number | null | undefined;
-
-        if (sortConfig.key === 'progress') {
-          const aSetup = venueSetups.find(s => s.eventId === a.id);
-          const bSetup = venueSetups.find(s => s.eventId === b.id);
-          aValue = getSetupProgress(aSetup);
-          bValue = getSetupProgress(bSetup);
-        } else if (sortConfig.key === 'layout') {
-          const aSetup = venueSetups.find(s => s.eventId === a.id);
-          const bSetup = venueSetups.find(s => s.eventId === b.id);
-          aValue = aSetup?.layoutType ?? '';
-          bValue = bSetup?.layoutType ?? '';
-        } else {
-          aValue = a[sortConfig.key as keyof BanquetEvent];
-          bValue = b[sortConfig.key as keyof BanquetEvent];
-        }
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [events, searchQuery, statusFilter, typeFilter, venueFilter, sortConfig, venueSetups]);
-
-  const uniqueVenues = useMemo(() => {
-    const venues = events.map(e => e.venue).filter(Boolean);
-    return Array.from(new Set(venues));
-  }, [events]);
-
-  const handleSort = (key: string) => {
-    setSortConfig((prev) => {
-      if (prev?.key === key) {
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
-      }
-      return { key, direction: "asc" };
-    });
-  };
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-    setTypeFilter("all");
-    setVenueFilter("all");
-    setSortConfig(null);
-  };
+    return events.filter(
+      (e) =>
+        (e.status === "confirmed" || e.status === "in_progress") &&
+        (e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [events, searchQuery]);
 
   // Get setup for an event
   const getSetupForEvent = (eventId: string) => {
@@ -257,16 +189,6 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const handleOpenChecklist = (event: BanquetEvent) => {
     setSelectedEvent(event);
     setChecklistDialogOpen(true);
-  };
-
-  const handleEyeClick = (event: BanquetEvent) => {
-    const setup = getSetupForEvent(event.id);
-    if (!setup) {
-      setSelectedEvent(event);
-      setNoSetupDialogOpen(true);
-    } else {
-      handleOpenSetupDialog(event);
-    }
   };
 
   const handleSaveSetup = () => {
@@ -423,139 +345,48 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
         </Card>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-9"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            <Button variant="outline" size="sm" onClick={clearFilters} className="gap-2 whitespace-nowrap">
-              Clear Filters
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium uppercase text-muted-foreground">Event Type</Label>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="wedding">Wedding</SelectItem>
-                <SelectItem value="corporate">Corporate</SelectItem>
-                <SelectItem value="birthday">Birthday</SelectItem>
-                <SelectItem value="conference">Conference</SelectItem>
-                <SelectItem value="social">Social</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium uppercase text-muted-foreground">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium uppercase text-muted-foreground">Venue</Label>
-            <Select value={venueFilter} onValueChange={setVenueFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Venues" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Venues</SelectItem>
-                {uniqueVenues.map(venue => (
-                  <SelectItem key={venue} value={venue}>{venue}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Search */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
       </div>
 
       {/* Events Table */}
       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layout className="h-5 w-5" />
+            Venue Setup Tracking
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead onClick={() => handleSort('event_name')} className="cursor-pointer hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-center gap-2">
-                    Event
-                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('event_date')} className="cursor-pointer hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-center gap-2">
-                    Date
-                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('venue')} className="cursor-pointer hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-center gap-2">
-                    Venue
-                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('layout')} className="cursor-pointer hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-center gap-2">
-                    Layout
-                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </TableHead>
-                <TableHead>Equipment</TableHead>
-                <TableHead onClick={() => handleSort('progress')} className="cursor-pointer hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-center gap-2">
-                    Checklist
-                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('status')} className="cursor-pointer hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-center gap-2">
-                    Status
-                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {activeEvents.length === 0 ? (
+          {activeEvents.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              No confirmed events requiring setup
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                    No active events requiring setup
-                  </TableCell>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Venue</TableHead>
+                  <TableHead>Layout</TableHead>
+                  <TableHead>Equipment</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ) : (
-                activeEvents.map((event) => {
+              </TableHeader>
+              <TableBody>
+                {activeEvents.map((event) => {
                   const setup = getSetupForEvent(event.id);
                   const progress = getSetupProgress(setup);
                   const layout = setup
@@ -564,23 +395,13 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                   return (
                     <TableRow key={event.id}>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEyeClick(event)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                      <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
                           <p className="text-xs text-muted-foreground">{event.client_name}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{event.event_date}</TableCell>
-                      <TableCell className="text-sm">{event.venue}</TableCell>
+                      <TableCell>{event.event_date}</TableCell>
+                      <TableCell>{event.venue}</TableCell>
                       <TableCell>
                         {setup ? (
                           <Badge variant="outline">{layout?.name || setup.layoutType}</Badge>
@@ -609,21 +430,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                       <TableCell>
                         {setup ? (
-                          <div className="flex flex-col items-center gap-2 py-1">
-                            <div className="w-24">
-                              <Progress value={progress} className="h-2" />
-                              <p className="text-[10px] text-muted-foreground mt-1 text-center">
-                                {progress.toFixed(0)}%
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenChecklist(event)}
-                              className="h-6 text-[10px] px-2"
-                            >
-                              Checklist
-                            </Button>
+                          <div className="w-24">
+                            <Progress value={progress} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {progress.toFixed(0)}%
+                            </p>
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
@@ -631,31 +442,41 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                       <TableCell>
                         {setup ? (
-                          <Badge variant="outline" className={`${statusColors[setup.setupStatus]} text-[10px]`}>
+                          <Badge variant="outline" className={statusColors[setup.setupStatus]}>
                             {setup.setupStatus.replace("_", " ")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-muted text-[10px]">
+                          <Badge variant="outline" className="bg-muted">
                             No setup
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenSetupDialog(event)}
-                          className="h-8 text-xs"
-                        >
-                          {setup ? "Edit" : "Setup"}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenSetupDialog(event)}
+                          >
+                            {setup ? "Edit" : "Setup"}
+                          </Button>
+                          {setup && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenChecklist(event)}
+                            >
+                              Checklist
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
-                })
-              )}
-            </TableBody>
-          </Table>
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -861,44 +682,6 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* No Setup Dialog */}
-      <Dialog open={noSetupDialogOpen} onOpenChange={setNoSetupDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              No Venue Setup
-            </DialogTitle>
-            <DialogDescription>
-              This event does not have a venue setup configured yet.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {selectedEvent && (
-              <div className="p-3 rounded-lg bg-muted border">
-                <p className="font-medium">{selectedEvent.event_name}</p>
-                <p className="text-sm text-muted-foreground">{selectedEvent.client_name}</p>
-                <div className="flex gap-4 mt-2 text-sm">
-                  <span>{selectedEvent.venue}</span>
-                  <span>{selectedEvent.guest_count} guests</span>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setNoSetupDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              setNoSetupDialogOpen(false);
-              if (selectedEvent) handleOpenSetupDialog(selectedEvent);
-            }}>
-              Configure Setup
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,38 +1,24 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Users, History, ShieldAlert, Loader2, ShieldCheck, UserPlus } from "lucide-react";
+import { Users, History, ShieldAlert, Loader2 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole } from "@/hooks/useUsersWithRoles";
-import { UsersTable, AuditLogTable, PermissionsTab, InviteUserDialog } from "@/components/users";
+import { UsersTable, AuditLogTable } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 const UserManagement = () => {
   useAdminRealtime();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "users";
-
-  const setActiveTab = (tab: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", tab);
-      return prev;
-    });
-  };
-
   const [searchQuery, setSearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
   const [auditRoleFilter, setAuditRoleFilter] = useState<string>("all");
   const [auditDateFilter, setAuditDateFilter] = useState<string>("all");
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
-  const canAccess = isAdmin || import.meta.env.DEV;
-  const [inviteOpen, setInviteOpen] = useState(false);
 
-  const { data: users, isLoading: isLoadingUsers } = useUsersWithRoles(canAccess);
-  const { data: auditLogs, isLoading: isLoadingAudit } = useRoleChangeAudit(canAccess);
+  const { data: users, isLoading: isLoadingUsers } = useUsersWithRoles(isAdmin);
+  const { data: auditLogs, isLoading: isLoadingAudit } = useRoleChangeAudit(isAdmin);
   const updateRole = useUpdateUserRole();
 
   const handleRoleChange = (userId: string, oldRole: AppRole, newRole: AppRole) => {
@@ -54,28 +40,14 @@ const UserManagement = () => {
   }
 
   return (
-    <MainLayout
-      title="User Management"
-      subtitle="Manage user roles and permissions (Admin only)"
-      headerActions={
-        <Button
-          variant="primary"
-          size="sm"
-          className="gap-2"
-          onClick={() => setInviteOpen(true)}
-        >
-          <UserPlus className="h-4 w-4" />
-          Invite User
-        </Button>
-      }
-    >
+    <MainLayout title="User Management" subtitle="Manage user roles and permissions (Admin only)">
       <ErrorBoundary>
         <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
           <ShieldAlert className="h-4 w-4" />
           <span>You are viewing admin-only settings. Role changes take effect immediately.</span>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="users" className="space-y-6">
           <div className="overflow-x-auto pb-1 scrollbar-hide">
             <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
@@ -85,10 +57,6 @@ const UserManagement = () => {
               <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
                 <History className="h-4 w-4" />
                 Audit Log
-              </TabsTrigger>
-              <TabsTrigger value="permissions" className="gap-2 whitespace-nowrap">
-                <ShieldCheck className="h-4 w-4" />
-                Permissions
               </TabsTrigger>
             </TabsList>
           </div>
@@ -116,16 +84,7 @@ const UserManagement = () => {
               onDateFilterChange={setAuditDateFilter}
             />
           </TabsContent>
-
-          <TabsContent value="permissions">
-            <PermissionsTab />
-          </TabsContent>
         </Tabs>
-
-        <InviteUserDialog
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-        />
       </ErrorBoundary>
     </MainLayout>
   );

@@ -7,9 +7,6 @@ interface SidebarContextType {
   isMobile: boolean;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
-  openGroups: string[];
-  setOpenGroups: (groups: string[] | ((prev: string[]) => string[])) => void;
-  toggleGroup: (label: string) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -18,7 +15,6 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -27,7 +23,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         setMobileOpen(false);
       }
     };
-
+    
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -35,25 +31,14 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const toggleCollapsed = () => setCollapsed(prev => !prev);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups(prev =>
-      prev.includes(label)
-        ? prev.filter(l => l !== label)
-        : [...prev, label]
-    );
-  };
-
   return (
-    <SidebarContext.Provider value={{
-      collapsed,
-      setCollapsed,
-      toggleCollapsed,
-      isMobile,
-      mobileOpen,
-      setMobileOpen,
-      openGroups,
-      setOpenGroups,
-      toggleGroup
+    <SidebarContext.Provider value={{ 
+      collapsed, 
+      setCollapsed, 
+      toggleCollapsed, 
+      isMobile, 
+      mobileOpen, 
+      setMobileOpen 
     }}>
       {children}
     </SidebarContext.Provider>

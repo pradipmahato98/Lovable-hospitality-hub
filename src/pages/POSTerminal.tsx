@@ -39,7 +39,6 @@ import {
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { generateSecureNumericString } from "@/utils/security";
 import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
@@ -173,11 +172,9 @@ const POSTerminal = () => {
       return;
     }
 
-    const transactionNumber = `POS-${generateSecureNumericString(12)}`;
-
     try {
       if (paymentMethod === "wallet" && selectedGateway) {
-        const result = await processPayment(selectedGateway, total, "USD", transactionNumber);
+        const result = await processPayment(selectedGateway, total, "USD", `POS-${Date.now()}`);
         if (!result.success) {
           toast.error(`Payment failed: ${result.error}`);
           return;
@@ -188,7 +185,7 @@ const POSTerminal = () => {
       const { data, error } = await supabase
         .from("pos_transactions")
         .insert({
-          transaction_number: transactionNumber,
+          transaction_number: `POS-${Date.now()}`,
           table_number: "Counter", // Placeholder for walk-in
           customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
           subtotal: subtotal,

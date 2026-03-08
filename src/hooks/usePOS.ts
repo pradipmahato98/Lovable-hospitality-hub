@@ -2,7 +2,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { generateSecureNumericString } from "@/utils/security";
 
 // ============= Types =============
 export interface POSTable {
@@ -308,7 +307,9 @@ export function useCreatePOSTransaction() {
       const transactionNumber = `TXN-${new Date()
         .toISOString()
         .slice(0, 10)
-        .replace(/-/g, "")}-${generateSecureNumericString(4)}`;
+        .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, "0")}`;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const insertData: any = {
@@ -364,7 +365,9 @@ export async function saveTransaction(
   const transactionNumber = `TXN-${new Date()
     .toISOString()
     .slice(0, 10)
-    .replace(/-/g, "")}-${generateSecureNumericString(4)}`;
+    .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0")}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const insertData: any = {

@@ -37,21 +37,23 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { useBusinessDate } from "@/hooks/useSettings";
-import { JournalEntryEditor } from "./JournalEntryEditor";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
-  onEditorToggle?: (isOpen: boolean) => void;
 }
 
-export function JournalManagementService({ isReadOnly, onEditorToggle }: JournalManagementServiceProps) {
-  const [journalEditorOpen, setJournalEditorOpen] = useState(false);
+export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
+  const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [postingDialogOpen, setPostingDialogOpen] = useState(false);
-
-  const toggleEditor = (open: boolean) => {
-    setJournalEditorOpen(open);
-    onEditorToggle?.(open);
-  };
+  const [newJournalEntry, setNewJournalEntry] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    description: "",
+    reference: "",
+    lines: [
+      { account_id: "", debit: 0, credit: 0 },
+      { account_id: "", debit: 0, credit: 0 },
+    ],
+  });
   const [quickPost, setQuickPost] = useState({
     account_id: "",
     contra_account_id: "",
@@ -65,6 +67,52 @@ export function JournalManagementService({ isReadOnly, onEditorToggle }: Journal
   const createJournalEntry = useCreateJournalEntry();
   const postJournalEntry = usePostJournalEntry();
   const { data: businessDate } = useBusinessDate();
+
+  const handleCreateJournalEntry = async () => {
+    if (!newJournalEntry.description) {
+      toast.error("Please enter a description");
+      return;
+    }
+
+    const validLines = newJournalEntry.lines.filter(
+      (l) => l.account_id && (l.debit > 0 || l.credit > 0)
+    );
+
+    if (validLines.length < 2) {
+      toast.error("Please add at least two lines");
+      return;
+    }
+
+    const totalDebit = validLines.reduce((sum, l) => sum + l.debit, 0);
+    const totalCredit = validLines.reduce((sum, l) => sum + l.credit, 0);
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      toast.error("Debits must equal credits");
+      return;
+    }
+
+    try {
+      await createJournalEntry.mutateAsync({
+        date: newJournalEntry.date,
+        description: newJournalEntry.description,
+        reference: newJournalEntry.reference || null,
+        lines: validLines,
+      });
+      toast.success("Journal entry created");
+      setJournalDialogOpen(false);
+      setNewJournalEntry({
+        date: new Date().toISOString().slice(0, 10),
+        description: "",
+        reference: "",
+        lines: [
+          { account_id: "", debit: 0, credit: 0 },
+          { account_id: "", debit: 0, credit: 0 },
+        ],
+      });
+    } catch (error) {
+      toast.error("Failed to create journal entry");
+    }
+  };
 
   const handlePostEntry = async (entryId: string) => {
     try {
@@ -118,9 +166,21 @@ export function JournalManagementService({ isReadOnly, onEditorToggle }: Journal
     }
   };
 
-  if (journalEditorOpen) {
-    return <JournalEntryEditor onClose={() => toggleEditor(false)} />;
-  }
+  const addJournalLine = () => {
+    setNewJournalEntry((prev) => ({
+      ...prev,
+      lines: [...prev.lines, { account_id: "", debit: 0, credit: 0 }],
+    }));
+  };
+
+  const updateJournalLine = (index: number, field: string, value: any) => {
+    setNewJournalEntry((prev) => ({
+      ...prev,
+      lines: prev.lines.map((line, i) =>
+        i === index ? { ...line, [field]: value } : line
+      ),
+    }));
+  };
 
   return (
     <div className="space-y-6">
@@ -135,7 +195,7 @@ export function JournalManagementService({ isReadOnly, onEditorToggle }: Journal
               <Send className="h-4 w-4" />
               Quick Post
             </Button>
-            <Button onClick={() => toggleEditor(true)} className="gap-2">
+            <Button onClick={() => setJournalDialogOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               New Journal Entry
             </Button>
@@ -164,62 +224,27 @@ export function JournalManagementService({ isReadOnly, onEditorToggle }: Journal
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Voucher Type</TableHead>
-                  <TableHead>Voucher No.</TableHead>
-                  <TableHead>Transaction Date</TableHead>
+                  <TableHead>Entry #</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Debit</TableHead>
+                  <TableHead className="text-right">Credit</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Entry By</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {journalEntries.map((entry) => {
                   const totalDebit = entry.lines?.reduce((sum: number, l: any) => sum + (l.debit || 0), 0) || 0;
-                  const creatorName = entry.created_by_profile
-                    ? `${entry.created_by_profile.first_name || ""} ${entry.created_by_profile.last_name || ""}`.trim()
-                    : "System";
-                  const createdDate = new Date(entry.created_at).toLocaleString([], {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
+                  const totalCredit = entry.lines?.reduce((sum: number, l: any) => sum + (l.credit || 0), 0) || 0;
 
                   return (
                     <TableRow key={entry.id}>
-                      <TableCell>
-                        {!entry.is_posted && !isReadOnly && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePostEntry(entry.id)}
-                            disabled={postJournalEntry.isPending}
-                            className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Post
-                          </Button>
-                        )}
-                        {entry.is_posted && (
-                          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                            Completed
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="font-mono">
-                          {entry.voucher_type || "JV"}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="font-mono text-primary">{entry.entry_number}</TableCell>
                       <TableCell>{entry.date}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
-                      <TableCell className="text-right font-mono font-bold">
-                        ${totalDebit.toFixed(2)}
-                      </TableCell>
+                      <TableCell>{entry.description}</TableCell>
+                      <TableCell className="text-right font-mono">${totalDebit.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono">${totalCredit.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
@@ -229,10 +254,17 @@ export function JournalManagementService({ isReadOnly, onEditorToggle }: Journal
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{creatorName}</span>
-                          <span className="text-xs text-muted-foreground">{createdDate}</span>
-                        </div>
+                        {!entry.is_posted && !isReadOnly && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePostEntry(entry.id)}
+                            disabled={postJournalEntry.isPending}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Post
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -243,6 +275,97 @@ export function JournalManagementService({ isReadOnly, onEditorToggle }: Journal
         </CardContent>
       </Card>
 
+      <Dialog open={journalDialogOpen} onOpenChange={setJournalDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Journal Entry</DialogTitle>
+            <DialogDescription>Enter debits and credits for this transaction</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={newJournalEntry.date}
+                  onChange={(e) => setNewJournalEntry((p) => ({ ...p, date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Description</Label>
+                <Input
+                  placeholder="Transaction description"
+                  value={newJournalEntry.description}
+                  onChange={(e) => setNewJournalEntry((p) => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reference (Optional)</Label>
+              <Input
+                placeholder="Invoice #, Check #, etc."
+                value={newJournalEntry.reference}
+                onChange={(e) => setNewJournalEntry((p) => ({ ...p, reference: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Lines</Label>
+              <div className="space-y-2">
+                {newJournalEntry.lines.map((line, index) => (
+                  <div key={index} className="grid grid-cols-4 gap-2">
+                    <Select
+                      value={line.account_id}
+                      onValueChange={(v) => updateJournalLine(index, "account_id", v)}
+                    >
+                      <SelectTrigger className="col-span-2">
+                        <SelectValue placeholder="Select account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.code} - {acc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Debit"
+                      value={line.debit || ""}
+                      onChange={(e) => updateJournalLine(index, "debit", parseFloat(e.target.value) || 0)}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Credit"
+                      value={line.credit || ""}
+                      onChange={(e) => updateJournalLine(index, "credit", parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" onClick={addJournalLine}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Line
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-muted-foreground">
+                Debit: ${newJournalEntry.lines.reduce((s, l) => s + l.debit, 0).toFixed(2)} |
+                Credit: ${newJournalEntry.lines.reduce((s, l) => s + l.credit, 0).toFixed(2)}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setJournalDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateJournalEntry} disabled={createJournalEntry.isPending}>
+                  {createJournalEntry.isPending ? "Creating..." : "Create Entry"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Posting Dialog */}
       <Dialog open={postingDialogOpen} onOpenChange={setPostingDialogOpen}>

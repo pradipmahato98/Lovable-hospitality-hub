@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { StaffDirectoryTab } from "@/components/staff/StaffDirectoryTab";
 import { PersonalDetailsTab } from "@/components/staff/PersonalDetailsTab";
 import { PreferencesTab } from "@/components/staff/PreferencesTab";
 import { AlertsTab } from "@/components/staff/AlertsTab";
@@ -20,32 +21,24 @@ import { LogsReportTab } from "@/components/staff/LogsReportTab";
 import { cn } from "@/lib/utils";
 
 const StaffManagement = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
 
-  const activeTab = searchParams.get("tab") || "about";
+  const activeTab = searchParams.get("tab") || (isAdmin || isManager ? "directory" : "about");
   const subTab = searchParams.get("sub") || "details";
 
   const handleTabChange = (value: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", value);
-      if (value === "about") {
-        prev.set("sub", subTab);
-      } else {
-        prev.delete("sub");
-      }
-      return prev;
-    });
+    if (value === "about") {
+      navigate(`/staff?tab=about&sub=${subTab}`, { replace: true });
+    } else {
+      navigate(`/staff?tab=${value}`, { replace: true });
+    }
   };
 
   const handleSubTabChange = (value: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", "about");
-      prev.set("sub", value);
-      return prev;
-    });
+    navigate(`/staff?tab=about&sub=${value}`, { replace: true });
   };
 
   if (loadingAdmin || loadingManager) {
@@ -66,6 +59,13 @@ const StaffManagement = () => {
         <div className="flex flex-col md:flex-row gap-6 md:gap-10">
           <aside className="w-full md:w-64 flex-shrink-0">
             <TabsList className="flex md:flex-col h-auto w-full bg-card/50 border border-border/50 p-2 gap-1 overflow-x-auto md:overflow-visible justify-start md:items-stretch rounded-xl scrollbar-hide">
+              {canSeeRestricted && (
+                <TabsTrigger value="directory" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                  <Users className="h-4 w-4" />
+                  <span className="whitespace-nowrap">Staff Directory</span>
+                </TabsTrigger>
+              )}
+
               <TabsTrigger value="about" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
                 <Info className="h-4 w-4" />
                 <span className="whitespace-nowrap">About Staff</span>
@@ -79,6 +79,10 @@ const StaffManagement = () => {
           </aside>
 
           <main className="flex-1 min-w-0">
+            <TabsContent value="directory" className="mt-0">
+              {canSeeRestricted && <StaffDirectoryTab />}
+            </TabsContent>
+
             <TabsContent value="about" className="mt-0">
               <Tabs value={subTab} onValueChange={handleSubTabChange} className="w-full">
                 <div className="mb-6 overflow-x-auto pb-1">

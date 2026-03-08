@@ -31,7 +31,7 @@ export function RoomStatusGrid() {
     <Card variant="elevated" className="animate-slide-up" style={{ animationDelay: "300ms" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Room Status</CardTitle>
-        <a href="/front-desk" className="text-sm text-primary hover:underline">
+        <a href="/rooms" className="text-sm text-primary hover:underline">
           Manage rooms
         </a>
       </CardHeader>

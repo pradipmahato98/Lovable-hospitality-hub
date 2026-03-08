@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { generateSecureNumericString } from "@/utils/security";
 
 // ============= Types =============
 export interface Account {
@@ -20,18 +19,10 @@ export interface JournalEntry {
   id: string;
   entry_number: string;
   date: string;
-  miti?: string;
-  fiscal_year?: string;
-  voucher_type?: string;
   description: string;
   reference: string | null;
-  attachments?: { name: string; url: string; type: string }[];
   is_posted: boolean;
   created_by: string | null;
-  created_by_profile?: {
-    first_name: string | null;
-    last_name: string | null;
-  };
   created_at: string;
   updated_at: string;
   lines?: JournalLine[];
@@ -41,7 +32,6 @@ export interface JournalLine {
   id: string;
   journal_entry_id: string;
   account_id: string;
-  sub_ledger?: string | null;
   debit: number;
   credit: number;
   description: string | null;
@@ -185,7 +175,6 @@ export function useJournalEntries(filters?: {
   const query = useQuery({
     queryKey: ["journal-entries", filters],
     queryFn: async () => {
-      // Basic fetch without complex profile join to avoid PGRST200 schema cache issues in local dev
       let q = db
         .from("journal_entries")
         .select(`
@@ -216,7 +205,6 @@ export function useJournalEntries(filters?: {
 
       return (data || []).map((entry: any) => ({
         ...entry,
-        voucher_type: "JV", // Default to Journal Voucher
         lines: entry.journal_lines || [],
       })) as JournalEntry[];
     },
@@ -259,22 +247,16 @@ export function useCreateJournalEntry() {
   return useMutation({
     mutationFn: async (entry: {
       date: string;
-      miti?: string;
-      fiscal_year?: string;
-      voucher_type?: string;
       description: string;
       reference?: string | null;
-      attachments?: { name: string; url: string; type: string }[];
-      lines: {
-        account_id: string;
-        sub_ledger?: string | null;
-        debit: number;
-        credit: number;
-        description?: string | null;
-      }[];
+      lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
     }) => {
-      // Generate entry number if not provided (should follow format: [Prefix]-[FY]-XX)
-      const entryNumber = entry.reference || `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumericString(4)}`;
+      // Generate entry number
+      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
+        Math.random() * 10000
+      )
+        .toString()
+        .padStart(4, "0")}`;
 
       // Insert journal entry
       const { data: journalEntry, error: entryError } = await db
@@ -282,12 +264,8 @@ export function useCreateJournalEntry() {
         .insert({
           entry_number: entryNumber,
           date: entry.date,
-          miti: entry.miti,
-          fiscal_year: entry.fiscal_year,
-          voucher_type: entry.voucher_type,
           description: entry.description,
           reference: entry.reference ?? null,
-          attachments: entry.attachments || [],
           is_posted: false,
         })
         .select()
@@ -302,7 +280,6 @@ export function useCreateJournalEntry() {
       const lines = entry.lines.map((line) => ({
         journal_entry_id: journalEntry.id,
         account_id: line.account_id,
-        sub_ledger: line.sub_ledger || null,
         debit: line.debit,
         credit: line.credit,
         description: line.description ?? null,
@@ -498,7 +475,7 @@ export function useTrialBalance(asOfDate?: string) {
       const { data, error } = await q;
 
       if (error) {
-        console.warn("Error fetching trial balance, returning empty:", error.message);
+        console.error("Error fetching trial balance:", error);
         return [];
       }
 

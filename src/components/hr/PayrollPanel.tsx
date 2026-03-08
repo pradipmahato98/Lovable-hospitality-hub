@@ -37,20 +37,9 @@ import {
   Users,
   Calculator,
   Download,
-  Eye,
-  FileDown,
-  FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { SalarySlip } from "./SalarySlip";
-import {
-  downloadSalarySlipPDF,
-  downloadSalarySlipExcel,
-  deriveSalaryDetails,
-  EmployeeInfo,
-  SalaryDetails
-} from "@/utils/salaryUtils";
 
 interface PayrollRecord {
   id: string;
@@ -95,8 +84,6 @@ export function PayrollPanel() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockInDialogOpen, setClockInDialogOpen] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
-  const [previewSlipOpen, setPreviewSlipOpen] = useState(false);
-  const [selectedRecordForSlip, setSelectedRecordForSlip] = useState<PayrollRecord | null>(null);
 
   // Real-time clock update
   useEffect(() => {
@@ -161,23 +148,6 @@ export function PayrollPanel() {
     toast.success("Marked as paid");
   };
 
-  const getSalaryDetailsFromRecord = (record: PayrollRecord): SalaryDetails => {
-    return deriveSalaryDetails(record.netPay, record.deductions);
-  };
-
-  const getEmployeeInfoFromRecord = (record: PayrollRecord): EmployeeInfo => {
-    return {
-      employeeName: record.employeeName,
-      employeeId: record.employeeId,
-      designation: "Staff Member", // Mock designation
-      department: record.department,
-      payPeriod: record.payPeriod,
-      employeePan: "ABCDE1234F", // Mock PAN
-      bankAccountNo: "XXXX-XXXX-1234", // Mock Bank Acc
-      dateOfPayment: format(new Date(), "yyyy-MM-dd"),
-    };
-  };
-
   const calculateDuration = (clockIn: Date, clockOut: Date | null) => {
     const end = clockOut || currentTime;
     const diff = end.getTime() - clockIn.getTime();
@@ -219,7 +189,7 @@ export function PayrollPanel() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Payroll</p>
-              <p className="text-2xl font-bold">₹{stats.totalPayroll.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${stats.totalPayroll.toLocaleString()}</p>
               </div>
               <DollarSign className="h-8 w-8 text-success" />
             </div>
@@ -342,7 +312,6 @@ export function PayrollPanel() {
                   <TableHead>Overtime</TableHead>
                   <TableHead>Net Pay</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Salary Slip</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -364,55 +333,33 @@ export function PayrollPanel() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="font-semibold">₹{record.netPay.toLocaleString()}</TableCell>
+                    <TableCell className="font-semibold">${record.netPay.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[record.status]}>
                         {record.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {(record.status === "paid" || record.status === "processed") ? (
+                      {record.status === "pending" && (
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="gap-2"
                           onClick={() => {
-                            setSelectedRecordForSlip(record);
-                            setPreviewSlipOpen(true);
+                            setSelectedPayroll(record);
+                            setProcessDialogOpen(true);
                           }}
                         >
-                          <FileText className="h-4 w-4" />
-                          View Slip
+                          Process
                         </Button>
-                      ) : (
-                        <span className="text-muted-foreground text-xs italic">Pending process</span>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {record.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPayroll(record);
-                              setProcessDialogOpen(true);
-                            }}
-                          >
-                            Process
-                          </Button>
-                        )}
-                        {record.status === "processed" && (
-                          <Button variant="ghost" size="sm" onClick={() => handleMarkAsPaid(record.id)}>
-                            Mark Paid
-                          </Button>
-                        )}
-                        {record.status === "paid" && (
-                          <Badge variant="outline" className="bg-success/20 text-success border-success/30 px-3 py-1">
-                            Completed
-                          </Badge>
-                        )}
-                      </div>
+                      {record.status === "processed" && (
+                        <Button variant="ghost" size="sm" onClick={() => handleMarkAsPaid(record.id)}>
+                          Mark Paid
+                        </Button>
+                      )}
+                      {record.status === "paid" && (
+                        <span className="text-xs text-muted-foreground">Completed</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -451,54 +398,6 @@ export function PayrollPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* Salary Slip Preview Dialog */}
-      <Dialog open={previewSlipOpen} onOpenChange={setPreviewSlipOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Salary Slip Preview</DialogTitle>
-            <DialogDescription>
-              Preview and download salary slip for {selectedRecordForSlip?.employeeName}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedRecordForSlip && (
-            <div className="space-y-6">
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => downloadSalarySlipPDF(
-                    getEmployeeInfoFromRecord(selectedRecordForSlip),
-                    getSalaryDetailsFromRecord(selectedRecordForSlip)
-                  )}
-                >
-                  <FileDown className="h-4 w-4" />
-                  PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => downloadSalarySlipExcel(
-                    getEmployeeInfoFromRecord(selectedRecordForSlip),
-                    getSalaryDetailsFromRecord(selectedRecordForSlip)
-                  )}
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Excel
-                </Button>
-              </div>
-
-              <div className="border rounded-lg p-4 bg-slate-50">
-                <SalarySlip
-                  {...getEmployeeInfoFromRecord(selectedRecordForSlip)}
-                  details={getSalaryDetailsFromRecord(selectedRecordForSlip)}
-                />
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Process Payroll Dialog */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
         <DialogContent>
@@ -513,19 +412,19 @@ export function PayrollPanel() {
               <div className="p-4 rounded-lg bg-secondary/50 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Base Salary</span>
-                  <span>₹{selectedPayroll.baseSalary.toLocaleString()}</span>
+                  <span>${selectedPayroll.baseSalary.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Overtime ({selectedPayroll.overtime}h)</span>
-                  <span className="text-success">+₹{(selectedPayroll.overtime * 25).toLocaleString()}</span>
+                  <span className="text-success">+${(selectedPayroll.overtime * 25).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Deductions</span>
-                  <span className="text-destructive">-₹{selectedPayroll.deductions.toLocaleString()}</span>
+                  <span className="text-destructive">-${selectedPayroll.deductions.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-semibold border-t border-border pt-2">
                   <span>Net Pay</span>
-                  <span className="text-primary">₹{selectedPayroll.netPay.toLocaleString()}</span>
+                  <span className="text-primary">${selectedPayroll.netPay.toLocaleString()}</span>
                 </div>
               </div>
               <Button variant="gold" className="w-full" onClick={handleProcessPayroll}>
