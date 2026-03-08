@@ -8,10 +8,9 @@ export function useOTASync() {
 
   const syncMutation = useMutation({
     mutationFn: async (otaName: string) => {
-      // Simulate API call to OTA
       console.log(`Syncing with ${otaName}...`);
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("ota_sync_logs")
         .insert({
           ota_name: otaName,
@@ -26,7 +25,7 @@ export function useOTASync() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "Sync Successful",
         description: `Successfully synchronized with ${data.ota_name}.`,
