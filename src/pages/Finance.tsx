@@ -65,11 +65,6 @@ import { AuditReportingService } from "@/components/finance/reporting/AuditRepor
 import { ConsolidationBIService } from "@/components/finance/reporting/ConsolidationBIService";
 import { FinanceTrialBalanceTab } from "@/components/finance/tabs/TrialBalanceTab";
 
-// Infrastructure components
-import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
-import { SharedDataService } from "@/components/finance/infrastructure/SharedDataService";
-import { APIGatewayService } from "@/components/finance/infrastructure/APIGatewayService";
-import { SecurityLayerService } from "@/components/finance/infrastructure/SecurityLayerService";
 
 import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
 import { useFinancialStats } from "@/hooks/useFinanceExtended";
