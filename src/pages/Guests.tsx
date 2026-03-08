@@ -38,6 +38,7 @@ import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
 import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
 import { GuestMergeTool } from "@/components/guests/GuestMergeTool";
+import { NewGuestDialog } from "@/components/quick-actions/NewGuestDialog";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
