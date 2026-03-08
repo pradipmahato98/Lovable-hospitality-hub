@@ -302,8 +302,8 @@ const POSTerminal = () => {
 
           {/* Items Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {filteredItems.map(item => {
-              const Icon = item.icon;
+            {filteredItems.map((item: any) => {
+              const Icon = item.icon || Coffee;
               return (
                 <Card
                   key={item.id}
