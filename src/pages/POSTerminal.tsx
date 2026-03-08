@@ -62,6 +62,8 @@ const categoryIcons: Record<string, any> = {
 const POSTerminal = () => {
   const navigate = useNavigate();
   useAdminRealtime();
+  const { data: dbMenuItems = [] } = useMenuItems();
+  const { data: dbCategories = [] } = useMenuCategories();
   const [activeTab, setActiveTab] = useState("tables");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
