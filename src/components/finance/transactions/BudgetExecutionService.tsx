@@ -1,122 +1,87 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  TrendingUp,
-  BarChart3,
-  Plus,
-  RefreshCw,
-  AlertCircle,
-  ChevronDown,
-  ArrowUpRight,
-  ArrowDownRight
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TrendingUp, BarChart3, AlertCircle, ArrowDownRight } from "lucide-react";
+import { useBudgets } from "@/hooks/useBudgets";
+import { useExpenses } from "@/hooks/useFinanceExtended";
 import { cn } from "@/lib/utils";
 
-interface BudgetExecutionServiceProps {
-  isReadOnly?: boolean;
-}
+export function BudgetExecutionService({ isReadOnly }: { isReadOnly?: boolean }) {
+  const { data: budgets } = useBudgets();
+  const { data: expenses } = useExpenses();
 
-export function BudgetExecutionService({ isReadOnly }: BudgetExecutionServiceProps) {
-  const departmentalBudgets = [
-    { dept: 'Rooms Division', budget: 120000, actual: 115000, variance: 5000, status: 'Under' },
-    { dept: 'Food & Beverage', budget: 85000, actual: 92000, variance: -7000, status: 'Over' },
-    { dept: 'Marketing', budget: 15000, actual: 12500, variance: 2500, status: 'Under' },
-    { dept: 'Maintenance', budget: 22000, actual: 24500, variance: -2500, status: 'Over' },
-    { dept: 'Administration', budget: 18000, actual: 17800, variance: 200, status: 'Under' },
-  ];
+  // Aggregate expenses by category as a proxy for department budgets
+  const expenseByCategory = (expenses || [])
+    .filter(e => e.status === "paid" || e.status === "approved")
+    .reduce<Record<string, number>>((acc, e) => {
+      acc[e.category] = (acc[e.category] || 0) + e.amount;
+      return acc;
+    }, {});
+
+  const activeBudget = (budgets || []).find(b => b.status === "active") || (budgets || [])[0];
+  const totalBudgeted = activeBudget?.total_amount || 0;
+  const totalActual = Object.values(expenseByCategory).reduce((s, v) => s + v, 0);
+  const variance = totalBudgeted - totalActual;
+  const utilization = totalBudgeted > 0 ? (totalActual / totalBudgeted) * 100 : 0;
+
+  const departments = Object.entries(expenseByCategory).map(([dept, actual]) => {
+    const budgeted = totalBudgeted > 0 ? totalBudgeted / Object.keys(expenseByCategory).length : 0;
+    return { dept, budgeted, actual, variance: budgeted - actual, status: budgeted >= actual ? "Under" : "Over" };
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold font-display flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" /> Budget Execution
-          </h2>
-          <p className="text-muted-foreground text-sm">Monitor real-time variance, record revisions, and track departmental spending.</p>
-        </div>
-        <div className="flex gap-2">
-           <Button variant="outline" className="gap-2">
-              <RefreshCw className="h-4 w-4" /> Run Forecast
-           </Button>
-           {!isReadOnly && (
-             <Button className="gap-2">
-               <Plus className="h-4 w-4" /> Revised Budget
-             </Button>
-           )}
-        </div>
+      <div>
+        <h2 className="text-xl font-bold font-display flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" /> Budget Execution
+        </h2>
+        <p className="text-muted-foreground text-sm">Monitor real-time variance and departmental spending.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs uppercase text-muted-foreground">Period Performance</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-             <div>
-                <h3 className="text-2xl font-bold font-display text-success">-2.4%</h3>
-                <p className="text-[10px] text-muted-foreground">Under budget overall</p>
-             </div>
-             <div className="p-2 bg-success/10 rounded-full">
-                <ArrowDownRight className="h-5 w-5 text-success" />
-             </div>
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold font-display">{utilization.toFixed(1)}%</h3>
+              <p className="text-[10px] text-muted-foreground">Budget utilization</p>
+            </div>
+            <div className="p-2 bg-primary/10 rounded-full"><BarChart3 className="h-5 w-5 text-primary" /></div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs uppercase text-muted-foreground">Critical Variance</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-             <div>
-                <h3 className="text-2xl font-bold font-display text-destructive">+$7,000</h3>
-                <p className="text-[10px] text-muted-foreground">F&B Cost Overrun</p>
-             </div>
-             <div className="p-2 bg-destructive/10 rounded-full">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-             </div>
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <h3 className={cn("text-2xl font-bold font-display", variance >= 0 ? "text-success" : "text-destructive")}>
+                {variance >= 0 ? "+" : ""}${variance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </h3>
+              <p className="text-[10px] text-muted-foreground">{variance >= 0 ? "Under budget" : "Over budget"}</p>
+            </div>
+            <div className={cn("p-2 rounded-full", variance >= 0 ? "bg-success/10" : "bg-destructive/10")}>
+              {variance >= 0 ? <ArrowDownRight className="h-5 w-5 text-success" /> : <AlertCircle className="h-5 w-5 text-destructive" />}
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs uppercase text-muted-foreground">Utilization</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-             <div>
-                <h3 className="text-2xl font-bold font-display">84.2%</h3>
-                <p className="text-[10px] text-muted-foreground">Budget used to date</p>
-             </div>
-             <div className="p-2 bg-primary/10 rounded-full">
-                <BarChart3 className="h-5 w-5 text-primary" />
-             </div>
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold font-display">${totalActual.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+              <p className="text-[10px] text-muted-foreground">Actual spend (of ${totalBudgeted.toLocaleString()})</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Departmental Variance Log</CardTitle>
-            <CardDescription>Comparison of budgeted vs actual operational spend</CardDescription>
-          </div>
-          <Button variant="ghost" size="sm" className="h-8">
-            Filter Month <ChevronDown className="h-3 w-3 ml-1" />
-          </Button>
+        <CardHeader>
+          <CardTitle>Category Variance</CardTitle>
+          <CardDescription>Actual vs estimated spend by expense category</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Department</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead className="text-right">Budgeted</TableHead>
                 <TableHead className="text-right">Actual</TableHead>
                 <TableHead className="text-right">Variance</TableHead>
@@ -124,24 +89,20 @@ export function BudgetExecutionService({ isReadOnly }: BudgetExecutionServicePro
               </TableRow>
             </TableHeader>
             <TableBody>
-              {departmentalBudgets.map((item) => (
+              {departments.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No expense data available</TableCell></TableRow>
+              ) : departments.map(item => (
                 <TableRow key={item.dept}>
-                  <TableCell className="font-medium text-sm">{item.dept}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">${item.budget.toLocaleString()}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">${item.actual.toLocaleString()}</TableCell>
-                  <TableCell className={cn(
-                    "text-right font-mono text-xs font-bold",
-                    item.variance >= 0 ? "text-success" : "text-destructive"
-                  )}>
-                    {item.variance >= 0 ? '+' : ''}${item.variance.toLocaleString()}
+                  <TableCell className="font-medium text-sm capitalize">{item.dept}</TableCell>
+                  <TableCell className="text-right font-mono text-xs">${item.budgeted.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right font-mono text-xs">${item.actual.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className={cn("text-right font-mono text-xs font-bold", item.variance >= 0 ? "text-success" : "text-destructive")}>
+                    {item.variance >= 0 ? "+" : ""}${item.variance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="outline" className={cn(
-                      "text-[10px] uppercase font-bold px-1.5 h-5",
-                      item.status === 'Under' ? "text-success border-success/20 bg-success/5" : "text-destructive border-destructive/20 bg-destructive/5"
-                    )}>
-                      {item.status}
-                    </Badge>
+                    <Badge variant="outline" className={cn("text-[10px] uppercase",
+                      item.status === "Under" ? "text-success border-success/20 bg-success/5" : "text-destructive border-destructive/20 bg-destructive/5"
+                    )}>{item.status}</Badge>
                   </TableCell>
                 </TableRow>
               ))}
