@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { CreditCard, Plus, RotateCcw, ArrowDownToLine } from "lucide-react";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 export function KeyCardManagement() {
   const { data: logs = [], issueCard, returnCard, replaceCard } = useKeyCards();
