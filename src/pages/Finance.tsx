@@ -120,12 +120,6 @@ const reportSubTabs: SubTabDef[] = [
   { id: "consolidation", label: "Consolidation & BI", component: ConsolidationBIService },
 ];
 
-const infraSubTabs: SubTabDef[] = [
-  { id: "event-bus", label: "Event Bus", component: EventBusService },
-  { id: "data-lake", label: "Shared Data", component: SharedDataService },
-  { id: "api-gateway", label: "API Gateway", component: APIGatewayService },
-  { id: "security", label: "Security Layer", component: SecurityLayerService },
-];
 
 function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: string }) {
   const [activeSubTab, setActiveSubTab] = useState(defaultTab || tabs[0]?.id || "");
