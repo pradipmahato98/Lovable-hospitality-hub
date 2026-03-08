@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, Menu, Moon, Sun, User, X, LogOut } from "lucide-react";
+import { Bell, Search, Menu, Moon, Sun, User, X, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
