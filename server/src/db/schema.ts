@@ -9,6 +9,7 @@ export const profiles = pgTable("profiles", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   email: text("email").unique(),
+  passwordHash: text("password_hash"), // 🔐 Sentinel: Added for authentication
   phone: text("phone"),
   avatarUrl: text("avatar_url"),
   isBlocked: boolean("is_blocked").default(false),
@@ -22,6 +23,13 @@ export const userRoles = pgTable("user_roles", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
   role: appRoleEnum("role").notNull().default("user"),
+});
+
+// Role Permissions Table
+export const rolePermissions = pgTable("role_permissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  role: appRoleEnum("role").notNull(),
+  permission: text("permission").notNull(),
 });
 
 // Rooms Table
@@ -83,4 +91,18 @@ export const reservations = pgTable("reservations", {
   createdBy: uuid("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Audit Log Table
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id"),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id"),
+  oldValues: jsonb("old_values"),
+  newValues: jsonb("new_values"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
