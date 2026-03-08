@@ -163,6 +163,7 @@ const Settings = () => {
               />
             )}
             {activeTab === "broadcast" && <BroadcastSettings />}
+            {activeTab === "configure" && <ConfigureModuleCard />}
             {activeTab === "security" && <SecuritySettingsCard />}
           </div>
         </div>
