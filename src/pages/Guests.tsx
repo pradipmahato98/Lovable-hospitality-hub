@@ -44,7 +44,7 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
