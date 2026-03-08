@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UIPreferences } from "@/hooks/useSettings";
 import { Rocket, ShieldCheck, Clock, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 interface ReleaseWorkflowProps {
   livePrefs: UIPreferences | undefined;
