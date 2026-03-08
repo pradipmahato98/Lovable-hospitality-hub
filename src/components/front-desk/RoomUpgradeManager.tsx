@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useRooms } from "@/hooks/useRooms";
-import { useReservations } from "@/hooks/useReservations";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,6 @@ import {
 import { ArrowUpCircle, Sparkles, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
 
 const db = supabase as any;
 
