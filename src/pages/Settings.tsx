@@ -65,6 +65,7 @@ const Settings = () => {
     { id: "property" as const, icon: Hotel, label: "Property Details" },
     { id: "notifications" as const, icon: Bell, label: "Notifications" },
     { id: "broadcast" as const, icon: Megaphone, label: "Broadcasts" },
+    { id: "configure" as const, icon: Settings2, label: "Configure" },
     { id: "security" as const, icon: Shield, label: "Security" },
   ];
 
