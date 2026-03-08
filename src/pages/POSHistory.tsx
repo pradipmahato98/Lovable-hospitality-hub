@@ -171,7 +171,7 @@ export default function POSHistory() {
     doc.setFontSize(18);
     doc.text("POS Transaction History", 14, 22);
     doc.setFontSize(10);
-    doc.text(`Generated: ${format(new Date(), "PPpp")}`, 14, 30);
+    doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 30);
 
     if (startDate || endDate) {
       doc.text(`Period: ${startDate || "Start"} to ${endDate || "Now"}`, 14, 36);
