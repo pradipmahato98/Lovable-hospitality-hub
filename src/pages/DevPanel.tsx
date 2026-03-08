@@ -76,15 +76,10 @@ const DevPanel = () => {
   const { isAdmin, isLoading } = useIsAdmin();
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
-  const [emailConfig, setEmailConfig] = useState<EmailConfig>({
-    enabled: false,
-    provider: "resend",
-    roleChangeNotifications: true,
-    bookingNotifications: true,
-    systemAlerts: true,
-  });
+  const { data: emailConfig } = useSettings<EmailConfig>("email_config", defaultEmailConfig);
+  const updateEmailConfig = useUpdateSettings<EmailConfig>("email_config");
 
-  // Fetch users with multiple roles
+  const currentEmailConfig = emailConfig ?? defaultEmailConfig;
   const { data: usersWithMultipleRoles, isLoading: isLoadingRoles, refetch: refetchRoles } = useQuery({
     queryKey: ["users-with-multiple-roles"],
     queryFn: async () => {
