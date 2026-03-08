@@ -7,7 +7,11 @@ import {
   rolePermissions,
   auditLog,
   userRoles,
-  profiles
+  profiles,
+  otaChannels,
+  staffMembers,
+  housekeepingTasks,
+  lostAndFound
 } from "@/db/schema";
 
 const api = new Hono();
@@ -20,5 +24,9 @@ api.route("/role_permissions", createCRUDRouter(rolePermissions, "role_permissio
 api.route("/audit_log", createCRUDRouter(auditLog, "audit_log"));
 api.route("/user_roles", createCRUDRouter(userRoles, "user_roles"));
 api.route("/profiles", createCRUDRouter(profiles, "profiles"));
+api.route("/ota_channels", createCRUDRouter(otaChannels, "ota_channels"));
+api.route("/staff_members", createCRUDRouter(staffMembers, "staff_members"));
+api.route("/housekeeping_tasks", createCRUDRouter(housekeepingTasks, "housekeeping_tasks"));
+api.route("/lost_and_found", createCRUDRouter(lostAndFound, "lost_and_found"));
 
 export default api;

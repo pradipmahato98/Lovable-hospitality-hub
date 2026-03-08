@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/integrations/supabase/types";
 
@@ -38,12 +38,14 @@ export function usePermissions() {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
+      // 🔄 Sentinel: Refactored to use api.from() for backend abstraction
+      const { data: rolesRes, error: rolesError } = await (await api.from("user_roles"))
         .select("role")
         .eq("user_id", user.id);
 
-      if (rolesError || !roles || roles.length === 0) return [];
+      const roles = (rolesRes as any[]) || [];
+
+      if (rolesError || roles.length === 0) return [];
 
       const userRoles = roles.map(r => r.role);
       const isAdmin = userRoles.includes("admin");
@@ -53,23 +55,24 @@ export function usePermissions() {
       }
 
       try {
-        const { data: permissions, error: permissionsError } = await supabase
-          .from("role_permissions")
+        const { data: permissionsRes, error: permissionsError } = await (await api.from("role_permissions"))
           .select("role, permission")
           .in("role", userRoles);
+
+        const permissions = (permissionsRes as any[]) || [];
 
         if (permissionsError) {
           console.warn("Could not fetch permissions from database, using defaults:", permissionsError.message);
           return userRoles.flatMap(role =>
-            (DEFAULT_PERMISSIONS[role] || []).map(permission => ({ role, permission }))
+            (DEFAULT_PERMISSIONS[role as AppRole] || []).map(permission => ({ role, permission }))
           ) as UserPermission[];
         }
 
-        return (permissions || []) as UserPermission[];
+        return permissions as UserPermission[];
       } catch (err) {
         console.warn("Exception while fetching permissions, using defaults");
         return userRoles.flatMap(role =>
-          (DEFAULT_PERMISSIONS[role] || []).map(permission => ({ role, permission }))
+          (DEFAULT_PERMISSIONS[role as AppRole] || []).map(permission => ({ role, permission }))
         ) as UserPermission[];
       }
     },

@@ -91,4 +91,25 @@ auth.post("/login", zValidator("json", loginSchema), async (c) => {
   });
 });
 
+/**
+ * Returns the current authenticated user's profile.
+ */
+auth.get("/me", async (c) => {
+  const token = c.req.header("Authorization")?.split(" ")[1];
+  if (!token) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_PUBLIC_KEY, { algorithms: ["RS256"] }) as { sub: string };
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.userId, decoded.sub),
+    });
+
+    if (!profile) return c.json({ error: "User not found" }, 404);
+
+    return c.json({ user: { id: profile.userId, email: profile.email, first_name: profile.firstName, last_name: profile.lastName } });
+  } catch (err) {
+    return c.json({ error: "Invalid token" }, 401);
+  }
+});
+
 export default auth;

@@ -9,7 +9,7 @@ import { encryptWithKey, decryptWithKey, deriveKey } from "@/utils/encryption";
 
 // Toggle between Supabase and Custom Backend
 // 🚀 Switching to Custom Backend to use the production-grade isolated system
-const USE_CUSTOM_BACKEND = true;
+export const USE_CUSTOM_BACKEND = true;
 const BACKEND_URL = "http://localhost:3000/api/v1";
 
 export interface ApiResponse<T> {
@@ -38,6 +38,27 @@ export const api = {
   },
 
   /**
+   * Centralized Guest ID Encryption/Decryption
+   */
+  async encryptGuestId(idNumber: string): Promise<string> {
+    if (!idNumber) return idNumber;
+    const encryptedString = await this.encryptSensitive(idNumber);
+    const [_, iv, encrypted] = encryptedString.split(":");
+    return `e2ee:${iv}:${encrypted}`;
+  },
+
+  async decryptGuestId(prefixedId: string | null): Promise<string | null> {
+    if (!prefixedId || !prefixedId.startsWith("e2ee:")) return prefixedId;
+    try {
+      const [_, iv, encrypted] = prefixedId.split(":");
+      return await this.decryptSensitive(`enc:${iv}:${encrypted}`);
+    } catch (error) {
+      console.error("🛡️ Sentinel: Decryption failed for ID:", prefixedId, error);
+      return prefixedId;
+    }
+  },
+
+  /**
    * Data Operations
    */
   async from(tableName: string) {
@@ -56,6 +77,10 @@ export const api = {
         },
         eq(column: string, value: any) {
           this.query.filters.push({ type: 'eq', column, value });
+          return this;
+        },
+        in(column: string, values: any[]) {
+          this.query.filters.push({ type: 'in', column, value: values });
           return this;
         },
         order(column: string, { ascending = true } = {}) {
@@ -92,7 +117,7 @@ export const api = {
             eq: (col: string, val: any) => {
               this.query.filters.push({ type: 'eq', column: col, value: val });
               return {
-                select: () => ({ single: execute }),
+                select: () => ({ single: execute, execute }),
                 execute
               };
             }
@@ -161,7 +186,7 @@ export const api = {
             const data = await response.json();
             const result = Array.isArray(data) ? data : data.data || [];
             resolve({
-              data: this.query.single ? result[0] || null : result,
+              data: this.query.single ? (Array.isArray(result) ? result[0] : result) || null : result,
               error: response.ok ? null : new Error("Fetch failed")
             });
           } catch (error) {
@@ -171,7 +196,7 @@ export const api = {
       };
       return builder;
     } else {
-      return supabase.from(tableName as any);
+      return (supabase as any).from(tableName);
     }
   },
 
@@ -203,6 +228,24 @@ export const api = {
       } else {
         return await supabase.auth.signOut();
       }
+    },
+
+    async getUser() {
+       if (USE_CUSTOM_BACKEND) {
+         const token = localStorage.getItem('token');
+         if (!token) return { data: { user: null }, error: null };
+
+         try {
+           const response = await fetch(`${BACKEND_URL}/auth/me`, {
+             headers: { 'Authorization': `Bearer ${token}` }
+           });
+           const result = await response.json();
+           return { data: { user: result.user }, error: response.ok ? null : new Error(result.error) };
+         } catch (e) {
+           return { data: { user: null }, error: e as Error };
+         }
+       }
+       return await supabase.auth.getUser();
     }
   },
 
@@ -238,5 +281,13 @@ export const api = {
         return supabase.storage.from(bucketName);
       }
     }
-  }
+  },
+
+  channel(name: string) {
+    return {
+      on: function() { return this; },
+      subscribe: () => ({ unsubscribe: () => {} })
+    };
+  },
+  removeChannel: (c: any) => {}
 };

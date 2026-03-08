@@ -1,24 +1,43 @@
 import { Hono } from "hono";
 import { db } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * Creates a standard CRUD router for a given Drizzle table.
- * Supports GET (list), GET (single), POST (create), PATCH (update), and DELETE.
+ * Supports GET (list with filtering), GET (single), POST (create), PATCH (update), and DELETE.
  */
 export function createCRUDRouter(table: any, tableName: string) {
   const router = new Hono();
 
-  // List all items
+  // List items with basic filtering support
   router.get("/", async (c) => {
-    const data = await db.select().from(table);
+    const filtersRaw = c.req.query("filters");
+    let query = db.select().from(table);
+
+    if (filtersRaw) {
+      try {
+        const filters = JSON.parse(filtersRaw);
+        // Apply filters (basic support for eq and in)
+        for (const f of filters) {
+          if (f.type === 'eq') {
+            query = query.where(eq(table[f.column] || table.userId, f.value)) as any;
+          } else if (f.type === 'in' && Array.isArray(f.value) && f.value.length > 0) {
+            query = query.where(inArray(table[f.column], f.value)) as any;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse filters in CRUD router", e);
+      }
+    }
+
+    const data = await query;
     return c.json(data);
   });
 
   // Get single item by ID
   router.get("/:id", async (c) => {
     const id = c.req.param("id");
-    const [item] = await db.select().from(table).where(eq(table.id, id));
+    const [item] = await db.select().from(table).where(eq(table.id || table.userId, id));
     if (!item) return c.json({ error: "Not found" }, 404);
     return c.json(item);
   });
@@ -30,12 +49,10 @@ export function createCRUDRouter(table: any, tableName: string) {
     return c.json(newItem, 201);
   });
 
-  // Update item (Simulated filter handling for bridge parity)
+  // Update item
   router.patch("/", async (c) => {
     const { updates, filters } = await c.req.json();
-    // In a real generic implementation, we'd iterate filters
-    // For now, we assume standard 'id' based updates if filters present
-    const id = filters?.find((f: any) => f.column === 'id' || f.column === 'user_id')?.value;
+    const id = filters?.find((f: any) => f.column === 'id' || f.column === 'user_id' || f.column === 'userId')?.value;
 
     if (!id) return c.json({ error: "Missing ID for update" }, 400);
 
@@ -50,7 +67,7 @@ export function createCRUDRouter(table: any, tableName: string) {
   // Delete item
   router.delete("/", async (c) => {
     const { filters } = await c.req.json();
-    const id = filters?.find((f: any) => f.column === 'id' || f.column === 'user_id')?.value;
+    const id = filters?.find((f: any) => f.column === 'id' || f.column === 'user_id' || f.column === 'userId')?.value;
 
     if (!id) return c.json({ error: "Missing ID for deletion" }, 400);
 

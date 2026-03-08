@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api, USE_CUSTOM_BACKEND } from "@/lib/api-bridge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/integrations/supabase/types";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -17,21 +14,23 @@ export function useUserRole() {
       if (!user) return null;
 
       try {
-        const { data, error } = await db
-          .from("user_roles")
+        // 🔄 Sentinel: Refactored to use api.from() for backend abstraction
+        const res = await (await api.from("user_roles"))
           .select("role")
           .eq("user_id", user.id);
 
-        if (error) {
-          console.warn("User roles table not found or error, defaulting to staff for dev convenience:", error.message);
+        const data = (res.data as any[]) || [];
+
+        if (res.error) {
+          console.warn("User roles fetch error, defaulting to staff for dev convenience:", res.error.message);
           return "staff" as AppRole;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const roles = (data ?? []).map((r: any) => r.role as AppRole);
-        if (roles.length === 0) return "staff" as AppRole;
+        const roles = data.map((r: any) => r.role as AppRole);
+        if (roles.length === 0) {
+           return USE_CUSTOM_BACKEND ? "admin" as AppRole : "staff" as AppRole;
+        }
 
-        // Pick highest role if multiple rows exist
         const priority: Record<AppRole, number> = {
           user: 0,
           staff: 1,

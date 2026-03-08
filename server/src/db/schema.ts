@@ -9,7 +9,7 @@ export const profiles = pgTable("profiles", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   email: text("email").unique(),
-  passwordHash: text("password_hash"), // 🔐 Sentinel: Added for authentication
+  passwordHash: text("password_hash"),
   phone: text("phone"),
   avatarUrl: text("avatar_url"),
   isBlocked: boolean("is_blocked").default(false),
@@ -30,6 +30,67 @@ export const rolePermissions = pgTable("role_permissions", {
   id: uuid("id").primaryKey().defaultRandom(),
   role: appRoleEnum("role").notNull(),
   permission: text("permission").notNull(),
+});
+
+// Staff Members Table
+export const staffMembers = pgTable("staff_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employeeId: text("employee_id").notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  department: text("department").notNull(),
+  position: text("position").notNull(),
+  status: text("status").notNull().default("active"),
+  hireDate: timestamp("hire_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Housekeeping Tasks Table
+export const housekeepingTasks = pgTable("housekeeping_tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roomId: uuid("room_id").notNull(),
+  taskType: text("task_type").notNull(),
+  priority: text("priority").notNull().default("normal"),
+  status: text("status").notNull().default("pending"),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  notes: text("notes"),
+  assignedTo: uuid("assigned_to"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Lost and Found Table
+export const lostAndFound = pgTable("lost_and_found", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  itemDescription: text("item_description").notNull(),
+  foundLocation: text("found_location").notNull(),
+  foundBy: text("found_by"),
+  foundDate: timestamp("found_date").notNull(),
+  category: text("category"),
+  status: text("status").notNull().default("stored"),
+  storageLocation: text("storage_location"),
+  notes: text("notes"),
+  claimedBy: text("claimed_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// OTA Channels Table
+export const otaChannels = pgTable("ota_channels", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  apiEndpoint: text("api_endpoint"),
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  syncStatus: text("sync_status"),
+  lastSyncAt: timestamp("last_sync_at"),
+  settings: jsonb("settings"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Rooms Table

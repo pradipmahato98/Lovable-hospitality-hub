@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-bridge";
 import { useHousekeepingTasks, useLostAndFound, useHousekeepingStats } from "@/hooks/useHousekeeping";
 import { format } from "date-fns";
 
@@ -79,9 +79,10 @@ const Housekeeping = () => {
   const { data: rooms, isLoading: loadingRooms, refetch } = useQuery({
     queryKey: ["housekeeping-rooms"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").order("room_number");
+      // 🔄 Sentinel: Refactored to use api.from() for backend abstraction
+      const { data, error } = await (await api.from("rooms")).select("*").order("room_number");
       if (error) throw error;
-      return data.map((room, index) => ({
+      return (data as any[]).map((room, index) => ({
         ...room,
         housekeeping_status: ["clean", "dirty", "inspected", "in_progress", "dirty"][index % 5] as RoomStatus,
         assigned_to: index % 3 === 0 ? "Maria G." : index % 3 === 1 ? "John D." : undefined,
@@ -111,9 +112,9 @@ const Housekeeping = () => {
     notes: "",
   });
 
-  const floors = rooms ? [...new Set(rooms.map((r) => r.floor))].sort() : [];
+  const floors = (rooms as any[]) ? [...new Set((rooms as any[]).map((r) => r.floor))].sort() : [];
 
-  const filteredRooms = rooms?.filter((room) => {
+  const filteredRooms = (rooms as any[])?.filter((room) => {
     const matchesStatus = filterStatus === "all" || room.housekeeping_status === filterStatus;
     const matchesFloor = filterFloor === "all" || room.floor.toString() === filterFloor;
     return matchesStatus && matchesFloor;
@@ -146,10 +147,10 @@ const Housekeeping = () => {
   };
 
   const roomStats = {
-    clean: rooms?.filter((r) => r.housekeeping_status === "clean").length || 0,
-    dirty: rooms?.filter((r) => r.housekeeping_status === "dirty").length || 0,
-    inProgress: rooms?.filter((r) => r.housekeeping_status === "in_progress").length || 0,
-    inspected: rooms?.filter((r) => r.housekeeping_status === "inspected").length || 0,
+    clean: (rooms as any[])?.filter((r) => r.housekeeping_status === "clean").length || 0,
+    dirty: (rooms as any[])?.filter((r) => r.housekeeping_status === "dirty").length || 0,
+    inProgress: (rooms as any[])?.filter((r) => r.housekeeping_status === "in_progress").length || 0,
+    inspected: (rooms as any[])?.filter((r) => r.housekeeping_status === "inspected").length || 0,
   };
 
   return (
@@ -172,7 +173,6 @@ const Housekeeping = () => {
         </TabsList>
 
         <TabsContent value="rooms" className="space-y-6">
-          {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="cursor-pointer hover:border-success/50" onClick={() => setFilterStatus("clean")}>
               <CardContent className="p-4">
@@ -220,7 +220,6 @@ const Housekeeping = () => {
             </Card>
           </div>
 
-          {/* Filters */}
           <div className="flex flex-wrap gap-4">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-36">
@@ -256,7 +255,6 @@ const Housekeeping = () => {
             </Button>
           </div>
 
-          {/* Room Grid */}
           {loadingRooms ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -264,7 +262,7 @@ const Housekeeping = () => {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {filteredRooms?.map((room) => {
-                const StatusIcon = statusConfig[room.housekeeping_status].icon;
+                const StatusIcon = statusConfig[room.housekeeping_status as RoomStatus].icon;
                 return (
                   <Card 
                     key={room.id} 
@@ -286,10 +284,10 @@ const Housekeeping = () => {
                       
                       <Badge 
                         variant="outline" 
-                        className={`${statusConfig[room.housekeeping_status].color} w-full justify-center mb-3`}
+                        className={`${statusConfig[room.housekeeping_status as RoomStatus].color} w-full justify-center mb-3`}
                       >
                         <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusConfig[room.housekeeping_status].label}
+                        {statusConfig[room.housekeeping_status as RoomStatus].label}
                       </Badge>
 
                       {room.assigned_to && (
@@ -368,7 +366,7 @@ const Housekeeping = () => {
                     <Select value={newTask.room_id} onValueChange={(v) => setNewTask({ ...newTask, room_id: v })}>
                       <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
                       <SelectContent>
-                        {rooms?.map((r) => (
+                        {(rooms as any[])?.map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.room_number} - {r.room_type}</SelectItem>
                         ))}
                       </SelectContent>

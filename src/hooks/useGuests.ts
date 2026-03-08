@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-bridge";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface Guest {
   id: string;
@@ -43,7 +42,7 @@ export const useGuests = () => {
       if (error) throw error;
 
       // 🛡️ Sentinel: Decrypt E2EE id_numbers for UI display
-      const guests = data as Guest[];
+      const guests = (data as Guest[]) || [];
       return await Promise.all(guests.map(async (guest) => ({
         ...guest,
         id_number: await api.decryptGuestId(guest.id_number)
@@ -83,20 +82,20 @@ export const useUpdateGuest = () => {
         const changes: Record<string, { old: any; new: any }> = {};
         Object.keys(updates).forEach((key) => {
           const k = key as keyof Guest;
-          if (oldGuest[k] !== updates[k]) {
-            changes[key] = { old: oldGuest[k], new: updates[k] };
+          if ((oldGuest as any)[k] !== (updates as any)[k]) {
+            changes[key] = { old: (oldGuest as any)[k], new: (updates as any)[k] };
           }
         });
 
         if (Object.keys(changes).length > 0) {
-          const { data: userData } = await supabase.auth.getUser();
-          await supabase.from("guest_audit_logs").insert({
+          const { data: userRes } = await api.auth.getUser();
+          await (await api.from("guest_audit_logs")).insert({
             guest_id: id,
-            staff_id: userData.user?.id,
-            staff_name: staffName || userData.user?.email,
+            staff_id: userRes.user?.id,
+            staff_name: staffName || userRes.user?.email,
             action: "update_profile",
             details: changes,
-          });
+          }).execute();
         }
       }
 
@@ -116,8 +115,7 @@ export const useGuest = (guestId: string | null) => {
     queryFn: async () => {
       if (!guestId) return null;
       
-      const { data, error } = await supabase
-        .from("guests")
+      const { data, error } = await (await api.from("guests"))
         .select("*")
         .eq("id", guestId)
         .single();
