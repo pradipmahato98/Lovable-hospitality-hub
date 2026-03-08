@@ -224,11 +224,11 @@ const DevPanel = () => {
     if (enabled) {
       toast.info("Email notifications require API key setup. Contact your administrator.");
     }
-    setEmailConfig({ ...emailConfig, enabled });
+    updateEmailConfig.mutate({ ...currentEmailConfig, enabled });
   };
 
   const handleSaveEmailConfig = () => {
-    toast.success("Email configuration saved");
+    updateEmailConfig.mutate(currentEmailConfig);
   };
 
   return (
