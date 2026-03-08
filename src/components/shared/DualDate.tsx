@@ -19,7 +19,7 @@ interface DualDateProps {
 
 export function DualDate({
   date,
-  adFormat = "MMM dd, yyyy",
+  adFormat = "dd/MM/yyyy",
   bsFormat = "long",
   bsOnly = false,
   className,
