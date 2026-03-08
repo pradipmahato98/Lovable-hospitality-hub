@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMenuItems, useMenuCategories } from "@/hooks/useMenuItems";
 import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
@@ -51,24 +52,18 @@ interface CartItem {
   category: string;
 }
 
-const menuItems = [
-  { id: "1", name: "Coffee", price: 4.50, category: "Beverages", icon: Coffee },
-  { id: "2", name: "Tea", price: 3.50, category: "Beverages", icon: Coffee },
-  { id: "3", name: "Fresh Juice", price: 6.00, category: "Beverages", icon: Coffee },
-  { id: "4", name: "Breakfast Combo", price: 15.00, category: "Food", icon: Utensils },
-  { id: "5", name: "Lunch Special", price: 22.00, category: "Food", icon: Utensils },
-  { id: "6", name: "Dinner Platter", price: 35.00, category: "Food", icon: Utensils },
-  { id: "7", name: "Wine Glass", price: 12.00, category: "Bar", icon: Wine },
-  { id: "8", name: "Cocktail", price: 14.00, category: "Bar", icon: Wine },
-  { id: "9", name: "Beer", price: 8.00, category: "Bar", icon: Wine },
-  { id: "10", name: "Ice Cream", price: 7.00, category: "Desserts", icon: IceCream },
-  { id: "11", name: "Cake Slice", price: 9.00, category: "Desserts", icon: IceCream },
-  { id: "12", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
-];
+const categoryIcons: Record<string, any> = {
+  "Beverages": Coffee,
+  "Food": Utensils,
+  "Bar": Wine,
+  "Desserts": IceCream,
+};
 
 const POSTerminal = () => {
   const navigate = useNavigate();
   useAdminRealtime();
+  const { data: dbMenuItems = [] } = useMenuItems();
+  const { data: dbCategories = [] } = useMenuCategories();
   const [activeTab, setActiveTab] = useState("tables");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,15 +98,23 @@ const POSTerminal = () => {
   const { data: gatewaysData } = usePaymentGateways();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
 
-  const categories = [...new Set(menuItems.map(item => item.category))];
+  const menuItems = dbMenuItems.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    category: item.category?.name || "Other",
+    icon: categoryIcons[item.category?.name] || Coffee,
+  }));
 
-  const filteredItems = menuItems.filter(item => {
+  const categories = [...new Set(menuItems.map((item: any) => item.category as string))];
+
+  const filteredItems = menuItems.filter((item: any) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !activeCategory || item.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (item: typeof menuItems[0]) => {
+  const addToCart = (item: any) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -284,7 +287,7 @@ const POSTerminal = () => {
               >
                 All
               </Button>
-              {categories.map(cat => (
+              {categories.map((cat: string) => (
                 <Button
                   key={cat}
                   variant={activeCategory === cat ? "secondary" : "outline"}
@@ -299,8 +302,8 @@ const POSTerminal = () => {
 
           {/* Items Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {filteredItems.map(item => {
-              const Icon = item.icon;
+            {filteredItems.map((item: any) => {
+              const Icon = item.icon || Coffee;
               return (
                 <Card
                   key={item.id}

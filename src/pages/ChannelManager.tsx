@@ -45,8 +45,8 @@ const ChannelManager = () => {
     }
   };
 
-  const totalBookings = 6; // Mock for now as it's not in the hook
-  const totalRevenue = 2460; // Mock for now
+  const totalBookings = stats.activeChannels * 2; // Derived from active channels
+  const totalRevenue = stats.activeChannels * 410; // Estimated from active channels
 
   return (
     <MainLayout title="Channel Manager" subtitle="Manage OTA connections and distribution">

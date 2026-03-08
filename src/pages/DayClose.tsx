@@ -5,45 +5,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-  DollarSign,
-  BarChart3,
-  TrendingUp,
-  Lock,
-  Unlock,
-  Receipt,
-  Utensils,
-  Bed,
-  Sparkles,
-  ChevronRight,
-  Printer
+  DollarSign, BarChart3, TrendingUp, Lock, Unlock, Receipt,
+  Utensils, Bed, Sparkles, ChevronRight, Printer
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNightAudit } from "@/hooks/useNightAudit";
+import { useReportStats } from "@/hooks/useReportStats";
 import { format, parseISO } from "date-fns";
-
-const departmentRevenue = [
-  { id: 1, name: "Rooms & Lodging", code: "ROOM", amount: 4250.00, transactions: 45, icon: Bed, color: "text-blue-500" },
-  { id: 2, name: "Restaurant (POS)", code: "REST", amount: 1280.50, transactions: 82, icon: Utensils, color: "text-orange-500" },
-  { id: 3, name: "Spa & Wellness", code: "SPA", amount: 650.00, transactions: 12, icon: Sparkles, color: "text-purple-500" },
-  { id: 4, name: "Minibar & Other", code: "MISC", amount: 245.25, transactions: 28, icon: Receipt, color: "text-green-500" },
-];
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DayClose() {
   const { businessDate } = useNightAudit();
+  const { data: reportStats, isLoading: statsLoading } = useReportStats();
   const [isClosed, setIsClosed] = useState(false);
 
   const handleCloseDay = () => {
     setIsClosed(true);
     toast.success("Day has been successfully balanced and closed for accounting.");
   };
+
+  const departmentRevenue = [
+    { id: 1, name: "Rooms & Lodging", code: "ROOM", amount: reportStats?.totalReservationRevenue || 0, transactions: reportStats?.reservationCount || 0, icon: Bed, color: "text-blue-500" },
+    { id: 2, name: "Restaurant (POS)", code: "REST", amount: reportStats?.totalPOSRevenue || 0, transactions: reportStats?.posCount || 0, icon: Utensils, color: "text-orange-500" },
+    { id: 3, name: "Invoiced Revenue", code: "INV", amount: reportStats?.totalInvoiceRevenue || 0, transactions: reportStats?.invoiceCount || 0, icon: Receipt, color: "text-green-500" },
+  ];
 
   const totalRevenue = departmentRevenue.reduce((sum, dept) => sum + dept.amount, 0);
 
