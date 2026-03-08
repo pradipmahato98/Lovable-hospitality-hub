@@ -287,7 +287,7 @@ const POSTerminal = () => {
               >
                 All
               </Button>
-              {categories.map(cat => (
+              {categories.map((cat: string) => (
                 <Button
                   key={cat}
                   variant={activeCategory === cat ? "secondary" : "outline"}
