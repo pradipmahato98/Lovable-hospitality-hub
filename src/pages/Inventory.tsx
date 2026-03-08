@@ -478,7 +478,7 @@ const Inventory = () => {
                       <TableRow key={po.id}>
                         <TableCell className="font-mono">{po.order_number}</TableCell>
                         <TableCell>{po.supplier?.name || "-"}</TableCell>
-                        <TableCell>{format(new Date(po.order_date), "MMM d, yyyy")}</TableCell>
+                        <TableCell>{formatAD(new Date(po.order_date))}</TableCell>
                         <TableCell>
                           <Badge className={
                             po.status === "received" ? "bg-success/20 text-success" :
