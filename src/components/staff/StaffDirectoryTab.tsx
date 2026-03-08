@@ -539,7 +539,7 @@ export const StaffDirectoryTab = () => {
                       <TableCell>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(staff.hire_date), "MMM d, yyyy")}
+                          {formatAD(new Date(staff.hire_date))}
                         </div>
                       </TableCell>
                       {isAdmin && (

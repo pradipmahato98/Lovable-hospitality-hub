@@ -170,7 +170,7 @@ export function POSDashboard() {
                   </div>
                   <div>
                     <p className="font-bold text-sm tracking-tight">{t.transaction_number}</p>
-                    <p className="text-xs text-muted-foreground">{format(new Date(t.created_at), "MMM d, HH:mm")}</p>
+                    <p className="text-xs text-muted-foreground">{formatAD(new Date(t.created_at), "time")}</p>
                   </div>
                 </div>
                 <div className="text-right">

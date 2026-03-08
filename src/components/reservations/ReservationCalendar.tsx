@@ -221,7 +221,7 @@ export function ReservationCalendar() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium min-w-32 text-center">
-              {format(weekStart, "MMM d")} - {format(addDays(weekStart, 13), "MMM d, yyyy")}
+              {formatAD(weekStart)} - {formatAD(addDays(weekStart, 13))}
             </span>
             <Button variant="outline" size="icon" onClick={goToNextWeek}>
               <ChevronRight className="h-4 w-4" />

@@ -150,7 +150,7 @@ export function GuestDocuments({ guestId, guestName }: GuestDocumentsProps) {
                   <TableCell className="font-medium capitalize">{doc.document_type.replace("_", " ")}</TableCell>
                   <TableCell className="font-mono text-sm">{doc.document_number || "-"}</TableCell>
                   <TableCell>{doc.issuing_country || "-"}</TableCell>
-                  <TableCell>{doc.expiry_date ? format(new Date(doc.expiry_date), "MMM d, yyyy") : "-"}</TableCell>
+                  <TableCell>{doc.expiry_date ? formatAD(new Date(doc.expiry_date)) : "-"}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {doc.verified ? (
