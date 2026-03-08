@@ -251,6 +251,7 @@ export function LeaveManagement() {
                       id="startDate"
                       type="date"
                       value={formData.startDate}
+                      max={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                       required
                     />
