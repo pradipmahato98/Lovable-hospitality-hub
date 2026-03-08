@@ -387,19 +387,58 @@ export default function NewJournalEntry() {
     if (lines.length < 2) { toast.error("At least two entry lines required"); return; }
     if (!isBalanced) { toast.error("Debit and Credit must be equal"); return; }
 
+    setIsSaving(true);
     try {
-      const entry = await createJournalEntry.mutateAsync({
-        date: transactionDate,
-        description: narration,
-        reference: voucherNo || null,
-        lines: lines.map(l => ({
-          account_id: l.account_id,
-          debit: l.debit,
-          credit: l.credit,
-          description: l.remarks || null,
-        })),
-      });
-      await postJournalEntry.mutateAsync(entry.id);
+      let targetEntryId: string;
+
+      if (isEditMode && editEntryId) {
+        const { error: entryError } = await supabase
+          .from("journal_entries")
+          .update({
+            date: transactionDate,
+            description: narration,
+            reference: voucherNo || null,
+            is_posted: false,
+          })
+          .eq("id", editEntryId);
+
+        if (entryError) throw entryError;
+
+        const { error: deleteLinesError } = await supabase
+          .from("journal_lines")
+          .delete()
+          .eq("journal_entry_id", editEntryId);
+
+        if (deleteLinesError) throw deleteLinesError;
+
+        const { error: insertLinesError } = await supabase.from("journal_lines").insert(
+          lines.map((l) => ({
+            journal_entry_id: editEntryId,
+            account_id: l.account_id,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.remarks || null,
+          }))
+        );
+
+        if (insertLinesError) throw insertLinesError;
+        targetEntryId = editEntryId;
+      } else {
+        const entry = await createJournalEntry.mutateAsync({
+          date: transactionDate,
+          description: narration,
+          reference: voucherNo || null,
+          lines: lines.map(l => ({
+            account_id: l.account_id,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.remarks || null,
+          })),
+        });
+        targetEntryId = entry.id;
+      }
+
+      await postJournalEntry.mutateAsync(targetEntryId);
       toast.success(`${VOUCHER_LABELS[voucherType as VoucherType] || "Entry"} saved & posted — ${voucherNo}`);
 
       if (andNew) {
@@ -408,12 +447,20 @@ export default function NewJournalEntry() {
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
-        generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
+        setEditingLineId(null);
+
+        if (isEditMode) {
+          navigate("/finance/journal/new");
+        } else {
+          generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
+        }
       } else {
         navigate("/finance");
       }
     } catch {
       toast.error("Failed to save entry");
+    } finally {
+      setIsSaving(false);
     }
   };
 
