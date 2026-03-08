@@ -218,7 +218,7 @@ export default function NewJournalEntry() {
 
   // ── Entry Lines (default 2 empty) ──
   const [lines, setLines] = useState<EntryLine[]>([]);
-  const [editLines, setEditLines] = useState<EntryLine[]>([emptyLine(), emptyLine()]);
+  const [editLines, setEditLines] = useState<EntryLine[]>([emptyLine()]);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
 
   // ── Narration & Attachment ──
