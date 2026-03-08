@@ -59,7 +59,6 @@ export function DayBookService() {
   const handleSearch = () => setApplied(true);
   const handleCancel = () => {
     setShowFilter(false);
-    setApplied(false);
   };
 
   return (
