@@ -218,7 +218,7 @@ export default function NewJournalEntry() {
 
   // ── Entry Lines (default 2 empty) ──
   const [lines, setLines] = useState<EntryLine[]>([]);
-  const [editLines, setEditLines] = useState<EntryLine[]>([emptyLine(), emptyLine()]);
+  const [editLines, setEditLines] = useState<EntryLine[]>([emptyLine()]);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
 
   // ── Narration & Attachment ──
@@ -305,7 +305,7 @@ export default function NewJournalEntry() {
           remarks: line.description || "",
         }))
       );
-      setEditLines([emptyLine(), emptyLine()]);
+      setEditLines([emptyLine()]);
       setEditingLineId(null);
     };
 
@@ -444,7 +444,7 @@ export default function NewJournalEntry() {
 
       if (andNew) {
         setLines([]);
-        setEditLines([emptyLine(), emptyLine()]);
+        setEditLines([emptyLine()]);
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
@@ -856,7 +856,6 @@ export default function NewJournalEntry() {
                 <Button className="gap-2" onClick={() => handleSave(false)} disabled={isSaving || isLoadingEdit || !isHeaderComplete}>
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save"}
-                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-1">⌘S</kbd>
                 </Button>
               </div>
             </div>
