@@ -32,6 +32,7 @@ export function RoomUpgradeManager() {
       return data as any[];
     },
   });
+  const queryClient = useQueryClient();
   const [selectedRes, setSelectedRes] = useState<any>(null);
   const [targetRoomId, setTargetRoomId] = useState("");
   const [isUpgrading, setIsUpgrading] = useState(false);
