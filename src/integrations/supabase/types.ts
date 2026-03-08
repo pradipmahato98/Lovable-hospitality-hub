@@ -58,6 +58,57 @@ export type Database = {
           },
         ]
       }
+      approval_queue: {
+        Row: {
+          action: string
+          amount: number | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          notes: string | null
+          rejection_reason: string | null
+          requested_at: string
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          action?: string
+          amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          action?: string
+          amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -192,6 +243,159 @@ export type Database = {
           is_active?: boolean
           is_system?: boolean
           name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      budget_lines: {
+        Row: {
+          account_id: string | null
+          actual_amount: number
+          budget_id: string
+          budgeted_amount: number
+          created_at: string
+          department: string | null
+          id: string
+          notes: string | null
+          period_label: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          actual_amount?: number
+          budget_id: string
+          budgeted_amount?: number
+          created_at?: string
+          department?: string | null
+          id?: string
+          notes?: string | null
+          period_label?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          actual_amount?: number
+          budget_id?: string
+          budgeted_amount?: number
+          created_at?: string
+          department?: string | null
+          id?: string
+          notes?: string | null
+          period_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budgets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string
+          fiscal_year: number
+          id: string
+          name: string
+          notes: string | null
+          start_date: string
+          status: string
+          total_amount: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          fiscal_year?: number
+          id?: string
+          name: string
+          notes?: string | null
+          start_date: string
+          status?: string
+          total_amount?: number
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          fiscal_year?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          start_date?: string
+          status?: string
+          total_amount?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          address: string | null
+          city: string | null
+          contact_person: string | null
+          country: string | null
+          created_at: string
+          credit_limit: number
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          payment_terms: string | null
+          phone: string | null
+          tax_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          contact_person?: string | null
+          country?: string | null
+          created_at?: string
+          credit_limit?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          contact_person?: string | null
+          country?: string | null
+          created_at?: string
+          credit_limit?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          type?: string
           updated_at?: string
         }
         Relationships: []
@@ -420,6 +624,125 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          end_date: string
+          fiscal_year: number
+          id: string
+          name: string
+          notes: string | null
+          period_type: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          end_date: string
+          fiscal_year: number
+          id?: string
+          name: string
+          notes?: string | null
+          period_type?: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          end_date?: string
+          fiscal_year?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          period_type?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fixed_assets: {
+        Row: {
+          account_id: string | null
+          accumulated_depreciation: number
+          acquisition_date: string
+          asset_number: string
+          category: string
+          cost: number
+          created_at: string
+          depreciation_method: string
+          description: string | null
+          disposal_amount: number | null
+          disposed_date: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          salvage_value: number
+          status: string
+          updated_at: string
+          useful_life_months: number
+        }
+        Insert: {
+          account_id?: string | null
+          accumulated_depreciation?: number
+          acquisition_date?: string
+          asset_number: string
+          category?: string
+          cost?: number
+          created_at?: string
+          depreciation_method?: string
+          description?: string | null
+          disposal_amount?: number | null
+          disposed_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          salvage_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_months?: number
+        }
+        Update: {
+          account_id?: string | null
+          accumulated_depreciation?: number
+          acquisition_date?: string
+          asset_number?: string
+          category?: string
+          cost?: number
+          created_at?: string
+          depreciation_method?: string
+          description?: string | null
+          disposal_amount?: number | null
+          disposed_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          salvage_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_assets_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
