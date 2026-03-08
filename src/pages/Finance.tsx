@@ -93,6 +93,9 @@ const setupSubTabs: SubTabDef[] = [
 
 const transactionSubTabs: SubTabDef[] = [
   { id: "journals", label: "Journal Entries", component: JournalManagementService },
+  { id: "ledger-tx", label: "Ledger", component: LedgerTransactionService },
+  { id: "day-book", label: "Day Book", component: DayBookService },
+  { id: "cash-bank-reconcile", label: "Cash & Bank Reconcile", component: CashBankReconcileService },
   { id: "invoices", label: "Invoices & Payments", component: FinanceInvoicesTab as any },
   { id: "expenses", label: "Expenses", component: FinanceExpensesTab as any },
   { id: "ar", label: "Accounts Receivable", component: ARTransactionService },
