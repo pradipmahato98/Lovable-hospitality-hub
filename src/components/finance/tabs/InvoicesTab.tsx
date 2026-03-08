@@ -73,7 +73,7 @@ export function FinanceInvoicesTab() {
       const q = searchText.toLowerCase();
       items = items.filter(i =>
         i.invoice_number?.toLowerCase().includes(q) ||
-        formatISOasBS(i.invoice_date, "long").toLowerCase().includes(q) ||
+        formatISOasBS(i.invoice_date, "short").toLowerCase().includes(q) ||
         (i.guest && `${i.guest.first_name} ${i.guest.last_name}`.toLowerCase().includes(q))
       );
     }
