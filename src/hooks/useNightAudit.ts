@@ -65,7 +65,7 @@ export const useNightAudit = () => {
   // 4. Mutation: Post Daily Room Charges
   const postCharges = useMutation({
     mutationFn: async (date: string) => {
-      const { data, error } = await supabase.rpc('post_daily_room_charges', {
+      const { data, error } = await (supabase as any).rpc('post_daily_room_charges', {
         v_business_date: date
       });
       if (error) throw error;
