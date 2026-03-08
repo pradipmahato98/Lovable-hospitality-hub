@@ -40,6 +40,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useHousekeepingTasks, useLostAndFound, useHousekeepingStats } from "@/hooks/useHousekeeping";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 type RoomStatus = "clean" | "dirty" | "inspected" | "out_of_order" | "in_progress";
 
