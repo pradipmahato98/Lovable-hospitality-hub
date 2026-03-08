@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { AlarmClock, Plus, Check, X, Phone } from "lucide-react";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 export function WakeUpCallScheduler() {
   const { data: calls = [], scheduleCall, updateCallStatus, cancelCall } = useWakeUpCalls();
