@@ -355,7 +355,27 @@ const FrontDesk = () => {
             <FrontDeskMessages />
           </TabsContent>
 
-          {/* Billing Tab */}
+          {/* Upgrades Tab */}
+          <TabsContent value="upgrades">
+            <RoomUpgradeManager />
+          </TabsContent>
+
+          {/* Wake-Up Tab */}
+          <TabsContent value="wakeup">
+            <WakeUpCallScheduler />
+          </TabsContent>
+
+          {/* Group Check-In/Out Tab */}
+          <TabsContent value="group">
+            <GroupCheckInOut />
+          </TabsContent>
+
+          {/* Key Cards Tab */}
+          <TabsContent value="keycards">
+            <KeyCardManagement />
+          </TabsContent>
+
+
           <TabsContent value="billing">
             <div className="space-y-6">
               {/* Billing Metrics */}
