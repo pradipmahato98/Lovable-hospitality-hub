@@ -83,7 +83,7 @@ export const useNightAudit = () => {
       const nextDate = format(addDays(parseISO(currentDate), 1), "yyyy-MM-dd");
 
       // Update business date in settings
-      const { error: settingsError } = await supabase
+      const { error: settingsError } = await (supabase as any)
         .from("settings")
         .update({ value: nextDate })
         .eq("key", "business_date");
