@@ -4,6 +4,8 @@ import { RecentBookings } from "@/components/dashboard/RecentBookings";
 import { RoomStatusGrid } from "@/components/dashboard/RoomStatusGrid";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { OccupancyBarChart } from "@/components/dashboard/OccupancyBarChart";
+import { GuestTrendLineChart } from "@/components/dashboard/GuestTrendLineChart";
 import { BedDouble, Users, TrendingUp, CalendarCheck, ShieldAlert, Loader2 } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useIsAdmin } from "@/hooks/useUserRole";
@@ -26,8 +28,27 @@ const Index = () => {
 
   return (
     <MainLayout title="Dashboard" subtitle="Property real-time overview and analytics.">
+      {/* Security Alert */}
+      {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
+        <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              SECURITY ADVISORY
+            </CardTitle>
+            <Badge variant="destructive">Action Required</Badge>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">
+              Detected <strong>{stats.securityAlerts}</strong> security-related events in the last 24 hours.
+              Please review the audit logs in the Admin Console.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-6">
         <MetricCard
           title="Occupancy Rate"
           value={stats?.occupancyRate || "0%"}
@@ -47,13 +68,13 @@ const Index = () => {
           link="/guests"
         />
         <MetricCard
-          title="Today's Bookings"
+          title="Today's Revenue"
           value={stats?.todayRevenue || "$0"}
           change="New revenue streams"
           changeType="positive"
           icon={TrendingUp}
           delay={100}
-          link="/front-desk"
+          link="/finance"
         />
         <MetricCard
           title="Pending Bookings"
@@ -66,32 +87,20 @@ const Index = () => {
         />
       </div>
 
-      {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
-        <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4" />
-              SECURITY ADVISORY
-            </CardTitle>
-            <Badge variant="destructive">Action Required</Badge>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">
-              Detected <strong>{stats.securityAlerts}</strong> security-related events in the last 24 hours.
-              Please review the audit logs in the Admin Console.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Charts & Tables */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Revenue Chart (full width) */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5 mb-6">
         <RevenueChart />
         <QuickActions />
       </div>
 
+      {/* Bar + Line Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-6">
+        <OccupancyBarChart />
+        <GuestTrendLineChart />
+      </div>
+
       {/* Bookings & Room Status */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5">
         <RecentBookings />
         <RoomStatusGrid />
       </div>

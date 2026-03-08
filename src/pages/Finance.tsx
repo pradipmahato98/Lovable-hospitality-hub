@@ -121,15 +121,20 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
   const ActiveComponent = tabs.find((t) => t.id === activeSubTab)?.component;
 
   return (
-    <div className="space-y-4">
-      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex flex-wrap gap-2 min-w-max">
+    <div className="flex gap-4">
+      {/* Vertical scrollable sidebar tabs */}
+      <div className="w-48 shrink-0">
+        <div className="sticky top-4 max-h-[calc(100vh-12rem)] overflow-y-auto scrollbar-hide space-y-1 pr-2 border-r border-border/60">
           {tabs.map((tab) => (
             <Button
               key={tab.id}
-              variant={activeSubTab === tab.id ? "default" : "outline"}
+              variant={activeSubTab === tab.id ? "default" : "ghost"}
               size="sm"
-              className="text-xs h-8"
+              className={`w-full justify-start text-xs h-9 ${
+                activeSubTab === tab.id
+                  ? ""
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => setActiveSubTab(tab.id)}
             >
               {tab.label}
@@ -137,7 +142,8 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
           ))}
         </div>
       </div>
-      <div className="mt-4">
+      {/* Content area */}
+      <div className="flex-1 min-w-0">
         {ActiveComponent && <ActiveComponent />}
       </div>
     </div>
