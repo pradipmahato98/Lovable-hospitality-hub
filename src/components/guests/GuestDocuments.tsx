@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { FileText, Plus, Shield, ShieldAlert, Trash2 } from "lucide-react";
 import { format, isPast, addMonths } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 interface GuestDocumentsProps {
   guestId: string;
