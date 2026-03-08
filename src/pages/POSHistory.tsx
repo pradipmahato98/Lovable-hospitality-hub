@@ -412,7 +412,7 @@ export default function POSHistory() {
                           {transaction.transaction_number || "N/A"}
                         </TableCell>
                         <TableCell>
-                          {formatDateSafe(transaction.created_at, "MMM d, yyyy HH:mm")}
+                          {formatDateSafe(transaction.created_at, "dd/MM/yyyy HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">T{transaction.table_number || "0"}</Badge>
