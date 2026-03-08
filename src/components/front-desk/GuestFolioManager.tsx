@@ -604,7 +604,7 @@ export const GuestFolioManager = () => {
                       {items.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {format(new Date(item.created_at), "MMM dd, HH:mm")}
+                            {formatAD(new Date(item.created_at), "time")}
                           </TableCell>
                           <TableCell className="font-medium">{item.description}</TableCell>
                           <TableCell>
