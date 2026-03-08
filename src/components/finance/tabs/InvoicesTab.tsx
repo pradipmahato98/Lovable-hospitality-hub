@@ -281,10 +281,10 @@ export function FinanceInvoicesTab() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Invoice (Optional)</Label>
-              <Select value={newPayment.invoice_id || ""} onValueChange={v => setNewPayment(p => ({ ...p, invoice_id: v || null }))}>
+              <Select value={newPayment.invoice_id || "none"} onValueChange={v => setNewPayment(p => ({ ...p, invoice_id: v === "none" ? null : v }))}>
                 <SelectTrigger><SelectValue placeholder="Standalone payment" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No invoice (standalone)</SelectItem>
+                  <SelectItem value="none">No invoice (standalone)</SelectItem>
                   {invoices?.filter(i => i.status !== "paid").map(i => (
                     <SelectItem key={i.id} value={i.id}>{i.invoice_number} — ${i.balance_due.toFixed(2)} due</SelectItem>
                   ))}
