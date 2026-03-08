@@ -649,13 +649,16 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           </div>
         </DialogContent>
       </Dialog>
+      </>
+      )}
 
+      {activeTab === "register" && (
       {/* ═══ Journal Register (existing entries) ═══ */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <CardTitle className="text-base">Journal Register</CardTitle>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -705,7 +708,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                         <TableCell className="text-right font-mono text-xs">{d.toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-xs">{c.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("text-[10px]", entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400")}>
+                          <Badge variant="outline" className={cn("text-[10px]", entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-600")}>
                             {entry.is_posted ? "Posted" : "Draft"}
                           </Badge>
                         </TableCell>
@@ -725,6 +728,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
