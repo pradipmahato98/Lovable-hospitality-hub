@@ -259,11 +259,11 @@ export function NepaliDateSearch({ onSearch, className, mode = "BS" }: NepaliDat
         <>
           <div className="space-y-1">
             <Label className="text-xs">From (AD)</Label>
-            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 text-sm" />
+            <Input type="date" value={fromDate} max={today} onChange={(e) => setFromDate(e.target.value)} className="h-9 text-sm" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">To (AD)</Label>
-            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 text-sm" />
+            <Input type="date" value={toDate} max={today} onChange={(e) => setToDate(e.target.value)} className="h-9 text-sm" />
           </div>
         </>
       ) : (
