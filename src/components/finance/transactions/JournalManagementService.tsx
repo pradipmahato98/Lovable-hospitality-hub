@@ -16,13 +16,19 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Eye, Pencil, Printer, Trash2, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Plus, Search, Eye, Pencil, Printer, Trash2, MoreHorizontal,
+  ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
+} from "lucide-react";
 import {
   useJournalEntries, usePostJournalEntry, useAccounts,
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { NepaliDateSearch } from "@/components/shared/NepaliDateInput";
-import { formatISOasBS } from "@/lib/nepaliDate";
+import { formatISOasBS, isoToBS, formatBSDate } from "@/lib/nepaliDate";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,15 +38,22 @@ interface JournalManagementServiceProps {
   isReadOnly?: boolean;
 }
 
+type SortField = "reference" | "date" | "description" | "debit" | "credit";
+type SortDir = "asc" | "desc";
+
 export function JournalManagementService({ isReadOnly }: JournalManagementServiceProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string } | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [searchMode, setSearchMode] = useState<"BS" | "AD">("BS");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pageSizeInput, setPageSizeInput] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewEntry, setViewEntry] = useState<any | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const { data: journalEntries, isLoading } = useJournalEntries();
   const { data: accounts } = useAccounts();
@@ -53,15 +66,48 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     }
     if (searchText) {
       const q = searchText.toLowerCase();
-      entries = entries.filter(e =>
-        e.description?.toLowerCase().includes(q) ||
-        e.entry_number?.toLowerCase().includes(q) ||
-        e.reference?.toLowerCase().includes(q) ||
-        formatISOasBS(e.date, "long").toLowerCase().includes(q)
-      );
+      if (searchMode === "AD") {
+        entries = entries.filter(e =>
+          e.date?.toLowerCase().includes(q) ||
+          e.description?.toLowerCase().includes(q) ||
+          e.entry_number?.toLowerCase().includes(q) ||
+          e.reference?.toLowerCase().includes(q)
+        );
+      } else {
+        entries = entries.filter(e =>
+          e.description?.toLowerCase().includes(q) ||
+          e.entry_number?.toLowerCase().includes(q) ||
+          e.reference?.toLowerCase().includes(q) ||
+          formatISOasBS(e.date, "long").toLowerCase().includes(q)
+        );
+      }
+    }
+    // Sort
+    if (sortField) {
+      entries = [...entries].sort((a, b) => {
+        let av: any, bv: any;
+        if (sortField === "debit") {
+          av = a.lines?.reduce((s: number, l: any) => s + (l.debit || 0), 0) || 0;
+          bv = b.lines?.reduce((s: number, l: any) => s + (l.debit || 0), 0) || 0;
+        } else if (sortField === "credit") {
+          av = a.lines?.reduce((s: number, l: any) => s + (l.credit || 0), 0) || 0;
+          bv = b.lines?.reduce((s: number, l: any) => s + (l.credit || 0), 0) || 0;
+        } else if (sortField === "reference") {
+          av = (a.reference || a.entry_number || "").toLowerCase();
+          bv = (b.reference || b.entry_number || "").toLowerCase();
+        } else if (sortField === "date") {
+          av = a.date; bv = b.date;
+        } else {
+          av = (a[sortField] || "").toString().toLowerCase();
+          bv = (b[sortField] || "").toString().toLowerCase();
+        }
+        if (av < bv) return sortDir === "asc" ? -1 : 1;
+        if (av > bv) return sortDir === "asc" ? 1 : -1;
+        return 0;
+      });
     }
     return entries;
-  }, [journalEntries, dateFilter, searchText]);
+  }, [journalEntries, dateFilter, searchText, searchMode, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / pageSize));
   const paginatedEntries = useMemo(() => {
@@ -74,15 +120,37 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    // Delete lines first, then entry
+    await supabase.from("journal_lines").delete().eq("journal_entry_id", deleteId);
     const { error } = await supabase.from("journal_entries").delete().eq("id", deleteId);
     if (error) { toast.error("Delete failed"); }
     else { toast.success("Entry deleted"); queryClient.invalidateQueries({ queryKey: ["journal-entries"] }); }
     setDeleteId(null);
   };
 
+  const handlePost = async (id: string) => {
+    postJournalEntry.mutate(id);
+  };
+
   const handlePageSizeManual = () => {
     const val = parseInt(pageSizeInput);
     if (val > 0 && val <= 500) { setPageSize(val); setPageSizeInput(""); }
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDir === "asc") setSortDir("desc");
+      else { setSortField(null); setSortDir("asc"); }
+    } else {
+      setSortField(field); setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="h-3 w-3 ml-1 text-primary" />
+      : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
   };
 
   const formatPostedInfo = (entry: any) => {
@@ -102,6 +170,11 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     );
   };
 
+  const getAccountName = (accountId: string) => {
+    const acct = accounts?.find((a: any) => a.id === accountId);
+    return acct ? `${acct.code} - ${acct.name}` : accountId;
+  };
+
   return (
     <div className="space-y-3">
       <Card>
@@ -118,16 +191,37 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           )}
         </div>
 
-        {/* Row 2: Search, From, To, Search btn, Clear */}
+        {/* Row 2: Search, AD/BS toggle, From (BS), To (BS), Search btn, Clear */}
         <div className="flex items-end gap-2 px-5 pb-3 flex-wrap">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Search entries..."
+              placeholder={`Search entries (${searchMode})...`}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
-              className="pl-8 h-9 text-sm w-[200px]"
+              className="pl-8 h-9 text-sm w-[180px]"
             />
+          </div>
+          {/* AD/BS Switcher */}
+          <div className="flex h-9 rounded-md border border-border overflow-hidden">
+            <button
+              className={cn(
+                "px-2.5 text-xs font-medium transition-colors",
+                searchMode === "AD" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"
+              )}
+              onClick={() => setSearchMode("AD")}
+            >
+              AD
+            </button>
+            <button
+              className={cn(
+                "px-2.5 text-xs font-medium transition-colors",
+                searchMode === "BS" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"
+              )}
+              onClick={() => setSearchMode("BS")}
+            >
+              BS
+            </button>
           </div>
           <NepaliDateSearch onSearch={(from, to) => setDateFilter({ from, to })} />
           {dateFilter && (
@@ -148,14 +242,24 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[80px]">Action</TableHead>
-                    <TableHead>Voucher #</TableHead>
-                    <TableHead>Date (AD)</TableHead>
-                    <TableHead>मिति (BS)</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Debit</TableHead>
-                    <TableHead className="text-right">Credit</TableHead>
-                    <TableHead>Posted By</TableHead>
+                    <TableHead className="w-[50px]">Action</TableHead>
+                    <TableHead className="w-[90px] cursor-pointer select-none" onClick={() => toggleSort("reference")}>
+                      <span className="flex items-center">Voucher # <SortIcon field="reference" /></span>
+                    </TableHead>
+                    <TableHead className="w-[95px] cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                      <span className="flex items-center">Date (AD) <SortIcon field="date" /></span>
+                    </TableHead>
+                    <TableHead className="w-[110px]">मिति (BS)</TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("description")}>
+                      <span className="flex items-center">Description <SortIcon field="description" /></span>
+                    </TableHead>
+                    <TableHead className="text-right w-[90px] cursor-pointer select-none" onClick={() => toggleSort("debit")}>
+                      <span className="flex items-center justify-end">Debit <SortIcon field="debit" /></span>
+                    </TableHead>
+                    <TableHead className="text-right w-[90px] cursor-pointer select-none" onClick={() => toggleSort("credit")}>
+                      <span className="flex items-center justify-end">Credit <SortIcon field="credit" /></span>
+                    </TableHead>
+                    <TableHead className="w-[90px]">Posted By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -164,7 +268,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                     const c = entry.lines?.reduce((s: number, l: any) => s + (l.credit || 0), 0) || 0;
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell>
+                        <TableCell className="py-1.5 px-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -172,15 +276,17 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-32">
-                              <DropdownMenuItem className="text-xs gap-2">
+                              <DropdownMenuItem className="text-xs gap-2" onClick={() => setViewEntry(entry)}>
                                 <Eye className="h-3 w-3" /> View
                               </DropdownMenuItem>
                               {!entry.is_posted && !isReadOnly && (
-                                <DropdownMenuItem className="text-xs gap-2">
+                                <DropdownMenuItem className="text-xs gap-2" onClick={() => navigate(`/finance/journal/new?edit=${entry.id}`)}>
                                   <Pencil className="h-3 w-3" /> Edit
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-xs gap-2">
+                              <DropdownMenuItem className="text-xs gap-2" onClick={() => {
+                                toast.info("Print feature coming soon");
+                              }}>
                                 <Printer className="h-3 w-3" /> Print
                               </DropdownMenuItem>
                               {!entry.is_posted && !isReadOnly && (
@@ -194,13 +300,13 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-primary">{entry.reference || entry.entry_number}</TableCell>
-                        <TableCell className="text-xs">{entry.date}</TableCell>
-                        <TableCell className="text-xs text-primary font-medium">{formatISOasBS(entry.date, "long")}</TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate">{entry.description}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">{d.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">{c.toFixed(2)}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-mono text-xs text-primary py-1.5 px-2">{entry.reference || entry.entry_number}</TableCell>
+                        <TableCell className="text-xs py-1.5 px-2">{entry.date}</TableCell>
+                        <TableCell className="text-xs text-primary font-medium py-1.5 px-2">{formatISOasBS(entry.date, "long")}</TableCell>
+                        <TableCell className="text-xs max-w-[200px] truncate py-1.5">{entry.description}</TableCell>
+                        <TableCell className="text-right font-mono text-xs py-1.5">{d.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs py-1.5">{c.toFixed(2)}</TableCell>
+                        <TableCell className="py-1.5">
                           {entry.is_posted ? (
                             formatPostedInfo(entry)
                           ) : (
@@ -280,6 +386,50 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View Dialog */}
+      <Dialog open={!!viewEntry} onOpenChange={open => !open && setViewEntry(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-sm">
+              Voucher: {viewEntry?.reference || viewEntry?.entry_number}
+            </DialogTitle>
+          </DialogHeader>
+          {viewEntry && (
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-muted-foreground">Date (AD):</span> {viewEntry.date}</div>
+                <div><span className="text-muted-foreground">मिति (BS):</span> {formatISOasBS(viewEntry.date, "long")}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">Description:</span> {viewEntry.description}</div>
+                <div><span className="text-muted-foreground">Status:</span> {viewEntry.is_posted ? "Posted" : "Draft"}</div>
+              </div>
+              {viewEntry.lines && viewEntry.lines.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Account</TableHead>
+                      <TableHead className="text-xs text-right">Debit</TableHead>
+                      <TableHead className="text-xs text-right">Credit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewEntry.lines.map((line: any) => (
+                      <TableRow key={line.id}>
+                        <TableCell className="text-xs">{line.account?.name || getAccountName(line.account_id)}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">{(line.debit || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">{(line.credit || 0).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button size="sm" variant="outline" onClick={() => setViewEntry(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
