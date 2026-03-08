@@ -9,7 +9,6 @@ import {
   Settings2,
   RefreshCw,
   FileText,
-  Server,
   BookOpen,
   Scale,
   TrendingUp,
@@ -20,10 +19,6 @@ import {
   CircleDollarSign,
   CalendarDays,
   Send,
-  Receipt,
-  ShieldCheck,
-  Zap,
-  Database,
 } from "lucide-react";
 
 // Setup components
