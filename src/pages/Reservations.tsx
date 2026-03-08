@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatAD } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
@@ -26,9 +33,12 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
+const allStatuses = ["all", "pending", "confirmed", "checked-in", "checked-out", "cancelled"];
+
 const Reservations = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("list");
   const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
@@ -39,7 +49,11 @@ const Reservations = () => {
   }>({ open: false, mode: "check-in", reservationId: "" });
 
   const { isLoading, refetch, filterReservations } = useReservations();
-  const filteredReservations = filterReservations(searchQuery);
+  const searchFiltered = filterReservations(searchQuery);
+  const filteredReservations = useMemo(() => {
+    if (statusFilter === "all") return searchFiltered;
+    return searchFiltered.filter((r) => r.status === statusFilter);
+  }, [searchFiltered, statusFilter]);
 
   // Enable realtime updates
   useRealtimeReservations({
