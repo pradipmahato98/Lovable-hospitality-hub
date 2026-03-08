@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Plus, Pencil, Trash2, Save, FilePlus, Paperclip, Eye, X, Lock, ShieldCheck, Search, Check, Send,
+  Plus, Pencil, Trash2, Save, FilePlus, Paperclip, Eye, X, Lock, ShieldCheck, Search, Check, Send, BookOpen,
 } from "lucide-react";
 import {
   useJournalEntries, useCreateJournalEntry, usePostJournalEntry, useAccounts, JournalEntry,
@@ -287,20 +287,40 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
     return acc ? `${acc.code} - ${acc.name}` : id;
   };
 
+  // ─── Tab state ─────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"new" | "register">("new");
+
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* Page Header */}
+      {/* Page Header with Tab Switcher */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold font-display">Journal & Voucher Entry</h2>
           <p className="text-muted-foreground text-sm">Create journal, receipt, payment & contra vouchers</p>
         </div>
-        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-          <ShieldCheck className="h-3 w-3 mr-1" /> Audit Ready
-        </Badge>
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+          <Button
+            variant={activeTab === "new" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("new")}
+          >
+            <FilePlus className="h-3.5 w-3.5" /> New Journal Entries
+          </Button>
+          <Button
+            variant={activeTab === "register" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setActiveTab("register")}
+          >
+            <BookOpen className="h-3.5 w-3.5" /> Journal Register
+          </Button>
+        </div>
       </div>
 
+      {activeTab === "new" && (
+      <>
       {/* ═══ CARD 1: Voucher Header ═══ */}
       <Card>
         <CardHeader className="pb-3">
@@ -629,13 +649,15 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           </div>
         </DialogContent>
       </Dialog>
+      </>
+      )}
 
-      {/* ═══ Journal Register (existing entries) ═══ */}
+      {activeTab === "register" && (
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <CardTitle className="text-base">Journal Register</CardTitle>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -685,7 +707,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
                         <TableCell className="text-right font-mono text-xs">{d.toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-xs">{c.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("text-[10px]", entry.is_posted ? "bg-success/20 text-success" : "bg-amber-500/20 text-amber-400")}>
+                          <Badge variant="outline" className={cn("text-[10px]", entry.is_posted ? "bg-success/20 text-success" : "bg-warning/20 text-warning")}>
                             {entry.is_posted ? "Posted" : "Draft"}
                           </Badge>
                         </TableCell>
@@ -705,6 +727,7 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
