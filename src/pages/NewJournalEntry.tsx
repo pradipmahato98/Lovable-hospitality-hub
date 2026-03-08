@@ -230,6 +230,8 @@ export default function NewJournalEntry() {
 
   // ── Delete Confirmation ──
   const [deleteTarget, setDeleteTarget] = useState<{ type: "line" | "attachment"; id?: string } | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // ── Create Ledger Dialogs ──
   const [createLedgerOpen, setCreateLedgerOpen] = useState(false);
