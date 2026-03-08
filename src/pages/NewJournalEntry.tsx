@@ -43,6 +43,13 @@ const VOUCHER_LABELS: Record<VoucherType, string> = {
   journal: "Journal Voucher", receipt: "Receipt Voucher", payment: "Payment Voucher", contra: "Contra Voucher",
 };
 
+const PREFIX_TO_TYPE: Record<string, VoucherType> = {
+  JV: "journal",
+  RV: "receipt",
+  PV: "payment",
+  CV: "contra",
+};
+
 interface EntryLine {
   id: string;
   account_id: string;
