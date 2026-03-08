@@ -376,8 +376,8 @@ export function LeaveManagement() {
                             <span>{days} day{days !== 1 ? "s" : ""}</span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {format(parseISO(request.startDate), "MMM d")} -{" "}
-                            {format(parseISO(request.endDate), "MMM d, yyyy")}
+                            {formatAD(parseISO(request.startDate))} -{" "}
+                            {formatAD(parseISO(request.endDate))}
                           </p>
                         </div>
                       </TableCell>
