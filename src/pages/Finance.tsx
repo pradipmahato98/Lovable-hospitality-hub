@@ -212,9 +212,6 @@ export default function Finance() {
               <TabsTrigger value="reports" className={tabTriggerClass}>
                 <FileText className="h-4 w-4" /> Report
               </TabsTrigger>
-              <TabsTrigger value="infrastructure" className={tabTriggerClass}>
-                <Server className="h-4 w-4" /> Infrastructure
-              </TabsTrigger>
             </TabsList>
           </div>
 
