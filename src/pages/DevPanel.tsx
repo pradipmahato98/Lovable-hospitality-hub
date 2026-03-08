@@ -55,6 +55,14 @@ interface EmailConfig {
   systemAlerts: boolean;
 }
 
+const defaultEmailConfig: EmailConfig = {
+  enabled: false,
+  provider: "resend",
+  roleChangeNotifications: true,
+  bookingNotifications: true,
+  systemAlerts: true,
+};
+
 interface UserWithMultipleRoles {
   user_id: string;
   email: string | null;
