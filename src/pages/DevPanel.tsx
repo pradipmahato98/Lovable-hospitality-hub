@@ -538,7 +538,7 @@ const DevPanel = () => {
                   </>
                 )}
 
-                {!emailConfig.enabled && (
+                {!currentEmailConfig.enabled && (
                   <div className="p-4 rounded-lg border border-dashed border-border text-center">
                     <Mail className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">
