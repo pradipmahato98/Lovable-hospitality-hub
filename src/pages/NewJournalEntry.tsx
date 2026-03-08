@@ -30,7 +30,7 @@ import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { formatISOasBS, todayBS, bsToAD, adToBS } from "@/lib/nepaliDate";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type VoucherType = "journal" | "receipt" | "payment" | "contra";
