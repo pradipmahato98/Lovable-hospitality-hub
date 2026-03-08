@@ -9,9 +9,10 @@ import { env } from "./config/env";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
 import storageRoutes from "./routes/storage";
-import roomsRoutes from "./routes/rooms";
+import apiRoutes from "./routes/api";
 import { rateLimiter } from "./middleware/rateLimit";
 import { errorHandler } from "./middleware/errorHandler";
+import { rlsMiddleware } from "./middleware/rls";
 
 if (process.env.SENTRY_DSN) {
   Sentry.init({ dsn: process.env.SENTRY_DSN });
@@ -30,11 +31,14 @@ app.use("*", cors({
   credentials: true,
 }));
 
+// 🛡️ Sentinel: Apply RLS middleware to all API routes
+app.use("/api/*", rlsMiddleware);
+
 // Routes
 app.route("/api/v1/auth", authRoutes);
 app.route("/api/v1/storage", storageRoutes);
 app.route("/api/v1/health", healthRoutes);
-app.route("/api/v1/rooms", roomsRoutes);
+app.route("/api/v1", apiRoutes); // Core API routes (rooms, guests, etc.)
 
 // Error Handling
 app.onError(errorHandler);

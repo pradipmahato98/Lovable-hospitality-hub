@@ -8,8 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { encryptWithKey, decryptWithKey, deriveKey } from "@/utils/encryption";
 
 // Toggle between Supabase and Custom Backend
-const USE_CUSTOM_BACKEND = false; // Set to true to switch to the new architecture
-const BACKEND_URL = "http://localhost:3001/api";
+// 🚀 Switching to Custom Backend to use the production-grade isolated system
+const USE_CUSTOM_BACKEND = true;
+const BACKEND_URL = "http://localhost:3000/api/v1";
 
 export interface ApiResponse<T> {
   data: T | null;
@@ -21,8 +22,6 @@ export const api = {
    * Security & E2EE
    */
   async getEncryptionKey() {
-    // 🛡️ Sentinel: Using environment variables for master key and salt to avoid hardcoded secrets.
-    // In production, these should be unique, complex strings stored in a secure secret manager.
     const secret = import.meta.env.VITE_E2EE_MASTER_KEY || "dev-master-password-do-not-use-in-prod";
     const salt = import.meta.env.VITE_E2EE_SYSTEM_SALT || "system-salt-fallback";
     return await deriveKey(secret, salt);
@@ -39,34 +38,10 @@ export const api = {
   },
 
   /**
-   * Centralized Guest ID Encryption/Decryption
-   */
-  async encryptGuestId(idNumber: string): Promise<string> {
-    if (!idNumber) return idNumber;
-    const encryptedString = await this.encryptSensitive(idNumber);
-    // encryptedString is "enc:iv:encrypted"
-    const [_, iv, encrypted] = encryptedString.split(":");
-    return `e2ee:${iv}:${encrypted}`;
-  },
-
-  async decryptGuestId(prefixedId: string | null): Promise<string | null> {
-    if (!prefixedId || !prefixedId.startsWith("e2ee:")) return prefixedId;
-    try {
-      const [_, iv, encrypted] = prefixedId.split(":");
-      // decryptSensitive expects "enc:iv:encrypted"
-      return await this.decryptSensitive(`enc:${iv}:${encrypted}`);
-    } catch (error) {
-      console.error("🛡️ Sentinel: Decryption failed for ID:", prefixedId, error);
-      return prefixedId; // Fallback to raw value if decryption fails
-    }
-  },
-
-  /**
    * Data Operations
    */
   async from(tableName: string) {
     if (USE_CUSTOM_BACKEND) {
-      // Logic for custom backend with chainable query builder
       const builder = {
         query: {
           select: "*",
@@ -91,28 +66,34 @@ export const api = {
           this.query.limit = count;
           return this;
         },
+        maybeSingle() {
+          this.query.single = true;
+          return this;
+        },
         single() {
           this.query.single = true;
           return this;
         },
         update(item: any) {
+          const execute = async () => {
+             const response = await fetch(`${BACKEND_URL}/${tableName}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ updates: item, filters: this.query.filters }),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+              });
+              const data = await response.json();
+              return { data, error: response.ok ? null : new Error(data.error) };
+          };
+
           return {
             eq: (col: string, val: any) => {
               this.query.filters.push({ type: 'eq', column: col, value: val });
               return {
-                select: () => {
-                  return {
-                    single: async () => {
-                      const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}`, {
-                        method: 'PATCH',
-                        body: JSON.stringify({ updates: item, filters: this.query.filters }),
-                        headers: { 'Content-Type': 'application/json' }
-                      });
-                      const data = await response.json();
-                      return { data, error: null };
-                    }
-                  };
-                }
+                select: () => ({ single: execute }),
+                execute
               };
             }
           };
@@ -122,9 +103,9 @@ export const api = {
             eq: (col: string, val: any) => {
               this.query.filters.push({ type: 'eq', column: col, value: val });
               return {
-                then: async (resolve: any, reject: any) => {
+                then: async (resolve: any) => {
                   try {
-                    const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}`, {
+                    const response = await fetch(`${BACKEND_URL}/${tableName}`, {
                       method: 'DELETE',
                       body: JSON.stringify({ filters: this.query.filters }),
                       headers: {
@@ -133,7 +114,7 @@ export const api = {
                       }
                     });
                     const data = await response.json();
-                    resolve({ data, error: null });
+                    resolve({ data, error: response.ok ? null : new Error(data.error) });
                   } catch (error) {
                     resolve({ data: null, error });
                   }
@@ -143,44 +124,53 @@ export const api = {
           };
         },
         insert(item: any) {
-          return {
-            select: () => {
-              return {
-                single: async () => {
-                  const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}`, {
-                    method: 'POST',
-                    body: JSON.stringify(item),
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                  const data = await response.json();
-                  return { data, error: null };
+          const execute = async () => {
+             const response = await fetch(`${BACKEND_URL}/${tableName}`, {
+                method: 'POST',
+                body: JSON.stringify(item),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
-              };
-            }
+              });
+              const data = await response.json();
+              return { data, error: response.ok ? null : new Error(data.error) };
+          };
+
+          return {
+            select: () => ({
+              single: execute,
+              maybeSingle: execute,
+              execute
+            }),
+            execute
           };
         },
-        // Terminal then/awaitable
-        then: async (resolve: any, reject: any) => {
+        then: async (resolve: any) => {
           try {
             const queryString = new URLSearchParams({
               select: this.query.select,
+              limit: String(this.query.limit || ""),
               filters: JSON.stringify(this.query.filters),
               order: JSON.stringify(this.query.order),
-              limit: String(this.query.limit || ""),
-              single: String(this.query.single)
             }).toString();
 
-            const response = await fetch(`${BACKEND_URL}/database/tables/${tableName}?${queryString}`);
+            const response = await fetch(`${BACKEND_URL}/${tableName}?${queryString}`, {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
             const data = await response.json();
-            resolve({ data, error: null });
+            const result = Array.isArray(data) ? data : data.data || [];
+            resolve({
+              data: this.query.single ? result[0] || null : result,
+              error: response.ok ? null : new Error("Fetch failed")
+            });
           } catch (error) {
-            resolve({ data: null, error });
+            resolve({ data: this.query.single ? null : [], error });
           }
         }
       };
       return builder;
     } else {
-      // Fallback to Supabase
       return supabase.from(tableName as any);
     }
   },
@@ -196,7 +186,11 @@ export const api = {
           body: JSON.stringify(credentials),
           headers: { 'Content-Type': 'application/json' }
         });
-        return await response.json();
+        const result = await response.json();
+        if (result.accessToken) {
+          localStorage.setItem('token', result.accessToken);
+        }
+        return { data: { user: result.user, session: { access_token: result.accessToken } }, error: response.ok ? null : new Error(result.error) };
       } else {
         return await supabase.auth.signInWithPassword(credentials);
       }
@@ -204,51 +198,11 @@ export const api = {
 
     async signOut() {
       if (USE_CUSTOM_BACKEND) {
-        await fetch(`${BACKEND_URL}/auth/logout`, { method: 'POST' });
+        localStorage.removeItem('token');
         return { error: null };
       } else {
         return await supabase.auth.signOut();
       }
-    },
-
-    async getUser() {
-      if (USE_CUSTOM_BACKEND) {
-        const response = await fetch(`${BACKEND_URL}/auth/me`);
-        return await response.json();
-      } else {
-        return await supabase.auth.getUser();
-      }
-    }
-  },
-
-  /**
-   * Real-time Subscriptions
-   */
-  channel(name: string) {
-    if (USE_CUSTOM_BACKEND) {
-      // Logic for Socket.io (skeleton)
-      const mockChannel = {
-        on: function(event: string, filter: any, callback: Function) {
-          console.log(`Subscribed to custom channel ${name} for event ${event}`);
-          return this;
-        },
-        subscribe: () => {
-          console.log(`Channel ${name} subscribed`);
-          return { unsubscribe: () => console.log(`Channel ${name} unsubscribed`) };
-        }
-      };
-      return mockChannel;
-    } else {
-      return supabase.channel(name);
-    }
-  },
-
-  removeChannel(channel: any) {
-    if (USE_CUSTOM_BACKEND) {
-      console.log(`Removed custom channel`);
-      return;
-    } else {
-      return supabase.removeChannel(channel);
     }
   },
 
@@ -256,35 +210,6 @@ export const api = {
    * Storage Operations
    */
   storage: {
-    async listBuckets() {
-      if (USE_CUSTOM_BACKEND) {
-        const response = await fetch(`${BACKEND_URL}/storage/buckets`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-        return { data, error: response.ok ? null : data.error };
-      } else {
-        return await supabase.storage.listBuckets();
-      }
-    },
-
-    async createBucket(name: string, options?: any) {
-      if (USE_CUSTOM_BACKEND) {
-        const response = await fetch(`${BACKEND_URL}/storage/buckets`, {
-          method: 'POST',
-          body: JSON.stringify({ name, ...options }),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        const data = await response.json();
-        return { data, error: response.ok ? null : data.error };
-      } else {
-        return await supabase.storage.createBucket(name, options);
-      }
-    },
-
     from(bucketName: string) {
       if (USE_CUSTOM_BACKEND) {
         return {
@@ -293,20 +218,18 @@ export const api = {
             formData.append('file', file);
             formData.append('path', path);
 
-            const response = await fetch(`${BACKEND_URL}/storage/buckets/${bucketName}/upload`, {
+            const response = await fetch(`${BACKEND_URL}/storage/upload?bucket=${bucketName}`, {
               method: 'POST',
               body: formData,
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             const data = await response.json();
-            return { data, error: response.ok ? null : data.error };
+            return { data, error: response.ok ? null : new Error(data.error) };
           },
           getPublicUrl: (path: string) => {
             return {
               data: {
-                publicUrl: `${BACKEND_URL}/storage/buckets/${bucketName}/files/${path}`
+                publicUrl: `${BACKEND_URL}/storage/url/${bucketName}/${path}`
               }
             };
           }
