@@ -17,7 +17,7 @@ export function BudgetForecastReportingService({ isReadOnly }: { isReadOnly?: bo
     const linesByBudget: Record<string, { budgeted: number; actual: number; name: string }> = {};
 
     activeBudgets.forEach((b) => {
-      const lines = (budgetLines || []).filter((l) => l.budget_id === b.id);
+      const lines = b.lines || [];
       const budgeted = lines.reduce((s, l) => s + l.budgeted_amount, 0);
       const actual = lines.reduce((s, l) => s + l.actual_amount, 0);
       linesByBudget[b.id] = { budgeted, actual, name: b.name };
