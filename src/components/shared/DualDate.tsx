@@ -1,7 +1,6 @@
-import { format } from "date-fns";
 import { adToBS, formatBSDate, isoToBS } from "@/lib/nepaliDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 
 interface DualDateProps {
   /** ISO string (YYYY-MM-DD) or Date object */
