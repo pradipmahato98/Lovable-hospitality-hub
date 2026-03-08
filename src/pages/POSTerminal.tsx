@@ -52,20 +52,12 @@ interface CartItem {
   category: string;
 }
 
-const menuItems = [
-  { id: "1", name: "Coffee", price: 4.50, category: "Beverages", icon: Coffee },
-  { id: "2", name: "Tea", price: 3.50, category: "Beverages", icon: Coffee },
-  { id: "3", name: "Fresh Juice", price: 6.00, category: "Beverages", icon: Coffee },
-  { id: "4", name: "Breakfast Combo", price: 15.00, category: "Food", icon: Utensils },
-  { id: "5", name: "Lunch Special", price: 22.00, category: "Food", icon: Utensils },
-  { id: "6", name: "Dinner Platter", price: 35.00, category: "Food", icon: Utensils },
-  { id: "7", name: "Wine Glass", price: 12.00, category: "Bar", icon: Wine },
-  { id: "8", name: "Cocktail", price: 14.00, category: "Bar", icon: Wine },
-  { id: "9", name: "Beer", price: 8.00, category: "Bar", icon: Wine },
-  { id: "10", name: "Ice Cream", price: 7.00, category: "Desserts", icon: IceCream },
-  { id: "11", name: "Cake Slice", price: 9.00, category: "Desserts", icon: IceCream },
-  { id: "12", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
-];
+const categoryIcons: Record<string, any> = {
+  "Beverages": Coffee,
+  "Food": Utensils,
+  "Bar": Wine,
+  "Desserts": IceCream,
+};
 
 const POSTerminal = () => {
   const navigate = useNavigate();
