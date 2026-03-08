@@ -206,6 +206,9 @@ function CreateLedgerDialog({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function NewJournalEntry() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editEntryId = searchParams.get("edit");
+  const isEditMode = !!editEntryId;
 
   // ── Header State ──
   const [fiscalYear, setFiscalYear] = useState(getCurrentNepaliFiscalYear());
