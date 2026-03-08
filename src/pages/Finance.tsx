@@ -6,32 +6,159 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  BookOpen,
+  Settings2,
+  RefreshCw,
   FileText,
+  Server,
+  BookOpen,
   Scale,
   TrendingUp,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  Receipt,
   CreditCard,
   CircleDollarSign,
   CalendarDays,
   Send,
+  Receipt,
+  ShieldCheck,
+  Zap,
+  Database,
 } from "lucide-react";
 
+// Setup components
 import { ChartOfAccountsService } from "@/components/finance/setup/ChartOfAccountsService";
+import { FinancialConfigurationService } from "@/components/finance/setup/FinancialConfigurationService";
+import { CustomerMasterService } from "@/components/finance/setup/CustomerMasterService";
+import { VendorMasterService } from "@/components/finance/setup/VendorMasterService";
+import { BankCashSetupService } from "@/components/finance/setup/BankCashSetupService";
+import { AssetMasterService } from "@/components/finance/setup/AssetMasterService";
+import { TaxConfigurationService } from "@/components/finance/setup/TaxConfigurationService";
+import { BudgetSetupService } from "@/components/finance/setup/BudgetSetupService";
+import { AccessControlService } from "@/components/finance/setup/AccessControlService";
+import { FinancialStatementMappingService } from "@/components/finance/setup/FinancialStatementMappingService";
+
+// Transaction components
 import { JournalManagementService } from "@/components/finance/transactions/JournalManagementService";
-import { LedgerInquiryService } from "@/components/finance/reporting/LedgerInquiryService";
-import { FinancialStatements } from "@/components/finance/FinancialStatements";
+import { ARTransactionService } from "@/components/finance/transactions/ARTransactionService";
+import { APTransactionService } from "@/components/finance/transactions/APTransactionService";
+import { BankCashTransactionService } from "@/components/finance/transactions/BankCashTransactionService";
+import { AssetOperationsService } from "@/components/finance/transactions/AssetOperationsService";
+import { TaxCalculationService } from "@/components/finance/transactions/TaxCalculationService";
+import { BudgetExecutionService } from "@/components/finance/transactions/BudgetExecutionService";
+import { FinancialPeriodCloseService } from "@/components/finance/transactions/FinancialPeriodCloseService";
+import { ApprovalWorkflowService } from "@/components/finance/transactions/ApprovalWorkflowService";
+import { IntegrationOrchestratorService } from "@/components/finance/transactions/IntegrationOrchestratorService";
 import { FinanceInvoicesTab } from "@/components/finance/tabs/InvoicesTab";
 import { FinanceExpensesTab } from "@/components/finance/tabs/ExpensesTab";
+
+// Report components
+import { FinancialReportingService } from "@/components/finance/reporting/FinancialReportingService";
+import { LedgerInquiryService } from "@/components/finance/reporting/LedgerInquiryService";
+import { ARReportingService } from "@/components/finance/reporting/ARReportingService";
+import { APReportingService } from "@/components/finance/reporting/APReportingService";
+import { CashBankReportingService } from "@/components/finance/reporting/CashBankReportingService";
+import { FixedAssetsReportingService } from "@/components/finance/reporting/FixedAssetsReportingService";
+import { TaxReportingService } from "@/components/finance/reporting/TaxReportingService";
+import { BudgetForecastReportingService } from "@/components/finance/reporting/BudgetForecastReportingService";
+import { AuditReportingService } from "@/components/finance/reporting/AuditReportingService";
+import { ConsolidationBIService } from "@/components/finance/reporting/ConsolidationBIService";
 import { FinanceTrialBalanceTab } from "@/components/finance/tabs/TrialBalanceTab";
+
+// Infrastructure components
+import { EventBusService } from "@/components/finance/infrastructure/EventBusService";
+import { SharedDataService } from "@/components/finance/infrastructure/SharedDataService";
+import { APIGatewayService } from "@/components/finance/infrastructure/APIGatewayService";
+import { SecurityLayerService } from "@/components/finance/infrastructure/SecurityLayerService";
 
 import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
 import { useFinancialStats } from "@/hooks/useFinanceExtended";
 import { useBusinessDate } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+
+// Sub-tab definition type
+interface SubTabDef {
+  id: string;
+  label: string;
+  component: React.ComponentType<{ isReadOnly?: boolean }>;
+}
+
+const setupSubTabs: SubTabDef[] = [
+  { id: "coa", label: "Chart of Accounts", component: ChartOfAccountsService },
+  { id: "fin-config", label: "Financial Config", component: FinancialConfigurationService },
+  { id: "customer", label: "Customer Master", component: CustomerMasterService },
+  { id: "vendor", label: "Vendor Master", component: VendorMasterService },
+  { id: "bank-cash", label: "Bank & Cash", component: BankCashSetupService },
+  { id: "assets", label: "Asset Master", component: AssetMasterService },
+  { id: "tax", label: "Tax Config", component: TaxConfigurationService },
+  { id: "budget", label: "Budget Setup", component: BudgetSetupService },
+  { id: "access", label: "Access Control", component: AccessControlService },
+  { id: "mapping", label: "Statement Mapping", component: FinancialStatementMappingService },
+];
+
+const transactionSubTabs: SubTabDef[] = [
+  { id: "journals", label: "Journal Entries", component: JournalManagementService },
+  { id: "invoices", label: "Invoices & Payments", component: FinanceInvoicesTab as any },
+  { id: "expenses", label: "Expenses", component: FinanceExpensesTab as any },
+  { id: "ar", label: "Accounts Receivable", component: ARTransactionService },
+  { id: "ap", label: "Accounts Payable", component: APTransactionService },
+  { id: "bank-cash-tx", label: "Bank & Cash", component: BankCashTransactionService },
+  { id: "asset-ops", label: "Asset Operations", component: AssetOperationsService },
+  { id: "tax-calc", label: "Tax Calculation", component: TaxCalculationService },
+  { id: "budget-exec", label: "Budget Execution", component: BudgetExecutionService },
+  { id: "period-close", label: "Period Close", component: FinancialPeriodCloseService },
+  { id: "approvals", label: "Approvals", component: ApprovalWorkflowService },
+  { id: "integration", label: "Integrations", component: IntegrationOrchestratorService },
+];
+
+const reportSubTabs: SubTabDef[] = [
+  { id: "trial-balance", label: "Trial Balance", component: FinanceTrialBalanceTab as any },
+  { id: "ledger", label: "General Ledger", component: LedgerInquiryService },
+  { id: "statements", label: "Financial Statements", component: FinancialReportingService },
+  { id: "ar-report", label: "AR Reports", component: ARReportingService },
+  { id: "ap-report", label: "AP Reports", component: APReportingService },
+  { id: "cash-bank", label: "Cash & Bank", component: CashBankReportingService },
+  { id: "fixed-assets", label: "Fixed Assets", component: FixedAssetsReportingService },
+  { id: "tax-report", label: "Tax Reports", component: TaxReportingService },
+  { id: "budget-forecast", label: "Budget & Forecast", component: BudgetForecastReportingService },
+  { id: "audit", label: "Audit Reports", component: AuditReportingService },
+  { id: "consolidation", label: "Consolidation & BI", component: ConsolidationBIService },
+];
+
+const infraSubTabs: SubTabDef[] = [
+  { id: "event-bus", label: "Event Bus", component: EventBusService },
+  { id: "data-lake", label: "Shared Data", component: SharedDataService },
+  { id: "api-gateway", label: "API Gateway", component: APIGatewayService },
+  { id: "security", label: "Security Layer", component: SecurityLayerService },
+];
+
+function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: string }) {
+  const [activeSubTab, setActiveSubTab] = useState(defaultTab || tabs[0]?.id || "");
+  const ActiveComponent = tabs.find((t) => t.id === activeSubTab)?.component;
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex flex-wrap gap-2 min-w-max">
+          {tabs.map((tab) => (
+            <Button
+              key={tab.id}
+              variant={activeSubTab === tab.id ? "default" : "outline"}
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setActiveSubTab(tab.id)}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-4">
+        {ActiveComponent && <ActiveComponent />}
+      </div>
+    </div>
+  );
+}
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -47,13 +174,13 @@ export default function Finance() {
     const credits = trialBalance.reduce((sum, t) => sum + t.totalCredit, 0);
 
     let assets = 0, liabilities = 0, revenue = 0, expenses = 0;
-    trialBalance.forEach(item => {
+    trialBalance.forEach((item) => {
       const balance = item.totalDebit - item.totalCredit;
       const type = item.account.type;
-      if (type === 'asset') assets += balance;
-      else if (type === 'liability') liabilities -= balance;
-      else if (type === 'revenue') revenue -= balance;
-      else if (type === 'expense') expenses += balance;
+      if (type === "asset") assets += balance;
+      else if (type === "liability") liabilities -= balance;
+      else if (type === "revenue") revenue -= balance;
+      else if (type === "expense") expenses += balance;
     });
 
     return {
@@ -66,7 +193,8 @@ export default function Finance() {
     };
   }, [trialBalance]);
 
-  const tabTriggerClass = "gap-2 h-11 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 transition-all text-xs sm:text-sm";
+  const tabTriggerClass =
+    "gap-2 h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 transition-all";
 
   return (
     <MainLayout
@@ -82,35 +210,26 @@ export default function Finance() {
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-1">
+            <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
               <TabsTrigger value="dashboard" className={tabTriggerClass}>
                 <LayoutDashboard className="h-4 w-4" /> Dashboard
               </TabsTrigger>
-              <TabsTrigger value="accounts" className={tabTriggerClass}>
-                <BookOpen className="h-4 w-4" /> Chart of Accounts
+              <TabsTrigger value="setup" className={tabTriggerClass}>
+                <Settings2 className="h-4 w-4" /> Setup
               </TabsTrigger>
-              <TabsTrigger value="journals" className={tabTriggerClass}>
-                <FileText className="h-4 w-4" /> Journal Entries
+              <TabsTrigger value="transactions" className={tabTriggerClass}>
+                <RefreshCw className="h-4 w-4" /> Transaction
               </TabsTrigger>
-              <TabsTrigger value="ledger" className={tabTriggerClass}>
-                <Receipt className="h-4 w-4" /> General Ledger
+              <TabsTrigger value="reports" className={tabTriggerClass}>
+                <FileText className="h-4 w-4" /> Report
               </TabsTrigger>
-              <TabsTrigger value="trial-balance" className={tabTriggerClass}>
-                <Scale className="h-4 w-4" /> Trial Balance
-              </TabsTrigger>
-              <TabsTrigger value="statements" className={tabTriggerClass}>
-                <TrendingUp className="h-4 w-4" /> Financial Statements
-              </TabsTrigger>
-              <TabsTrigger value="invoices" className={tabTriggerClass}>
-                <CreditCard className="h-4 w-4" /> Invoices & Payments
-              </TabsTrigger>
-              <TabsTrigger value="expenses" className={tabTriggerClass}>
-                <CircleDollarSign className="h-4 w-4" /> Expenses
+              <TabsTrigger value="infrastructure" className={tabTriggerClass}>
+                <Server className="h-4 w-4" /> Infrastructure
               </TabsTrigger>
             </TabsList>
           </div>
 
-          {/* Dashboard */}
+          {/* ========== DASHBOARD ========== */}
           <TabsContent value="dashboard" className="space-y-6 mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard title="Total Assets" value={`$${totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
@@ -120,66 +239,91 @@ export default function Finance() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MetricCard title="Total Accounts" value={accounts.length.toString()} change={`${accounts.filter(a => a.is_active).length} active`} changeType="neutral" icon={BookOpen} delay={200} />
-              <MetricCard title="Journal Entries" value={journalEntries.length.toString()} change={`${journalEntries.filter(e => e.is_posted).length} posted`} changeType="neutral" icon={FileText} delay={250} />
+              <MetricCard title="Total Accounts" value={accounts.length.toString()} change={`${accounts.filter((a) => a.is_active).length} active`} changeType="neutral" icon={BookOpen} delay={200} />
+              <MetricCard title="Journal Entries" value={journalEntries.length.toString()} change={`${journalEntries.filter((e) => e.is_posted).length} posted`} changeType="neutral" icon={FileText} delay={250} />
               <MetricCard title="Total Revenue" value={`$${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
               <MetricCard title="Total Expenses" value={`$${stats.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
             </div>
 
             {/* Quick Actions */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("journals")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
                 <Send className="h-5 w-5 text-primary" />
-                <span className="text-xs">New Journal Entry</span>
+                <span className="text-xs">Journal Entries</span>
               </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("invoices")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
                 <CreditCard className="h-5 w-5 text-primary" />
-                <span className="text-xs">Create Invoice</span>
+                <span className="text-xs">Invoices & Payments</span>
               </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("expenses")}>
-                <CircleDollarSign className="h-5 w-5 text-primary" />
-                <span className="text-xs">Record Expense</span>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
+                <Scale className="h-5 w-5 text-primary" />
+                <span className="text-xs">Trial Balance</span>
               </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("statements")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <span className="text-xs">View Reports</span>
+                <span className="text-xs">Financial Statements</span>
               </Button>
+            </div>
+
+            {/* Infrastructure status cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="bg-primary/5 border-primary/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Zap className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Event Bus</p>
+                    <p className="text-sm font-bold">Operational</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-success/5 border-success/10">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <ShieldCheck className="h-8 w-8 text-success" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Security Layer</p>
+                    <p className="text-sm font-bold">100% Policy Match</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-blue-500/10" style={{ backgroundColor: "hsl(var(--primary) / 0.05)" }}>
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Server className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">API Gateway</p>
+                    <p className="text-sm font-bold">24ms Avg Latency</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-accent/10" style={{ backgroundColor: "hsl(var(--accent) / 0.05)" }}>
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <Database className="h-8 w-8 text-accent-foreground" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Data Lake</p>
+                    <p className="text-sm font-bold">85% Optimization</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
-          {/* Chart of Accounts */}
-          <TabsContent value="accounts" className="mt-4">
-            <ChartOfAccountsService />
+          {/* ========== SETUP ========== */}
+          <TabsContent value="setup" className="mt-4">
+            <SubTabPanel tabs={setupSubTabs} />
           </TabsContent>
 
-          {/* Journal Entries */}
-          <TabsContent value="journals" className="mt-4">
-            <JournalManagementService />
+          {/* ========== TRANSACTIONS ========== */}
+          <TabsContent value="transactions" className="mt-4">
+            <SubTabPanel tabs={transactionSubTabs} />
           </TabsContent>
 
-          {/* General Ledger */}
-          <TabsContent value="ledger" className="mt-4">
-            <LedgerInquiryService />
+          {/* ========== REPORTS ========== */}
+          <TabsContent value="reports" className="mt-4">
+            <SubTabPanel tabs={reportSubTabs} />
           </TabsContent>
 
-          {/* Trial Balance */}
-          <TabsContent value="trial-balance" className="mt-4">
-            <FinanceTrialBalanceTab />
-          </TabsContent>
-
-          {/* Financial Statements */}
-          <TabsContent value="statements" className="mt-4">
-            <FinancialStatements />
-          </TabsContent>
-
-          {/* Invoices & Payments */}
-          <TabsContent value="invoices" className="mt-4">
-            <FinanceInvoicesTab />
-          </TabsContent>
-
-          {/* Expenses */}
-          <TabsContent value="expenses" className="mt-4">
-            <FinanceExpensesTab />
+          {/* ========== INFRASTRUCTURE ========== */}
+          <TabsContent value="infrastructure" className="mt-4">
+            <SubTabPanel tabs={infraSubTabs} />
           </TabsContent>
         </Tabs>
       </div>
