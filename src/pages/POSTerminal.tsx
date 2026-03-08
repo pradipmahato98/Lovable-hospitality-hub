@@ -98,15 +98,23 @@ const POSTerminal = () => {
   const { data: gatewaysData } = usePaymentGateways();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
 
-  const categories = [...new Set(menuItems.map(item => item.category))];
+  const menuItems = dbMenuItems.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    category: item.category?.name || "Other",
+    icon: categoryIcons[item.category?.name] || Coffee,
+  }));
 
-  const filteredItems = menuItems.filter(item => {
+  const categories = [...new Set(menuItems.map((item: any) => item.category as string))];
+
+  const filteredItems = menuItems.filter((item: any) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !activeCategory || item.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (item: typeof menuItems[0]) => {
+  const addToCart = (item: any) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
