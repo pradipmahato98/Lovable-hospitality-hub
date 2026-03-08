@@ -264,10 +264,64 @@ export default function NewJournalEntry() {
   }, [fiscalYear, minDate, maxDate]);
 
   useEffect(() => {
-    if (voucherType) {
+    let isMounted = true;
+
+    const loadForEdit = async () => {
+      if (!editEntryId) return;
+      setIsLoadingEdit(true);
+
+      const { data, error } = await supabase
+        .from("journal_entries")
+        .select(`
+          *,
+          journal_lines (*)
+        `)
+        .eq("id", editEntryId)
+        .single();
+
+      if (!isMounted) return;
+
+      if (error || !data) {
+        toast.error("Unable to load voucher for editing");
+        return;
+      }
+
+      const referenceValue = data.reference || data.entry_number || "";
+      const prefix = referenceValue.split("-")[0];
+      const detectedType = PREFIX_TO_TYPE[prefix as keyof typeof PREFIX_TO_TYPE];
+
+      setTransactionDate(data.date);
+      setNarration(data.description || "");
+      setVoucherNo(referenceValue);
+      if (detectedType) setVoucherType(detectedType);
+      setLines(
+        (data.journal_lines || []).map((line: any) => ({
+          id: line.id,
+          account_id: line.account_id,
+          sub_account: "",
+          debit: Number(line.debit) || 0,
+          credit: Number(line.credit) || 0,
+          remarks: line.description || "",
+        }))
+      );
+      setEditLines([emptyLine(), emptyLine()]);
+      setEditingLineId(null);
+    };
+
+    loadForEdit().finally(() => {
+      if (isMounted) setIsLoadingEdit(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [editEntryId]);
+
+  useEffect(() => {
+    if (voucherType && !isEditMode) {
       generateVoucherNo(voucherType as VoucherType, fiscalYear).then(setVoucherNo);
     }
-  }, [voucherType, fiscalYear]);
+  }, [voucherType, fiscalYear, isEditMode]);
 
   // ── Add line from edit row ──
   const handleAddEditLine = (index: number) => {
