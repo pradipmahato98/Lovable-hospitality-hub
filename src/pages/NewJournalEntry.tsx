@@ -13,8 +13,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Plus, Pencil, Trash2, Save, FilePlus, Paperclip, Eye, X, Lock, ArrowLeft,
 } from "lucide-react";
@@ -22,9 +26,8 @@ import {
   useJournalEntries, useCreateJournalEntry, usePostJournalEntry, useAccounts,
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
-import { useBusinessDate } from "@/hooks/useSettings";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
-import { formatISOasBS, todayBS } from "@/lib/nepaliDate";
+import { formatISOasBS, todayBS, bsToAD, adToBS } from "@/lib/nepaliDate";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -52,6 +55,10 @@ function generateId() {
   return crypto.randomUUID?.() || Math.random().toString(36).slice(2);
 }
 
+function emptyLine(): EntryLine {
+  return { id: generateId(), account_id: "", sub_account: "", debit: 0, credit: 0, remarks: "" };
+}
+
 function getNepaliFiscalYears() {
   const current = todayBS();
   const years: string[] = [];
@@ -74,6 +81,101 @@ function generateVoucherNo(voucherType: VoucherType, fiscalYear: string) {
   return `${prefix}-${fyShort}-${seq}`;
 }
 
+/** Get AD date range for a Nepali fiscal year string like "2082/83" */
+function getFiscalYearADRange(fy: string): { minDate: string; maxDate: string } {
+  const startYear = parseInt(fy.split("/")[0]);
+  // Nepali FY starts on 1 Shrawan (month 4) and ends on 31 Ashar (month 3) next year
+  const startBS = { year: startYear, month: 4, day: 1 };
+  const endBS = { year: startYear + 1, month: 3, day: 32 }; // will clamp
+  // Get actual last day of Ashar
+  const endBSClamped = { year: startYear + 1, month: 3, day: 31 }; // safe upper bound
+
+  const startAD = bsToAD(startBS);
+  const endAD = bsToAD(endBSClamped);
+
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { minDate: fmt(startAD), maxDate: fmt(endAD) };
+}
+
+// ─── Create Ledger Dialog Component ──────────────────────────────────────────
+function CreateLedgerDialog({
+  open,
+  onOpenChange,
+  type,
+  accounts,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  type: "ledger" | "sub_ledger";
+  accounts?: { id: string; code: string; name: string; type: string }[];
+}) {
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [acctType, setAcctType] = useState("expense");
+  const [parentId, setParentId] = useState("");
+
+  const handleCreate = () => {
+    if (!name.trim() || !code.trim()) {
+      toast.error("Name and Code are required");
+      return;
+    }
+    // TODO: wire to actual create account mutation
+    toast.success(`${type === "ledger" ? "Ledger" : "Sub-Ledger"} "${name}" created (demo)`);
+    setName(""); setCode(""); setAcctType("expense"); setParentId("");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{type === "ledger" ? "Create Ledger Account" : "Create Sub-Ledger Account"}</DialogTitle>
+          <DialogDescription>Add a new {type === "ledger" ? "ledger" : "sub-ledger"} account to the chart of accounts.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Account Code *</Label>
+            <Input value={code} onChange={e => setCode(e.target.value)} placeholder="e.g. 1100" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Account Name *</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Cash in Hand" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Account Type</Label>
+            <Select value={acctType} onValueChange={setAcctType}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["asset", "liability", "equity", "income", "expense"].map(t => (
+                  <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {type === "sub_ledger" && accounts && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Parent Account</Label>
+              <Select value={parentId} onValueChange={setParentId}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select parent" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map(a => (
+                    <SelectItem key={a.id} value={a.id} className="text-xs">{a.code} - {a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleCreate}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function NewJournalEntry() {
   const navigate = useNavigate();
 
@@ -83,14 +185,10 @@ export default function NewJournalEntry() {
   const [voucherType, setVoucherType] = useState<VoucherType | "">("");
   const [voucherNo, setVoucherNo] = useState("");
 
-  // ── Entry Lines ──
+  // ── Entry Lines (default 2 empty) ──
   const [lines, setLines] = useState<EntryLine[]>([]);
+  const [editLines, setEditLines] = useState<EntryLine[]>([emptyLine(), emptyLine()]);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
-
-  // ── New Line Input ──
-  const [newLine, setNewLine] = useState<Omit<EntryLine, "id">>({
-    account_id: "", sub_account: "", debit: 0, credit: 0, remarks: "",
-  });
 
   // ── Narration & Attachment ──
   const [narration, setNarration] = useState("");
@@ -98,6 +196,16 @@ export default function NewJournalEntry() {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Delete Confirmation ──
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "line" | "attachment"; id?: string } | null>(null);
+
+  // ── Create Ledger Dialogs ──
+  const [createLedgerOpen, setCreateLedgerOpen] = useState(false);
+  const [createSubLedgerOpen, setCreateSubLedgerOpen] = useState(false);
+
+  // ── Input Refs for Tab/Enter navigation ──
+  const inputRefs = useRef<Record<string, HTMLInputElement | HTMLButtonElement | null>>({});
 
   // ── Hooks ──
   const { data: accounts } = useAccounts();
@@ -110,48 +218,81 @@ export default function NewJournalEntry() {
   const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
   const isBalanced = lines.length >= 2 && Math.abs(totalDebit - totalCredit) < 0.01;
 
+  // ── Fiscal year date constraints ──
+  const fyRange = useMemo(() => getFiscalYearADRange(fiscalYear), [fiscalYear]);
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const maxDate = fyRange.maxDate > todayISO ? todayISO : fyRange.maxDate;
+  const minDate = fyRange.minDate;
+
+  // Clamp transaction date when fiscal year changes
+  useEffect(() => {
+    if (transactionDate < minDate) setTransactionDate(minDate);
+    else if (transactionDate > maxDate) setTransactionDate(maxDate);
+  }, [fiscalYear, minDate, maxDate]);
+
   useEffect(() => {
     if (voucherType) {
       setVoucherNo(generateVoucherNo(voucherType as VoucherType, fiscalYear));
     }
   }, [voucherType, fiscalYear]);
 
-  const getAutoAmount = useCallback(() => {
-    if (lines.length === 0) return { debit: 0, credit: 0 };
-    const diff = totalDebit - totalCredit;
-    if (diff > 0) return { debit: 0, credit: diff };
-    if (diff < 0) return { debit: Math.abs(diff), credit: 0 };
-    return { debit: 0, credit: 0 };
-  }, [lines, totalDebit, totalCredit]);
+  // ── Add line from edit row ──
+  const handleAddEditLine = (index: number) => {
+    const line = editLines[index];
+    if (!line.account_id) { toast.error("Please select a Ledger Account"); return; }
+    if (line.debit === 0 && line.credit === 0) { toast.error("Enter Debit or Credit amount"); return; }
+    if (line.debit > 0 && line.credit > 0) { toast.error("A line cannot have both Debit and Credit"); return; }
 
-  const handleAddLine = () => {
-    if (!newLine.account_id) { toast.error("Please select a Ledger Account"); return; }
-    if (newLine.debit === 0 && newLine.credit === 0) { toast.error("Enter Debit or Credit amount"); return; }
-    if (newLine.debit > 0 && newLine.credit > 0) { toast.error("A line cannot have both Debit and Credit"); return; }
+    setLines(prev => [...prev, { ...line, id: line.id || generateId() }]);
 
-    const line: EntryLine = { ...newLine, id: generateId() };
-    setLines(prev => [...prev, line]);
-    setNewLine({ account_id: "", sub_account: "", debit: 0, credit: 0, remarks: "" });
+    // Replace with new empty line
+    setEditLines(prev => {
+      const next = [...prev];
+      next[index] = emptyLine();
+      return next;
+    });
 
+    // Auto-fill next empty edit line with balancing amount
     setTimeout(() => {
-      const newTotal = [...lines, line];
-      const d = newTotal.reduce((s, l) => s + l.debit, 0);
-      const c = newTotal.reduce((s, l) => s + l.credit, 0);
-      const diff = d - c;
-      if (diff > 0) setNewLine(p => ({ ...p, credit: parseFloat(diff.toFixed(2)) }));
-      else if (diff < 0) setNewLine(p => ({ ...p, debit: parseFloat(Math.abs(diff).toFixed(2)) }));
+      setEditLines(prev => {
+        const allLines = [...lines, line];
+        const d = allLines.reduce((s, l) => s + l.debit, 0);
+        const c = allLines.reduce((s, l) => s + l.credit, 0);
+        const diff = d - c;
+        const emptyIdx = prev.findIndex(p => !p.account_id);
+        if (emptyIdx >= 0 && Math.abs(diff) > 0.001) {
+          const next = [...prev];
+          next[emptyIdx] = {
+            ...next[emptyIdx],
+            debit: diff < 0 ? parseFloat(Math.abs(diff).toFixed(2)) : 0,
+            credit: diff > 0 ? parseFloat(diff.toFixed(2)) : 0,
+          };
+          return next;
+        }
+        return prev;
+      });
     }, 0);
   };
 
   const handleDeleteLine = (id: string) => {
     setLines(prev => prev.filter(l => l.id !== id));
     toast.success("Line removed");
+    setDeleteTarget(null);
   };
 
   const handleEditLine = (line: EntryLine) => {
-    setEditingLineId(line.id);
-    setNewLine({ account_id: line.account_id, sub_account: line.sub_account, debit: line.debit, credit: line.credit, remarks: line.remarks });
+    // Remove from committed lines, put into first empty edit slot
     setLines(prev => prev.filter(l => l.id !== line.id));
+    setEditLines(prev => {
+      const emptyIdx = prev.findIndex(p => !p.account_id);
+      if (emptyIdx >= 0) {
+        const next = [...prev];
+        next[emptyIdx] = { ...line };
+        return next;
+      }
+      return [...prev, { ...line }];
+    });
+    setEditingLineId(line.id);
   };
 
   const handleSave = async (andNew: boolean) => {
@@ -176,11 +317,11 @@ export default function NewJournalEntry() {
 
       if (andNew) {
         setLines([]);
+        setEditLines([emptyLine(), emptyLine()]);
         setNarration("");
         setAttachment(null);
         setAttachmentPreview(null);
         setVoucherNo(generateVoucherNo(voucherType as VoucherType, fiscalYear));
-        setNewLine({ account_id: "", sub_account: "", debit: 0, credit: 0, remarks: "" });
       } else {
         navigate("/finance");
       }
@@ -221,6 +362,7 @@ export default function NewJournalEntry() {
     setAttachment(null);
     setAttachmentPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setDeleteTarget(null);
   };
 
   const getAccountName = (id: string) => {
@@ -228,26 +370,67 @@ export default function NewJournalEntry() {
     return acc ? `${acc.code} - ${acc.name}` : id;
   };
 
+  // ── Tab/Enter navigation helper ──
+  const NAV_FIELDS = ["account", "sub_account", "debit", "credit", "remarks", "add"];
+  const handleFieldKeyDown = (e: React.KeyboardEvent, lineIdx: number, fieldIdx: number) => {
+    if (e.key === "Enter" || e.key === "Tab") {
+      if (e.key === "Enter") e.preventDefault();
+      // If on add button and pressing enter, trigger add
+      if (NAV_FIELDS[fieldIdx] === "add" && e.key === "Enter") {
+        handleAddEditLine(lineIdx);
+        // Focus first field of same row after reset
+        setTimeout(() => {
+          const ref = inputRefs.current[`${lineIdx}-0`];
+          if (ref) ref.focus();
+        }, 50);
+        return;
+      }
+      if (e.key === "Enter") {
+        // Move to next field
+        const nextField = fieldIdx + 1;
+        if (nextField < NAV_FIELDS.length) {
+          const ref = inputRefs.current[`${lineIdx}-${nextField}`];
+          if (ref) ref.focus();
+        } else {
+          // Move to add button
+          handleAddEditLine(lineIdx);
+          setTimeout(() => {
+            const ref = inputRefs.current[`${lineIdx}-0`];
+            if (ref) ref.focus();
+          }, 50);
+        }
+      }
+    }
+  };
+
+  const updateEditLine = (index: number, updates: Partial<EntryLine>) => {
+    setEditLines(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
+    });
+  };
+
   return (
     <MainLayout
       title="New Journal Entry"
       subtitle="Create journal, receipt, payment & contra vouchers"
-      actions={
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/finance")}>
-          <ArrowLeft className="h-4 w-4" /> Back to Finance
-        </Button>
-      }
     >
       <div className="space-y-4 max-w-6xl">
         {/* ═══ CARD 1: Voucher Header ═══ */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Voucher Details</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Voucher Details</CardTitle>
+              <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => navigate("/finance")}>
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to Journal Register
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
               <div className="space-y-1.5">
-                <Label className="text-xs">Fiscal Year *</Label>
+                <Label className="text-xs font-semibold">Fiscal Year *</Label>
                 <Select value={fiscalYear} onValueChange={setFiscalYear}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -258,14 +441,31 @@ export default function NewJournalEntry() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Transaction AD *</Label>
-                <Input type="date" value={transactionDate} onChange={e => setTransactionDate(e.target.value)} className="h-9 text-sm" />
+                <Label className="text-xs font-semibold">Transaction AD *</Label>
+                <Input
+                  type="date"
+                  value={transactionDate}
+                  min={minDate}
+                  max={maxDate}
+                  onChange={e => {
+                    const v = e.target.value;
+                    if (v >= minDate && v <= maxDate) setTransactionDate(v);
+                  }}
+                  className="h-9 text-sm"
+                />
               </div>
               <div className="space-y-1.5">
-                <NepaliDateInput label="नेपाली मिति *" value={transactionDate} onChange={setTransactionDate} showDual={false} />
+                <NepaliDateInput
+                  label="नेपाली मिति *"
+                  value={transactionDate}
+                  onChange={v => {
+                    if (v >= minDate && v <= maxDate) setTransactionDate(v);
+                  }}
+                  showDual={false}
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Voucher Type *</Label>
+                <Label className="text-xs font-semibold">Voucher Type *</Label>
                 <Select value={voucherType} onValueChange={(v) => setVoucherType(v as VoucherType)}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
@@ -276,7 +476,7 @@ export default function NewJournalEntry() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Voucher No</Label>
+                <Label className="text-xs font-semibold">Voucher No</Label>
                 <Input value={voucherNo} readOnly className="h-9 text-sm bg-muted/50 font-mono" placeholder="Auto-generated" />
               </div>
             </div>
@@ -291,40 +491,103 @@ export default function NewJournalEntry() {
             {isHeaderComplete && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Add Entry Line</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 items-end">
-                  <div className="lg:col-span-2 space-y-1">
-                    <Label className="text-[10px]">Ledger Account *</Label>
-                    <Select value={newLine.account_id} onValueChange={v => setNewLine(p => ({ ...p, account_id: v }))}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select account" /></SelectTrigger>
-                      <SelectContent>
-                        {accounts?.map(acc => (
-                          <SelectItem key={acc.id} value={acc.id} className="text-xs">{acc.code} - {acc.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Sub Account</Label>
-                    <Input placeholder="Sub acct" value={newLine.sub_account} onChange={e => setNewLine(p => ({ ...p, sub_account: e.target.value }))} className="h-9 text-xs" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Debit</Label>
-                    <Input type="number" placeholder="0.00" value={newLine.debit || ""} onChange={e => setNewLine(p => ({ ...p, debit: parseFloat(e.target.value) || 0, credit: parseFloat(e.target.value) ? 0 : p.credit }))} className="h-9 text-xs font-mono" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Credit</Label>
-                    <Input type="number" placeholder="0.00" value={newLine.credit || ""} onChange={e => setNewLine(p => ({ ...p, credit: parseFloat(e.target.value) || 0, debit: parseFloat(e.target.value) ? 0 : p.debit }))} className="h-9 text-xs font-mono" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Remarks</Label>
-                    <div className="flex gap-1">
-                      <Input placeholder="Note" value={newLine.remarks} onChange={e => setNewLine(p => ({ ...p, remarks: e.target.value }))} className="h-9 text-xs" />
-                      <Button size="sm" className="h-9 px-3 shrink-0" onClick={handleAddLine}>
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
+                {editLines.map((editLine, idx) => (
+                  <div key={editLine.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2 items-end mb-2">
+                    <div className="lg:col-span-2 space-y-1">
+                      <Label className="text-[10px]">Ledger Account *</Label>
+                      <div className="flex gap-1">
+                        <Select
+                          value={editLine.account_id}
+                          onValueChange={v => updateEditLine(idx, { account_id: v })}
+                        >
+                          <SelectTrigger
+                            className="h-9 text-xs flex-1"
+                            ref={el => { inputRefs.current[`${idx}-0`] = el as any; }}
+                            onKeyDown={e => handleFieldKeyDown(e, idx, 0)}
+                          >
+                            <SelectValue placeholder="Select account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accounts?.map(acc => (
+                              <SelectItem key={acc.id} value={acc.id} className="text-xs">{acc.code} - {acc.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setCreateLedgerOpen(true)} title="Create Ledger">
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Sub Account</Label>
+                      <div className="flex gap-1">
+                        <Input
+                          placeholder="Sub acct"
+                          value={editLine.sub_account}
+                          onChange={e => updateEditLine(idx, { sub_account: e.target.value })}
+                          className="h-9 text-xs flex-1"
+                          ref={el => { inputRefs.current[`${idx}-1`] = el; }}
+                          onKeyDown={e => handleFieldKeyDown(e, idx, 1)}
+                        />
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setCreateSubLedgerOpen(true)} title="Create Sub-Ledger">
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Debit</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={editLine.debit || ""}
+                        onChange={e => updateEditLine(idx, {
+                          debit: parseFloat(e.target.value) || 0,
+                          credit: parseFloat(e.target.value) ? 0 : editLine.credit,
+                        })}
+                        className="h-9 text-xs font-mono"
+                        ref={el => { inputRefs.current[`${idx}-2`] = el; }}
+                        onKeyDown={e => handleFieldKeyDown(e, idx, 2)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Credit</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={editLine.credit || ""}
+                        onChange={e => updateEditLine(idx, {
+                          credit: parseFloat(e.target.value) || 0,
+                          debit: parseFloat(e.target.value) ? 0 : editLine.debit,
+                        })}
+                        className="h-9 text-xs font-mono"
+                        ref={el => { inputRefs.current[`${idx}-3`] = el; }}
+                        onKeyDown={e => handleFieldKeyDown(e, idx, 3)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Remarks</Label>
+                      <div className="flex gap-1">
+                        <Input
+                          placeholder="Note"
+                          value={editLine.remarks}
+                          onChange={e => updateEditLine(idx, { remarks: e.target.value })}
+                          className="h-9 text-xs"
+                          ref={el => { inputRefs.current[`${idx}-4`] = el; }}
+                          onKeyDown={e => handleFieldKeyDown(e, idx, 4)}
+                        />
+                        <Button
+                          size="sm"
+                          className="h-9 px-3 shrink-0"
+                          onClick={() => handleAddEditLine(idx)}
+                          ref={el => { inputRefs.current[`${idx}-5`] = el; }}
+                          onKeyDown={e => handleFieldKeyDown(e, idx, 5)}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
             )}
           </CardContent>
@@ -373,7 +636,11 @@ export default function NewJournalEntry() {
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditLine(line)}>
                                   <Pencil className="h-3 w-3" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDeleteLine(line.id)}>
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteTarget({ type: "line", id: line.id })}
+                                >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
@@ -417,45 +684,51 @@ export default function NewJournalEntry() {
               <Label className="text-xs font-medium">Narration *</Label>
               <Textarea placeholder="What is this entry for? (mandatory)" value={narration} onChange={e => setNarration(e.target.value)} rows={3} className="text-sm resize-none" />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Attachment (max 1 MB — JPG, PNG, PDF)</Label>
-              <div className="flex items-center gap-3">
-                <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleFileChange} />
-                {!attachment ? (
-                  <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => fileInputRef.current?.click()}>
-                    <Paperclip className="h-3.5 w-3.5" /> Attach File
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 text-xs">
-                    <Paperclip className="h-3.5 w-3.5 text-primary" />
-                    <span className="truncate max-w-[200px]">{attachment.name}</span>
-                    <span className="text-muted-foreground">({(attachment.size / 1024).toFixed(0)} KB)</span>
-                    {(attachmentPreview || attachment.type === "application/pdf") && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPreviewOpen(true)}>
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={removeAttachment}>
-                      <X className="h-3 w-3" />
+
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              {/* Attachment */}
+              <div className="space-y-2 flex-1">
+                <Label className="text-xs font-medium">Attachment (max 1 MB — JPG, PNG, PDF)</Label>
+                <div className="flex items-center gap-3">
+                  <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleFileChange} />
+                  {!attachment ? (
+                    <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => fileInputRef.current?.click()}>
+                      <Paperclip className="h-3.5 w-3.5" /> Attach File
                     </Button>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 text-xs">
+                      <Paperclip className="h-3.5 w-3.5 text-primary" />
+                      <span className="truncate max-w-[200px]">{attachment.name}</span>
+                      <span className="text-muted-foreground">({(attachment.size / 1024).toFixed(0)} KB)</span>
+                      {(attachmentPreview || attachment.type === "application/pdf") && (
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPreviewOpen(true)}>
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteTarget({ type: "attachment" })}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t">
-              <Button variant="outline" className="gap-2 flex-1 sm:flex-none" onClick={() => handleSave(true)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
-                <FilePlus className="h-4 w-4" /> Save & New
-              </Button>
-              <Button className="gap-2 flex-1 sm:flex-none" onClick={() => handleSave(false)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
-                <Save className="h-4 w-4" />
-                {createJournalEntry.isPending ? "Saving..." : "Save"}
-                <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-1">⌘S</kbd>
-              </Button>
+
+              {/* Save Buttons - Right aligned */}
+              <div className="flex items-center gap-2 sm:pt-5 shrink-0">
+                <Button variant="outline" className="gap-2" onClick={() => handleSave(true)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
+                  <FilePlus className="h-4 w-4" /> Save & New
+                </Button>
+                <Button className="gap-2" onClick={() => handleSave(false)} disabled={createJournalEntry.isPending || !isHeaderComplete}>
+                  <Save className="h-4 w-4" />
+                  {createJournalEntry.isPending ? "Saving..." : "Save"}
+                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-1">⌘S</kbd>
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Attachment Preview Dialog */}
+        {/* ── Attachment Preview Dialog ── */}
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Attachment Preview</DialogTitle></DialogHeader>
@@ -472,6 +745,36 @@ export default function NewJournalEntry() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* ── Delete Confirmation Dialog ── */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteTarget?.type === "line"
+                  ? "Are you sure you want to delete this entry line? This action cannot be undone."
+                  : "Are you sure you want to remove the attachment?"}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deleteTarget?.type === "line" && deleteTarget.id) handleDeleteLine(deleteTarget.id);
+                  else if (deleteTarget?.type === "attachment") removeAttachment();
+                }}
+              >
+                Yes, Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* ── Create Ledger Dialogs ── */}
+        <CreateLedgerDialog open={createLedgerOpen} onOpenChange={setCreateLedgerOpen} type="ledger" accounts={accounts} />
+        <CreateLedgerDialog open={createSubLedgerOpen} onOpenChange={setCreateSubLedgerOpen} type="sub_ledger" accounts={accounts} />
       </div>
     </MainLayout>
   );
