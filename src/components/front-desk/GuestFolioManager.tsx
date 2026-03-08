@@ -930,7 +930,7 @@ export const GuestFolioManager = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold">Folio #: {selectedFolio.folio_number}</p>
-                  <p>Date: {format(new Date(), "PPP")}</p>
+                  <p>Date: {formatAD(new Date())}</p>
                 </div>
               </div>
 
