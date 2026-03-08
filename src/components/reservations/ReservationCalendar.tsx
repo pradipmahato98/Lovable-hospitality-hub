@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfWeek, eachDayOfInterval, isSameDay, isWithinInterval, parseISO, startOfDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 import { CheckInOutDialog } from "./CheckInOutDialog";
 
 interface Reservation {
@@ -221,7 +221,7 @@ export function ReservationCalendar() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium min-w-32 text-center">
-              {format(weekStart, "MMM d")} - {format(addDays(weekStart, 13), "MMM d, yyyy")}
+              {formatAD(weekStart)} - {formatAD(addDays(weekStart, 13))}
             </span>
             <Button variant="outline" size="icon" onClick={goToNextWeek}>
               <ChevronRight className="h-4 w-4" />

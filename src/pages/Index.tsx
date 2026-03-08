@@ -12,7 +12,7 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { todayBS, formatBSDate } from "@/lib/nepaliDate";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 const Index = () => {
   const { data: stats, isLoading } = useDashboardStats();
@@ -31,7 +31,7 @@ const Index = () => {
   const bsToday = formatBSDate(todayBS(), "long");
 
   return (
-    <MainLayout title="Dashboard" subtitle={`${format(new Date(), "MMM dd, yyyy")} • ${bsToday} BS`}>
+    <MainLayout title="Dashboard" subtitle={`${formatAD(new Date())} • ${bsToday} BS`}>
       {/* Security Alert */}
       {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
         <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">

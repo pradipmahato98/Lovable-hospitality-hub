@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAdminAuditLogs } from "@/hooks/useUsersWithRoles";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function AuditReportingService({ isReadOnly }: { isReadOnly?: boolean }) {
@@ -101,7 +102,7 @@ export function AuditReportingService({ isReadOnly }: { isReadOnly?: boolean }) 
                       <TableCell className="text-muted-foreground font-mono text-[11px]">
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3" />
-                          {format(new Date(log.created_at), "MMM d, HH:mm:ss")}
+                          {formatAD(new Date(log.created_at), "seconds")}
                         </div>
                       </TableCell>
                       <TableCell>

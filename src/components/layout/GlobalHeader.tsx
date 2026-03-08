@@ -7,7 +7,7 @@ import { HeaderSearch } from "./header/HeaderSearch";
 import { HeaderNotifications } from "./header/HeaderNotifications";
 import { HeaderUserMenu } from "./header/HeaderUserMenu";
 import { todayBS, formatBSDate } from "@/lib/nepaliDate";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HeaderProps {
@@ -30,7 +30,7 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   const bsToday = todayBS();
   const bsFormatted = formatBSDate(bsToday, "long");
-  const adFormatted = format(new Date(), "MMM dd, yyyy");
+  const adFormatted = formatAD(new Date());
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4">

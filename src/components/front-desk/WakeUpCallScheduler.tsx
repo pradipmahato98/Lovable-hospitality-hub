@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { AlarmClock, Plus, Check, X, Phone } from "lucide-react";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 export function WakeUpCallScheduler() {
   const { data: calls = [], scheduleCall, updateCallStatus, cancelCall } = useWakeUpCalls();
@@ -169,7 +170,7 @@ export function WakeUpCallScheduler() {
                 calls.map((call) => (
                   <TableRow key={call.id}>
                     <TableCell className="font-mono font-bold text-primary">{call.call_time}</TableCell>
-                    <TableCell className="text-sm">{format(new Date(call.call_date), "MMM d")}</TableCell>
+                    <TableCell className="text-sm">{formatAD(new Date(call.call_date))}</TableCell>
                     <TableCell className="font-medium">{call.guest_name}</TableCell>
                     <TableCell className="font-mono">{call.room_number}</TableCell>
                     <TableCell>

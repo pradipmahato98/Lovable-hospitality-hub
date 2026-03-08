@@ -13,6 +13,7 @@ import { Users, LogIn, LogOut, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 const db = supabase as any;
 
@@ -171,7 +172,7 @@ export function GroupCheckInOut() {
                         <TableCell><Checkbox checked={selectedIds.has(res.id)} onCheckedChange={() => toggleSelect(res.id)} /></TableCell>
                         <TableCell className="font-medium">{res.guests?.first_name} {res.guests?.last_name}</TableCell>
                         <TableCell className="font-mono">{room?.room_number || "-"}</TableCell>
-                        <TableCell className="text-sm">{format(new Date(res.check_in_date), "MMM d")}</TableCell>
+                        <TableCell className="text-sm">{formatAD(new Date(res.check_in_date))}</TableCell>
                       </TableRow>
                     );
                   })
@@ -210,7 +211,7 @@ export function GroupCheckInOut() {
                         <TableCell><Checkbox checked={selectedIds.has(res.id)} onCheckedChange={() => toggleSelect(res.id)} /></TableCell>
                         <TableCell className="font-medium">{res.guests?.first_name} {res.guests?.last_name}</TableCell>
                         <TableCell className="font-mono">{room?.room_number || "-"}</TableCell>
-                        <TableCell className="text-sm">{format(new Date(res.check_out_date), "MMM d")}</TableCell>
+                        <TableCell className="text-sm">{formatAD(new Date(res.check_out_date))}</TableCell>
                       </TableRow>
                     );
                   })

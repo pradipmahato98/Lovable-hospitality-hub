@@ -31,6 +31,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { MessageSquare, Mail, Package, AlertCircle, Archive, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { useGuests } from "@/hooks/useGuests";
 
 export const FrontDeskMessages = () => {
@@ -156,7 +157,7 @@ export const FrontDeskMessages = () => {
                     <TableRow key={msg.id} className={msg.message_type === 'emergency' ? "bg-destructive/5" : ""}>
                       <TableCell>{getTypeIcon(msg.message_type)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(msg.created_at), "MMM dd, HH:mm")}
+                        {formatAD(new Date(msg.created_at), "time")}
                       </TableCell>
                       <TableCell className="font-medium">
                         {msg.guests?.first_name} {msg.guests?.last_name}

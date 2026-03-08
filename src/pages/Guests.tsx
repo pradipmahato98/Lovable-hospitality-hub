@@ -44,7 +44,7 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
@@ -363,7 +363,7 @@ const Guests = () => {
                               {f.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>{format(new Date(f.created_at), "MMM d")}</TableCell>
+                          <TableCell>{formatAD(new Date(f.created_at))}</TableCell>
                           <TableCell>
                             {f.status === "pending" && (
                               <Button variant="ghost" size="sm" onClick={() => updateStatus.mutate({ id: f.id, status: "resolved" })}>
@@ -442,7 +442,7 @@ const Guests = () => {
                           </TableCell>
                           <TableCell className="font-semibold">{m.points_balance.toLocaleString()}</TableCell>
                           <TableCell>{m.lifetime_points.toLocaleString()}</TableCell>
-                          <TableCell>{format(new Date(m.join_date), "MMM d, yyyy")}</TableCell>
+                          <TableCell>{formatAD(new Date(m.join_date))}</TableCell>
                         </TableRow>
                       ))
                     )}

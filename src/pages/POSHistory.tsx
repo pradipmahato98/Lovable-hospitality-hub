@@ -171,7 +171,7 @@ export default function POSHistory() {
     doc.setFontSize(18);
     doc.text("POS Transaction History", 14, 22);
     doc.setFontSize(10);
-    doc.text(`Generated: ${format(new Date(), "PPpp")}`, 14, 30);
+    doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 30);
 
     if (startDate || endDate) {
       doc.text(`Period: ${startDate || "Start"} to ${endDate || "Now"}`, 14, 36);
@@ -197,7 +197,7 @@ export default function POSHistory() {
 
     filteredTransactions.slice(0, 30).forEach((t) => {
       doc.text((t.transaction_number || "").slice(-8), 14, y);
-      doc.text(formatDateSafe(t.created_at, "MM/dd HH:mm"), 50, y);
+      doc.text(formatDateSafe(t.created_at, "dd/MM HH:mm"), 50, y);
       doc.text(`T${t.table_number || ""}`, 90, y);
       doc.text(paymentMethodLabels[t.payment_method] || t.payment_method || "", 110, y);
       doc.text(`$${(t.total || 0).toFixed(2)}`, 150, y);
@@ -215,7 +215,7 @@ export default function POSHistory() {
   const exportToExcel = () => {
     const data = filteredTransactions.map((t) => ({
       "Transaction #": t.transaction_number,
-      Date: formatDateSafe(t.created_at, "yyyy-MM-dd HH:mm:ss"),
+      Date: formatDateSafe(t.created_at, "dd/MM/yyyy HH:mm:ss"),
       Table: t.table_number,
       Customer: t.customer_name || "-",
       Company: t.company_name || "-",
@@ -412,7 +412,7 @@ export default function POSHistory() {
                           {transaction.transaction_number || "N/A"}
                         </TableCell>
                         <TableCell>
-                          {formatDateSafe(transaction.created_at, "MMM d, yyyy HH:mm")}
+                          {formatDateSafe(transaction.created_at, "dd/MM/yyyy HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">T{transaction.table_number || "0"}</Badge>
@@ -467,7 +467,7 @@ export default function POSHistory() {
                 <div>
                   <p className="text-muted-foreground">Date & Time</p>
                   <p className="font-medium">
-                    {formatDateSafe(selectedTransaction.created_at, "PPpp")}
+                    {formatDateSafe(selectedTransaction.created_at, "dd/MM/yyyy HH:mm:ss")}
                   </p>
                 </div>
                 <div>

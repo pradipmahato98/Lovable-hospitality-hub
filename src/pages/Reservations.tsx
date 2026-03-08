@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, Plus, MoreVertical, LogIn, LogOut, CalendarDays, List, UserPlus, Receipt } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
@@ -134,10 +134,10 @@ const Reservations = () => {
                                 {reservation.room ? `${reservation.room.room_number} - ${reservation.room.room_type}` : "N/A"}
                               </TableCell>
                               <TableCell className="hidden lg:table-cell">
-                                {format(new Date(reservation.check_in_date), "MMM dd, yyyy")}
+                                {formatAD(new Date(reservation.check_in_date))}
                               </TableCell>
                               <TableCell className="hidden lg:table-cell">
-                                {format(new Date(reservation.check_out_date), "MMM dd, yyyy")}
+                                {formatAD(new Date(reservation.check_out_date))}
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={statusColors[reservation.status] || statusColors.pending}>

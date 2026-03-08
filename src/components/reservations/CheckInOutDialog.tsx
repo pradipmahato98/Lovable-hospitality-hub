@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
 import { useCheckInSettings } from "@/hooks/useSettings";
 
@@ -452,7 +452,7 @@ export function CheckInOutDialog({
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(formData.checkInDate, "PPP")}
+                        {formatAD(formData.checkInDate)}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -472,7 +472,7 @@ export function CheckInOutDialog({
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(formData.checkOutDate, "PPP")}
+                        {formatAD(formData.checkOutDate)}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">

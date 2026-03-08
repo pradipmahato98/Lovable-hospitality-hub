@@ -40,6 +40,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useHousekeepingTasks, useLostAndFound, useHousekeepingStats } from "@/hooks/useHousekeeping";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 type RoomStatus = "clean" | "dirty" | "inspected" | "out_of_order" | "in_progress";
 
@@ -565,7 +566,7 @@ const Housekeeping = () => {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.item_description}</TableCell>
                         <TableCell>{item.found_location}</TableCell>
-                        <TableCell>{format(new Date(item.found_date), "MMM d, yyyy")}</TableCell>
+                        <TableCell>{formatAD(new Date(item.found_date))}</TableCell>
                         <TableCell className="capitalize">{item.category || "-"}</TableCell>
                         <TableCell>
                           <Badge className={

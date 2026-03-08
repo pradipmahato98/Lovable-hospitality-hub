@@ -19,7 +19,7 @@ import { Search, History, Filter, Calendar, Clock } from "lucide-react";
 import { RoleChangeAudit, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { RoleBadge } from "./RoleBadge";
 import { TableSkeleton } from "@/components/skeletons";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 
 interface AuditLogTableProps {
   logs: RoleChangeAudit[] | undefined;
@@ -152,7 +152,7 @@ export const AuditLogTable = ({
                       <TableCell className="text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
-                          {format(new Date(log.created_at), "MMM d, yyyy HH:mm")}
+                          {formatAD(new Date(log.created_at), "time")}
                         </div>
                       </TableCell>
                       <TableCell>{log.user_email}</TableCell>

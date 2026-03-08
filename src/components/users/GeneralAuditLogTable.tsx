@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Terminal, Clock, ShieldAlert, Lock, User, Info } from "lucide-react";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/skeletons";
 
@@ -56,7 +56,7 @@ export const GeneralAuditLogTable = ({ logs, isLoading }: GeneralAuditLogTablePr
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Clock className="h-3.5 w-3.5" />
-                        {format(new Date(log.created_at), "MMM d, HH:mm:ss")}
+                        {formatAD(new Date(log.created_at), "seconds")}
                       </div>
                     </TableCell>
                     <TableCell>

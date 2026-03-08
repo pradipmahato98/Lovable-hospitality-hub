@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,7 @@ export default function DayClose() {
                 Accounting Status: {isClosed ? "Closed" : "Open"}
               </CardTitle>
               <CardDescription>
-                Business Date: {businessDate ? format(parseISO(businessDate), "PP") : "---"}
+                Business Date: {businessDate ? formatAD(parseISO(businessDate)) : "---"}
               </CardDescription>
             </div>
             {isClosed ? (

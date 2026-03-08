@@ -1,7 +1,6 @@
-import { format } from "date-fns";
 import { adToBS, formatBSDate, isoToBS } from "@/lib/nepaliDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 
 interface DualDateProps {
   /** ISO string (YYYY-MM-DD) or Date object */
@@ -20,7 +19,7 @@ interface DualDateProps {
 
 export function DualDate({
   date,
-  adFormat = "MMM dd, yyyy",
+  adFormat = "dd/MM/yyyy",
   bsFormat = "long",
   bsOnly = false,
   className,
@@ -28,7 +27,7 @@ export function DualDate({
 }: DualDateProps) {
   const adDate = typeof date === "string" ? new Date(date) : date;
   const bsDate = adToBS(adDate);
-  const adFormatted = format(adDate, adFormat);
+  const adFormatted = formatAD(adDate);
   const bsFormatted = formatBSDate(bsDate, bsFormat);
 
   if (bsOnly) {
@@ -69,7 +68,7 @@ export function DualDateBadge({ date, className }: DualDateBadgeProps) {
   const adDate = typeof date === "string" ? new Date(date) : date;
   const bsDate = adToBS(adDate);
   const bsFormatted = formatBSDate(bsDate, "short");
-  const adFormatted = format(adDate, "yyyy/MM/dd");
+  const adFormatted = formatAD(adDate);
 
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-xs", className)}>

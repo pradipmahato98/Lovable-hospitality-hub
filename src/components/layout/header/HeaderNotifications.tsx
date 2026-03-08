@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
@@ -67,7 +67,7 @@ export function HeaderNotifications() {
                     </p>
                     <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
                     <p className="text-xs text-muted-foreground/70 mt-1">
-                      {format(new Date(notification.created_at), "MMM d, h:mm a")}
+                      {formatAD(new Date(notification.created_at), "time")}
                     </p>
                   </div>
                 </DropdownMenuItem>

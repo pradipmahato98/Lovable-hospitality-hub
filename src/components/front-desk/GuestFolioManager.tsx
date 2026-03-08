@@ -79,7 +79,7 @@ import { format } from "date-fns";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
-import { cn } from "@/lib/utils";
+import { cn, formatAD } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
 export const GuestFolioManager = () => {
@@ -343,7 +343,7 @@ export const GuestFolioManager = () => {
     if (!selectedFolio || !items) return;
 
     const exportData = items.map(item => ({
-      Date: format(new Date(item.created_at), "yyyy-MM-dd HH:mm"),
+      Date: formatAD(new Date(item.created_at), "time"),
       Description: item.description,
       Source: item.source,
       Charge: item.amount > 0 ? item.amount : 0,
@@ -604,7 +604,7 @@ export const GuestFolioManager = () => {
                       {items.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {format(new Date(item.created_at), "MMM dd, HH:mm")}
+                            {formatAD(new Date(item.created_at), "time")}
                           </TableCell>
                           <TableCell className="font-medium">{item.description}</TableCell>
                           <TableCell>
@@ -681,7 +681,7 @@ export const GuestFolioManager = () => {
                             {items.filter(i => i.reason).map((item) => (
                               <TableRow key={`audit-${item.id}`}>
                                 <TableCell className="text-xs text-muted-foreground">
-                                  {format(new Date(item.created_at), "MMM dd, HH:mm:ss")}
+                                  {formatAD(new Date(item.created_at), "seconds")}
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="text-[10px]">ADJUSTMENT</Badge>
@@ -930,7 +930,7 @@ export const GuestFolioManager = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold">Folio #: {selectedFolio.folio_number}</p>
-                  <p>Date: {format(new Date(), "PPP")}</p>
+                  <p>Date: {formatAD(new Date())}</p>
                 </div>
               </div>
 
@@ -958,7 +958,7 @@ export const GuestFolioManager = () => {
                 <TableBody>
                   {items.map((item) => (
                     <TableRow key={item.id} className="border-none">
-                      <TableCell className="py-2">{format(new Date(item.created_at), "MMM dd, yyyy")}</TableCell>
+                      <TableCell className="py-2">{formatAD(new Date(item.created_at))}</TableCell>
                       <TableCell className="py-2">{item.description}</TableCell>
                       <TableCell className="text-right py-2 font-mono">${item.amount.toFixed(2)}</TableCell>
                     </TableRow>

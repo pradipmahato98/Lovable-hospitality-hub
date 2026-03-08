@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { formatAD } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
@@ -149,7 +150,7 @@ export const LogsReportTab = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(log.created_at), "MMM d, h:mm a")}
+                      {formatAD(new Date(log.created_at), "time")}
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-muted-foreground">
                       {log.new_values ? JSON.stringify(log.new_values) : "-"}
