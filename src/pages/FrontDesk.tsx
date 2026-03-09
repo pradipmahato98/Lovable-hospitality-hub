@@ -392,7 +392,7 @@ const FrontDesk = () => {
                     />
                     <MetricCard
                       title="Pending Payments"
-                      value={`$${pendingAmount.toLocaleString()}`}
+                      value={formatCurrency(pendingAmount)}
                       change={`${pendingInvoices.length} invoices`}
                       changeType="neutral"
                       icon={Receipt}
