@@ -134,6 +134,14 @@ const StaffManagement = () => {
               </Tabs>
             </TabsContent>
 
+            <TabsContent value="schedules" className="mt-0">
+              <SchedulesTab />
+            </TabsContent>
+
+            <TabsContent value="attendance" className="mt-0">
+              <AttendanceTab />
+            </TabsContent>
+
             <TabsContent value="logs" className="mt-0">
               <LogsReportTab />
             </TabsContent>

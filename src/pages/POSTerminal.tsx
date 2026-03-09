@@ -366,15 +366,15 @@ const POSTerminal = () => {
                 <div className="border-t border-border pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>{formatCurrency(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax (10%)</span>
-                    <span>${(subtotal * 0.1).toFixed(2)}</span>
+                    <span>{formatCurrency(subtotal * 0.1)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-semibold border-t border-border pt-2">
                     <span>Total</span>
-                    <span className="text-primary">${(subtotal * 1.1).toFixed(2)}</span>
+                    <span className="text-primary">{formatCurrency(subtotal * 1.1)}</span>
                   </div>
                 </div>
 

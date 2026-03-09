@@ -199,6 +199,7 @@ const HR = () => {
 
         <TabsContent value="payroll"><PayrollPanel /></TabsContent>
         <TabsContent value="leave"><LeaveManagement /></TabsContent>
+        <TabsContent value="reports"><HRReportsTab /></TabsContent>
       </Tabs>
     </MainLayout>
   );
