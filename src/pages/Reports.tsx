@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { useReportStats } from "@/hooks/useReportStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 const Reports = () => {
   const [activeReportTab, setActiveReportTab] = useState("overview");
