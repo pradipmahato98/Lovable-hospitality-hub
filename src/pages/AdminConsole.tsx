@@ -25,6 +25,9 @@ import {
   Plus,
   Trash2,
   Layout,
+  Hotel,
+  Calendar,
+  DollarSign,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -69,6 +72,17 @@ import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { formatCurrency } from "@/lib/utils";
+import { useRooms } from "@/hooks/useRooms";
+import { useReservations } from "@/hooks/useReservations";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+
+// Security policy interface
+interface SecurityPolicies {
+  force_mfa: boolean;
+  session_timeout_hours: number;
+  password_policy: "basic" | "standard" | "strong";
+}
 
 const AdminConsole = () => {
   const [mounted, setMounted] = useState(false);
@@ -92,13 +106,26 @@ const AdminConsole = () => {
   const [isProvisioning, setIsProvisioning] = useState(false);
 
   // Data hooks
-  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users");
-  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit");
+  const { data: users, isLoading: loadingUsers } = useUsersWithRoles(activeTab === "users" || activeTab === "overview");
+  const { data: adminLogs, isLoading: loadingLogs } = useAdminAuditLogs(activeTab === "audit" || activeTab === "overview");
   const { data: permissions, isLoading: loadingPerms } = useRolePermissions(activeTab === "permissions");
   const { data: otaChannels, isLoading: loadingChannels } = useOTAChannels(activeTab === "integrations");
   const { data: otaLogs, isLoading: loadingOTALogs } = useOTASyncLogs(activeTab === "integrations");
   const { data: apiKeysSettings, isLoading: loadingAPIKeys } = useAPIKeysSettings();
   const updateAPIKeys = useUpdateAPIKeysSettings();
+
+  // System metrics hooks
+  const { data: rooms } = useRooms();
+  const { data: reservations } = useReservations();
+  const { data: dashboardStats } = useDashboardStats();
+
+  // Security policies state (persisted)
+  const { data: securityPolicies } = useSettings<SecurityPolicies>("security_policies", {
+    force_mfa: false,
+    session_timeout_hours: 4,
+    password_policy: "standard"
+  });
+  const updateSecurityPolicies = useUpdateSettings<SecurityPolicies>("security_policies");
 
   // State for RBAC
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -126,7 +153,6 @@ const AdminConsole = () => {
         return;
       }
 
-      // Simple CSV conversion
       const headers = Object.keys(data[0]).join(",");
       const rows = data.map(log =>
         Object.values(log).map(val =>
@@ -169,21 +195,19 @@ const AdminConsole = () => {
     }
     setIsProvisioning(true);
     try {
-      // 1. Create Profile
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .insert({
           email: newUserData.email,
           first_name: newUserData.firstName,
           last_name: newUserData.lastName,
-          user_id: crypto.randomUUID(), // Mock user_id for profile-only entry
+          user_id: crypto.randomUUID(),
         })
         .select()
         .single();
 
       if (profileError) throw profileError;
 
-      // 2. Assign Role
       const { error: roleError } = await supabase
         .from("user_roles")
         .insert({
@@ -194,7 +218,7 @@ const AdminConsole = () => {
       if (roleError) throw roleError;
 
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
-      toast.success("Account provisioned successfully. User can now sign up with this email.");
+      toast.success("Profile pre-provisioned. User must sign up with this email to activate.");
       setProvisionModalOpen(false);
       setNewUserData({ email: "", firstName: "", lastName: "", role: "staff" });
     } catch (error: any) {
@@ -241,6 +265,16 @@ const AdminConsole = () => {
         setRbacModalOpen(false);
         setNewPermission({ ...newPermission, permission: "" });
       }
+    });
+  };
+
+  const handleSecurityPolicyChange = (key: keyof SecurityPolicies, value: any) => {
+    if (!securityPolicies) return;
+    updateSecurityPolicies.mutate({
+      ...securityPolicies,
+      [key]: value
+    }, {
+      onSuccess: () => toast.success("Security policy updated")
     });
   };
 
@@ -298,7 +332,7 @@ const AdminConsole = () => {
         </div>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -314,25 +348,37 @@ const AdminConsole = () => {
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-success" />
-                  RBAC Policies
+                  <Hotel className="h-4 w-4 text-blue-500" />
+                  Total Rooms
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{permissions?.length || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Active permission rules</p>
+                <div className="text-2xl font-bold">{rooms?.length || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Property inventory</p>
               </CardContent>
             </Card>
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-blue-500" />
-                  Integrations
+                  <Calendar className="h-4 w-4 text-success" />
+                  Reservations
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{otaChannels?.filter((c: any) => c.is_active).length || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Connected OTA channels</p>
+                <div className="text-2xl font-bold">{reservations?.length || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total bookings</p>
+              </CardContent>
+            </Card>
+            <Card variant="elevated">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-amber-500" />
+                  Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(dashboardStats?.totalRevenue || 0)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total earnings</p>
               </CardContent>
             </Card>
           </div>
@@ -422,7 +468,7 @@ const AdminConsole = () => {
           <Card variant="elevated">
             <CardHeader>
               <CardTitle>Global Security Policies</CardTitle>
-              <CardDescription>Configure system-wide authentication and access rules</CardDescription>
+              <CardDescription>Configure system-wide authentication and access rules. Changes are saved automatically.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -431,21 +477,53 @@ const AdminConsole = () => {
                     <p className="font-medium">Force Multi-Factor Authentication</p>
                     <p className="text-sm text-muted-foreground">Require 2FA for all staff members</p>
                   </div>
-                  <Badge variant="outline">Disabled</Badge>
+                  <Switch
+                    checked={securityPolicies?.force_mfa || false}
+                    onCheckedChange={(checked) => handleSecurityPolicyChange("force_mfa", checked)}
+                    disabled={updateSecurityPolicies.isPending}
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
                   <div>
                     <p className="font-medium">Session Timeout</p>
                     <p className="text-sm text-muted-foreground">Automatically logout after inactivity</p>
                   </div>
-                  <Badge>4 Hours</Badge>
+                  <Select 
+                    value={String(securityPolicies?.session_timeout_hours || 4)}
+                    onValueChange={(v) => handleSecurityPolicyChange("session_timeout_hours", parseInt(v))}
+                    disabled={updateSecurityPolicies.isPending}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Hour</SelectItem>
+                      <SelectItem value="2">2 Hours</SelectItem>
+                      <SelectItem value="4">4 Hours</SelectItem>
+                      <SelectItem value="8">8 Hours</SelectItem>
+                      <SelectItem value="24">24 Hours</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
                   <div>
                     <p className="font-medium">Password Policy</p>
                     <p className="text-sm text-muted-foreground">Minimum length and complexity requirements</p>
                   </div>
-                  <Badge variant="outline">Standard</Badge>
+                  <Select 
+                    value={securityPolicies?.password_policy || "standard"}
+                    onValueChange={(v) => handleSecurityPolicyChange("password_policy", v)}
+                    disabled={updateSecurityPolicies.isPending}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic</SelectItem>
+                      <SelectItem value="standard">Standard</SelectItem>
+                      <SelectItem value="strong">Strong</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -457,65 +535,45 @@ const AdminConsole = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Granular RBAC System</CardTitle>
-                  <CardDescription>Role-based access control policies</CardDescription>
+                  <CardTitle>Role-Based Access Control</CardTitle>
+                  <CardDescription>Manage permissions for each user role</CardDescription>
                 </div>
-                <div className="flex items-center gap-4">
-                  <Button size="sm" className="gap-2" onClick={() => setRbacModalOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                    Add Rule
-                  </Button>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
-                    <div className="w-1.5 h-1.5 bg-success rounded-full" />
-                    Live
-                  </div>
-                </div>
+                <Button onClick={() => setRbacModalOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Permission
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               {loadingPerms ? (
-                <TableSkeleton columns={3} rows={5} />
-              ) : (
-                <div className="rounded-lg border border-border overflow-hidden">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted text-muted-foreground uppercase text-[10px] tracking-wider">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Role</th>
-                        <th className="px-4 py-3 font-medium">Permission</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {permissions?.map((p: any) => (
-                        <tr key={p.id} className="hover:bg-secondary/30 transition-colors group">
-                          <td className="px-4 py-3 capitalize font-bold">{p.role}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="border-primary/30 text-primary">
-                              {p.permission}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                              onClick={() => updatePermission.mutate({ role: p.role, permission: p.permission, action: 'remove' })}
-                              disabled={updatePermission.isPending}
-                            >
-                              {updatePermission.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <TableSkeleton rows={5} />
+              ) : permissions && permissions.length > 0 ? (
+                <div className="space-y-2">
+                  {permissions.map((perm: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">{perm.role}</Badge>
+                        <span>{perm.permission}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => updatePermission.mutate({ role: perm.role, permission: perm.permission, action: 'remove' })}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <p className="text-center py-8 text-muted-foreground">No custom permissions configured</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="audit">
-          <GeneralAuditLogTable logs={adminLogs} isLoading={loadingLogs} />
+          <GeneralAuditLogTable logs={adminLogs || []} isLoading={loadingLogs} />
         </TabsContent>
 
         <TabsContent value="integrations">
@@ -525,45 +583,37 @@ const AdminConsole = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Key className="h-5 w-5 text-primary" />
-                      System API Keys
+                      <Globe className="h-5 w-5" />
+                      OTA Channels
                     </CardTitle>
-                    <CardDescription>Manage security credentials for external services</CardDescription>
+                    <CardDescription>Connected online travel agencies</CardDescription>
                   </div>
-                  <Button size="sm" onClick={handleAddAPIKey} disabled={updateAPIKeys.isPending}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Key
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {loadingAPIKeys ? (
-                  <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
-                ) : (
-                  <div className="space-y-4">
-                    {apiKeysSettings?.keys.map((key) => (
-                      <div key={key.name} className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/5">
-                        <div className="space-y-1">
-                          <p className="font-medium text-sm">{key.name}</p>
-                          <p className="text-xs font-mono text-muted-foreground">
-                            {key.is_secret ? "••••••••••••••••" : key.key}
-                          </p>
-                          {key.description && <p className="text-[10px] text-muted-foreground">{key.description}</p>}
+                {loadingChannels ? (
+                  <TableSkeleton rows={3} />
+                ) : otaChannels && otaChannels.length > 0 ? (
+                  <div className="space-y-3">
+                    {otaChannels.map((channel: any) => (
+                      <div key={channel.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={channel.is_active ? "default" : "secondary"}>
+                            {channel.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                          <span className="font-medium">{channel.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => toast.info("Key copied to clipboard")}>
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAPIKey(key.name)}>
-                            <Trash2 className="h-4 w-4" />
+                          <span className="text-sm text-muted-foreground">{channel.sync_status}</span>
+                          <Button variant="outline" size="sm" onClick={() => handleSyncChannel(channel.id)}>
+                            <RefreshCw className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
                     ))}
-                    {(!apiKeysSettings?.keys || apiKeysSettings.keys.length === 0) && (
-                      <p className="text-center text-sm text-muted-foreground py-8">No API keys configured</p>
-                    )}
                   </div>
+                ) : (
+                  <p className="text-center py-8 text-muted-foreground">No OTA channels configured</p>
                 )}
               </CardContent>
             </Card>
@@ -572,96 +622,39 @@ const AdminConsole = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>OTA Channels</CardTitle>
-                    <CardDescription>External booking service connections</CardDescription>
-                  </div>
-                  <Badge className="bg-success/20 text-success border-success/30">
-                    {otaChannels?.length || 0} Active
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {loadingChannels ? (
-                    <div className="col-span-2 py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
-                  ) : otaChannels?.map((channel: any) => (
-                    <div key={channel.id} className="p-4 rounded-lg border border-border flex items-center justify-between bg-secondary/10">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
-                          <Globe className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{channel.name}</p>
-                          <Badge variant="outline" className={`text-[10px] h-4 ${channel.is_active ? 'text-success' : 'text-muted-foreground'}`}>
-                            {channel.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground">Sync Status</p>
-                          <p className="text-xs font-medium">{channel.sync_status || 'Idle'}</p>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Switch
-                            checked={channel.is_active}
-                            onCheckedChange={(checked) => updateOTAChannel.mutate({ id: channel.id, is_active: checked })}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 text-[10px]"
-                            onClick={() => handleSyncChannel(channel.id)}
-                          >
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Sync
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card variant="elevated">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-amber-500" />
-                      Recent OTA Sync Events
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5" />
+                      API Keys
                     </CardTitle>
-                    <CardDescription>Real-time channel synchronization logs</CardDescription>
+                    <CardDescription>Manage system API keys</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full animate-pulse">
-                    <div className="w-1.5 h-1.5 bg-success rounded-full" />
-                    Live
-                  </div>
+                  <Button onClick={handleAddAPIKey} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Generate Key
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {loadingOTALogs ? (
-                  <TableSkeleton columns={3} rows={5} />
-                ) : (
+                {loadingAPIKeys ? (
+                  <TableSkeleton rows={2} />
+                ) : apiKeysSettings?.keys && apiKeysSettings.keys.length > 0 ? (
                   <div className="space-y-3">
-                    {otaLogs?.map((log: any) => (
-                      <div key={log.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-secondary/5">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={log.status === 'success' ? 'border-success/50 text-success' : 'border-destructive/50 text-destructive'}>
-                            {log.direction.toUpperCase()}
-                          </Badge>
-                          <div>
-                            <p className="text-sm font-medium">{log.ota_name}</p>
-                            <p className="text-xs text-muted-foreground">{log.message}</p>
-                          </div>
+                    {apiKeysSettings.keys.map((key, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                        <div>
+                          <p className="font-medium">{key.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {key.is_secret ? `${key.key.slice(0, 10)}${"*".repeat(20)}` : key.key}
+                          </p>
                         </div>
-                        <span className="text-[10px] text-muted-foreground">
-                          {format(new Date(log.created_at), "HH:mm:ss")}
-                        </span>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteAPIKey(key.name)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-center py-8 text-muted-foreground">No API keys configured</p>
                 )}
               </CardContent>
             </Card>
@@ -677,51 +670,43 @@ const AdminConsole = () => {
         </TabsContent>
       </Tabs>
 
+      {/* Provision Account Modal */}
       <Dialog open={provisionModalOpen} onOpenChange={setProvisionModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary" />
-              Provision New Account
-            </DialogTitle>
+            <DialogTitle>Provision New Account</DialogTitle>
             <DialogDescription>
-              Create a user profile and assign roles. The user will be able to complete signup with this email.
+              Pre-register an account. The user must sign up with the same email to activate.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email Address</Label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Email *</Label>
               <Input
-                id="email"
                 value={newUserData.email}
-                onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
-                placeholder="email@luxestay.com"
+                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                placeholder="user@example.com"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="firstName">First Name</Label>
+              <div className="space-y-2">
+                <Label>First Name</Label>
                 <Input
-                  id="firstName"
                   value={newUserData.firstName}
-                  onChange={(e) => setNewUserData({...newUserData, firstName: e.target.value})}
+                  onChange={(e) => setNewUserData({ ...newUserData, firstName: e.target.value })}
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="lastName">Last Name</Label>
+              <div className="space-y-2">
+                <Label>Last Name</Label>
                 <Input
-                  id="lastName"
                   value={newUserData.lastName}
-                  onChange={(e) => setNewUserData({...newUserData, lastName: e.target.value})}
+                  onChange={(e) => setNewUserData({ ...newUserData, lastName: e.target.value })}
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="role">Initial Role</Label>
-              <Select
-                value={newUserData.role}
-                onValueChange={(val: AppRole) => setNewUserData({...newUserData, role: val})}
-              >
+            <div className="space-y-2">
+              <Label>Initial Role</Label>
+              <Select value={newUserData.role} onValueChange={(v) => setNewUserData({ ...newUserData, role: v as AppRole })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -737,32 +722,27 @@ const AdminConsole = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setProvisionModalOpen(false)}>Cancel</Button>
             <Button onClick={handleProvisionAccount} disabled={isProvisioning}>
-              {isProvisioning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Provision Account
+              {isProvisioning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Provision
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Add Permission Modal */}
       <Dialog open={rbacModalOpen} onOpenChange={setRbacModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Add RBAC Rule
-            </DialogTitle>
+            <DialogTitle>Add Permission</DialogTitle>
             <DialogDescription>
-              Grant a specific permission to a user role. Changes take effect immediately.
+              Assign a new permission to a role
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="rbac-role">Target Role</Label>
-              <Select
-                value={newPermission.role}
-                onValueChange={(val: AppRole) => setNewPermission({...newPermission, role: val})}
-              >
-                <SelectTrigger id="rbac-role">
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={newPermission.role} onValueChange={(v) => setNewPermission({ ...newPermission, role: v as AppRole })}>
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -773,24 +753,20 @@ const AdminConsole = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="permission">Permission Name</Label>
+            <div className="space-y-2">
+              <Label>Permission</Label>
               <Input
-                id="permission"
                 value={newPermission.permission}
-                onChange={(e) => setNewPermission({...newPermission, permission: e.target.value})}
-                placeholder="e.g., manage_finance, view_reports"
+                onChange={(e) => setNewPermission({ ...newPermission, permission: e.target.value })}
+                placeholder="e.g., manage_reservations"
               />
-              <p className="text-[10px] text-muted-foreground italic">
-                Use snake_case for internal permission identifiers.
-              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRbacModalOpen(false)}>Cancel</Button>
             <Button onClick={handleAddPermission} disabled={updatePermission.isPending}>
-              {updatePermission.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Grant Permission
+              {updatePermission.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Add Permission
             </Button>
           </DialogFooter>
         </DialogContent>
