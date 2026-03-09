@@ -9,35 +9,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
 import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
 import { GuestMergeTool } from "@/components/guests/GuestMergeTool";
+import { GuestProfilePanel } from "@/components/guests/GuestProfilePanel";
+import { EditGuestDialog } from "@/components/guests/EditGuestDialog";
 import { NewGuestDialog } from "@/components/quick-actions/NewGuestDialog";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats } from "@/hooks/useGuestManagement";
 import { useNavigate } from "react-router-dom";
@@ -80,12 +67,14 @@ const Guests = () => {
   const { data: loyaltyMembers = [], enrollMember, addPoints } = useLoyaltyMembers();
   const stats = useGuestStats();
 
-  // Performance optimization: Use a Set for O(1) membership lookups instead of O(M) .some() calls in the list
   const loyaltyMemberIds = useMemo(() => new Set(loyaltyMembers.map(m => m.guest_id)), [loyaltyMembers]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [newGuestOpen, setNewGuestOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("guests");
+  const [gridSearch, setGridSearch] = useState("");
 
   const [newFeedback, setNewFeedback] = useState({
     feedback_type: "review",
@@ -95,12 +84,23 @@ const Guests = () => {
     message: "",
   });
 
+  // Filter guests in grid view
+  const filteredGuests = useMemo(() => {
+    if (!gridSearch) return guests;
+    const s = gridSearch.toLowerCase();
+    return guests.filter(g =>
+      `${g.first_name} ${g.last_name}`.toLowerCase().includes(s) ||
+      g.email?.toLowerCase().includes(s) ||
+      g.phone?.includes(s)
+    );
+  }, [guests, gridSearch]);
+
   const columns: Column<Guest>[] = [
     {
       key: "first_name",
       header: "Guest",
       render: (guest) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedGuest(guest)}>
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
               {guest.first_name[0]}{guest.last_name[0]}
@@ -130,12 +130,17 @@ const Guests = () => {
     },
     {
       key: "id",
-      header: "Folio",
+      header: "Actions",
+      sortable: false,
       render: (guest) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-          <Receipt className="h-4 w-4 mr-1" />
-          View
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedGuest(guest); setEditDialogOpen(true); }}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
+            <Receipt className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -162,11 +167,23 @@ const Guests = () => {
     }
   };
 
+  const handleSelectGuest = (guest: Guest) => {
+    setSelectedGuest(guest);
+  };
+
+  const handleViewDocuments = () => {
+    if (selectedGuest) setActiveTab("documents");
+  };
+
+  const handleViewHistory = () => {
+    if (selectedGuest) setActiveTab("history");
+  };
+
   return (
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
-        <Tabs defaultValue="guests" className="space-y-6">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="flex-wrap">
             <TabsTrigger value="guests" className="gap-2">
               <Users className="h-4 w-4" />
               Guests
@@ -178,7 +195,7 @@ const Guests = () => {
             </TabsTrigger>
             <TabsTrigger value="loyalty" className="gap-2">
               <Award className="h-4 w-4" />
-              Loyalty Program
+              Loyalty
             </TabsTrigger>
             <TabsTrigger value="documents" className="gap-2">
               <FileText className="h-4 w-4" />
@@ -214,118 +231,145 @@ const Guests = () => {
               </Button>
             </div>
 
-            {isLoading ? (
-              <TableSkeleton columns={6} rows={5} />
-            ) : viewMode === "table" ? (
-              <Card variant="elevated">
-                <CardHeader>
-                  <CardTitle>All Guests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DataTable data={guests} columns={columns} keyExtractor={(guest) => guest.id} searchPlaceholder="Search guests..." emptyMessage="No guests found." pageSize={10} />
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {guests.map((guest, index) => {
-                  const status = getGuestStatus(guest);
-                  const isMember = loyaltyMemberIds.has(guest.id);
-                  return (
-                    <Card key={guest.id} variant="elevated" className="animate-slide-up hover:shadow-glow transition-all cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">
-                                {guest.first_name[0]}{guest.last_name[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-semibold text-foreground flex items-center gap-2">
-                                {guest.first_name} {guest.last_name}
-                                {guest.is_vip && <Star className="h-4 w-4 text-primary fill-primary" />}
-                              </h3>
-                              <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>
-                            </div>
-                          </div>
-                          {isMember && <Trophy className="h-5 w-5 text-primary" />}
-                        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className={selectedGuest && viewMode === "grid" ? "lg:col-span-3" : "lg:col-span-4"}>
+                {isLoading ? (
+                  <TableSkeleton columns={6} rows={5} />
+                ) : viewMode === "table" ? (
+                  <Card variant="elevated">
+                    <CardHeader>
+                      <CardTitle>All Guests ({guests.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <DataTable data={guests} columns={columns} keyExtractor={(guest) => guest.id} searchPlaceholder="Search guests..." emptyMessage="No guests found." pageSize={10} onRowClick={handleSelectGuest} />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Grid Search */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search guests by name, email, phone..."
+                        value={gridSearch}
+                        onChange={(e) => setGridSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                      {filteredGuests.map((guest, index) => {
+                        const status = getGuestStatus(guest);
+                        const isMember = loyaltyMemberIds.has(guest.id);
+                        return (
+                          <Card
+                            key={guest.id}
+                            variant="elevated"
+                            className={`animate-slide-up hover:shadow-glow transition-all cursor-pointer ${selectedGuest?.id === guest.id ? "ring-2 ring-primary" : ""}`}
+                            style={{ animationDelay: `${index * 50}ms` }}
+                            onClick={() => handleSelectGuest(guest)}
+                          >
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-12 w-12">
+                                    <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">
+                                      {guest.first_name[0]}{guest.last_name[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                      {guest.first_name} {guest.last_name}
+                                      {guest.is_vip && <Star className="h-4 w-4 text-primary fill-primary" />}
+                                    </h3>
+                                    <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>
+                                  </div>
+                                </div>
+                                {isMember && <Trophy className="h-5 w-5 text-primary" />}
+                              </div>
 
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="h-4 w-4" />
-                            {guest.email || "-"}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-4 w-4" />
-                            {guest.phone || "-"}
-                          </div>
-                        </div>
+                              <div className="space-y-2 mb-4">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Mail className="h-4 w-4" />
+                                  {guest.email || "-"}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Phone className="h-4 w-4" />
+                                  {guest.phone || "-"}
+                                </div>
+                              </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border mb-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Visits</p>
-                            <p className="text-lg font-semibold text-foreground">{guest.total_visits || 0}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Total Spent</p>
-                            <p className="text-lg font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</p>
-                          </div>
-                        </div>
+                              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border mb-4">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Visits</p>
+                                  <p className="text-lg font-semibold text-foreground">{guest.total_visits || 0}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Total Spent</p>
+                                  <p className="text-lg font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</p>
+                                </div>
+                              </div>
 
-                        <div className="flex flex-wrap gap-2">
-                          <Button variant="outline" size="sm" className="flex-1 min-w-[100px]" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-                            <Receipt className="h-4 w-4 mr-1" />
-                            Folio
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1 min-w-[100px]" onClick={() => { setSelectedGuest(guest); setFeedbackDialogOpen(true); }}>
-                            <MessageSquare className="h-4 w-4 mr-1" />
-                            Feedback
-                          </Button>
-                          {!isMember && (
-                            <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEnrollLoyalty(guest.id)}>
-                              <Award className="h-4 w-4 mr-1" />
-                              Enroll
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-                {guests.length === 0 && (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">No guests found</div>
+                              <div className="flex flex-wrap gap-2">
+                                <Button variant="outline" size="sm" className="flex-1 min-w-[80px]" onClick={(e) => { e.stopPropagation(); setSelectedGuest(guest); setEditDialogOpen(true); }}>
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <Button variant="outline" size="sm" className="flex-1 min-w-[80px]" onClick={(e) => { e.stopPropagation(); setSelectedGuest(guest); setFeedbackDialogOpen(true); }}>
+                                  <MessageSquare className="h-4 w-4 mr-1" />
+                                  Feedback
+                                </Button>
+                                {!isMember && (
+                                  <Button variant="outline" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); handleEnrollLoyalty(guest.id); }}>
+                                    <Award className="h-4 w-4 mr-1" />
+                                    Enroll
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                      {filteredGuests.length === 0 && (
+                        <div className="col-span-full text-center py-12 text-muted-foreground">No guests found</div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            )}
+
+              {/* Profile Panel - shows when guest selected in grid view */}
+              {selectedGuest && viewMode === "grid" && (
+                <div className="lg:col-span-1">
+                  <GuestProfilePanel
+                    guest={selectedGuest}
+                    onEdit={() => setEditDialogOpen(true)}
+                    onViewDocuments={handleViewDocuments}
+                    onViewHistory={handleViewHistory}
+                    onClose={() => setSelectedGuest(null)}
+                  />
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="feedback" className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Total Feedback</p>
-                  <p className="text-2xl font-bold">{stats.totalFeedback}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold text-amber-500">{stats.pendingFeedback}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Avg Rating</p>
-                  <p className="text-2xl font-bold text-primary">{stats.avgRating.toFixed(1)} ★</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Loyalty Members</p>
-                  <p className="text-2xl font-bold text-success">{stats.loyaltyMembers}</p>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Total Feedback</p>
+                <p className="text-2xl font-bold">{stats.totalFeedback}</p>
+              </CardContent></Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-amber-500">{stats.pendingFeedback}</p>
+              </CardContent></Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Avg Rating</p>
+                <p className="text-2xl font-bold text-primary">{stats.avgRating.toFixed(1)} ★</p>
+              </CardContent></Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Loyalty Members</p>
+                <p className="text-2xl font-bold text-success">{stats.loyaltyMembers}</p>
+              </CardContent></Card>
             </div>
 
             <Card variant="elevated">
@@ -384,32 +428,24 @@ const Guests = () => {
 
           <TabsContent value="loyalty" className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Total Members</p>
-                  <p className="text-2xl font-bold">{stats.loyaltyMembers}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Platinum</p>
-                  <p className="text-2xl font-bold text-purple-400">{stats.platinumMembers}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Gold</p>
-                  <p className="text-2xl font-bold text-yellow-400">{stats.goldMembers}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Active Rate</p>
-                  <p className="text-2xl font-bold text-success">
-                    {guests.length > 0 ? ((stats.loyaltyMembers / guests.length) * 100).toFixed(0) : 0}%
-                  </p>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Total Members</p>
+                <p className="text-2xl font-bold">{stats.loyaltyMembers}</p>
+              </CardContent></Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Platinum</p>
+                <p className="text-2xl font-bold text-purple-400">{stats.platinumMembers}</p>
+              </CardContent></Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Gold</p>
+                <p className="text-2xl font-bold text-yellow-400">{stats.goldMembers}</p>
+              </CardContent></Card>
+              <Card><CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground">Active Rate</p>
+                <p className="text-2xl font-bold text-success">
+                  {guests.length > 0 ? ((stats.loyaltyMembers / guests.length) * 100).toFixed(0) : 0}%
+                </p>
+              </CardContent></Card>
             </div>
 
             <Card variant="elevated">
@@ -454,34 +490,90 @@ const Guests = () => {
             </Card>
           </TabsContent>
 
-          {/* Documents Tab */}
+          {/* Documents Tab - now with guest selector */}
           <TabsContent value="documents" className="space-y-6">
-            {selectedGuest ? (
-              <GuestDocuments guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
-            ) : (
-              <Card><CardContent className="py-12 text-center text-muted-foreground">
-                Select a guest from the Guests tab to view their documents. Click the "Feedback" button on any guest card first.
-              </CardContent></Card>
+            {!selectedGuest && (
+              <Card variant="elevated">
+                <CardHeader><CardTitle>Select a Guest</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                    {guests.map((g) => (
+                      <Button
+                        key={g.id}
+                        variant="outline"
+                        className="justify-start gap-2 h-auto py-3"
+                        onClick={() => setSelectedGuest(g)}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
+                            {g.first_name[0]}{g.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-left">
+                          <p className="font-medium">{g.first_name} {g.last_name}</p>
+                          <p className="text-xs text-muted-foreground">{g.email || g.phone || "No contact"}</p>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedGuest && (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Documents for {selectedGuest.first_name} {selectedGuest.last_name}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedGuest(null)}>Change Guest</Button>
+                </div>
+                <GuestDocuments guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
+              </>
             )}
           </TabsContent>
 
-          {/* History Tab */}
+          {/* History Tab - now with guest selector */}
           <TabsContent value="history" className="space-y-6">
-            {selectedGuest ? (
-              <GuestHistoryTimeline guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
-            ) : (
-              <Card><CardContent className="py-12 text-center text-muted-foreground">
-                Select a guest from the Guests tab to view their history timeline.
-              </CardContent></Card>
+            {!selectedGuest && (
+              <Card variant="elevated">
+                <CardHeader><CardTitle>Select a Guest</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                    {guests.map((g) => (
+                      <Button
+                        key={g.id}
+                        variant="outline"
+                        className="justify-start gap-2 h-auto py-3"
+                        onClick={() => setSelectedGuest(g)}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
+                            {g.first_name[0]}{g.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-left">
+                          <p className="font-medium">{g.first_name} {g.last_name}</p>
+                          <p className="text-xs text-muted-foreground">{g.email || g.phone || "No contact"}</p>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedGuest && (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">History for {selectedGuest.first_name} {selectedGuest.last_name}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedGuest(null)}>Change Guest</Button>
+                </div>
+                <GuestHistoryTimeline guestId={selectedGuest.id} guestName={`${selectedGuest.first_name} ${selectedGuest.last_name}`} />
+              </>
             )}
           </TabsContent>
 
-          {/* Messaging Tab */}
           <TabsContent value="messaging" className="space-y-6">
             <AutomatedMessaging />
           </TabsContent>
 
-          {/* De-dup Tab */}
           <TabsContent value="dedup" className="space-y-6">
             <GuestMergeTool />
           </TabsContent>
@@ -524,9 +616,10 @@ const Guests = () => {
               </div>
               <div className="space-y-2">
                 <Label>Department</Label>
-                <Select value={newFeedback.department} onValueChange={(v) => setNewFeedback({ ...newFeedback, department: v })}>
+                <Select value={newFeedback.department || "none"} onValueChange={(v) => setNewFeedback({ ...newFeedback, department: v === "none" ? "" : v })}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Select Department</SelectItem>
                     <SelectItem value="front_desk">Front Desk</SelectItem>
                     <SelectItem value="housekeeping">Housekeeping</SelectItem>
                     <SelectItem value="restaurant">Restaurant</SelectItem>
@@ -553,7 +646,9 @@ const Guests = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
         <NewGuestDialog open={newGuestOpen} onOpenChange={setNewGuestOpen} />
+        <EditGuestDialog guest={selectedGuest} open={editDialogOpen} onOpenChange={setEditDialogOpen} />
       </ErrorBoundary>
     </MainLayout>
   );
