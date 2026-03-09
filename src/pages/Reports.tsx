@@ -15,16 +15,17 @@ import {
 import { toast } from "sonner";
 import { useReportStats } from "@/hooks/useReportStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 const Reports = () => {
   const [activeReportTab, setActiveReportTab] = useState("overview");
   const { data: stats, isLoading } = useReportStats();
 
   const reportTypes = [
-    { icon: TrendingUp, title: "Revenue Report", description: "Detailed financial analysis", value: stats ? `$${stats.totalReservationRevenue.toLocaleString()}` : "—" },
+    { icon: TrendingUp, title: "Revenue Report", description: "Detailed financial analysis", value: stats ? formatCurrency(stats.totalReservationRevenue) : "—" },
     { icon: BedDouble, title: "Occupancy Report", description: "Room utilization metrics", value: stats ? `${stats.occupancyRate}%` : "—" },
     { icon: Users, title: "Reservations", description: "Total bookings tracked", value: stats ? String(stats.reservationCount) : "—" },
-    { icon: DollarSign, title: "POS Revenue", description: "Restaurant & service sales", value: stats ? `$${stats.totalPOSRevenue.toLocaleString()}` : "—" },
+    { icon: DollarSign, title: "POS Revenue", description: "Restaurant & service sales", value: stats ? formatCurrency(stats.totalPOSRevenue) : "—" },
   ];
 
   const monthlyData = stats?.monthlyData || [];
@@ -109,7 +110,7 @@ const Reports = () => {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: any) => `$${Number(value).toLocaleString()}`} />
+                        <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
                         <Legend verticalAlign="bottom" />
                       </PieChart>
                     </ResponsiveContainer>
@@ -129,7 +130,7 @@ const Reports = () => {
               </CardHeader>
               <CardContent>
                 <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : `$${(stats?.adr || 0).toFixed(2)}`}
+                  {isLoading ? <Skeleton className="h-9 w-24" /> : formatCurrency(stats?.adr || 0)}
                 </span>
               </CardContent>
             </Card>
@@ -149,7 +150,7 @@ const Reports = () => {
               </CardHeader>
               <CardContent>
                 <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : `$${(stats?.totalPOSRevenue || 0).toLocaleString()}`}
+                  {isLoading ? <Skeleton className="h-9 w-24" /> : formatCurrency(stats?.totalPOSRevenue || 0)}
                 </span>
               </CardContent>
             </Card>

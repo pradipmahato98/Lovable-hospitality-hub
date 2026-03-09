@@ -45,7 +45,7 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
-import { formatAD } from "@/lib/utils";
+import { formatAD, formatCurrency } from "@/lib/utils";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
@@ -118,7 +118,7 @@ const Guests = () => {
     { key: "email", header: "Email", render: (guest) => <span className="text-muted-foreground">{guest.email || "-"}</span> },
     { key: "phone", header: "Phone", render: (guest) => <span className="text-muted-foreground">{guest.phone || "-"}</span> },
     { key: "total_visits", header: "Visits", render: (guest) => <span className="font-semibold">{guest.total_visits || 0}</span> },
-    { key: "total_spending", header: "Total Spent", render: (guest) => <span className="font-semibold text-primary">${(guest.total_spending || 0).toLocaleString()}</span> },
+    { key: "total_spending", header: "Total Spent", render: (guest) => <span className="font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</span> },
     {
       key: "is_vip",
       header: "Status",
@@ -269,7 +269,7 @@ const Guests = () => {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Total Spent</p>
-                            <p className="text-lg font-semibold text-primary">${(guest.total_spending || 0).toLocaleString()}</p>
+                            <p className="text-lg font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</p>
                           </div>
                         </div>
 

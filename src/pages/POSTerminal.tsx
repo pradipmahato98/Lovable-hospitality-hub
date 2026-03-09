@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -164,7 +165,7 @@ const POSTerminal = () => {
     if (splitPayment) {
       const splitTotal = splitAmounts.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
       if (Math.abs(splitTotal - total) > 0.01) {
-        toast.error(`Split amounts must equal $${total.toFixed(2)}`);
+        toast.error(`Split amounts must equal ${formatCurrency(total)}`);
         return;
       }
     } else if (paymentMethod === "room" && !roomChargeRoom) {
@@ -208,7 +209,7 @@ const POSTerminal = () => {
 
       const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
                     paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
-      toast.success(`Payment of $${total.toFixed(2)} processed via ${methodLabel}`);
+      toast.success(`Payment of ${formatCurrency(total)} processed via ${methodLabel}`);
 
       setCart([]);
       setCheckoutOpen(false);
@@ -254,7 +255,7 @@ const POSTerminal = () => {
         {/* Tables Tab - Table Selection System */}
         <TabsContent value="tables">
           <POSTableSystem onCheckout={(total, items) => {
-            toast.success(`Checkout completed: $${total.toFixed(2)} for ${items.length} items`);
+            toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
           }} />
         </TabsContent>
 

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { POSHeader } from "@/components/pos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -179,8 +180,8 @@ export default function POSHistory() {
 
     doc.setFontSize(12);
     doc.text(`Total Transactions: ${totalTransactions}`, 14, 46);
-    doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 14, 52);
-    doc.text(`Average Transaction: $${avgTransaction.toFixed(2)}`, 14, 58);
+    doc.text(`Total Revenue: ${formatCurrency(totalRevenue)}`, 14, 52);
+    doc.text(`Average Transaction: ${formatCurrency(avgTransaction)}`, 14, 58);
 
     // Table header
     let y = 70;
@@ -200,7 +201,7 @@ export default function POSHistory() {
       doc.text(formatDateSafe(t.created_at, "dd/MM HH:mm"), 50, y);
       doc.text(`T${t.table_number || ""}`, 90, y);
       doc.text(paymentMethodLabels[t.payment_method] || t.payment_method || "", 110, y);
-      doc.text(`$${(t.total || 0).toFixed(2)}`, 150, y);
+      doc.text(formatCurrency(t.total || 0), 150, y);
       y += 6;
 
       if (y > 280) {
@@ -265,7 +266,7 @@ export default function POSHistory() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold text-success">${totalRevenue.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-success">{formatCurrency(totalRevenue)}</p>
                 </div>
               </div>
             </CardContent>
@@ -279,7 +280,7 @@ export default function POSHistory() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Avg. Transaction</p>
-                  <p className="text-2xl font-bold">${avgTransaction.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(avgTransaction)}</p>
                 </div>
               </div>
             </CardContent>
@@ -430,7 +431,7 @@ export default function POSHistory() {
                         </TableCell>
                         <TableCell>{transaction.items_count || 0}</TableCell>
                         <TableCell className="text-right font-semibold">
-                          ${(transaction.total || 0).toFixed(2)}
+                          {formatCurrency(transaction.total || 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -529,7 +530,7 @@ export default function POSHistory() {
                       <span>
                         {item.item_name} x{item.quantity}
                       </span>
-                      <span>${((item.item_price || 0) * (item.quantity || 0)).toFixed(2)}</span>
+                      <span>{formatCurrency((item.item_price || 0) * (item.quantity || 0))}</span>
                     </div>
                   ))}
                 </div>
@@ -538,27 +539,27 @@ export default function POSHistory() {
               <div className="border-t border-border pt-4 space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>${(selectedTransaction.subtotal || 0).toFixed(2)}</span>
+                  <span>{formatCurrency(selectedTransaction.subtotal || 0)}</span>
                 </div>
                 {(selectedTransaction.discount_amount || 0) > 0 && (
                   <div className="flex justify-between text-sm text-success">
                     <span>Discount</span>
-                    <span>-${selectedTransaction.discount_amount?.toFixed(2)}</span>
+                    <span>-{formatCurrency(selectedTransaction.discount_amount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span>${(selectedTransaction.tax_amount || 0).toFixed(2)}</span>
+                  <span>{formatCurrency(selectedTransaction.tax_amount || 0)}</span>
                 </div>
                 {(selectedTransaction.tip_amount || 0) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Tip</span>
-                    <span>${selectedTransaction.tip_amount?.toFixed(2)}</span>
+                    <span>{formatCurrency(selectedTransaction.tip_amount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
                   <span>Total</span>
-                  <span className="text-primary">${(selectedTransaction.total || 0).toFixed(2)}</span>
+                  <span className="text-primary">{formatCurrency(selectedTransaction.total || 0)}</span>
                 </div>
               </div>
             </div>

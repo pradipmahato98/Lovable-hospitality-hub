@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { POSHeader } from "@/components/pos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -285,9 +286,9 @@ export default function POSReports() {
       [`Period: ${dateRange.start} to ${dateRange.end}`],
       [""],
       ["Metric", "Value"],
-      ["Total Revenue", `$${metrics.totalRevenue.toFixed(2)}`],
+      ["Total Revenue", formatCurrency(metrics.totalRevenue)],
       ["Total Transactions", metrics.totalTransactions],
-      ["Average Transaction", `$${metrics.avgTransaction.toFixed(2)}`],
+      ["Average Transaction", formatCurrency(metrics.avgTransaction)],
       ["Total Items Sold", metrics.totalItems],
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Summary");
@@ -475,7 +476,7 @@ export default function POSReports() {
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
                           }}
-                          formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
                         />
                         <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -514,7 +515,7 @@ export default function POSReports() {
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
                           }}
-                          formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
                         />
                       </PieChart>
                     </ResponsiveContainer>
@@ -583,7 +584,7 @@ export default function POSReports() {
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
                           }}
-                          formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
                         />
                         <Legend />
                       </PieChart>

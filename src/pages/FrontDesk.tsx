@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard, ArrowUpCircle, AlarmClock, LogIn, Key } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
 import { QueueManager } from "@/components/front-desk/QueueManager";
@@ -384,7 +384,7 @@ const FrontDesk = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     <MetricCard
                       title="Total Invoiced"
-                      value={`$${totalRevenue.toLocaleString()}`}
+                      value={formatCurrency(totalRevenue)}
                       change={`${invoices.length} invoices`}
                       changeType="neutral"
                       icon={DollarSign}
@@ -392,7 +392,7 @@ const FrontDesk = () => {
                     />
                     <MetricCard
                       title="Pending Payments"
-                      value={`$${pendingAmount.toLocaleString()}`}
+                      value={formatCurrency(pendingAmount)}
                       change={`${pendingInvoices.length} invoices`}
                       changeType="neutral"
                       icon={Receipt}
@@ -468,7 +468,7 @@ const FrontDesk = () => {
                               {invoice.reservation?.reservation_code || "—"}
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">{invoice.invoice_date}</TableCell>
-                            <TableCell className="font-semibold whitespace-nowrap">${(invoice.total || 0).toLocaleString()}</TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(invoice.total || 0)}</TableCell>
                             <TableCell>
                               <Badge
                                 variant="outline"

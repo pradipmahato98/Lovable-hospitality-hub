@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -249,17 +250,17 @@ export default function Finance() {
           {/* ========== DASHBOARD ========== */}
           <TabsContent value="dashboard" className="space-y-6 mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MetricCard title="Total Assets" value={`$${totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
-              <MetricCard title="Net Income" value={`$${netIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change={netIncome >= 0 ? "Profit" : "Loss"} changeType={netIncome >= 0 ? "positive" : "negative"} icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight} delay={50} />
-              <MetricCard title="Outstanding Receivables" value={`$${stats.outstandingReceivables.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change={`${stats.invoiceCount} invoices`} changeType="neutral" icon={CreditCard} delay={100} />
-              <MetricCard title="Trial Balance" value={isBalanced ? "Balanced" : "Unbalanced"} change={isBalanced ? "All entries balanced" : `Diff: $${Math.abs(totalDebits - totalCredits).toFixed(2)}`} changeType={isBalanced ? "positive" : "negative"} icon={Scale} delay={150} />
+              <MetricCard title="Total Assets" value={formatCurrency(totalAssets)} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
+              <MetricCard title="Net Income" value={formatCurrency(netIncome)} change={netIncome >= 0 ? "Profit" : "Loss"} changeType={netIncome >= 0 ? "positive" : "negative"} icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight} delay={50} />
+              <MetricCard title="Outstanding Receivables" value={formatCurrency(stats.outstandingReceivables)} change={`${stats.invoiceCount} invoices`} changeType="neutral" icon={CreditCard} delay={100} />
+              <MetricCard title="Trial Balance" value={isBalanced ? "Balanced" : "Unbalanced"} change={isBalanced ? "All entries balanced" : `Diff: ${formatCurrency(Math.abs(totalDebits - totalCredits))}`} changeType={isBalanced ? "positive" : "negative"} icon={Scale} delay={150} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard title="Total Accounts" value={accounts.length.toString()} change={`${accounts.filter((a) => a.is_active).length} active`} changeType="neutral" icon={BookOpen} delay={200} />
               <MetricCard title="Journal Entries" value={journalEntries.length.toString()} change={`${journalEntries.filter((e) => e.is_posted).length} posted`} changeType="neutral" icon={FileText} delay={250} />
-              <MetricCard title="Total Revenue" value={`$${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
-              <MetricCard title="Total Expenses" value={`$${stats.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
+              <MetricCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
+              <MetricCard title="Total Expenses" value={formatCurrency(stats.totalExpenses)} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
             </div>
 
             {/* Quick Actions */}

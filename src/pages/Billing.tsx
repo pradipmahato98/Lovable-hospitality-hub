@@ -15,6 +15,7 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ModuleQuickActions, QuickAction } from "@/components/shared";
 import { useInvoices, useBillingStats } from "@/hooks/useBillingData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   paid: "bg-success/20 text-success border-success/30",
@@ -42,7 +43,7 @@ const Billing = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <MetricCard
               title="Total Revenue"
-              value={stats ? `$${stats.totalRevenue.toLocaleString()}` : "—"}
+              value={stats ? formatCurrency(stats.totalRevenue) : "—"}
               change="From all invoices"
               changeType="positive"
               icon={DollarSign}
@@ -50,7 +51,7 @@ const Billing = () => {
             />
             <MetricCard
               title="Pending Payments"
-              value={stats ? `$${stats.pendingAmount.toLocaleString()}` : "—"}
+              value={stats ? formatCurrency(stats.pendingAmount) : "—"}
               change={stats ? `${stats.pendingCount} invoices` : ""}
               changeType="neutral"
               icon={Receipt}
@@ -58,7 +59,7 @@ const Billing = () => {
             />
             <MetricCard
               title="Avg. Invoice"
-              value={stats && invoices.length > 0 ? `$${Math.round(stats.totalRevenue / Math.max(invoices.length, 1)).toLocaleString()}` : "—"}
+              value={stats && invoices.length > 0 ? formatCurrency(Math.round(stats.totalRevenue / Math.max(invoices.length, 1))) : "—"}
               change="Per invoice"
               changeType="positive"
               icon={TrendingUp}
@@ -124,7 +125,7 @@ const Billing = () => {
                               {inv.reservation?.reservation_code || "—"}
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">{inv.invoice_date}</TableCell>
-                            <TableCell className="font-semibold whitespace-nowrap">${(inv.total || 0).toLocaleString()}</TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(inv.total || 0)}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={statusColors[inv.status] || statusColors.draft}>
                                 {inv.status}

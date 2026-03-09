@@ -40,7 +40,7 @@ import {
   usePurchaseOrders, useStockMovements, useInventoryStats 
 } from "@/hooks/useInventory";
 import { format } from "date-fns";
-import { formatAD } from "@/lib/utils";
+import { formatAD, formatCurrency } from "@/lib/utils";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -177,7 +177,7 @@ const Inventory = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Value</p>
-                    <p className="text-2xl font-bold text-primary">${stats.totalValue.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalValue)}</p>
                   </div>
                   <DollarSign className="h-8 w-8 text-primary" />
                 </div>

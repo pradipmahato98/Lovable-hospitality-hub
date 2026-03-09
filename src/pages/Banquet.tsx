@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -404,7 +405,7 @@ export default function Banquet() {
           />
           <MetricCard
             title="Revenue (Completed)"
-            value={`$${totalRevenue.toLocaleString()}`}
+            value={formatCurrency(totalRevenue)}
             change="From completed events"
             changeType="positive"
             icon={DollarSign}
@@ -412,7 +413,7 @@ export default function Banquet() {
           />
           <MetricCard
             title="Pending Deposits"
-            value={`$${pendingDeposits.toLocaleString()}`}
+            value={formatCurrency(pendingDeposits)}
             change="Confirmed events"
             changeType="neutral"
             icon={FileText}
@@ -540,7 +541,7 @@ export default function Banquet() {
                           </TableCell>
                           <TableCell>{event.guest_count}</TableCell>
                           <TableCell className="font-mono">
-                            ${event.total_amount.toLocaleString()}
+                            {formatCurrency(event.total_amount)}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={statusColors[event.status]}>

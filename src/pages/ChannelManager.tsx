@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ const ChannelManager = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Today's Revenue</p>
-                <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
               </div>
               <DollarSign className="h-8 w-8 text-success" />
             </div>

@@ -96,12 +96,12 @@ function DayClose() {
                       </TableCell>
                       <TableCell><code className="text-xs">{dept.code}</code></TableCell>
                       <TableCell className="text-right">{dept.transactions}</TableCell>
-                      <TableCell className="text-right font-mono font-bold">${dept.amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono font-bold">{formatCurrency(dept.amount)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-secondary/30 font-bold">
                     <TableCell colSpan={3} className="text-right uppercase text-xs tracking-wider opacity-60">Total Daily Revenue</TableCell>
-                    <TableCell className="text-right text-lg text-primary font-display">${totalRevenue.toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-lg text-primary font-display">{formatCurrency(totalRevenue)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -116,7 +116,7 @@ function DayClose() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {statsLoading ? <Skeleton className="h-8 w-24" /> : `$${((reportStats?.totalReservationRevenue || 0) / Math.max(reportStats?.reservationCount || 1, 1)).toFixed(2)}`}
+                  {statsLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency((reportStats?.totalReservationRevenue || 0) / Math.max(reportStats?.reservationCount || 1, 1))}
                 </p>
                 <div className="flex items-center text-xs text-success mt-1">
                   <TrendingUp className="h-3 w-3 mr-1" />
@@ -131,7 +131,7 @@ function DayClose() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {statsLoading ? <Skeleton className="h-8 w-24" /> : `$${((reportStats?.totalReservationRevenue || 0) * ((reportStats?.occupancyRate || 0) / 100)).toFixed(2)}`}
+                  {statsLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency((reportStats?.totalReservationRevenue || 0) * ((reportStats?.occupancyRate || 0) / 100))}
                 </p>
                 <div className="flex items-center text-xs text-success mt-1">
                   <TrendingUp className="h-3 w-3 mr-1" />
