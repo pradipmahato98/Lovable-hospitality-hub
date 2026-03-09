@@ -539,7 +539,7 @@ export default function POSHistory() {
               <div className="border-t border-border pt-4 space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>${(selectedTransaction.subtotal || 0).toFixed(2)}</span>
+                  <span>{formatCurrency(selectedTransaction.subtotal || 0)}</span>
                 </div>
                 {(selectedTransaction.discount_amount || 0) > 0 && (
                   <div className="flex justify-between text-sm text-success">
