@@ -269,7 +269,7 @@ const Guests = () => {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Total Spent</p>
-                            <p className="text-lg font-semibold text-primary">${(guest.total_spending || 0).toLocaleString()}</p>
+                            <p className="text-lg font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</p>
                           </div>
                         </div>
 

@@ -541,7 +541,7 @@ export default function Banquet() {
                           </TableCell>
                           <TableCell>{event.guest_count}</TableCell>
                           <TableCell className="font-mono">
-                            ${event.total_amount.toLocaleString()}
+                            {formatCurrency(event.total_amount)}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={statusColors[event.status]}>
