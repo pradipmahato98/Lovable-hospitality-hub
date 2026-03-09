@@ -22,10 +22,10 @@ const Reports = () => {
   const { data: stats, isLoading } = useReportStats();
 
   const reportTypes = [
-    { icon: TrendingUp, title: "Revenue Report", description: "Detailed financial analysis", value: stats ? `$${stats.totalReservationRevenue.toLocaleString()}` : "—" },
+    { icon: TrendingUp, title: "Revenue Report", description: "Detailed financial analysis", value: stats ? formatCurrency(stats.totalReservationRevenue) : "—" },
     { icon: BedDouble, title: "Occupancy Report", description: "Room utilization metrics", value: stats ? `${stats.occupancyRate}%` : "—" },
     { icon: Users, title: "Reservations", description: "Total bookings tracked", value: stats ? String(stats.reservationCount) : "—" },
-    { icon: DollarSign, title: "POS Revenue", description: "Restaurant & service sales", value: stats ? `$${stats.totalPOSRevenue.toLocaleString()}` : "—" },
+    { icon: DollarSign, title: "POS Revenue", description: "Restaurant & service sales", value: stats ? formatCurrency(stats.totalPOSRevenue) : "—" },
   ];
 
   const monthlyData = stats?.monthlyData || [];
