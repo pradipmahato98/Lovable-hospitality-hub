@@ -584,7 +584,7 @@ export default function POSReports() {
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
                           }}
-                          formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
                         />
                         <Legend />
                       </PieChart>

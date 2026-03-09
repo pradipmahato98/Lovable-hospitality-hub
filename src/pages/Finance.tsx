@@ -259,8 +259,8 @@ export default function Finance() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard title="Total Accounts" value={accounts.length.toString()} change={`${accounts.filter((a) => a.is_active).length} active`} changeType="neutral" icon={BookOpen} delay={200} />
               <MetricCard title="Journal Entries" value={journalEntries.length.toString()} change={`${journalEntries.filter((e) => e.is_posted).length} posted`} changeType="neutral" icon={FileText} delay={250} />
-              <MetricCard title="Total Revenue" value={`$${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
-              <MetricCard title="Total Expenses" value={`$${stats.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
+              <MetricCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
+              <MetricCard title="Total Expenses" value={formatCurrency(stats.totalExpenses)} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
             </div>
 
             {/* Quick Actions */}
