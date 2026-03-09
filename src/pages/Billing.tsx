@@ -125,7 +125,7 @@ const Billing = () => {
                               {inv.reservation?.reservation_code || "—"}
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">{inv.invoice_date}</TableCell>
-                            <TableCell className="font-semibold whitespace-nowrap">${(inv.total || 0).toLocaleString()}</TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(inv.total || 0)}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={statusColors[inv.status] || statusColors.draft}>
                                 {inv.status}

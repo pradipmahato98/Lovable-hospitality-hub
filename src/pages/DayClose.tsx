@@ -116,7 +116,7 @@ function DayClose() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {statsLoading ? <Skeleton className="h-8 w-24" /> : `$${((reportStats?.totalReservationRevenue || 0) / Math.max(reportStats?.reservationCount || 1, 1)).toFixed(2)}`}
+                  {statsLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency((reportStats?.totalReservationRevenue || 0) / Math.max(reportStats?.reservationCount || 1, 1))}
                 </p>
                 <div className="flex items-center text-xs text-success mt-1">
                   <TrendingUp className="h-3 w-3 mr-1" />

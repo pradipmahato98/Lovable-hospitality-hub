@@ -68,7 +68,7 @@ const Payments = () => {
                         <TableRow key={payment.id}>
                           <TableCell className="font-mono text-xs">{payment.payment_number}</TableCell>
                           <TableCell>{payment.guest ? `${payment.guest.first_name} ${payment.guest.last_name}` : "—"}</TableCell>
-                          <TableCell className="font-semibold">${(payment.amount || 0).toFixed(2)}</TableCell>
+                          <TableCell className="font-semibold">{formatCurrency(payment.amount || 0)}</TableCell>
                           <TableCell>
                             <Badge variant={payment.status === "completed" ? "success" : "warning"}>
                               {payment.status}

@@ -150,7 +150,7 @@ const Reports = () => {
               </CardHeader>
               <CardContent>
                 <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : `$${(stats?.totalPOSRevenue || 0).toLocaleString()}`}
+                  {isLoading ? <Skeleton className="h-9 w-24" /> : formatCurrency(stats?.totalPOSRevenue || 0)}
                 </span>
               </CardContent>
             </Card>
