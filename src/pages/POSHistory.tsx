@@ -530,7 +530,7 @@ export default function POSHistory() {
                       <span>
                         {item.item_name} x{item.quantity}
                       </span>
-                      <span>${((item.item_price || 0) * (item.quantity || 0)).toFixed(2)}</span>
+                      <span>{formatCurrency((item.item_price || 0) * (item.quantity || 0))}</span>
                     </div>
                   ))}
                 </div>
