@@ -316,7 +316,7 @@ const POSTerminal = () => {
                       <Icon className="h-6 w-6 text-primary" />
                     </div>
                     <p className="font-medium text-sm truncate">{item.name}</p>
-                    <p className="text-primary font-semibold">${item.price.toFixed(2)}</p>
+                    <p className="text-primary font-semibold">{formatCurrency(item.price)}</p>
                   </CardContent>
                 </Card>
               );
