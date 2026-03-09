@@ -40,7 +40,7 @@ import {
   usePurchaseOrders, useStockMovements, useInventoryStats 
 } from "@/hooks/useInventory";
 import { format } from "date-fns";
-import { formatAD } from "@/lib/utils";
+import { formatAD, formatCurrency } from "@/lib/utils";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
