@@ -15,6 +15,7 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ModuleQuickActions, QuickAction } from "@/components/shared";
 import { useInvoices, useBillingStats } from "@/hooks/useBillingData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   paid: "bg-success/20 text-success border-success/30",
