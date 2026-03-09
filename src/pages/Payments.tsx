@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StripeConnect } from "@/components/finance/StripeConnect";
@@ -88,4 +89,10 @@ const Payments = () => {
   );
 };
 
-export default Payments;
+const PaymentsPage = () => (
+  <ErrorBoundary>
+    <Payments />
+  </ErrorBoundary>
+);
+
+export default PaymentsPage;

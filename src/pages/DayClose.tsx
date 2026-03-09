@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { cn, formatAD } from "@/lib/utils";
+import { cn, formatAD, formatCurrency } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { useReportStats } from "@/hooks/useReportStats";
 import { format, parseISO } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function DayClose() {
+function DayClose() {
   const { businessDate } = useNightAudit();
   const { data: reportStats, isLoading: statsLoading } = useReportStats();
   const [isClosed, setIsClosed] = useState(false);
@@ -203,3 +204,11 @@ export default function DayClose() {
     </MainLayout>
   );
 }
+
+const DayClosePage = () => (
+  <ErrorBoundary>
+    <DayClose />
+  </ErrorBoundary>
+);
+
+export default DayClosePage;

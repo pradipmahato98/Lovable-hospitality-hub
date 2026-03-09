@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -186,4 +187,10 @@ const Reports = () => {
   );
 };
 
-export default Reports;
+const ReportsPage = () => (
+  <ErrorBoundary>
+    <Reports />
+  </ErrorBoundary>
+);
+
+export default ReportsPage;

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCallback } from "react";
 
 export interface Reservation {
   id: string;
@@ -18,58 +19,52 @@ export interface Reservation {
   } | null;
 }
 
+async function fetchReservations(): Promise<Reservation[]> {
+  const { data, error } = await supabase
+    .from("reservations")
+    .select(`
+      id,
+      reservation_code,
+      check_in_date,
+      check_out_date,
+      status,
+      total_amount,
+      guest:guests(first_name, last_name),
+      room:rooms(room_number, room_type)
+    `)
+    .order("check_in_date", { ascending: false });
+
+  if (error) throw error;
+  return data as unknown as Reservation[];
+}
+
 export const useReservations = () => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data: reservations = [], isLoading, error, refetch } = useQuery({
+    queryKey: ["reservations"],
+    queryFn: fetchReservations,
+  });
 
-  const fetchReservations = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("reservations")
-        .select(`
-          id,
-          reservation_code,
-          check_in_date,
-          check_out_date,
-          status,
-          total_amount,
-          guest:guests(first_name, last_name),
-          room:rooms(room_number, room_type)
-        `)
-        .order("check_in_date", { ascending: false });
-
-      if (fetchError) throw fetchError;
-      setReservations(data as unknown as Reservation[]);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch reservations"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchReservations();
-  }, [fetchReservations]);
-
-  const filterReservations = useCallback((query: string) => {
-    if (!query) return reservations;
-    const searchLower = query.toLowerCase();
-    return reservations.filter((res) =>
-      res.reservation_code.toLowerCase().includes(searchLower) ||
-      `${res.guest?.first_name} ${res.guest?.last_name}`.toLowerCase().includes(searchLower) ||
-      res.room?.room_number.toLowerCase().includes(searchLower)
-    );
-  }, [reservations]);
+  const filterReservations = useCallback(
+    (query: string) => {
+      if (!query) return reservations;
+      const searchLower = query.toLowerCase();
+      return reservations.filter(
+        (res) =>
+          res.reservation_code.toLowerCase().includes(searchLower) ||
+          `${res.guest?.first_name} ${res.guest?.last_name}`
+            .toLowerCase()
+            .includes(searchLower) ||
+          res.room?.room_number.toLowerCase().includes(searchLower)
+      );
+    },
+    [reservations]
+  );
 
   return {
     reservations,
     isLoading,
-    error,
-    refetch: fetchReservations,
+    error: error as Error | null,
+    refetch,
     filterReservations,
   };
 };
