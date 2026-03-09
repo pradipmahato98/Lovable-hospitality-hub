@@ -80,6 +80,43 @@ const Settings = () => {
     updateQuickMenu.mutate({ enabled_items: newItems });
   };
 
+  const handleExportSettings = async () => {
+    try {
+      const { data, error } = await supabase.from("settings").select("*");
+      if (error) throw error;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `settings-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Settings exported successfully");
+    } catch (e: any) {
+      toast.error("Export failed: " + e.message);
+    }
+  };
+
+  const handleImportSettings = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const settings = JSON.parse(text);
+      if (!Array.isArray(settings)) throw new Error("Invalid format");
+      for (const s of settings) {
+        if (s.key && s.value !== undefined) {
+          await supabase.from("settings").upsert({ key: s.key, value: s.value }, { onConflict: "key" });
+        }
+      }
+      toast.success("Settings imported successfully");
+      window.location.reload();
+    } catch (e: any) {
+      toast.error("Import failed: " + e.message);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <MainLayout title="Admin Settings" subtitle="Manage system configuration (Admin only)">
       <ErrorBoundary>
