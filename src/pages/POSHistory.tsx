@@ -554,7 +554,7 @@ export default function POSHistory() {
                 {(selectedTransaction.tip_amount || 0) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Tip</span>
-                    <span>${selectedTransaction.tip_amount?.toFixed(2)}</span>
+                    <span>{formatCurrency(selectedTransaction.tip_amount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
