@@ -101,7 +101,7 @@ function DayClose() {
                   ))}
                   <TableRow className="bg-secondary/30 font-bold">
                     <TableCell colSpan={3} className="text-right uppercase text-xs tracking-wider opacity-60">Total Daily Revenue</TableCell>
-                    <TableCell className="text-right text-lg text-primary font-display">${totalRevenue.toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-lg text-primary font-display">{formatCurrency(totalRevenue)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
