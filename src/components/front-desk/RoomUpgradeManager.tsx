@@ -184,7 +184,7 @@ export function RoomUpgradeManager() {
               <SelectContent>
                 {upgradeOptions.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    Room {r.room_number} - {r.room_type} (${r.price_per_night}/night)
+                    Room {r.room_number} - {r.room_type} ({formatCurrency(r.price_per_night)}/night)
                   </SelectItem>
                 ))}
               </SelectContent>

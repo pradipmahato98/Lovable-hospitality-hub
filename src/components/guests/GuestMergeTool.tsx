@@ -181,7 +181,7 @@ export function GuestMergeTool() {
                       <TableCell className="text-sm text-muted-foreground">{g.email || "-"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{g.phone || "-"}</TableCell>
                       <TableCell>{g.total_visits || 0}</TableCell>
-                      <TableCell className="text-primary font-medium">${(g.total_spending || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-primary font-medium">{formatCurrency(g.total_spending || 0)}</TableCell>
                       <TableCell>
                         {selectedIds.has(g.id) && (
                           <Button

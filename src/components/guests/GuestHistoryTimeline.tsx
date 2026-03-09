@@ -76,7 +76,7 @@ export function GuestHistoryTimeline({ guestId, guestName }: GuestHistoryTimelin
         date: r.check_in_date,
         type: "reservation",
         title: `Stay in Room ${r.rooms?.room_number || "N/A"}`,
-        description: `${r.rooms?.room_type || "Room"} • ${r.status} • $${r.total_amount?.toLocaleString() || 0}`,
+        description: `${r.rooms?.room_type || "Room"} • ${r.status} • ${formatCurrency(r.total_amount || 0)}`,
         icon: <Bed className="h-4 w-4" />,
         color: "bg-primary/20 text-primary border-primary/30",
       });
