@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { POSHeader } from "@/components/pos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
