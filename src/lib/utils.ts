@@ -15,6 +15,26 @@ export const AD_DATETIME_FORMAT = "dd/MM/yyyy HH:mm";
 /** Standard AD datetime with seconds: dd/MM/yyyy HH:mm:ss */
 export const AD_DATETIME_SEC_FORMAT = "dd/MM/yyyy HH:mm:ss";
 
+/** Format a number as currency (NPR by default) */
+export function formatCurrency(
+  amount: number | null | undefined,
+  currency: string = "NPR",
+  locale: string = "en-NP"
+): string {
+  if (amount === null || amount === undefined) return "—";
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    // Fallback for unsupported locales
+    return `${currency} ${amount.toLocaleString()}`;
+  }
+}
+
 /** Format a date in standard AD format (dd/MM/yyyy) */
 export function formatAD(date: Date | string, withTime?: "time" | "seconds"): string {
   const d = typeof date === "string" ? new Date(date) : date;
