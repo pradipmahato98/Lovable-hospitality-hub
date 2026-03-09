@@ -57,15 +57,7 @@ export const useGuestFolios = () => {
 
       if (error) {
         console.error("Error fetching folios:", error);
-        return [
-          {
-            id: "folio-1", folio_number: "FOL-100234", status: "open",
-            total_charges: 450.00, total_payments: 100.00, balance: 350.00,
-            guests: { first_name: "Sarah", last_name: "Johnson", email: "sarah@example.com" },
-            rooms: { room_number: "204", room_type: "Deluxe" },
-            created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-          },
-        ] as GuestFolio[];
+        return [] as GuestFolio[];
       }
       return data as GuestFolio[];
     },
