@@ -110,7 +110,7 @@ export function GuestProfilePanel({ guest, onEdit, onViewDocuments, onViewHistor
             variant="outline"
             size="sm"
             className="w-full gap-2"
-            onClick={() => toggleVIP.mutate({ id: guest.id, is_vip: !guest.is_vip })}
+            onClick={() => toggleVIP.mutateAsync({ id: guest.id, is_vip: !guest.is_vip })}
           >
             <Award className="h-4 w-4" />
             {guest.is_vip ? "Remove VIP" : "Mark VIP"}
