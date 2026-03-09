@@ -130,7 +130,7 @@ const Reports = () => {
               </CardHeader>
               <CardContent>
                 <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : `$${(stats?.adr || 0).toFixed(2)}`}
+                  {isLoading ? <Skeleton className="h-9 w-24" /> : formatCurrency(stats?.adr || 0)}
                 </span>
               </CardContent>
             </Card>
