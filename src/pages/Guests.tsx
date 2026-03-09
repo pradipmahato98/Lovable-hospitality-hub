@@ -118,7 +118,7 @@ const Guests = () => {
     { key: "email", header: "Email", render: (guest) => <span className="text-muted-foreground">{guest.email || "-"}</span> },
     { key: "phone", header: "Phone", render: (guest) => <span className="text-muted-foreground">{guest.phone || "-"}</span> },
     { key: "total_visits", header: "Visits", render: (guest) => <span className="font-semibold">{guest.total_visits || 0}</span> },
-    { key: "total_spending", header: "Total Spent", render: (guest) => <span className="font-semibold text-primary">${(guest.total_spending || 0).toLocaleString()}</span> },
+    { key: "total_spending", header: "Total Spent", render: (guest) => <span className="font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</span> },
     {
       key: "is_vip",
       header: "Status",
