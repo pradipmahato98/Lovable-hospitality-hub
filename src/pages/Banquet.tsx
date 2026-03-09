@@ -383,6 +383,7 @@ export default function Banquet() {
     .reduce((sum, e) => sum + (e.deposit_amount || 0), 0);
 
   return (
+    <ErrorBoundary>
     <MainLayout title="Banquet & Events" subtitle="Manage events, bookings, and catering">
       <div className="space-y-6">
         {/* Metrics */}
