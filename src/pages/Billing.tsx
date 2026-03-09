@@ -59,7 +59,7 @@ const Billing = () => {
             />
             <MetricCard
               title="Avg. Invoice"
-              value={stats && invoices.length > 0 ? `$${Math.round(stats.totalRevenue / Math.max(invoices.length, 1)).toLocaleString()}` : "—"}
+              value={stats && invoices.length > 0 ? formatCurrency(Math.round(stats.totalRevenue / Math.max(invoices.length, 1))) : "—"}
               change="Per invoice"
               changeType="positive"
               icon={TrendingUp}
