@@ -431,7 +431,7 @@ export default function POSHistory() {
                         </TableCell>
                         <TableCell>{transaction.items_count || 0}</TableCell>
                         <TableCell className="text-right font-semibold">
-                          ${(transaction.total || 0).toFixed(2)}
+                          {formatCurrency(transaction.total || 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
