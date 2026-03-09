@@ -372,8 +372,8 @@ const AdminConsole = () => {
             <Card variant="elevated">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-amber-500" />
-                  Revenue
+                  <DollarSign className="h-4 w-4 text-warning" />
+                  Today's Revenue
                 </CardTitle>
               </CardHeader>
               <CardContent>
