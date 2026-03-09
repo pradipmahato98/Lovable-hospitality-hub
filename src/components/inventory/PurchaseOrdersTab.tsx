@@ -1,0 +1,244 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Loader2, Warehouse, PackageCheck, Eye, X } from "lucide-react";
+import { toast } from "sonner";
+import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder } from "@/hooks/useInventory";
+import { formatAD, formatCurrency } from "@/lib/utils";
+
+interface POLineItem { item_id: string; quantity: number; unit_price: number; }
+
+export function PurchaseOrdersTab() {
+  const { data: orders = [], createPurchaseOrder, updatePurchaseOrderStatus, receivePurchaseOrder } = usePurchaseOrders();
+  const { data: suppliers = [] } = useSuppliers();
+  const { data: items = [] } = useInventoryItems();
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
+
+  const [form, setForm] = useState({ supplier_id: "", expected_delivery: "", notes: "" });
+  const [lineItems, setLineItems] = useState<POLineItem[]>([{ item_id: "", quantity: 1, unit_price: 0 }]);
+  const [receiveQtys, setReceiveQtys] = useState<Record<string, number>>({});
+
+  const subtotal = lineItems.reduce((s, li) => s + li.quantity * li.unit_price, 0);
+  const taxAmount = subtotal * 0.13;
+  const total = subtotal + taxAmount;
+
+  const addLine = () => setLineItems([...lineItems, { item_id: "", quantity: 1, unit_price: 0 }]);
+  const removeLine = (i: number) => setLineItems(lineItems.filter((_, idx) => idx !== i));
+  const updateLine = (i: number, field: string, value: any) => {
+    const updated = [...lineItems];
+    (updated[i] as any)[field] = value;
+    if (field === "item_id") {
+      const item = items.find((it) => it.id === value);
+      if (item) updated[i].unit_price = item.cost_price;
+    }
+    setLineItems(updated);
+  };
+
+  const handleCreate = async () => {
+    try {
+      const validLines = lineItems.filter((l) => l.item_id && l.quantity > 0);
+      if (!form.supplier_id || validLines.length === 0) { toast.error("Select supplier and add items"); return; }
+      await createPurchaseOrder.mutateAsync({
+        supplier_id: form.supplier_id,
+        expected_delivery: form.expected_delivery || null,
+        notes: form.notes || null,
+        subtotal, tax_amount: taxAmount, total,
+        status: "draft",
+        items: validLines,
+      } as any);
+      toast.success("Purchase order created");
+      setCreateOpen(false);
+      setForm({ supplier_id: "", expected_delivery: "", notes: "" });
+      setLineItems([{ item_id: "", quantity: 1, unit_price: 0 }]);
+    } catch { toast.error("Failed to create PO"); }
+  };
+
+  const openReceive = (po: PurchaseOrder) => {
+    setSelectedPO(po);
+    const qtys: Record<string, number> = {};
+    po.items?.forEach((pi) => { qtys[pi.id] = pi.received_quantity || 0; });
+    setReceiveQtys(qtys);
+    setReceiveOpen(true);
+  };
+
+  const handleReceive = async () => {
+    if (!selectedPO?.items) return;
+    try {
+      const receivedItems = selectedPO.items.map((pi) => ({
+        poItemId: pi.id, itemId: pi.item_id, receivedQty: receiveQtys[pi.id] || 0,
+      }));
+      await receivePurchaseOrder.mutateAsync({ poId: selectedPO.id, receivedItems });
+      toast.success("PO received — stock updated");
+      setReceiveOpen(false);
+    } catch { toast.error("Failed to receive PO"); }
+  };
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      await updatePurchaseOrderStatus.mutateAsync({ id, status });
+      toast.success(`Status updated to ${status}`);
+    } catch { toast.error("Failed to update status"); }
+  };
+
+  const statusColor = (s: string) => {
+    switch (s) {
+      case "received": return "bg-success/20 text-success";
+      case "partially_received": return "bg-blue-500/20 text-blue-400";
+      case "sent": return "bg-amber-500/20 text-amber-400";
+      case "cancelled": return "bg-destructive/20 text-destructive";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  return (
+    <Card variant="elevated">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div><CardTitle className="flex items-center gap-2"><Warehouse className="h-5 w-5" />Purchase Orders</CardTitle><CardDescription>{orders.length} orders</CardDescription></div>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild><Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />New Order</Button></DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader><DialogTitle>Create Purchase Order</DialogTitle><DialogDescription>Select supplier and add items</DialogDescription></DialogHeader>
+              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Supplier *</Label>
+                    <Select value={form.supplier_id} onValueChange={(v) => setForm({ ...form, supplier_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                      <SelectContent>{suppliers.filter((s) => s.is_active).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Expected Delivery</Label><Input type="date" value={form.expected_delivery} onChange={(e) => setForm({ ...form, expected_delivery: e.target.value })} /></div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between"><Label>Line Items</Label><Button variant="outline" size="sm" onClick={addLine}><Plus className="h-3 w-3 mr-1" />Add</Button></div>
+                  {lineItems.map((li, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_80px_100px_32px] gap-2 items-end">
+                      <Select value={li.item_id} onValueChange={(v) => updateLine(i, "item_id", v)}>
+                        <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
+                        <SelectContent>{items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Input type="number" min={1} value={li.quantity} onChange={(e) => updateLine(i, "quantity", Number(e.target.value))} placeholder="Qty" />
+                      <Input type="number" min={0} value={li.unit_price} onChange={(e) => updateLine(i, "unit_price", Number(e.target.value))} placeholder="Price" />
+                      {lineItems.length > 1 && <Button variant="ghost" size="sm" onClick={() => removeLine(i)}><X className="h-4 w-4" /></Button>}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
+                  <div className="flex justify-between"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+                  <div className="flex justify-between"><span>Tax (13%)</span><span>{formatCurrency(taxAmount)}</span></div>
+                  <div className="flex justify-between font-bold"><span>Total</span><span>{formatCurrency(total)}</span></div>
+                </div>
+
+                <div className="space-y-2"><Label>Notes</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreate} disabled={createPurchaseOrder.isPending}>
+                  {createPurchaseOrder.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create Order
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order #</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Expected</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orders.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No purchase orders yet</TableCell></TableRow>
+            ) : (
+              orders.map((po) => (
+                <TableRow key={po.id}>
+                  <TableCell className="font-mono">{po.order_number}</TableCell>
+                  <TableCell>{po.supplier?.name || "-"}</TableCell>
+                  <TableCell>{formatAD(new Date(po.order_date))}</TableCell>
+                  <TableCell>{po.expected_delivery ? formatAD(new Date(po.expected_delivery)) : "-"}</TableCell>
+                  <TableCell><Badge className={statusColor(po.status)}>{po.status.replace("_", " ")}</Badge></TableCell>
+                  <TableCell className="font-medium">{formatCurrency(po.total)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPO(po); setDetailOpen(true); }}><Eye className="h-4 w-4" /></Button>
+                      {po.status === "draft" && <Button variant="ghost" size="sm" onClick={() => handleStatusChange(po.id, "sent")}>Send</Button>}
+                      {(po.status === "sent" || po.status === "partially_received") && (
+                        <Button variant="ghost" size="sm" onClick={() => openReceive(po)}><PackageCheck className="h-4 w-4 mr-1" />Receive</Button>
+                      )}
+                      {po.status === "draft" && <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleStatusChange(po.id, "cancelled")}>Cancel</Button>}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>PO {selectedPO?.order_number}</DialogTitle></DialogHeader>
+          {selectedPO?.items && (
+            <Table>
+              <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>Price</TableHead><TableHead>Received</TableHead><TableHead>Total</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {selectedPO.items.map((pi) => (
+                  <TableRow key={pi.id}>
+                    <TableCell>{pi.item?.name || "-"}</TableCell>
+                    <TableCell>{pi.quantity}</TableCell>
+                    <TableCell>{formatCurrency(pi.unit_price)}</TableCell>
+                    <TableCell>{pi.received_quantity}/{pi.quantity}</TableCell>
+                    <TableCell>{formatCurrency(pi.quantity * pi.unit_price)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Receive Dialog */}
+      <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Receive PO {selectedPO?.order_number}</DialogTitle><DialogDescription>Enter received quantities for each item</DialogDescription></DialogHeader>
+          <div className="space-y-3 py-4">
+            {selectedPO?.items?.map((pi) => (
+              <div key={pi.id} className="flex items-center justify-between gap-4">
+                <div className="flex-1"><p className="font-medium text-sm">{pi.item?.name}</p><p className="text-xs text-muted-foreground">Ordered: {pi.quantity} · Already received: {pi.received_quantity}</p></div>
+                <Input type="number" className="w-24" min={0} max={pi.quantity} value={receiveQtys[pi.id] || 0}
+                  onChange={(e) => setReceiveQtys({ ...receiveQtys, [pi.id]: Number(e.target.value) })} />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReceiveOpen(false)}>Cancel</Button>
+            <Button onClick={handleReceive} disabled={receivePurchaseOrder.isPending}>
+              {receivePurchaseOrder.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Confirm Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
