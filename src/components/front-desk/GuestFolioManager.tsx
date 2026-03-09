@@ -471,7 +471,7 @@ export const GuestFolioManager = () => {
                   <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
                     <p className="text-sm text-muted-foreground">Outstanding Balance</p>
                     <p className={cn("text-xl font-bold font-display", selectedFolio.balance > 0 ? "text-destructive" : "text-success")}>
-                      ${selectedFolio.balance.toFixed(2)}
+                      {formatCurrency(selectedFolio.balance)}
                     </p>
                   </div>
                 </div>
