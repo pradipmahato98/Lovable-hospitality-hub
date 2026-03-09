@@ -29,7 +29,7 @@ const HR = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("employees");
-  const { setNewGuestOpen } = useQuickActions();
+  const navigate = useNavigate();
 
   if (roleLoading) {
     return (
