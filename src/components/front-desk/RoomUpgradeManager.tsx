@@ -16,6 +16,7 @@ import {
 import { ArrowUpCircle, Sparkles, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 const db = supabase as any;
 
@@ -113,7 +114,7 @@ export function RoomUpgradeManager() {
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Potential Revenue</p>
             <p className="text-2xl font-bold text-success">
-              ${rooms.filter((r) => r.status === "available").reduce((s, r) => s + Number(r.price_per_night), 0).toLocaleString()}
+              {formatCurrency(rooms.filter((r) => r.status === "available").reduce((s, r) => s + Number(r.price_per_night), 0))}
             </p>
             <p className="text-xs text-muted-foreground">from available rooms</p>
           </CardContent>
@@ -153,7 +154,7 @@ export function RoomUpgradeManager() {
                       </TableCell>
                       <TableCell className="font-mono">{room?.room_number || "-"}</TableCell>
                       <TableCell>{room?.room_type || "-"}</TableCell>
-                      <TableCell>${room?.price_per_night || 0}/night</TableCell>
+                      <TableCell>{formatCurrency(room?.price_per_night || 0)}/night</TableCell>
                       <TableCell><Badge variant="outline">{res.status}</Badge></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" className="gap-1" onClick={() => setSelectedRes(res)}>
@@ -183,7 +184,7 @@ export function RoomUpgradeManager() {
               <SelectContent>
                 {upgradeOptions.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    Room {r.room_number} - {r.room_type} (${r.price_per_night}/night)
+                    Room {r.room_number} - {r.room_type} ({formatCurrency(r.price_per_night)}/night)
                   </SelectItem>
                 ))}
               </SelectContent>

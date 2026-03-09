@@ -1458,6 +1458,106 @@ export type Database = {
           },
         ]
       }
+      inventory_transfers: {
+        Row: {
+          created_at: string
+          from_location: string
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          status: string
+          to_location: string
+          transfer_number: string
+          transferred_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_location: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity: number
+          status?: string
+          to_location: string
+          transfer_number: string
+          transferred_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_location?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          status?: string
+          to_location?: string
+          transfer_number?: string
+          transferred_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transfers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_wastage: {
+        Row: {
+          approved_by: string | null
+          cost_impact: number
+          created_at: string
+          id: string
+          item_id: string
+          quantity: number
+          reason: string | null
+          reported_by: string | null
+          status: string
+          updated_at: string
+          wastage_type: string
+        }
+        Insert: {
+          approved_by?: string | null
+          cost_impact?: number
+          created_at?: string
+          id?: string
+          item_id: string
+          quantity: number
+          reason?: string | null
+          reported_by?: string | null
+          status?: string
+          updated_at?: string
+          wastage_type?: string
+        }
+        Update: {
+          approved_by?: string | null
+          cost_impact?: number
+          created_at?: string
+          id?: string
+          item_id?: string
+          quantity?: number
+          reason?: string | null
+          reported_by?: string | null
+          status?: string
+          updated_at?: string
+          wastage_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_wastage_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           created_at: string

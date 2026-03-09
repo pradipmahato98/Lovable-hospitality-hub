@@ -79,7 +79,7 @@ import { format } from "date-fns";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
-import { cn, formatAD } from "@/lib/utils";
+import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
 export const GuestFolioManager = () => {
@@ -422,7 +422,7 @@ export const GuestFolioManager = () => {
                   <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
                     <span>Balance:</span>
                     <span className={cn("font-bold", folio.balance > 0 ? "text-destructive" : "text-success")}>
-                      ${folio.balance.toFixed(2)}
+                      {formatCurrency(folio.balance)}
                     </span>
                   </div>
                 </div>
@@ -462,16 +462,16 @@ export const GuestFolioManager = () => {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="p-4 bg-secondary/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Charges</p>
-                    <p className="text-xl font-bold font-display">${selectedFolio.total_charges.toFixed(2)}</p>
+                    <p className="text-xl font-bold font-display">{formatCurrency(selectedFolio.total_charges)}</p>
                   </div>
                   <div className="p-4 bg-secondary/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Payments</p>
-                    <p className="text-xl font-bold font-display text-success">${selectedFolio.total_payments.toFixed(2)}</p>
+                    <p className="text-xl font-bold font-display text-success">{formatCurrency(selectedFolio.total_payments)}</p>
                   </div>
                   <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
                     <p className="text-sm text-muted-foreground">Outstanding Balance</p>
                     <p className={cn("text-xl font-bold font-display", selectedFolio.balance > 0 ? "text-destructive" : "text-success")}>
-                      ${selectedFolio.balance.toFixed(2)}
+                      {formatCurrency(selectedFolio.balance)}
                     </p>
                   </div>
                 </div>
@@ -611,10 +611,10 @@ export const GuestFolioManager = () => {
                             <Badge variant="secondary" className="capitalize text-[10px]">{item.source}</Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {item.amount > 0 ? `$${item.amount.toFixed(2)}` : "-"}
+                            {item.amount > 0 ? formatCurrency(item.amount) : "-"}
                           </TableCell>
                           <TableCell className="text-right font-mono text-success">
-                            {item.amount < 0 ? `$${Math.abs(item.amount).toFixed(2)}` : "-"}
+                            {item.amount < 0 ? formatCurrency(Math.abs(item.amount)) : "-"}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -960,7 +960,7 @@ export const GuestFolioManager = () => {
                     <TableRow key={item.id} className="border-none">
                       <TableCell className="py-2">{formatAD(new Date(item.created_at))}</TableCell>
                       <TableCell className="py-2">{item.description}</TableCell>
-                      <TableCell className="text-right py-2 font-mono">${item.amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right py-2 font-mono">{formatCurrency(item.amount)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -969,7 +969,7 @@ export const GuestFolioManager = () => {
               <div className="flex flex-col items-end pt-6 border-t space-y-2">
                 <div className="flex justify-between w-48">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-mono">${selectedFolio.total_charges.toFixed(2)}</span>
+                  <span className="font-mono">{formatCurrency(selectedFolio.total_charges)}</span>
                 </div>
                 <div className="flex justify-between w-48">
                   <span className="text-muted-foreground">Tax (0%):</span>
@@ -977,11 +977,11 @@ export const GuestFolioManager = () => {
                 </div>
                 <div className="flex justify-between w-48 border-t pt-2 mt-2">
                   <span className="font-bold">Total:</span>
-                  <span className="font-bold font-mono text-lg">${selectedFolio.total_charges.toFixed(2)}</span>
+                  <span className="font-bold font-mono text-lg">{formatCurrency(selectedFolio.total_charges)}</span>
                 </div>
                 <div className="flex justify-between w-48 text-success font-medium">
                   <span>Paid:</span>
-                  <span className="font-mono">-${selectedFolio.total_payments.toFixed(2)}</span>
+                  <span className="font-mono">-{formatCurrency(selectedFolio.total_payments)}</span>
                 </div>
                 <div className="flex justify-between w-48 border-t-2 border-double pt-2 mt-2 font-bold text-xl">
                   <span>Balance:</span>

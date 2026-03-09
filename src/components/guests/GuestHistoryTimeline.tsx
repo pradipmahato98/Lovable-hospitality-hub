@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, DollarSign, Bed, MessageSquare, Award, Star } from "lucide-react";
-import { formatAD } from "@/lib/utils";
+import { formatAD, formatCurrency } from "@/lib/utils";
 
 const db = supabase as any;
 
@@ -76,7 +76,7 @@ export function GuestHistoryTimeline({ guestId, guestName }: GuestHistoryTimelin
         date: r.check_in_date,
         type: "reservation",
         title: `Stay in Room ${r.rooms?.room_number || "N/A"}`,
-        description: `${r.rooms?.room_type || "Room"} • ${r.status} • $${r.total_amount?.toLocaleString() || 0}`,
+        description: `${r.rooms?.room_type || "Room"} • ${r.status} • ${formatCurrency(r.total_amount || 0)}`,
         icon: <Bed className="h-4 w-4" />,
         color: "bg-primary/20 text-primary border-primary/30",
       });
