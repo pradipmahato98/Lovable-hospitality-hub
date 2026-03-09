@@ -345,7 +345,7 @@ const POSTerminal = () => {
                     <div key={item.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">${item.price.toFixed(2)} each</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, -1)}>
