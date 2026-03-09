@@ -10,6 +10,7 @@ import { DollarSign, CreditCard, ArrowUpRight } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { usePayments, useBillingStats } from "@/hooks/useBillingData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 const Payments = () => {
   const { data: payments = [], isLoading } = usePayments();
