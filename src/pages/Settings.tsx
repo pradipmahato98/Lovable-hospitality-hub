@@ -28,6 +28,7 @@ type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "n
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: checkInSettings, isLoading: isLoadingCheckIn } = useCheckInSettings();
   const updateCheckIn = useUpdateCheckInSettings();
