@@ -165,7 +165,7 @@ const POSTerminal = () => {
     if (splitPayment) {
       const splitTotal = splitAmounts.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
       if (Math.abs(splitTotal - total) > 0.01) {
-        toast.error(`Split amounts must equal $${total.toFixed(2)}`);
+        toast.error(`Split amounts must equal ${formatCurrency(total)}`);
         return;
       }
     } else if (paymentMethod === "room" && !roomChargeRoom) {
