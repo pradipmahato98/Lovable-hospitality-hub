@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -383,6 +384,7 @@ export default function Banquet() {
     .reduce((sum, e) => sum + (e.deposit_amount || 0), 0);
 
   return (
+    <ErrorBoundary>
     <MainLayout title="Banquet & Events" subtitle="Manage events, bookings, and catering">
       <div className="space-y-6">
         {/* Metrics */}
@@ -838,5 +840,6 @@ export default function Banquet() {
         </DialogContent>
       </Dialog>
     </MainLayout>
+    </ErrorBoundary>
   );
 }

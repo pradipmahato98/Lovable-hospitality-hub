@@ -15,11 +15,12 @@ import {
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
-import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { PayrollPanel } from "@/components/hr/PayrollPanel";
 import { LeaveManagement } from "@/components/hr/LeaveManagement";
+import { HRReportsTab } from "@/components/hr/HRReportsTab";
 import { useStaffMembers, useStaffDepartments } from "@/hooks/useStaffMembers";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 const HR = () => {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
@@ -28,7 +29,7 @@ const HR = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("employees");
-  const { setNewGuestOpen } = useQuickActions();
+  const navigate = useNavigate();
 
   if (roleLoading) {
     return (
@@ -80,10 +81,11 @@ const HR = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
           <TabsTrigger value="employees" className="gap-2"><Users className="h-4 w-4" />Employees</TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2"><DollarSign className="h-4 w-4" />Payroll</TabsTrigger>
           <TabsTrigger value="leave" className="gap-2"><CalendarDays className="h-4 w-4" />Leave</TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="employees">
@@ -91,10 +93,10 @@ const HR = () => {
             <Card variant="elevated">
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setNewGuestOpen(true)}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/staff?tab=directory")}>
                   <UserPlus className="h-4 w-4" />Add Employee
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/staff?tab=schedules")}>
                   <Calendar className="h-4 w-4" />Schedule Shifts
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("payroll")}>
@@ -103,7 +105,7 @@ const HR = () => {
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("leave")}>
                   <FileText className="h-4 w-4" />Leave Requests
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("reports")}>
                   <Award className="h-4 w-4" />Performance Reviews
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("payroll")}>
@@ -197,6 +199,7 @@ const HR = () => {
 
         <TabsContent value="payroll"><PayrollPanel /></TabsContent>
         <TabsContent value="leave"><LeaveManagement /></TabsContent>
+        <TabsContent value="reports"><HRReportsTab /></TabsContent>
       </Tabs>
     </MainLayout>
   );

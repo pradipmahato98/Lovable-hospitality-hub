@@ -10,23 +10,110 @@ import {
 } from "@/components/ui/table";
 import {
   DollarSign, BarChart3, TrendingUp, Lock, Unlock, Receipt,
-  Utensils, Bed, Sparkles, ChevronRight, Printer
+  Utensils, Bed, Sparkles, ChevronRight, Printer, FileText, Banknote, CreditCard, Wallet
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNightAudit } from "@/hooks/useNightAudit";
 import { useReportStats } from "@/hooks/useReportStats";
 import { format, parseISO } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import jsPDF from "jspdf";
 
 function DayClose() {
+  const queryClient = useQueryClient();
   const { businessDate } = useNightAudit();
   const { data: reportStats, isLoading: statsLoading } = useReportStats();
   const [isClosed, setIsClosed] = useState(false);
 
-  const handleCloseDay = () => {
-    setIsClosed(true);
-    toast.success("Day has been successfully balanced and closed for accounting.");
+  // Fetch audit history from night_audit_logs
+  const { data: auditHistory = [] } = useQuery({
+    queryKey: ["day-close-history"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("night_audit_logs")
+        .select("*")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch payment method breakdown from today's pos_transactions
+  const { data: paymentBreakdown = [] } = useQuery({
+    queryKey: ["day-close-payments", businessDate],
+    queryFn: async () => {
+      const today = businessDate || new Date().toISOString().split("T")[0];
+      const { data, error } = await (supabase as any)
+        .from("pos_transactions")
+        .select("payment_method, total")
+        .gte("created_at", `${today}T00:00:00`)
+        .lt("created_at", `${today}T23:59:59`);
+      if (error) throw error;
+      
+      const breakdown: Record<string, { count: number; total: number }> = {};
+      (data || []).forEach((t: any) => {
+        const method = t.payment_method || "other";
+        if (!breakdown[method]) breakdown[method] = { count: 0, total: 0 };
+        breakdown[method].count++;
+        breakdown[method].total += t.total || 0;
+      });
+      return Object.entries(breakdown).map(([method, stats]) => ({ method, ...stats }));
+    },
+    enabled: !!businessDate,
+  });
+
+  // Fetch today's expenses
+  const { data: todayExpenses = 0 } = useQuery({
+    queryKey: ["day-close-expenses", businessDate],
+    queryFn: async () => {
+      const today = businessDate || new Date().toISOString().split("T")[0];
+      const { data, error } = await (supabase as any)
+        .from("expenses")
+        .select("amount")
+        .eq("expense_date", today);
+      if (error) throw error;
+      return (data || []).reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+    },
+    enabled: !!businessDate,
+  });
+
+  // Persist day close
+  const persistClose = useMutation({
+    mutationFn: async () => {
+      const today = businessDate || new Date().toISOString().split("T")[0];
+      const totalRevenue = (reportStats?.totalReservationRevenue || 0) + (reportStats?.totalPOSRevenue || 0) + (reportStats?.totalInvoiceRevenue || 0);
+      const { error } = await (supabase as any)
+        .from("night_audit_logs")
+        .insert({
+          business_date: today,
+          total_charges_posted: (reportStats?.reservationCount || 0) + (reportStats?.posCount || 0),
+          total_room_revenue: totalRevenue,
+          occupancy_rate: reportStats?.occupancyRate || 0,
+          status: "completed",
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["day-close-history"] });
+    },
+  });
+
+  const handleCloseDay = async () => {
+    try {
+      await persistClose.mutateAsync();
+      setIsClosed(true);
+      toast.success("Day has been successfully balanced and closed for accounting.");
+    } catch (e: any) {
+      toast.error("Failed to close day: " + e.message);
+    }
   };
+
+  const totalRevenue = (reportStats?.totalReservationRevenue || 0) + (reportStats?.totalPOSRevenue || 0) + (reportStats?.totalInvoiceRevenue || 0);
+  const netProfit = totalRevenue - todayExpenses;
 
   const departmentRevenue = [
     { id: 1, name: "Rooms & Lodging", code: "ROOM", amount: reportStats?.totalReservationRevenue || 0, transactions: reportStats?.reservationCount || 0, icon: Bed, color: "text-blue-500" },
@@ -34,12 +121,26 @@ function DayClose() {
     { id: 3, name: "Invoiced Revenue", code: "INV", amount: reportStats?.totalInvoiceRevenue || 0, transactions: reportStats?.invoiceCount || 0, icon: Receipt, color: "text-green-500" },
   ];
 
-  const totalRevenue = departmentRevenue.reduce((sum, dept) => sum + dept.amount, 0);
+  const paymentIcons: Record<string, any> = { cash: Banknote, card: CreditCard, digital: Wallet };
+
+  const exportDailySummary = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Daily Summary Report", 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Business Date: ${businessDate ? formatAD(parseISO(businessDate)) : "N/A"}`, 14, 32);
+    doc.text(`Total Revenue: ${formatCurrency(totalRevenue)}`, 14, 42);
+    doc.text(`Total Expenses: ${formatCurrency(todayExpenses)}`, 14, 48);
+    doc.text(`Net Profit: ${formatCurrency(netProfit)}`, 14, 54);
+    departmentRevenue.forEach((dept, i) => {
+      doc.text(`${dept.name}: ${formatCurrency(dept.amount)} (${dept.transactions} txn)`, 14, 66 + i * 6);
+    });
+    doc.save(`daily-summary-${businessDate || "report"}.pdf`);
+  };
 
   return (
     <MainLayout title="Day Close" subtitle="Financial balancing and department reconciliation">
       <div className="space-y-6">
-
         {/* Status Card */}
         <Card className={cn("border-l-4 transition-all", isClosed ? "border-l-success" : "border-l-amber-500")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -53,11 +154,11 @@ function DayClose() {
               </CardDescription>
             </div>
             {isClosed ? (
-              <Button variant="outline" onClick={() => window.print()} className="gap-2">
-                <Printer className="h-4 w-4" /> Print Daily Summary
+              <Button variant="outline" onClick={exportDailySummary} className="gap-2">
+                <FileText className="h-4 w-4" /> Export PDF
               </Button>
             ) : (
-              <Button onClick={handleCloseDay} className="gap-2 bg-amber-600 hover:bg-amber-700">
+              <Button onClick={handleCloseDay} disabled={persistClose.isPending} className="gap-2 bg-amber-600 hover:bg-amber-700">
                 <Lock className="h-4 w-4" /> Finalize & Balance Day
               </Button>
             )}
@@ -69,8 +170,7 @@ function DayClose() {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                Department Revenue Breakdown
+                <DollarSign className="h-5 w-5 text-primary" /> Department Revenue Breakdown
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -108,98 +208,95 @@ function DayClose() {
             </CardContent>
           </Card>
 
-          {/* Quick Metrics */}
+          {/* Quick Metrics + Payment Breakdown */}
           <div className="space-y-6">
             <Card variant="elevated">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">ADR (Avg Daily Rate)</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">
-                  {statsLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency((reportStats?.totalReservationRevenue || 0) / Math.max(reportStats?.reservationCount || 1, 1))}
+                <p className={cn("text-2xl font-bold", netProfit >= 0 ? "text-success" : "text-destructive")}>
+                  {statsLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(netProfit)}
                 </p>
-                <div className="flex items-center text-xs text-success mt-1">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  <span>+5.2% from yesterday</span>
-                </div>
+                <p className="text-xs text-muted-foreground mt-1">Revenue minus expenses</p>
               </CardContent>
             </Card>
 
             <Card variant="elevated">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">RevPAR</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Expenses Today</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">
-                  {statsLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency((reportStats?.totalReservationRevenue || 0) * ((reportStats?.occupancyRate || 0) / 100))}
-                </p>
-                <div className="flex items-center text-xs text-success mt-1">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  <span>+2.1% from target</span>
-                </div>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(todayExpenses)}</p>
+                <p className="text-xs text-muted-foreground mt-1">All departments</p>
               </CardContent>
             </Card>
 
+            {/* Payment Method Breakdown */}
             <Card variant="glass" className="bg-primary/5 border-primary/20">
               <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary">Pre-Audit Checklist</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary">Payment Methods</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
-                  {[
-                    "All POS terminals closed",
-                    "Cash drawers reconciled",
-                    "External credit cards settled",
-                    "Room charges posted"
-                  ].map((task, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
-                      <div className="h-4 w-4 rounded-full border border-primary/30 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                      </div>
-                      {task}
-                    </li>
-                  ))}
-                </ul>
+                {paymentBreakdown.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No POS transactions today</p>
+                ) : (
+                  <div className="space-y-3">
+                    {paymentBreakdown.map((item: any) => {
+                      const Icon = paymentIcons[item.method] || Receipt;
+                      return (
+                        <div key={item.method} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <span className="capitalize">{item.method}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-mono font-bold">{formatCurrency(item.total)}</span>
+                            <span className="text-xs text-muted-foreground ml-2">({item.count})</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Recent Activity Logs */}
+        {/* Activity History from DB */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Day Close Activity History
+              <BarChart3 className="h-5 w-5 text-primary" /> Day Close History
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { date: "Dec 19, 2024", user: "Admin User", revenue: "$5,820.00", status: "Closed" },
-                { date: "Dec 18, 2024", user: "Manager One", revenue: "$6,140.50", status: "Closed" },
-                { date: "Dec 17, 2024", user: "Admin User", revenue: "$5,400.00", status: "Closed" },
-              ].map((log, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-lg border bg-secondary/20 hover:bg-secondary/30 transition-colors">
+              {auditHistory.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No day close history yet.</p>
+              ) : auditHistory.map((log: any, i: number) => (
+                <div key={log.id} className="flex items-center justify-between p-4 rounded-lg border bg-secondary/20 hover:bg-secondary/30 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border">
                       <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="font-medium">{log.date}</p>
-                      <p className="text-xs text-muted-foreground">Performed by {log.user}</p>
+                      <p className="font-medium">{formatAD(log.business_date)}</p>
+                      <p className="text-xs text-muted-foreground">Occupancy: {Math.round(log.occupancy_rate || 0)}%</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{log.revenue}</p>
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">SUCCESS</Badge>
+                    <p className="font-bold">{formatCurrency(log.total_room_revenue || 0)}</p>
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                      {log.status?.toUpperCase() || "COMPLETED"}
+                    </Badge>
                   </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-
       </div>
     </MainLayout>
   );
