@@ -839,5 +839,6 @@ export default function Banquet() {
         </DialogContent>
       </Dialog>
     </MainLayout>
+    </ErrorBoundary>
   );
 }
