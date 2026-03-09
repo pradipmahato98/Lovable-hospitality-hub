@@ -266,7 +266,7 @@ export default function POSHistory() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold text-success">${totalRevenue.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-success">{formatCurrency(totalRevenue)}</p>
                 </div>
               </div>
             </CardContent>
