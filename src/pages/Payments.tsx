@@ -22,7 +22,7 @@ const Payments = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <MetricCard
             title="Total Collected"
-            value={stats ? `$${payments.reduce((s: number, p: any) => s + (p.amount || 0), 0).toLocaleString()}` : "—"}
+            value={stats ? formatCurrency(payments.reduce((s: number, p: any) => s + (p.amount || 0), 0)) : "—"}
             change="All payments"
             changeType="positive"
             icon={DollarSign}
