@@ -154,7 +154,7 @@ export function RoomUpgradeManager() {
                       </TableCell>
                       <TableCell className="font-mono">{room?.room_number || "-"}</TableCell>
                       <TableCell>{room?.room_type || "-"}</TableCell>
-                      <TableCell>${room?.price_per_night || 0}/night</TableCell>
+                      <TableCell>{formatCurrency(room?.price_per_night || 0)}/night</TableCell>
                       <TableCell><Badge variant="outline">{res.status}</Badge></TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" className="gap-1" onClick={() => setSelectedRes(res)}>
