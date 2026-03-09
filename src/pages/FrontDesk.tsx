@@ -293,7 +293,7 @@ const FrontDesk = () => {
                               <span>Up to {room.capacity}</span>
                             </div>
                             <div className="text-right">
-                              <span className="text-xl font-bold text-primary">${room.price_per_night}</span>
+                              <span className="text-xl font-bold text-primary">{formatCurrency(room.price_per_night)}</span>
                               <span className="text-xs text-muted-foreground">/night</span>
                             </div>
                           </div>

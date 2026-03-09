@@ -79,7 +79,7 @@ import { format } from "date-fns";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
-import { cn, formatAD } from "@/lib/utils";
+import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
 export const GuestFolioManager = () => {

@@ -16,6 +16,7 @@ import {
 import { ArrowUpCircle, Sparkles, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 const db = supabase as any;
 
