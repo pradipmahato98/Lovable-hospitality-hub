@@ -53,17 +53,17 @@ export function useGuestCRUD() {
   });
 
   const toggleVIP = useMutation({
-    mutationFn: async ({ id, is_vip }: { id: string; is_vip: boolean }) => {
+    mutationFn: async (params: { id: string; is_vip: boolean }) => {
       const { data, error } = await db
         .from("guests")
-        .update({ is_vip })
-        .eq("id", id)
+        .update({ is_vip: params.is_vip })
+        .eq("id", params.id)
         .select()
         .single();
       if (error) throw error;
       return data;
     },
-    onSuccess: (_: any, vars: { is_vip: boolean }) => {
+    onSuccess: (_: any, vars: { id: string; is_vip: boolean }) => {
       queryClient.invalidateQueries({ queryKey: ["guests"] });
       toast.success(vars.is_vip ? "Guest marked as VIP" : "VIP status removed");
     },
