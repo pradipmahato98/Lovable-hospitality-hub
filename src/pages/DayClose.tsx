@@ -96,7 +96,7 @@ function DayClose() {
                       </TableCell>
                       <TableCell><code className="text-xs">{dept.code}</code></TableCell>
                       <TableCell className="text-right">{dept.transactions}</TableCell>
-                      <TableCell className="text-right font-mono font-bold">${dept.amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono font-bold">{formatCurrency(dept.amount)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-secondary/30 font-bold">
