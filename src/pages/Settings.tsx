@@ -120,9 +120,20 @@ const Settings = () => {
   return (
     <MainLayout title="Admin Settings" subtitle="Manage system configuration (Admin only)">
       <ErrorBoundary>
-        <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-          <ShieldAlert className="h-4 w-4" />
-          <span>You are viewing admin-only settings. Changes affect all users.</span>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+            <ShieldAlert className="h-4 w-4" />
+            <span>You are viewing admin-only settings. Changes affect all users.</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportSettings}>
+              <Download className="h-4 w-4 mr-1" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportSettings} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
