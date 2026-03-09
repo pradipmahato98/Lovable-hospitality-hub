@@ -516,7 +516,7 @@ export function NewReservationDialog({
                   </p>
                 </div>
                 <span className="text-2xl font-bold text-primary">
-                  ${calculateTotal().toFixed(2)}
+                  {formatCurrency(calculateTotal())}
                 </span>
               </div>
             </div>
