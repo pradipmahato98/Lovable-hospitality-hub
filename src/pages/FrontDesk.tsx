@@ -384,7 +384,7 @@ const FrontDesk = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     <MetricCard
                       title="Total Invoiced"
-                      value={`$${totalRevenue.toLocaleString()}`}
+                      value={formatCurrency(totalRevenue)}
                       change={`${invoices.length} invoices`}
                       changeType="neutral"
                       icon={DollarSign}
