@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export interface Reservation {
   id: string;
@@ -8,14 +9,28 @@ export interface Reservation {
   check_in_date: string;
   check_out_date: string;
   status: string;
+  payment_status: string | null;
   total_amount: number;
+  amount_paid: number | null;
+  adults: number;
+  children: number | null;
+  source: string | null;
+  special_requests: string | null;
+  actual_check_in: string | null;
+  actual_check_out: string | null;
+  created_at: string;
+  guest_id: string;
+  room_id: string;
   guest: {
     first_name: string;
     last_name: string;
+    email: string | null;
+    phone: string | null;
   } | null;
   room: {
     room_number: string;
     room_type: string;
+    price_per_night: number;
   } | null;
 }
 
@@ -28,9 +43,20 @@ async function fetchReservations(): Promise<Reservation[]> {
       check_in_date,
       check_out_date,
       status,
+      payment_status,
       total_amount,
-      guest:guests(first_name, last_name),
-      room:rooms(room_number, room_type)
+      amount_paid,
+      adults,
+      children,
+      source,
+      special_requests,
+      actual_check_in,
+      actual_check_out,
+      created_at,
+      guest_id,
+      room_id,
+      guest:guests(first_name, last_name, email, phone),
+      room:rooms(room_number, room_type, price_per_night)
     `)
     .order("check_in_date", { ascending: false });
 
@@ -39,6 +65,8 @@ async function fetchReservations(): Promise<Reservation[]> {
 }
 
 export const useReservations = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: reservations = [], isLoading, error, refetch } = useQuery({
     queryKey: ["reservations"],
     queryFn: fetchReservations,
@@ -60,11 +88,79 @@ export const useReservations = () => {
     [reservations]
   );
 
+  const updateReservation = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      toast({ title: "Reservation updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const cancelReservation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data: res } = await supabase
+        .from("reservations")
+        .select("room_id")
+        .eq("id", id)
+        .single();
+
+      const { error } = await supabase
+        .from("reservations")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+      if (error) throw error;
+
+      // Free up the room if it was occupied
+      if (res?.room_id) {
+        await supabase.from("rooms").update({ status: "available" }).eq("id", res.room_id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      toast({ title: "Reservation cancelled" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markNoShow = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ status: "no-show" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      toast({ title: "Reservation marked as no-show" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   return {
     reservations,
     isLoading,
     error: error as Error | null,
     refetch,
     filterReservations,
+    updateReservation,
+    cancelReservation,
+    markNoShow,
   };
 };

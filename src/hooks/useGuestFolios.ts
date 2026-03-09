@@ -57,15 +57,7 @@ export const useGuestFolios = () => {
 
       if (error) {
         console.error("Error fetching folios:", error);
-        return [
-          {
-            id: "folio-1", folio_number: "FOL-100234", status: "open",
-            total_charges: 450.00, total_payments: 100.00, balance: 350.00,
-            guests: { first_name: "Sarah", last_name: "Johnson", email: "sarah@example.com" },
-            rooms: { room_number: "204", room_type: "Deluxe" },
-            created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-          },
-        ] as GuestFolio[];
+        return [] as GuestFolio[];
       }
       return data as GuestFolio[];
     },
@@ -83,14 +75,8 @@ export const useGuestFolios = () => {
           .order("created_at", { ascending: true });
 
         if (error) {
-          if (folioId === "folio-1") {
-            return [
-              { id: "item-1", folio_id: "folio-1", item_type: "charge", source: "room_rate", description: "Room Charge - 2 Nights", amount: 240.00, created_at: new Date().toISOString() },
-              { id: "item-2", folio_id: "folio-1", item_type: "charge", source: "restaurant", description: "Dinner Service", amount: 110.00, created_at: new Date().toISOString() },
-              { id: "item-3", folio_id: "folio-1", item_type: "payment", source: "manual", description: "Advance Deposit", amount: -100.00, created_at: new Date().toISOString() },
-            ] as FolioItem[];
-          }
-          return [];
+          console.error("Error fetching folio items:", error);
+          return [] as FolioItem[];
         }
         return data as FolioItem[];
       },

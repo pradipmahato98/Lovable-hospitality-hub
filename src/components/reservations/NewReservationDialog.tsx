@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
-import { cn, formatAD } from "@/lib/utils";
+import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import { CalendarIcon, Loader2, CalendarPlus, Search, UserPlus, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -393,7 +393,7 @@ export function NewReservationDialog({
                         <span className="text-muted-foreground">-</span>
                         <span>{room.room_type}</span>
                         <span className="text-muted-foreground">-</span>
-                        <span className="font-medium">{room.price_per_night}/night</span>
+                        <span className="font-medium">{formatCurrency(room.price_per_night)}/night</span>
                         <Badge variant={room.status === "available" ? "default" : "secondary"} className="ml-2">
                           {room.status}
                         </Badge>
@@ -419,7 +419,7 @@ export function NewReservationDialog({
                       mode="single"
                       selected={formData.checkInDate}
                       onSelect={(date) => date && setFormData({ ...formData, checkInDate: date })}
-                      disabled={(date) => date > new Date()}
+                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                       initialFocus
                       className={cn("p-3 pointer-events-auto")}
                     />
@@ -440,7 +440,7 @@ export function NewReservationDialog({
                       mode="single"
                       selected={formData.checkOutDate}
                       onSelect={(date) => date && setFormData({ ...formData, checkOutDate: date })}
-                      disabled={(date) => date <= formData.checkInDate || date > new Date()}
+                      disabled={(date) => date <= formData.checkInDate}
                       initialFocus
                       className={cn("p-3 pointer-events-auto")}
                     />
@@ -516,7 +516,7 @@ export function NewReservationDialog({
                   </p>
                 </div>
                 <span className="text-2xl font-bold text-primary">
-                  ${calculateTotal().toFixed(2)}
+                  {formatCurrency(calculateTotal())}
                 </span>
               </div>
             </div>

@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
-import { cn, formatAD } from "@/lib/utils";
+import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
 import { useCheckInSettings } from "@/hooks/useSettings";
 
@@ -439,7 +439,7 @@ export function CheckInOutDialog({
                   <SelectContent>
                     {rooms.map((room) => (
                       <SelectItem key={room.id} value={room.id}>
-                        Room {room.room_number} - {room.room_type} ({room.price_per_night}/night)
+                        Room {room.room_number} - {room.room_type} ({formatCurrency(room.price_per_night)}/night)
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -460,7 +460,7 @@ export function CheckInOutDialog({
                         mode="single"
                         selected={formData.checkInDate}
                         onSelect={(date) => date && setFormData({ ...formData, checkInDate: date })}
-                        disabled={(date) => date > new Date()}
+                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />
@@ -481,7 +481,7 @@ export function CheckInOutDialog({
                         mode="single"
                         selected={formData.checkOutDate}
                         onSelect={(date) => date && setFormData({ ...formData, checkOutDate: date })}
-                        disabled={(date) => date <= formData.checkInDate || date > new Date()}
+                        disabled={(date) => date <= formData.checkInDate}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />
@@ -529,7 +529,7 @@ export function CheckInOutDialog({
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Amount</span>
                   <span className="text-2xl font-bold text-primary">
-                    ${calculateTotal().toFixed(2)}
+                    {formatCurrency(calculateTotal())}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
