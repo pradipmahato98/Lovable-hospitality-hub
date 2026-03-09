@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
