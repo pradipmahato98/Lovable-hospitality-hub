@@ -287,4 +287,10 @@ const Engineering = () => {
   );
 };
 
-export default Engineering;
+const EngineeringPage = () => (
+  <ErrorBoundary>
+    <Engineering />
+  </ErrorBoundary>
+);
+
+export default EngineeringPage;

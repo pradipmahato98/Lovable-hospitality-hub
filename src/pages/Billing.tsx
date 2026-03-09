@@ -149,4 +149,10 @@ const Billing = () => {
   );
 };
 
-export default Billing;
+const BillingPage = () => (
+  <ErrorBoundary>
+    <Billing />
+  </ErrorBoundary>
+);
+
+export default BillingPage;

@@ -202,4 +202,10 @@ const HR = () => {
   );
 };
 
-export default HR;
+const HRPage = () => (
+  <ErrorBoundary>
+    <HR />
+  </ErrorBoundary>
+);
+
+export default HRPage;

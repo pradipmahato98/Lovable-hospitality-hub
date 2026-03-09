@@ -89,4 +89,10 @@ const Payments = () => {
   );
 };
 
-export default Payments;
+const PaymentsPage = () => (
+  <ErrorBoundary>
+    <Payments />
+  </ErrorBoundary>
+);
+
+export default PaymentsPage;

@@ -204,3 +204,11 @@ export default function DayClose() {
     </MainLayout>
   );
 }
+
+const DayClosePage = () => (
+  <ErrorBoundary>
+    <DayClose />
+  </ErrorBoundary>
+);
+
+export default DayClosePage;

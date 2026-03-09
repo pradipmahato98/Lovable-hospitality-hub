@@ -187,4 +187,10 @@ const Reports = () => {
   );
 };
 
-export default Reports;
+const ReportsPage = () => (
+  <ErrorBoundary>
+    <Reports />
+  </ErrorBoundary>
+);
+
+export default ReportsPage;
