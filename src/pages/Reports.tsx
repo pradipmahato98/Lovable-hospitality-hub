@@ -110,7 +110,7 @@ const Reports = () => {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: any) => `$${Number(value).toLocaleString()}`} />
+                        <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
                         <Legend verticalAlign="bottom" />
                       </PieChart>
                     </ResponsiveContainer>
