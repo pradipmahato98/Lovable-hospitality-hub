@@ -413,7 +413,7 @@ export default function Banquet() {
           />
           <MetricCard
             title="Pending Deposits"
-            value={`$${pendingDeposits.toLocaleString()}`}
+            value={formatCurrency(pendingDeposits)}
             change="Confirmed events"
             changeType="neutral"
             icon={FileText}
