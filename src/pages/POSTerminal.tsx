@@ -255,7 +255,7 @@ const POSTerminal = () => {
         {/* Tables Tab - Table Selection System */}
         <TabsContent value="tables">
           <POSTableSystem onCheckout={(total, items) => {
-            toast.success(`Checkout completed: $${total.toFixed(2)} for ${items.length} items`);
+            toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
           }} />
         </TabsContent>
 

@@ -201,7 +201,7 @@ export default function POSHistory() {
       doc.text(formatDateSafe(t.created_at, "dd/MM HH:mm"), 50, y);
       doc.text(`T${t.table_number || ""}`, 90, y);
       doc.text(paymentMethodLabels[t.payment_method] || t.payment_method || "", 110, y);
-      doc.text(`$${(t.total || 0).toFixed(2)}`, 150, y);
+      doc.text(formatCurrency(t.total || 0), 150, y);
       y += 6;
 
       if (y > 280) {
