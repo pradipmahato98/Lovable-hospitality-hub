@@ -116,7 +116,7 @@ const AdminConsole = () => {
 
   // System metrics hooks
   const { data: rooms } = useRooms();
-  const { data: reservations } = useReservations();
+  const { reservations } = useReservations();
   const { data: dashboardStats } = useDashboardStats();
 
   // Security policies state (persisted)
