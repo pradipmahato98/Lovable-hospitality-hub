@@ -105,7 +105,7 @@ const HR = () => {
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("leave")}>
                   <FileText className="h-4 w-4" />Leave Requests
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("reports")}>
                   <Award className="h-4 w-4" />Performance Reviews
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("payroll")}>
