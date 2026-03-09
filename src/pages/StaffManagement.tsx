@@ -74,6 +74,16 @@ const StaffManagement = () => {
                 <span className="whitespace-nowrap">About Staff</span>
               </TabsTrigger>
 
+              <TabsTrigger value="schedules" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <CalendarDays className="h-4 w-4" />
+                <span className="whitespace-nowrap">Schedules</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="attendance" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <ClockIcon className="h-4 w-4" />
+                <span className="whitespace-nowrap">Attendance</span>
+              </TabsTrigger>
+
               <TabsTrigger value="logs" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
                 <FileText className="h-4 w-4" />
                 <span className="whitespace-nowrap">Logs Report</span>
