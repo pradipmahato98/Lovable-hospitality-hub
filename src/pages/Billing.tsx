@@ -43,7 +43,7 @@ const Billing = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <MetricCard
               title="Total Revenue"
-              value={stats ? `$${stats.totalRevenue.toLocaleString()}` : "—"}
+              value={stats ? formatCurrency(stats.totalRevenue) : "—"}
               change="From all invoices"
               changeType="positive"
               icon={DollarSign}
