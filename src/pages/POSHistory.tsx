@@ -559,7 +559,7 @@ export default function POSHistory() {
                 )}
                 <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
                   <span>Total</span>
-                  <span className="text-primary">${(selectedTransaction.total || 0).toFixed(2)}</span>
+                  <span className="text-primary">{formatCurrency(selectedTransaction.total || 0)}</span>
                 </div>
               </div>
             </div>
