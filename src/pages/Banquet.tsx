@@ -405,7 +405,7 @@ export default function Banquet() {
           />
           <MetricCard
             title="Revenue (Completed)"
-            value={`$${totalRevenue.toLocaleString()}`}
+            value={formatCurrency(totalRevenue)}
             change="From completed events"
             changeType="positive"
             icon={DollarSign}
