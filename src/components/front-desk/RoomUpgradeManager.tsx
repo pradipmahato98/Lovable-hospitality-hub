@@ -114,7 +114,7 @@ export function RoomUpgradeManager() {
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Potential Revenue</p>
             <p className="text-2xl font-bold text-success">
-              ${rooms.filter((r) => r.status === "available").reduce((s, r) => s + Number(r.price_per_night), 0).toLocaleString()}
+              {formatCurrency(rooms.filter((r) => r.status === "available").reduce((s, r) => s + Number(r.price_per_night), 0))}
             </p>
             <p className="text-xs text-muted-foreground">from available rooms</p>
           </CardContent>
