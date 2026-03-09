@@ -377,8 +377,8 @@ const AdminConsole = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(dashboardStats?.totalRevenue || 0)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Total earnings</p>
+                <div className="text-2xl font-bold">{dashboardStats?.todayRevenue || "NPR 0"}</div>
+                <p className="text-xs text-muted-foreground mt-1">Today's earnings</p>
               </CardContent>
             </Card>
           </div>
