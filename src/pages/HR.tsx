@@ -15,11 +15,12 @@ import {
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
-import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { PayrollPanel } from "@/components/hr/PayrollPanel";
 import { LeaveManagement } from "@/components/hr/LeaveManagement";
+import { HRReportsTab } from "@/components/hr/HRReportsTab";
 import { useStaffMembers, useStaffDepartments } from "@/hooks/useStaffMembers";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 const HR = () => {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
