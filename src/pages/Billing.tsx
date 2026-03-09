@@ -51,7 +51,7 @@ const Billing = () => {
             />
             <MetricCard
               title="Pending Payments"
-              value={stats ? `$${stats.pendingAmount.toLocaleString()}` : "—"}
+              value={stats ? formatCurrency(stats.pendingAmount) : "—"}
               change={stats ? `${stats.pendingCount} invoices` : ""}
               changeType="neutral"
               icon={Receipt}
