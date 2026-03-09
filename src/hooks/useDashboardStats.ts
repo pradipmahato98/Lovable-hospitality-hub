@@ -48,7 +48,7 @@ export const useDashboardStats = () => {
       return {
         occupancyRate: `${occupancyRate}%`,
         totalGuests: totalGuests || 0,
-        todayRevenue: `$${todayRevenue.toLocaleString()}`,
+        todayRevenue: formatCurrency(todayRevenue),
         pendingBookings: pendingBookings || 0,
         securityAlerts: securityAlerts || 0
       };
