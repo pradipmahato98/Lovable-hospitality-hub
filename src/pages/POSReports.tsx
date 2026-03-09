@@ -286,9 +286,9 @@ export default function POSReports() {
       [`Period: ${dateRange.start} to ${dateRange.end}`],
       [""],
       ["Metric", "Value"],
-      ["Total Revenue", `$${metrics.totalRevenue.toFixed(2)}`],
+      ["Total Revenue", formatCurrency(metrics.totalRevenue)],
       ["Total Transactions", metrics.totalTransactions],
-      ["Average Transaction", `$${metrics.avgTransaction.toFixed(2)}`],
+      ["Average Transaction", formatCurrency(metrics.avgTransaction)],
       ["Total Items Sold", metrics.totalItems],
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Summary");
