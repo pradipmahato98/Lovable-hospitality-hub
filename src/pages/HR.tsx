@@ -93,10 +93,10 @@ const HR = () => {
             <Card variant="elevated">
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setNewGuestOpen(true)}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/staff?tab=directory")}>
                   <UserPlus className="h-4 w-4" />Add Employee
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/staff?tab=schedules")}>
                   <Calendar className="h-4 w-4" />Schedule Shifts
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("payroll")}>
