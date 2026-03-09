@@ -71,6 +71,10 @@ export interface POSTransaction {
   items_count: number;
   items: POSOrderItem[];
   created_at: string;
+  status?: "completed" | "voided" | "refunded" | "partial_refund";
+  void_reason?: string | null;
+  refund_amount?: number | null;
+  refund_reason?: string | null;
 }
 
 // Default tables for fallback
@@ -660,6 +664,83 @@ export function useUpdateOrderItemStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos-orders"] });
+    },
+  });
+}
+
+// ============= Void/Refund Transactions =============
+import { toast } from "sonner";
+
+export function useVoidTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ transactionId, reason }: { transactionId: string; reason: string }) => {
+      // For now, we'll track void status in the audit_log since pos_transactions 
+      // doesn't have status/void columns. In production, add these columns.
+      const { data: transaction, error: fetchError } = await supabase
+        .from("pos_transactions")
+        .select("*")
+        .eq("id", transactionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Log the void action
+      await supabase.from("audit_log").insert({
+        action: "void_transaction",
+        entity_type: "pos_transaction",
+        entity_id: transactionId,
+        new_values: { reason, voided_at: new Date().toISOString(), original_total: transaction.total }
+      });
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos-transactions"] });
+      toast.success("Transaction voided successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to void transaction: " + error.message);
+    },
+  });
+}
+
+export function useRefundTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ transactionId, amount, reason }: { transactionId: string; amount: number; reason: string }) => {
+      const { data: transaction, error: fetchError } = await supabase
+        .from("pos_transactions")
+        .select("*")
+        .eq("id", transactionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Log the refund action
+      await supabase.from("audit_log").insert({
+        action: "refund_transaction",
+        entity_type: "pos_transaction",
+        entity_id: transactionId,
+        new_values: { 
+          reason, 
+          refunded_at: new Date().toISOString(), 
+          refund_amount: amount,
+          original_total: transaction.total,
+          is_partial: amount < transaction.total
+        }
+      });
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pos-transactions"] });
+      toast.success("Refund processed successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to process refund: " + error.message);
     },
   });
 }

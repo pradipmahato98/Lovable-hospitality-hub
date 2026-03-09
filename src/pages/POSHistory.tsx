@@ -28,7 +28,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Receipt,
   Search,
@@ -41,11 +52,16 @@ import {
   Banknote,
   Wallet,
   Building2,
+  RotateCcw,
+  XCircle,
+  Loader2,
 } from "lucide-react";
-import { usePOSTransactions, POSTransaction } from "@/hooks/usePOS";
+import { usePOSTransactions, POSTransaction, useVoidTransaction, useRefundTransaction } from "@/hooks/usePOS";
 import { format, subDays, subHours, isValid } from "date-fns";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 const paymentMethodIcons: Record<string, React.ReactNode> = {
   cash: <Banknote className="h-4 w-4" />,
@@ -67,12 +83,22 @@ export default function POSHistory() {
   const [paymentFilter, setPaymentFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<POSTransaction | null>(null);
+  
+  // Void/Refund state
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [actionTransaction, setActionTransaction] = useState<POSTransaction | null>(null);
+  const [actionReason, setActionReason] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
 
   const { data: realTransactions, isLoading } = usePOSTransactions({
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     paymentMethod: paymentFilter || undefined,
   });
+
+  const voidTransaction = useVoidTransaction();
+  const refundTransaction = useRefundTransaction();
 
   // High-fidelity mock transactions fallback
   const mockTransactions: POSTransaction[] = useMemo(() => [
@@ -91,7 +117,7 @@ export default function POSHistory() {
         { id: "i1", item_name: "Dinner Platter", item_price: 35.00, quantity: 2, category: "Food", status: "served", notes: null },
         { id: "i2", item_name: "Wine Glass", item_price: 15.00, quantity: 2, category: "Bar", status: "served", notes: null },
       ],
-      customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 5, rrn_number: null, transaction_ref: null, card_last_four: "4242", card_type: "Visa", room_number: null, discount_amount: 0
+      customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 5, rrn_number: null, transaction_ref: null, card_last_four: "4242", card_type: "Visa", room_number: null, discount_amount: 0, status: "completed"
     },
     {
       id: "m2",
@@ -107,7 +133,7 @@ export default function POSHistory() {
       items: [
         { id: "i3", item_name: "Lunch Special", item_price: 22.00, quantity: 2, category: "Food", status: "served", notes: "No onions" },
       ],
-      customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 0, rrn_number: null, transaction_ref: null, card_last_four: null, card_type: null, room_number: null, discount_amount: 0
+      customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 0, rrn_number: null, transaction_ref: null, card_last_four: null, card_type: null, room_number: null, discount_amount: 0, status: "completed"
     },
     {
       id: "m3",
@@ -121,7 +147,7 @@ export default function POSHistory() {
       items_count: 5,
       created_at: subDays(new Date(), 1).toISOString(),
       items: [],
-      customer_address: null, company_id: null, company_name: "Acme Corp", vat_number: "VAT123", pan_number: null, tip_amount: 0, rrn_number: "RRN789", transaction_ref: "REF456", card_last_four: null, card_type: null, room_number: null, discount_amount: 0
+      customer_address: null, company_id: null, company_name: "Acme Corp", vat_number: "VAT123", pan_number: null, tip_amount: 0, rrn_number: "RRN789", transaction_ref: "REF456", card_last_four: null, card_type: null, room_number: null, discount_amount: 0, status: "completed"
     }
   ], []);
 
@@ -146,8 +172,9 @@ export default function POSHistory() {
 
   // Calculate totals
   const { totalRevenue, totalTransactions, avgTransaction } = useMemo(() => {
-    const revenue = filteredTransactions.reduce((sum, t) => sum + (t.total || 0), 0);
-    const count = filteredTransactions.length;
+    const validTransactions = filteredTransactions.filter(t => t.status !== "voided");
+    const revenue = validTransactions.reduce((sum, t) => sum + (t.total || 0), 0);
+    const count = validTransactions.length;
     return {
       totalRevenue: revenue,
       totalTransactions: count,
@@ -164,6 +191,64 @@ export default function POSHistory() {
     } catch (e) {
       return "Invalid Date";
     }
+  };
+
+  // Void handler
+  const handleVoidClick = (transaction: POSTransaction) => {
+    setActionTransaction(transaction);
+    setActionReason("");
+    setVoidDialogOpen(true);
+  };
+
+  const handleVoidConfirm = () => {
+    if (!actionTransaction) return;
+    if (!actionReason.trim()) {
+      toast.error("Please provide a reason for voiding");
+      return;
+    }
+    voidTransaction.mutate({
+      transactionId: actionTransaction.id,
+      reason: actionReason
+    }, {
+      onSuccess: () => {
+        setVoidDialogOpen(false);
+        setActionTransaction(null);
+        setActionReason("");
+      }
+    });
+  };
+
+  // Refund handler
+  const handleRefundClick = (transaction: POSTransaction) => {
+    setActionTransaction(transaction);
+    setActionReason("");
+    setRefundAmount(String(transaction.total || 0));
+    setRefundDialogOpen(true);
+  };
+
+  const handleRefundConfirm = () => {
+    if (!actionTransaction) return;
+    if (!actionReason.trim()) {
+      toast.error("Please provide a reason for refund");
+      return;
+    }
+    const amount = parseFloat(refundAmount);
+    if (isNaN(amount) || amount <= 0 || amount > (actionTransaction.total || 0)) {
+      toast.error("Invalid refund amount");
+      return;
+    }
+    refundTransaction.mutate({
+      transactionId: actionTransaction.id,
+      amount,
+      reason: actionReason
+    }, {
+      onSuccess: () => {
+        setRefundDialogOpen(false);
+        setActionTransaction(null);
+        setActionReason("");
+        setRefundAmount("");
+      }
+    });
   };
 
   // Export functions
@@ -183,7 +268,6 @@ export default function POSHistory() {
     doc.text(`Total Revenue: ${formatCurrency(totalRevenue)}`, 14, 52);
     doc.text(`Average Transaction: ${formatCurrency(avgTransaction)}`, 14, 58);
 
-    // Table header
     let y = 70;
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
@@ -216,6 +300,7 @@ export default function POSHistory() {
   const exportToExcel = () => {
     const data = filteredTransactions.map((t) => ({
       "Transaction #": t.transaction_number,
+      "Status": t.status || "completed",
       Date: formatDateSafe(t.created_at, "dd/MM/yyyy HH:mm:ss"),
       Table: t.table_number,
       Customer: t.customer_name || "-",
@@ -236,6 +321,19 @@ export default function POSHistory() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Transactions");
     XLSX.writeFile(wb, `pos-history-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case "voided":
+        return <Badge variant="destructive">Voided</Badge>;
+      case "refunded":
+        return <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">Refunded</Badge>;
+      case "partial_refund":
+        return <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">Partial Refund</Badge>;
+      default:
+        return <Badge className="bg-success/20 text-success border-success/30">Completed</Badge>;
+    }
   };
 
   return (
@@ -403,14 +501,17 @@ export default function POSHistory() {
                       <TableHead>Table</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Payment</TableHead>
-                      <TableHead>Items</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id || Math.random()} className="hover:bg-secondary/20 cursor-pointer" onClick={() => setSelectedTransaction(transaction)}>
+                      <TableRow 
+                        key={transaction.id || Math.random()} 
+                        className={`hover:bg-secondary/20 ${transaction.status === "voided" ? "opacity-50" : ""}`}
+                      >
                         <TableCell className="font-mono text-sm">
                           {transaction.transaction_number || "N/A"}
                         </TableCell>
@@ -429,17 +530,42 @@ export default function POSHistory() {
                             {paymentMethodLabels[transaction.payment_method] || transaction.payment_method || "Other"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{transaction.items_count || 0}</TableCell>
+                        <TableCell>
+                          {getStatusBadge(transaction.status)}
+                        </TableCell>
                         <TableCell className="text-right font-semibold">
                           {formatCurrency(transaction.total || 0)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedTransaction(transaction)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {transaction.status !== "voided" && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-amber-500 hover:text-amber-600"
+                                  onClick={() => handleRefundClick(transaction)}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handleVoidClick(transaction)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -455,115 +581,164 @@ export default function POSHistory() {
       <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Transaction Details
-            </DialogTitle>
+            <DialogTitle>Transaction Details</DialogTitle>
             <DialogDescription>
               {selectedTransaction?.transaction_number}
             </DialogDescription>
           </DialogHeader>
-
           {selectedTransaction && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Date & Time</p>
-                  <p className="font-medium">
-                    {formatDateSafe(selectedTransaction.created_at, "dd/MM/yyyy HH:mm:ss")}
-                  </p>
+                  <p className="text-muted-foreground">Date</p>
+                  <p className="font-medium">{formatDateSafe(selectedTransaction.created_at, "dd MMM yyyy HH:mm")}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Table</p>
-                  <p className="font-medium">Table {selectedTransaction.table_number}</p>
+                  <p className="font-medium">T{selectedTransaction.table_number}</p>
                 </div>
-                {selectedTransaction.customer_name && (
-                  <div>
-                    <p className="text-muted-foreground">Customer</p>
-                    <p className="font-medium">{selectedTransaction.customer_name}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-muted-foreground">Customer</p>
+                  <p className="font-medium">{selectedTransaction.customer_name || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Payment</p>
+                  <p className="font-medium">{paymentMethodLabels[selectedTransaction.payment_method] || selectedTransaction.payment_method}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  {getStatusBadge(selectedTransaction.status)}
+                </div>
                 {selectedTransaction.company_name && (
                   <div>
                     <p className="text-muted-foreground">Company</p>
                     <p className="font-medium">{selectedTransaction.company_name}</p>
                   </div>
                 )}
-                {selectedTransaction.vat_number && (
-                  <div>
-                    <p className="text-muted-foreground">VAT Number</p>
-                    <p className="font-medium">{selectedTransaction.vat_number}</p>
-                  </div>
-                )}
-                {selectedTransaction.pan_number && (
-                  <div>
-                    <p className="text-muted-foreground">PAN Number</p>
-                    <p className="font-medium">{selectedTransaction.pan_number}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-muted-foreground">Payment Method</p>
-                  <p className="font-medium">
-                    {paymentMethodLabels[selectedTransaction.payment_method] ||
-                      selectedTransaction.payment_method}
-                  </p>
-                </div>
-                {selectedTransaction.rrn_number && (
-                  <div>
-                    <p className="text-muted-foreground">RRN Number</p>
-                    <p className="font-medium">{selectedTransaction.rrn_number}</p>
-                  </div>
-                )}
-                {selectedTransaction.transaction_ref && (
-                  <div>
-                    <p className="text-muted-foreground">Transaction Ref</p>
-                    <p className="font-medium">{selectedTransaction.transaction_ref}</p>
-                  </div>
-                )}
               </div>
 
-              <div className="border-t border-border pt-4">
-                <h4 className="font-medium mb-2">Items ({selectedTransaction.items_count})</h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {selectedTransaction.items?.map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>
-                        {item.item_name} x{item.quantity}
-                      </span>
-                      <span>{formatCurrency((item.item_price || 0) * (item.quantity || 0))}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4 space-y-1">
+              <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>{formatCurrency(selectedTransaction.subtotal || 0)}</span>
+                  <span>{formatCurrency(selectedTransaction.subtotal)}</span>
                 </div>
                 {(selectedTransaction.discount_amount || 0) > 0 && (
-                  <div className="flex justify-between text-sm text-success">
+                  <div className="flex justify-between text-sm text-destructive">
                     <span>Discount</span>
-                    <span>-{formatCurrency(selectedTransaction.discount_amount)}</span>
+                    <span>-{formatCurrency(selectedTransaction.discount_amount || 0)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span>{formatCurrency(selectedTransaction.tax_amount || 0)}</span>
+                  <span>{formatCurrency(selectedTransaction.tax_amount)}</span>
                 </div>
                 {(selectedTransaction.tip_amount || 0) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Tip</span>
-                    <span>{formatCurrency(selectedTransaction.tip_amount)}</span>
+                    <span>{formatCurrency(selectedTransaction.tip_amount || 0)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
+                <div className="flex justify-between font-bold border-t pt-2">
                   <span>Total</span>
-                  <span className="text-primary">{formatCurrency(selectedTransaction.total || 0)}</span>
+                  <span>{formatCurrency(selectedTransaction.total)}</span>
                 </div>
               </div>
+
+              {selectedTransaction.items && selectedTransaction.items.length > 0 && (
+                <div className="border-t pt-4">
+                  <p className="font-medium mb-2">Items ({selectedTransaction.items_count})</p>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {selectedTransaction.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span>{item.quantity}x {item.item_name}</span>
+                        <span>{formatCurrency(item.item_price * item.quantity)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Void Confirmation Dialog */}
+      <AlertDialog open={voidDialogOpen} onOpenChange={setVoidDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Void Transaction</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will void transaction {actionTransaction?.transaction_number}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label>Reason for voiding *</Label>
+            <Textarea
+              value={actionReason}
+              onChange={(e) => setActionReason(e.target.value)}
+              placeholder="Enter reason..."
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleVoidConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={voidTransaction.isPending}
+            >
+              {voidTransaction.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Void Transaction
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Refund Dialog */}
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Process Refund</DialogTitle>
+            <DialogDescription>
+              Refund for transaction {actionTransaction?.transaction_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Original Amount</Label>
+              <p className="text-lg font-bold">{formatCurrency(actionTransaction?.total || 0)}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Refund Amount *</Label>
+              <Input
+                type="number"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                max={actionTransaction?.total || 0}
+                min={0}
+                step="0.01"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Reason for refund *</Label>
+              <Textarea
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                placeholder="Enter reason..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleRefundConfirm}
+              disabled={refundTransaction.isPending}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              {refundTransaction.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Process Refund
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2 } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
@@ -15,6 +15,8 @@ import {
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
@@ -26,6 +28,7 @@ type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "n
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: checkInSettings, isLoading: isLoadingCheckIn } = useCheckInSettings();
   const updateCheckIn = useUpdateCheckInSettings();
@@ -77,12 +80,60 @@ const Settings = () => {
     updateQuickMenu.mutate({ enabled_items: newItems });
   };
 
+  const handleExportSettings = async () => {
+    try {
+      const { data, error } = await supabase.from("settings").select("*");
+      if (error) throw error;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `settings-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Settings exported successfully");
+    } catch (e: any) {
+      toast.error("Export failed: " + e.message);
+    }
+  };
+
+  const handleImportSettings = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const settings = JSON.parse(text);
+      if (!Array.isArray(settings)) throw new Error("Invalid format");
+      for (const s of settings) {
+        if (s.key && s.value !== undefined) {
+          await supabase.from("settings").upsert({ key: s.key, value: s.value }, { onConflict: "key" });
+        }
+      }
+      toast.success("Settings imported successfully");
+      window.location.reload();
+    } catch (e: any) {
+      toast.error("Import failed: " + e.message);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <MainLayout title="Admin Settings" subtitle="Manage system configuration (Admin only)">
       <ErrorBoundary>
-        <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-          <ShieldAlert className="h-4 w-4" />
-          <span>You are viewing admin-only settings. Changes affect all users.</span>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+            <ShieldAlert className="h-4 w-4" />
+            <span>You are viewing admin-only settings. Changes affect all users.</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportSettings}>
+              <Download className="h-4 w-4 mr-1" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportSettings} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
