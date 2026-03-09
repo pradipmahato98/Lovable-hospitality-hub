@@ -476,7 +476,7 @@ export default function POSReports() {
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
                           }}
-                          formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
                         />
                         <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
