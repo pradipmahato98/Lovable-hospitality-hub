@@ -439,7 +439,7 @@ export function CheckInOutDialog({
                   <SelectContent>
                     {rooms.map((room) => (
                       <SelectItem key={room.id} value={room.id}>
-                        Room {room.room_number} - {room.room_type} ({room.price_per_night}/night)
+                        Room {room.room_number} - {room.room_type} ({formatCurrency(room.price_per_night)}/night)
                       </SelectItem>
                     ))}
                   </SelectContent>
