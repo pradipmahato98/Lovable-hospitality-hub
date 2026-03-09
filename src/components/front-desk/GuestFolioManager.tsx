@@ -462,7 +462,7 @@ export const GuestFolioManager = () => {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="p-4 bg-secondary/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Charges</p>
-                    <p className="text-xl font-bold font-display">${selectedFolio.total_charges.toFixed(2)}</p>
+                    <p className="text-xl font-bold font-display">{formatCurrency(selectedFolio.total_charges)}</p>
                   </div>
                   <div className="p-4 bg-secondary/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Payments</p>
