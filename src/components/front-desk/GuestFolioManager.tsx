@@ -422,7 +422,7 @@ export const GuestFolioManager = () => {
                   <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
                     <span>Balance:</span>
                     <span className={cn("font-bold", folio.balance > 0 ? "text-destructive" : "text-success")}>
-                      ${folio.balance.toFixed(2)}
+                      {formatCurrency(folio.balance)}
                     </span>
                   </div>
                 </div>
