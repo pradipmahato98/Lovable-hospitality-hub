@@ -71,6 +71,10 @@ export interface POSTransaction {
   items_count: number;
   items: POSOrderItem[];
   created_at: string;
+  status?: "completed" | "voided" | "refunded" | "partial_refund";
+  void_reason?: string | null;
+  refund_amount?: number | null;
+  refund_reason?: string | null;
 }
 
 // Default tables for fallback
