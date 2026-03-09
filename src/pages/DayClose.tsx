@@ -18,7 +18,7 @@ import { useReportStats } from "@/hooks/useReportStats";
 import { format, parseISO } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function DayClose() {
+function DayClose() {
   const { businessDate } = useNightAudit();
   const { data: reportStats, isLoading: statsLoading } = useReportStats();
   const [isClosed, setIsClosed] = useState(false);
