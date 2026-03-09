@@ -549,7 +549,7 @@ export default function POSHistory() {
                 )}
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span>${(selectedTransaction.tax_amount || 0).toFixed(2)}</span>
+                  <span>{formatCurrency(selectedTransaction.tax_amount || 0)}</span>
                 </div>
                 {(selectedTransaction.tip_amount || 0) > 0 && (
                   <div className="flex justify-between text-sm">
