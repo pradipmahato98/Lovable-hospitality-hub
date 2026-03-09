@@ -18,7 +18,10 @@ import { PreferencesTab } from "@/components/staff/PreferencesTab";
 import { AlertsTab } from "@/components/staff/AlertsTab";
 import { SecurityTab } from "@/components/staff/SecurityTab";
 import { LogsReportTab } from "@/components/staff/LogsReportTab";
+import { SchedulesTab } from "@/components/staff/SchedulesTab";
+import { AttendanceTab } from "@/components/staff/AttendanceTab";
 import { cn } from "@/lib/utils";
+import { CalendarDays, Clock as ClockIcon } from "lucide-react";
 
 const StaffManagement = () => {
   const [searchParams] = useSearchParams();
