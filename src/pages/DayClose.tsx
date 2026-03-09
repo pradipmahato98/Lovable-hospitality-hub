@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { cn, formatAD } from "@/lib/utils";
+import { cn, formatAD, formatCurrency } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
