@@ -614,7 +614,7 @@ export const GuestFolioManager = () => {
                             {item.amount > 0 ? formatCurrency(item.amount) : "-"}
                           </TableCell>
                           <TableCell className="text-right font-mono text-success">
-                            {item.amount < 0 ? `$${Math.abs(item.amount).toFixed(2)}` : "-"}
+                            {item.amount < 0 ? formatCurrency(Math.abs(item.amount)) : "-"}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
