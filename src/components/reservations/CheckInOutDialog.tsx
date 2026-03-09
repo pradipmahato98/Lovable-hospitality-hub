@@ -529,7 +529,7 @@ export function CheckInOutDialog({
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Amount</span>
                   <span className="text-2xl font-bold text-primary">
-                    ${calculateTotal().toFixed(2)}
+                    {formatCurrency(calculateTotal())}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">

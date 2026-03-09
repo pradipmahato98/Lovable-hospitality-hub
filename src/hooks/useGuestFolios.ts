@@ -75,14 +75,8 @@ export const useGuestFolios = () => {
           .order("created_at", { ascending: true });
 
         if (error) {
-          if (folioId === "folio-1") {
-            return [
-              { id: "item-1", folio_id: "folio-1", item_type: "charge", source: "room_rate", description: "Room Charge - 2 Nights", amount: 240.00, created_at: new Date().toISOString() },
-              { id: "item-2", folio_id: "folio-1", item_type: "charge", source: "restaurant", description: "Dinner Service", amount: 110.00, created_at: new Date().toISOString() },
-              { id: "item-3", folio_id: "folio-1", item_type: "payment", source: "manual", description: "Advance Deposit", amount: -100.00, created_at: new Date().toISOString() },
-            ] as FolioItem[];
-          }
-          return [];
+          console.error("Error fetching folio items:", error);
+          return [] as FolioItem[];
         }
         return data as FolioItem[];
       },
