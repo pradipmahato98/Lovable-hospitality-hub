@@ -209,7 +209,7 @@ const POSTerminal = () => {
 
       const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
                     paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
-      toast.success(`Payment of $${total.toFixed(2)} processed via ${methodLabel}`);
+      toast.success(`Payment of ${formatCurrency(total)} processed via ${methodLabel}`);
 
       setCart([]);
       setCheckoutOpen(false);

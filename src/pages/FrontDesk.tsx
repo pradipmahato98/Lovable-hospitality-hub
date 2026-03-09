@@ -468,7 +468,7 @@ const FrontDesk = () => {
                               {invoice.reservation?.reservation_code || "—"}
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">{invoice.invoice_date}</TableCell>
-                            <TableCell className="font-semibold whitespace-nowrap">${(invoice.total || 0).toLocaleString()}</TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(invoice.total || 0)}</TableCell>
                             <TableCell>
                               <Badge
                                 variant="outline"
