@@ -180,8 +180,8 @@ export default function POSHistory() {
 
     doc.setFontSize(12);
     doc.text(`Total Transactions: ${totalTransactions}`, 14, 46);
-    doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 14, 52);
-    doc.text(`Average Transaction: $${avgTransaction.toFixed(2)}`, 14, 58);
+    doc.text(`Total Revenue: ${formatCurrency(totalRevenue)}`, 14, 52);
+    doc.text(`Average Transaction: ${formatCurrency(avgTransaction)}`, 14, 58);
 
     // Table header
     let y = 70;
