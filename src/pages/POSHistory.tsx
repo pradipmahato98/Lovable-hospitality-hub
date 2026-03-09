@@ -280,7 +280,7 @@ export default function POSHistory() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Avg. Transaction</p>
-                  <p className="text-2xl font-bold">${avgTransaction.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(avgTransaction)}</p>
                 </div>
               </div>
             </CardContent>
