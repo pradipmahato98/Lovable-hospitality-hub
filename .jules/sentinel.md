@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-03-09 - Insecure PRNG for Secret Generation
+**Vulnerability:** The system API key generation used `Math.random()`, which is a non-cryptographically secure PRNG, making generated keys predictable and vulnerable to brute-force or prediction attacks.
+**Learning:** Developers often use `Math.random()` for quick token generation in the frontend without realizing its security implications. While fine for UI IDs, it's unacceptable for secrets.
+**Prevention:** Always use `window.crypto.getRandomValues()` for any security-sensitive random values in the browser. Wrap it in a utility or use established libraries if possible.

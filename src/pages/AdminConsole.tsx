@@ -236,9 +236,15 @@ const AdminConsole = () => {
   };
 
   const handleAddAPIKey = () => {
+    // SECURITY: Use cryptographically secure PRNG for API key generation.
+    // Math.random() is predictable and unsuitable for security-sensitive tokens.
+    const array = new Uint8Array(24);
+    window.crypto.getRandomValues(array);
+    const secureKey = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: `sk_${secureKey}`,
       is_secret: true,
       description: "Auto-generated system key"
     };
