@@ -106,7 +106,7 @@ const FrontDesk = () => {
       key: "price_per_night",
       header: "Price/Night",
       render: (room) => (
-        <span className="font-semibold text-primary">${room.price_per_night}</span>
+        <span className="font-semibold text-primary">{formatCurrency(room.price_per_night)}</span>
       ),
     },
     {
