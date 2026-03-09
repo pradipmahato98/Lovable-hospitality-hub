@@ -393,7 +393,7 @@ export function NewReservationDialog({
                         <span className="text-muted-foreground">-</span>
                         <span>{room.room_type}</span>
                         <span className="text-muted-foreground">-</span>
-                        <span className="font-medium">${room.price_per_night}/night</span>
+                        <span className="font-medium">{room.price_per_night}/night</span>
                         <Badge variant={room.status === "available" ? "default" : "secondary"} className="ml-2">
                           {room.status}
                         </Badge>

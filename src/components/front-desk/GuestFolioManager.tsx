@@ -981,7 +981,7 @@ export const GuestFolioManager = () => {
                 </div>
                 <div className="flex justify-between w-48 text-success font-medium">
                   <span>Paid:</span>
-                  <span className="font-mono">-${selectedFolio.total_payments.toFixed(2)}</span>
+                  <span className="font-mono">-{formatCurrency(selectedFolio.total_payments)}</span>
                 </div>
                 <div className="flex justify-between w-48 border-t-2 border-double pt-2 mt-2 font-bold text-xl">
                   <span>Balance:</span>
