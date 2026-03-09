@@ -611,7 +611,7 @@ export const GuestFolioManager = () => {
                             <Badge variant="secondary" className="capitalize text-[10px]">{item.source}</Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {item.amount > 0 ? `$${item.amount.toFixed(2)}` : "-"}
+                            {item.amount > 0 ? formatCurrency(item.amount) : "-"}
                           </TableCell>
                           <TableCell className="text-right font-mono text-success">
                             {item.amount < 0 ? `$${Math.abs(item.amount).toFixed(2)}` : "-"}
