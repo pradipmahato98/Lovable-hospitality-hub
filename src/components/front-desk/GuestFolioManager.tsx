@@ -960,7 +960,7 @@ export const GuestFolioManager = () => {
                     <TableRow key={item.id} className="border-none">
                       <TableCell className="py-2">{formatAD(new Date(item.created_at))}</TableCell>
                       <TableCell className="py-2">{item.description}</TableCell>
-                      <TableCell className="text-right py-2 font-mono">${item.amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right py-2 font-mono">{formatCurrency(item.amount)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
