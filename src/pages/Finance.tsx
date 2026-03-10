@@ -267,19 +267,19 @@ export default function Finance() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("transactions")}>
                 <Send className="h-5 w-5 text-primary" />
                 <span className="text-xs">Journal Entries</span>
               </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("transactions")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("transactions")}>
                 <CreditCard className="h-5 w-5 text-primary" />
                 <span className="text-xs">Invoices & Payments</span>
               </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("reports")}>
                 <Scale className="h-5 w-5 text-primary" />
                 <span className="text-xs">Trial Balance</span>
               </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab("reports")}>
+              <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("reports")}>
                 <TrendingUp className="h-5 w-5 text-primary" />
                 <span className="text-xs">Financial Statements</span>
               </Button>
