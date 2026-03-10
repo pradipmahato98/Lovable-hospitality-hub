@@ -1,7 +1,8 @@
 import * as React from "react";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
 import { cva } from "class-variance-authority";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 
 import { cn } from "@/lib/utils";
 
@@ -59,16 +60,40 @@ NavigationMenuTrigger.displayName = NavigationMenuPrimitive.Trigger.displayName;
 const NavigationMenuContent = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <NavigationMenuPrimitive.Content
-    ref={ref}
-    className={cn(
-      "left-0 top-0 w-full data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 md:absolute md:w-auto",
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const { handleInteractionOutside, setClosing, animationClass } = usePersistentPopup();
+
+  return (
+    <NavigationMenuPrimitive.Content
+      ref={ref}
+      className={cn(
+        "left-0 top-0 w-full data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 md:absolute md:w-auto",
+        animationClass,
+        className,
+      )}
+      onPointerDownOutside={handleInteractionOutside}
+      onEscapeKeyDown={handleInteractionOutside}
+      {...props}
+    >
+      <div className="flex justify-end p-2 md:hidden">
+        <button
+          type="button"
+          className="h-5 w-5 flex items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors outline-none focus:bg-destructive/10"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setClosing();
+            const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+            e.currentTarget.dispatchEvent(event);
+          }}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+      {props.children}
+    </NavigationMenuPrimitive.Content>
+  );
+});
 NavigationMenuContent.displayName = NavigationMenuPrimitive.Content.displayName;
 
 const NavigationMenuLink = NavigationMenuPrimitive.Link;

@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
-import { Check, ChevronRight, Circle } from "lucide-react";
+import { Check, ChevronRight, Circle, X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 
 import { cn } from "@/lib/utils";
 
@@ -52,21 +53,58 @@ const ContextMenuSubContent = React.forwardRef<
 ));
 ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 
+import { X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
+
 const ContextMenuContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <ContextMenuPrimitive.Portal>
-    <ContextMenuPrimitive.Content
-      ref={ref}
-      className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        className,
-      )}
-      {...props}
-    />
-  </ContextMenuPrimitive.Portal>
-));
+>(({ className, ...props }, ref) => {
+  const { handleInteractionOutside, setClosing, animationClass } = usePersistentPopup();
+  const { onEscapeKeyDown, onInteractOutside, ...otherProps } = props;
+
+  return (
+    <ContextMenuPrimitive.Portal>
+      <ContextMenuPrimitive.Content
+        ref={ref}
+        {...otherProps}
+        className={cn(
+          "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          animationClass,
+          className,
+        )}
+        onInteractOutside={(e) => {
+          handleInteractionOutside(e);
+          // @ts-ignore
+          onInteractOutside?.(e);
+        }}
+        onEscapeKeyDown={(e) => {
+          handleInteractionOutside(e);
+          // @ts-ignore
+          onEscapeKeyDown?.(e);
+        }}
+      >
+        <div className="flex items-center justify-between px-2 py-1.5 bg-muted/30 border-b mb-1">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight ml-1">Actions</span>
+          <button
+            type="button"
+            className="h-5 w-5 flex items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors outline-none focus:bg-destructive/10"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setClosing();
+              const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+              e.currentTarget.dispatchEvent(event);
+            }}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+        {otherProps.children}
+      </ContextMenuPrimitive.Content>
+    </ContextMenuPrimitive.Portal>
+  );
+});
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName;
 
 const ContextMenuItem = React.forwardRef<

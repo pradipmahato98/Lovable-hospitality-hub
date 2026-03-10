@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 
 import { cn } from "@/lib/utils";
 
@@ -58,19 +59,14 @@ const SelectScrollDownButton = React.forwardRef<
 ));
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName;
 
+import { X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
+
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => {
-  const [isShaking, setIsShaking] = React.useState(false);
-  const isClosingRef = React.useRef(false);
-
-  const handleInteractionOutside = (e: any) => {
-    if (isClosingRef.current) return;
-    e.preventDefault();
-    setIsShaking(true);
-    setTimeout(() => setIsShaking(false), 400);
-  };
+  const { handleInteractionOutside, setClosing, animationClass } = usePersistentPopup();
 
   return (
     <SelectPrimitive.Portal>
@@ -80,7 +76,7 @@ const SelectContent = React.forwardRef<
           "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          isShaking && "animate-shake",
+          animationClass,
           className,
         )}
         position={position}
@@ -89,19 +85,20 @@ const SelectContent = React.forwardRef<
         {...props}
       >
       <SelectScrollUpButton />
-      <div className="flex items-center justify-between px-2 py-1 bg-muted/50 border-b">
-        <span className="text-[10px] font-bold text-muted-foreground uppercase">Select</span>
+      <div className="flex items-center justify-between px-2 py-1.5 bg-muted/30 border-b">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight ml-1">Select Option</span>
         <button
-          className="p-0.5 rounded-full hover:bg-destructive/10 hover:text-destructive cursor-pointer outline-none"
+          type="button"
+          className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors outline-none focus:bg-destructive/10"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            isClosingRef.current = true;
+            setClosing();
             const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
             e.currentTarget.dispatchEvent(event);
           }}
         >
-          <X className="h-3 w-3" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
       <SelectPrimitive.Viewport

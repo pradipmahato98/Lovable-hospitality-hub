@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as MenubarPrimitive from "@radix-ui/react-menubar";
-import { Check, ChevronRight, Circle } from "lucide-react";
+import { Check, ChevronRight, Circle, X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 
 import { cn } from "@/lib/utils";
 
@@ -77,24 +78,59 @@ const MenubarSubContent = React.forwardRef<
 ));
 MenubarSubContent.displayName = MenubarPrimitive.SubContent.displayName;
 
+import { X } from "lucide-react";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
+
 const MenubarContent = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.Content>
->(({ className, align = "start", alignOffset = -4, sideOffset = 8, ...props }, ref) => (
-  <MenubarPrimitive.Portal>
-    <MenubarPrimitive.Content
-      ref={ref}
-      align={align}
-      alignOffset={alignOffset}
-      sideOffset={sideOffset}
-      className={cn(
-        "z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        className,
-      )}
-      {...props}
-    />
-  </MenubarPrimitive.Portal>
-));
+>(({ className, align = "start", alignOffset = -4, sideOffset = 8, ...props }, ref) => {
+  const { handleInteractionOutside, setClosing, animationClass } = usePersistentPopup();
+  const { onEscapeKeyDown, onInteractOutside, ...otherProps } = props;
+
+  return (
+    <MenubarPrimitive.Portal>
+      <MenubarPrimitive.Content
+        ref={ref}
+        align={align}
+        alignOffset={alignOffset}
+        sideOffset={sideOffset}
+        className={cn(
+          "z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          animationClass,
+          className,
+        )}
+        onInteractOutside={(e) => {
+          handleInteractionOutside(e);
+          onInteractOutside?.(e);
+        }}
+        onEscapeKeyDown={(e) => {
+          handleInteractionOutside(e);
+          onEscapeKeyDown?.(e);
+        }}
+        {...otherProps}
+      >
+        <div className="flex items-center justify-between px-2 py-1.5 bg-muted/30 border-b mb-1">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight ml-1">Menu</span>
+          <button
+            type="button"
+            className="h-5 w-5 flex items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors outline-none focus:bg-destructive/10"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setClosing();
+              const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+              e.currentTarget.dispatchEvent(event);
+            }}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+        {otherProps.children}
+      </MenubarPrimitive.Content>
+    </MenubarPrimitive.Portal>
+  );
+});
 MenubarContent.displayName = MenubarPrimitive.Content.displayName;
 
 const MenubarItem = React.forwardRef<

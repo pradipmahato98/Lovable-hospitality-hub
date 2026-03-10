@@ -416,7 +416,7 @@ export async function savePOSTables(tables: POSTable[]) {
       ? (table.current_order as unknown as Record<string, unknown>[])
       : [];
       
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const { error } = await supabase
       .from("pos_tables")
       .update({

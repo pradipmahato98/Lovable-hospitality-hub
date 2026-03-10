@@ -79,6 +79,8 @@ const PAGES_DATA = [
   { icon: Hotel, label: "LuxeStay Home", path: "/", keywords: ["home", "main", "start"] },
 ];
 
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
+
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -91,6 +93,8 @@ export function GlobalSearch() {
 
   const { data: guests = [], isLoading: loadingGuests } = useGuests();
   const { data: staff = [], isLoading: loadingStaff } = useStaff();
+
+  const { handleInteractionOutside, setClosing, animationClass } = usePersistentPopup();
 
   // Keyboard shortcut (Cmd+K or Ctrl+K)
   useEffect(() => {
@@ -105,29 +109,21 @@ export function GlobalSearch() {
           setIsOpen(true);
         }
       }
-      // Escape key closure disabled to follow new project rules
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, []);
 
-  // Visual feedback for blocked closure
-  const [isShaking, setIsShaking] = useState(false);
-  const triggerShake = () => {
-    setIsShaking(true);
-    setTimeout(() => setIsShaking(false), 400);
-  };
-
   // Prevent closing when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isOpen && containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        triggerShake();
+        handleInteractionOutside(event);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, handleInteractionOutside]);
 
   const results = useMemo(() => {
     if (!query.trim()) {
@@ -259,8 +255,8 @@ export function GlobalSearch() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
-      triggerShake();
-      return;
+        handleInteractionOutside(e);
+        return;
     }
 
     if (results.all.length === 0) return;
@@ -290,7 +286,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className={cn("relative w-full sm:w-64 lg:w-80", isShaking && "animate-shake")} ref={containerRef}>
+    <div className={cn("relative w-full sm:w-64 lg:w-80", animationClass)} ref={containerRef}>
       <div className="relative w-full group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
@@ -350,6 +346,7 @@ export function GlobalSearch() {
               size="icon"
               className="h-6 w-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
               onClick={() => {
+                setClosing();
                 setIsOpen(false);
                 setQuery("");
               }}
@@ -400,18 +397,6 @@ export function GlobalSearch() {
                       </div>
                     ))}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-[10px] text-muted-foreground hover:text-primary mt-1 h-7 px-3"
-                    onClick={() => {
-                      setIsOpen(false);
-                      setQuery("");
-                      navigate("/guests");
-                    }}
-                  >
-                    View all guests <ExternalLink className="h-2 w-2 ml-1" />
-                  </Button>
                 </div>
               )}
 
@@ -474,6 +459,19 @@ export function GlobalSearch() {
                     );
                   })}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-[10px] text-muted-foreground hover:text-primary mt-1 h-7 px-3"
+                    onClick={() => {
+                      setClosing();
+                      setIsOpen(false);
+                      setQuery("");
+                      navigate("/guests");
+                    }}
+                  >
+                    View all guests <ExternalLink className="h-2 w-2 ml-1" />
+                  </Button>
                 </div>
               )}
 
@@ -517,6 +515,7 @@ export function GlobalSearch() {
                     size="sm"
                     className="w-full justify-start text-[10px] text-muted-foreground hover:text-primary mt-1 h-7 px-3"
                     onClick={() => {
+                      setClosing();
                       setIsOpen(false);
                       setQuery("");
                       navigate("/staff");
