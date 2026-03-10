@@ -98,6 +98,11 @@ const StaffManagement = () => {
                 <FileText className="h-4 w-4" />
                 <span className="whitespace-nowrap">Logs Report</span>
               </TabsTrigger>
+
+              <TabsTrigger value="analytics" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <BarChart3 className="h-4 w-4" />
+                <span className="whitespace-nowrap">Analytics</span>
+              </TabsTrigger>
             </TabsList>
           </aside>
 
