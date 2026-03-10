@@ -44,13 +44,13 @@ export function HeaderUserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to="/staff?tab=about&sub=details" className="flex items-center gap-2 cursor-pointer">
+          <Link to="/staff?tab=details" className="flex items-center gap-2 cursor-pointer">
             <User className="h-4 w-4" />
             My Account
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/staff?tab=about&sub=preferences" className="flex items-center gap-2 cursor-pointer">
+          <Link to="/staff?tab=preferences" className="flex items-center gap-2 cursor-pointer">
             <Settings className="h-4 w-4" />
             Preferences
           </Link>
