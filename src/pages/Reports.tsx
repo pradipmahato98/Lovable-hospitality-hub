@@ -17,11 +17,14 @@ import { useReportStats } from "@/hooks/useReportStats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
+import { DailyManagementReport } from "@/components/reports/DailyManagementReport";
+import { useManagement } from "@/hooks/useManagement";
 
 const Reports = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeReportTab = searchParams.get("tab") || "overview";
   const { data: stats, isLoading } = useReportStats();
+  const { data: managementData, isLoading: isManagementLoading } = useManagement();
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -46,7 +49,8 @@ const Reports = () => {
         <div className="flex justify-between items-center">
           <TabsList className="bg-secondary/50 p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="daily">Daily Report</TabsTrigger>
+            <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
+            <TabsTrigger value="daily">Daily Stats</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
@@ -128,6 +132,11 @@ const Reports = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* DMR Executive Report */}
+        <TabsContent value="dmr" className="space-y-6">
+          <DailyManagementReport data={managementData} isLoading={isManagementLoading} />
         </TabsContent>
 
         {/* Daily Report */}

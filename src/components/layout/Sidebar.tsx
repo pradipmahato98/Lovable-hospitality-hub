@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, CalendarDays, Users, BedDouble, Receipt, Package, BarChart3, Settings,
   ChevronLeft, ChevronRight, Hotel, LogOut, UserCog, Code2, ShoppingCart, UserCheck,
-  Globe, Sparkles, Wrench, DollarSign, PartyPopper, ShieldCheck, Moon, Lock, ChevronDown, LucideIcon
+  Globe, Sparkles, Wrench, DollarSign, PartyPopper, ShieldCheck, Moon, Lock, ChevronDown, LucideIcon,
+  Target, Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -164,13 +165,36 @@ const navItems: NavItemConfig[] = [
     ]
   },
   {
+    icon: Target,
+    label: "Sales & Marketing",
+    path: "/marketing",
+    defaultTab: "inquiries",
+    subItems: [
+      { label: "Inquiries", tab: "inquiries" },
+      { label: "Activities", tab: "activities" },
+      { label: "Accounts", tab: "accounts" },
+    ]
+  },
+  {
+    icon: Briefcase,
+    label: "Management",
+    path: "/management",
+    defaultTab: "performance",
+    subItems: [
+      { label: "Performance", tab: "performance" },
+      { label: "Forecasting", tab: "forecasting" },
+      { label: "Analysis", tab: "segmentation" },
+    ]
+  },
+  {
     icon: BarChart3,
     label: "Reports",
     path: "/reports",
     defaultTab: "overview",
     subItems: [
       { label: "Overview", tab: "overview" },
-      { label: "Daily Report", tab: "daily" },
+      { label: "DMR Executive", tab: "dmr" },
+      { label: "Daily Stats", tab: "daily" },
       { label: "Monthly Summary", tab: "monthly" },
     ]
   },
