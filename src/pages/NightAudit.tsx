@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useNightAudit } from "@/hooks/useNightAudit";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,6 +31,8 @@ import { format, parseISO } from "date-fns";
 type AuditStep = 'validation' | 'posting' | 'closing' | 'summary';
 
 export default function NightAudit() {
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
   const { businessDate, isDateLoading, usePendingArrivals, useStayOvers, postCharges, closeDay } = useNightAudit();
   const [currentStep, setCurrentStep] = useState<AuditStep>('validation');
   const [auditProgress, setAuditProgress] = useState(0);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone } from "lucide-react";
@@ -24,7 +25,16 @@ import {
 type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get("tab") as SettingsTab) || "checkin";
+
+  const setActiveTab = (tab: SettingsTab) => {
+    setSearchParams(prev => {
+      prev.set("tab", tab);
+      return prev;
+    });
+  };
+
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
   
   const { data: checkInSettings, isLoading: isLoadingCheckIn } = useCheckInSettings();

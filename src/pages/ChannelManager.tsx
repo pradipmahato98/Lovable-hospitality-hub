@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ import { ChannelConfigDialog } from "@/components/channel-manager/ChannelConfigD
 import { useSidebar } from "@/hooks/use-sidebar";
 
 const ChannelManager = () => {
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "channels";
   const {
     data: channels = [],
     isLoading,

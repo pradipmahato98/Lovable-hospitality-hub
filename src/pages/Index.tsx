@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RecentBookings } from "@/components/dashboard/RecentBookings";
@@ -11,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
   const { data: stats, isLoading } = useDashboardStats();
   const { isAdmin } = useIsAdmin();
 
@@ -26,6 +29,38 @@ const Index = () => {
 
   return (
     <MainLayout title="Dashboard" subtitle="Property real-time overview and analytics.">
+      {activeTab === "stats" ? (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RevenueChart />
+            <Card>
+              <CardHeader>
+                <CardTitle>Real-time Property Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg">
+                  <span className="text-sm font-medium">Active Sessions</span>
+                  <Badge variant="outline" className="bg-success/10 text-success">24 Active</Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg">
+                  <span className="text-sm font-medium">Server Load</span>
+                  <Badge variant="outline">12%</Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg">
+                  <span className="text-sm font-medium">Database Latency</span>
+                  <Badge variant="outline">45ms</Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg">
+                  <span className="text-sm font-medium">API Response Time</span>
+                  <Badge variant="outline">120ms</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <RoomStatusGrid />
+        </div>
+      ) : (
+        <>
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <MetricCard
@@ -95,6 +130,8 @@ const Index = () => {
         <RecentBookings />
         <RoomStatusGrid />
       </div>
+        </>
+      )}
     </MainLayout>
   );
 };

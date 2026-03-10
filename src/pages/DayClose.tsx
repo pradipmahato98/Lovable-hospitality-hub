@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -37,6 +38,8 @@ const departmentRevenue = [
 ];
 
 export default function DayClose() {
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "summary";
   const { businessDate } = useNightAudit();
   const [isClosed, setIsClosed] = useState(false);
 

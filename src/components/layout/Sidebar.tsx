@@ -117,7 +117,7 @@ const navItems: NavItem[] = [
     path: "/engineering",
     permission: "engineering:view",
     subItems: [
-      { label: "Maintenance Requests", path: "/engineering" },
+      { label: "Maintenance Requests", path: "/engineering?tab=requests" },
     ]
   },
   {
@@ -127,9 +127,9 @@ const navItems: NavItem[] = [
     permission: "pos:view",
     subItems: [
       { label: "Dashboard", path: "/pos" },
-      { label: "Reports", path: "/pos-reports" },
-      { label: "History", path: "/pos-history" },
-      { label: "Terminal", path: "/pos-terminal" },
+      { label: "Terminal", path: "/pos/terminal" },
+      { label: "History", path: "/pos/history" },
+      { label: "Reports", path: "/pos/reports" },
     ]
   },
   {
@@ -159,7 +159,7 @@ const navItems: NavItem[] = [
     path: "/channel-manager",
     permission: "channel_manager:view",
     subItems: [
-      { label: "Channels", path: "/channel-manager" },
+      { label: "Channels", path: "/channel-manager?tab=channels" },
     ]
   },
   {
@@ -209,7 +209,7 @@ const operationsNavItems: NavItem[] = [
     path: "/night-audit",
     permission: "operations:night_audit",
     subItems: [
-      { label: "Overview", path: "/night-audit" },
+      { label: "Overview", path: "/night-audit?tab=overview" },
     ]
   },
   {
@@ -218,7 +218,7 @@ const operationsNavItems: NavItem[] = [
     path: "/day-close",
     permission: "operations:day_close",
     subItems: [
-      { label: "Vouchers", path: "/day-close" },
+      { label: "Daily Summary", path: "/day-close?tab=summary" },
     ]
   },
 ];
@@ -230,7 +230,8 @@ const adminNavItems: NavItem[] = [
     path: "/users",
     permission: "all",
     subItems: [
-      { label: "Active Users", path: "/users" },
+      { label: "Directory", path: "/users?tab=users" },
+      { label: "Audit Log", path: "/users?tab=audit" },
     ]
   },
   {
@@ -266,7 +267,15 @@ const adminNavItems: NavItem[] = [
     path: "/settings",
     permission: "all",
     subItems: [
-      { label: "Property", path: "/settings" },
+      { label: "Check-in", path: "/settings?tab=checkin" },
+      { label: "Payment", path: "/settings?tab=payment" },
+      { label: "Sources", path: "/settings?tab=sources" },
+      { label: "Rates", path: "/settings?tab=rates" },
+      { label: "POS Quick Menu", path: "/settings?tab=quickmenu" },
+      { label: "Property", path: "/settings?tab=property" },
+      { label: "Notifications", path: "/settings?tab=notifications" },
+      { label: "Broadcasts", path: "/settings?tab=broadcast" },
+      { label: "Security", path: "/settings?tab=security" },
     ]
   },
   {
@@ -392,7 +401,29 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           </div>
           <CollapsibleContent className="pl-9 pr-2 space-y-1 mt-1 animate-in slide-in-from-top-1 duration-200">
             {item.subItems?.map((sub) => {
-              const isSubActive = location.pathname + location.search === sub.path;
+              const subUrl = new URL(sub.path, "http://localhost");
+              const subParams = new URLSearchParams(subUrl.search);
+              const currentParams = new URLSearchParams(location.search);
+
+              const isSubActive = () => {
+                if (location.pathname !== subUrl.pathname) return false;
+
+                // If sub item has specific search params (like ?tab=...), they must all match
+                if (subParams.size > 0) {
+                  let match = true;
+                  subParams.forEach((val, key) => {
+                    if (currentParams.get(key) !== val) match = false;
+                  });
+                  return match;
+                }
+
+                // If sub item has no search params, it's active only if the current URL has no search params
+                // (or if we want it to be the default fallback, but exact match is safer for our multi-tab modules)
+                return location.search === "" || location.search === "?";
+              };
+
+              const active = isSubActive();
+
               return (
                 <Link
                   key={sub.path}
@@ -400,7 +431,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                   onClick={onNavClick}
                   className={cn(
                     "block px-3 py-1.5 text-xs rounded-md transition-colors",
-                    isSubActive
+                    active
                       ? "text-primary font-medium bg-primary/5 shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
                   )}
