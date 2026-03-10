@@ -105,24 +105,29 @@ export function GlobalSearch() {
           setIsOpen(true);
         }
       }
-      if (e.key === "Escape") {
-        setIsOpen(false);
-      }
+      // Escape key closure disabled to follow new project rules
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, []);
 
-  // Close dropdown when clicking outside
+  // Visual feedback for blocked closure
+  const [isShaking, setIsShaking] = useState(false);
+  const triggerShake = () => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 400);
+  };
+
+  // Prevent closing when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+      if (isOpen && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        triggerShake();
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const results = useMemo(() => {
     if (!query.trim()) {
@@ -253,6 +258,11 @@ export function GlobalSearch() {
   }, [query, results.guests, navigate, handleGuestAction]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      triggerShake();
+      return;
+    }
+
     if (results.all.length === 0) return;
 
     if (e.key === "ArrowDown") {
@@ -276,13 +286,11 @@ export function GlobalSearch() {
           navigate(`/staff?staffId=${selected.data.id}`);
         }
       }
-    } else if (e.key === "Escape") {
-      setIsOpen(false);
     }
   };
 
   return (
-    <div className="relative w-full sm:w-64 lg:w-80" ref={containerRef}>
+    <div className={cn("relative w-full sm:w-64 lg:w-80", isShaking && "animate-shake")} ref={containerRef}>
       <div className="relative w-full group/search">
         {(loadingGuests || loadingStaff) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
@@ -335,7 +343,21 @@ export function GlobalSearch() {
               <p className="text-sm font-medium animate-pulse">Redirecting to profile...</p>
             </div>
           )}
-          <ScrollArea className="h-[450px] max-h-[70vh]">
+          <div className="flex items-center justify-between p-2 border-b bg-muted/30">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Search Results</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => {
+                setIsOpen(false);
+                setQuery("");
+              }}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <ScrollArea className="max-h-[450px]">
             <div className="p-2 pb-10">
               {!hasResults && !loadingGuests && (
                 <div className="py-8 text-center text-muted-foreground">
@@ -510,7 +532,7 @@ export function GlobalSearch() {
                 <span className="flex items-center gap-1"><kbd className="border bg-background px-1 rounded">↑↓</kbd> to navigate</span>
                 <span className="flex items-center gap-1"><kbd className="border bg-background px-1 rounded">↵</kbd> to select</span>
               </div>
-              <span className="italic">Press <kbd className="border bg-background px-1 rounded">Esc</kbd> to close</span>
+              <span className="italic font-bold text-primary">Use "X" or Clear to Close</span>
             </div>
           </ScrollArea>
         </div>
