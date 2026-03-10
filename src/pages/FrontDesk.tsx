@@ -135,6 +135,7 @@ const FrontDesk = () => {
             <TabsTrigger value="wakeup" className="gap-2"><AlarmClock className="h-4 w-4" />Wake-Up</TabsTrigger>
             <TabsTrigger value="group" className="gap-2"><LogIn className="h-4 w-4" />Group</TabsTrigger>
             <TabsTrigger value="keycards" className="gap-2"><Key className="h-4 w-4" />Key Cards</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
           </TabsList>
 
           {/* Rooms Tab */}
