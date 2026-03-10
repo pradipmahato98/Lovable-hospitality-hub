@@ -220,6 +220,7 @@ const FrontDesk = () => {
           <TabsContent value="wakeup"><WakeUpCallScheduler /></TabsContent>
           <TabsContent value="group"><GroupCheckInOut /></TabsContent>
           <TabsContent value="keycards"><KeyCardManagement /></TabsContent>
+          <TabsContent value="reports"><FrontDeskReportsTab /></TabsContent>
 
           {/* Billing Tab */}
           <TabsContent value="billing">

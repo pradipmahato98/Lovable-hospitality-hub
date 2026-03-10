@@ -312,6 +312,10 @@ const Reservations = () => {
           <TabsContent value="calendar">
             <ReservationCalendar />
           </TabsContent>
+
+          <TabsContent value="reports">
+            <ReservationReportsTab />
+          </TabsContent>
         </Tabs>
 
         <NewReservationDialog open={newDialogOpen} onOpenChange={setNewDialogOpen} onSuccess={refetch} />
