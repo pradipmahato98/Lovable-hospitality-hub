@@ -97,8 +97,8 @@ export const PersonalDetailsTab = () => {
 
             <div className="grid grid-cols-1 gap-3">
               <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Last Updated</p>
-                <p className="text-sm">{profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Account Status</p>
+                <p className="text-sm">Active</p>
               </div>
               <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Email</p>
