@@ -49,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { 
   DraggableBanquetCalendar,
@@ -100,8 +101,16 @@ const statusColors: Record<string, string> = {
 
 export default function Banquet() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("events");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "events";
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
    const [editingEvent, setEditingEvent] = useState<BanquetEvent | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<
@@ -436,7 +445,7 @@ export default function Banquet() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="events" className="gap-2">
               <CalendarDays className="h-4 w-4" />

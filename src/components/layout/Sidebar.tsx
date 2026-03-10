@@ -16,7 +16,8 @@ import { useEffect } from "react";
 
 interface NavSubItem {
   label: string;
-  tab: string;
+  tab?: string;
+  path?: string;
 }
 
 interface NavItemConfig {
@@ -24,30 +25,97 @@ interface NavItemConfig {
   label: string;
   path: string;
   subItems?: NavSubItem[];
+  defaultTab?: string;
 }
 
 const navItems: NavItemConfig[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: CalendarDays, label: "Reservations", path: "/reservations" },
-  { icon: Users, label: "Guests", path: "/guests" },
-  { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
-  { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
-  { icon: Wrench, label: "Engineering", path: "/engineering" },
+  {
+    icon: CalendarDays,
+    label: "Reservations",
+    path: "/reservations",
+    defaultTab: "list",
+    subItems: [
+      { label: "List View", tab: "list" },
+      { label: "Calendar", tab: "calendar" },
+    ]
+  },
+  {
+    icon: Users,
+    label: "Guests",
+    path: "/guests",
+    defaultTab: "guests",
+    subItems: [
+      { label: "Guests", tab: "guests" },
+      { label: "Feedback", tab: "feedback" },
+      { label: "Loyalty", tab: "loyalty" },
+      { label: "Preferences", tab: "preferences" },
+      { label: "Communications", tab: "communications" },
+      { label: "Documents", tab: "documents" },
+      { label: "History", tab: "history" },
+      { label: "Messaging", tab: "messaging" },
+      { label: "De-dup", tab: "dedup" },
+    ]
+  },
+  {
+    icon: BedDouble,
+    label: "Front Desk",
+    path: "/front-desk",
+    defaultTab: "rooms",
+    subItems: [
+      { label: "Rooms", tab: "rooms" },
+      { label: "Billing", tab: "billing" },
+      { label: "Guest Folios", tab: "folios" },
+      { label: "Queue", tab: "queue" },
+      { label: "Messages", tab: "messages" },
+      { label: "Upgrades", tab: "upgrades" },
+      { label: "Wake-Up", tab: "wakeup" },
+      { label: "Group", tab: "group" },
+      { label: "Key Cards", tab: "keycards" },
+    ]
+  },
+  {
+    icon: Sparkles,
+    label: "Housekeeping",
+    path: "/housekeeping",
+    defaultTab: "rooms",
+    subItems: [
+      { label: "Rooms", tab: "rooms" },
+      { label: "Tasks", tab: "tasks" },
+      { label: "Inspections", tab: "inspections" },
+      { label: "Lost & Found", tab: "lost-found" },
+      { label: "Supplies", tab: "supplies" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: Wrench,
+    label: "Engineering",
+    path: "/engineering",
+    defaultTab: "requests",
+    subItems: [
+      { label: "Requests", tab: "requests" },
+      { label: "Preventive", tab: "preventive" },
+      { label: "Assets", tab: "assets" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
   {
     icon: ShoppingCart,
     label: "POS",
     path: "/pos",
     subItems: [
-      { label: "Dashboard", tab: "dashboard" },
-      { label: "Terminal", tab: "terminal" },
-      { label: "History", tab: "history" },
-      { label: "Reports", tab: "reports" },
+      { label: "Dashboard", path: "/pos" },
+      { label: "Terminal", path: "/pos/terminal" },
+      { label: "History", path: "/pos/history" },
+      { label: "Reports", path: "/pos/reports" },
     ]
   },
   {
     icon: Package,
     label: "Inventory",
     path: "/inventory",
+    defaultTab: "items",
     subItems: [
       { label: "Items", tab: "items" },
       { label: "Categories", tab: "categories" },
@@ -58,11 +126,23 @@ const navItems: NavItemConfig[] = [
       { label: "Reports", tab: "reports" },
     ]
   },
-  { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
+  {
+    icon: Globe,
+    label: "Channel Manager",
+    path: "/channel-manager",
+    defaultTab: "channels",
+    subItems: [
+      { label: "Channels", tab: "channels" },
+      { label: "Rate Calendar", tab: "rates" },
+      { label: "Sync Logs", tab: "logs" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
   {
     icon: DollarSign,
     label: "Finance/Account",
     path: "/finance",
+    defaultTab: "dashboard",
     subItems: [
       { label: "Dashboard", tab: "dashboard" },
       { label: "Setup", tab: "setup" },
@@ -70,35 +150,136 @@ const navItems: NavItemConfig[] = [
       { label: "Reports", tab: "reports" },
     ]
   },
-  { icon: PartyPopper, label: "Banquet", path: "/banquet" },
-  { icon: BarChart3, label: "Reports", path: "/reports" },
+  {
+    icon: PartyPopper,
+    label: "Banquet",
+    path: "/banquet",
+    defaultTab: "events",
+    subItems: [
+      { label: "Events", tab: "events" },
+      { label: "Calendar", tab: "calendar" },
+      { label: "Catering", tab: "catering" },
+      { label: "Venue Setup", tab: "venue" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: BarChart3,
+    label: "Reports",
+    path: "/reports",
+    defaultTab: "overview",
+    subItems: [
+      { label: "Overview", tab: "overview" },
+      { label: "Daily Report", tab: "daily" },
+      { label: "Monthly Summary", tab: "monthly" },
+    ]
+  },
 ];
 
-const operationsNavItems = [
-  { icon: Moon, label: "Night Audit", path: "/night-audit" },
+const operationsNavItems: NavItemConfig[] = [
+  {
+    icon: Moon,
+    label: "Night Audit",
+    path: "/night-audit",
+    defaultTab: "audit",
+    subItems: [
+      { label: "Run Audit", tab: "audit" },
+      { label: "Audit History", tab: "history" },
+    ]
+  },
   { icon: Lock, label: "Day Close", path: "/day-close" },
 ];
 
 const adminNavItems: NavItemConfig[] = [
-  { icon: UserCog, label: "User Management", path: "/users" },
+  {
+    icon: UserCog,
+    label: "User Management",
+    path: "/users",
+    defaultTab: "users",
+    subItems: [
+      { label: "Users", tab: "users" },
+      { label: "Activity", tab: "activity" },
+      { label: "Bulk Actions", tab: "bulk" },
+      { label: "Audit Log", tab: "audit" },
+    ]
+  },
   {
     icon: Users,
     label: "Staff Management",
     path: "/staff",
+    defaultTab: "directory",
     subItems: [
       { label: "Directory", tab: "directory" },
+      { label: "My Profile", tab: "details" },
+      { label: "Preferences", tab: "preferences" },
       { label: "Attendance", tab: "attendance" },
       { label: "Schedules", tab: "schedules" },
       { label: "Alerts", tab: "alerts" },
-      { label: "Logs", tab: "logs" },
       { label: "Security", tab: "security" },
-      { label: "About", tab: "about" },
+      { label: "Logs", tab: "logs" },
     ]
   },
-  { icon: UserCheck, label: "HR", path: "/hr" },
-  { icon: Settings, label: "Settings", path: "/settings" },
-  { icon: ShieldCheck, label: "Admin Console", path: "/admin-console" },
-  { icon: Code2, label: "Dev Panel", path: "/dev" },
+  {
+    icon: UserCheck,
+    label: "HR",
+    path: "/hr",
+    defaultTab: "employees",
+    subItems: [
+      { label: "Employees", tab: "employees" },
+      { label: "Payroll", tab: "payroll" },
+      { label: "Leave", tab: "leave" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    path: "/settings",
+    defaultTab: "checkin",
+    subItems: [
+      { label: "Check-in", tab: "checkin" },
+      { label: "Payment", tab: "payment" },
+      { label: "Sources", tab: "sources" },
+      { label: "Rates", tab: "rates" },
+      { label: "Quick Menu", tab: "quickmenu" },
+      { label: "Property", tab: "property" },
+      { label: "Notifications", tab: "notifications" },
+      { label: "Broadcast", tab: "broadcast" },
+      { label: "Configure", tab: "configure" },
+      { label: "Security", tab: "security" },
+    ]
+  },
+  {
+    icon: ShieldCheck,
+    label: "Admin Console",
+    path: "/admin-console",
+    defaultTab: "overview",
+    subItems: [
+      { label: "Overview", tab: "overview" },
+      { label: "Users", tab: "users" },
+      { label: "Security", tab: "security" },
+      { label: "Permissions", tab: "permissions" },
+      { label: "Audit", tab: "audit" },
+      { label: "Integrations", tab: "integrations" },
+      { label: "Design System", tab: "design_system" },
+      { label: "Security Breach", tab: "security_breach" },
+    ]
+  },
+  {
+    icon: Code2,
+    label: "Dev Panel",
+    path: "/dev",
+    defaultTab: "status",
+    subItems: [
+      { label: "Status", tab: "status" },
+      { label: "Seeder", tab: "seeder" },
+      { label: "Cleanup", tab: "cleanup" },
+      { label: "Email", tab: "email" },
+      { label: "Logs", tab: "logs" },
+      { label: "MCP", tab: "mcp" },
+      { label: "Security", tab: "security" },
+    ]
+  },
 ];
 
 function NavItem({
@@ -128,15 +309,29 @@ function NavItem({
     }
   }, [isActive, hasSubItems]);
 
-  const isSubActive = (subTab: string) => {
-    return isActive && searchParams.get("tab") === subTab;
+  const isSubActive = (sub: NavSubItem, defaultTab?: string) => {
+    if (sub.path) {
+      // If the sub-item has a path, check if it matches the current pathname
+      // But also handle the case where the main item is active but we're on a sub-path
+      return location.pathname === sub.path;
+    }
+    // If it's a tab, check if the main path matches and the tab param matches
+    // Or if there is no tab param and this is the default tab
+    const currentTab = searchParams.get("tab") || defaultTab;
+    return isActive && currentTab === sub.tab;
   };
 
-  const handleSubItemClick = (e: React.MouseEvent, subTab: string) => {
-    if (isActive) {
+  const handleSubItemClick = (e: React.MouseEvent, sub: NavSubItem) => {
+    if (sub.path) {
+      // If it's a direct path, let the Link handle it
+      if (onNavClick) onNavClick();
+      return;
+    }
+
+    if (isActive && sub.tab) {
       e.preventDefault();
       setSearchParams(prev => {
-        prev.set("tab", subTab);
+        prev.set("tab", sub.tab!);
         return prev;
       });
     }
@@ -192,12 +387,12 @@ function NavItem({
         <div className="ml-9 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border/40 pl-2">
           {item.subItems?.map((sub) => (
             <Link
-              key={sub.tab}
-              to={`${item.path}?tab=${sub.tab}`}
-              onClick={(e) => handleSubItemClick(e, sub.tab)}
+              key={sub.path || sub.tab}
+              to={sub.path || `${item.path}?tab=${sub.tab}`}
+              onClick={(e) => handleSubItemClick(e, sub)}
               className={cn(
                 "px-3 py-1.5 text-xs rounded-md transition-colors",
-                isSubActive(sub.tab)
+                isSubActive(sub, item.defaultTab)
                   ? "text-primary font-medium bg-sidebar-accent/50"
                   : "text-sidebar-foreground/60 hover:text-foreground hover:bg-sidebar-accent/30"
               )}

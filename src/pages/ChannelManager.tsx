@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { formatCurrency, formatAD } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -32,7 +33,15 @@ function ChannelManager() {
   const stats = useChannelStats();
   const { data: reportStats } = useReportStats();
   const { data: rooms = [] } = useRooms();
-  const [activeTab, setActiveTab] = useState("channels");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "channels";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [addChannelOpen, setAddChannelOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<any>(null);
 
@@ -136,7 +145,7 @@ function ChannelManager() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
           <TabsTrigger value="channels" className="gap-2"><Globe className="h-4 w-4" />Channels</TabsTrigger>
           <TabsTrigger value="rates" className="gap-2"><DollarSign className="h-4 w-4" />Rate Calendar</TabsTrigger>

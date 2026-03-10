@@ -1,6 +1,7 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { 
   Wrench, CalendarClock, Settings, BarChart3
@@ -13,9 +14,18 @@ import {
 } from "@/components/engineering";
 
 const Engineering = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "requests";
   const { data: requests = [] } = useMaintenanceRequests();
   const pendingCount = requests.filter(r => r.status === "pending").length;
   const inProgressCount = requests.filter(r => r.status === "in_progress").length;
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   const quickActions: QuickAction[] = [
     { icon: Bed, label: "View Rooms", to: "/rooms", color: "text-blue-400" },
@@ -28,7 +38,7 @@ const Engineering = () => {
     <MainLayout title="Engineering" subtitle="Maintenance, preventive schedules, and asset management">
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <div className="xl:col-span-3">
-          <Tabs defaultValue="requests" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="flex flex-wrap h-auto gap-1">
               <TabsTrigger value="requests" className="gap-2">
                 <Wrench className="h-4 w-4" />

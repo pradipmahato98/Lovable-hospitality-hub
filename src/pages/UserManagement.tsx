@@ -13,6 +13,7 @@ import { UsersTable, AuditLogTable } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { format, formatDistanceToNow } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import {
@@ -33,8 +34,17 @@ import {
 
 const UserManagement = () => {
   useAdminRealtime();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "users";
   const [searchQuery, setSearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [auditRoleFilter, setAuditRoleFilter] = useState<string>("all");
   const [auditDateFilter, setAuditDateFilter] = useState<string>("all");
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
@@ -132,7 +142,7 @@ const UserManagement = () => {
           <span>You are viewing admin-only settings. Role changes take effect immediately.</span>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <div className="overflow-x-auto pb-1 scrollbar-hide">
             <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">

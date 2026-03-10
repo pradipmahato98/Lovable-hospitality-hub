@@ -44,6 +44,7 @@ import { useMenuItems, useMenuCategories } from "@/hooks/useMenuItems";
 import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import { useSearchParams } from "react-router-dom";
 
 interface CartItem {
   id: string;
@@ -65,7 +66,15 @@ const POSTerminal = () => {
   useAdminRealtime();
   const { data: dbMenuItems = [] } = useMenuItems();
   const { data: dbCategories = [] } = useMenuCategories();
-  const [activeTab, setActiveTab] = useState("tables");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "tables";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -219,7 +228,7 @@ const POSTerminal = () => {
       setSelectedGateway("");
       setSplitPayment(false);
       setRoomChargeRoom("");
-      setActiveTab("tables");
+      handleTabChange("tables");
     } catch (error: any) {
       toast.error(`Failed to process payment: ${error.message}`);
     }
@@ -230,7 +239,7 @@ const POSTerminal = () => {
       <POSHeader />
 
       {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="tables" className="gap-2">
@@ -404,7 +413,7 @@ const POSTerminal = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No items in cart</p>
-                  <Button variant="outline" className="mt-4" onClick={() => setActiveTab("order")}>
+                  <Button variant="outline" className="mt-4" onClick={() => handleTabChange("order")}>
                     Go to Order
                   </Button>
                 </div>

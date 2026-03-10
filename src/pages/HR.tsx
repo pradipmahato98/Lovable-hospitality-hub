@@ -20,16 +20,24 @@ import { LeaveManagement } from "@/components/hr/LeaveManagement";
 import { HRReportsTab } from "@/components/hr/HRReportsTab";
 import { useStaffMembers, useStaffDepartments } from "@/hooks/useStaffMembers";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const HR = () => {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const { data: employees = [], isLoading: staffLoading } = useStaffMembers();
   const { data: departments = [] } = useStaffDepartments();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "employees";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("employees");
   const navigate = useNavigate();
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   if (roleLoading) {
     return (
@@ -80,7 +88,7 @@ const HR = () => {
         ))}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
           <TabsTrigger value="employees" className="gap-2"><Users className="h-4 w-4" />Employees</TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2"><DollarSign className="h-4 w-4" />Payroll</TabsTrigger>
@@ -99,16 +107,16 @@ const HR = () => {
                 <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/staff?tab=schedules")}>
                   <Calendar className="h-4 w-4" />Schedule Shifts
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("payroll")}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => handleTabChange("payroll")}>
                   <Clock className="h-4 w-4" />Time & Attendance
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("leave")}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => handleTabChange("leave")}>
                   <FileText className="h-4 w-4" />Leave Requests
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("reports")}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => handleTabChange("reports")}>
                   <Award className="h-4 w-4" />Performance Reviews
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab("payroll")}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => handleTabChange("payroll")}>
                   <TrendingUp className="h-4 w-4" />Payroll Reports
                 </Button>
               </CardContent>

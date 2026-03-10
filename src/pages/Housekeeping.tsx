@@ -1,6 +1,7 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { 
   Bed, ClipboardList, Package, ClipboardCheck, ShoppingBag, BarChart3
@@ -11,14 +12,23 @@ import {
 } from "@/components/housekeeping";
 
 const Housekeeping = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "rooms";
   const today = new Date().toISOString().split("T")[0];
   const stats = useHousekeepingStats(today);
   const { data: lostItems = [] } = useLostAndFound("stored");
   const storedCount = lostItems.length;
 
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
+
   return (
     <MainLayout title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
-      <Tabs defaultValue="rooms" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />
