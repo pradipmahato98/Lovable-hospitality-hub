@@ -33,10 +33,10 @@ LuxeStay is a comprehensive, self-contained ERP system designed for hotels, reso
 # Clone and install
 git clone <YOUR_GIT_URL>
 cd luxestay-erp
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm run dev
 ```
 
 Open `http://localhost:5173` in your browser.
@@ -112,10 +112,10 @@ luxestay-erp/
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npm run lint` | Run ESLint |
+| `pnpm run dev` | Start development server |
+| `pnpm run build` | Build for production |
+| `pnpm run preview` | Preview production build |
+| `pnpm run lint` | Run ESLint |
 
 ---
 
