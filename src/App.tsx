@@ -49,6 +49,8 @@ const Finance = lazy(() => import("./pages/Finance"));
 const NewJournalEntry = lazy(() => import("./pages/NewJournalEntry"));
 const Payments = lazy(() => import("./pages/Payments"));
 const Banquet = lazy(() => import("./pages/Banquet"));
+const Marketing = lazy(() => import("./pages/Marketing"));
+const Management = lazy(() => import("./pages/Management"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,6 +117,8 @@ const App = () => (
                   <Route path="/finance/journal/new" element={<ProtectedRoute><NewJournalEntry /></ProtectedRoute>} />
                   <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                   <Route path="/banquet" element={<ProtectedRoute><Banquet /></ProtectedRoute>} />
+                  <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
+                  <Route path="/management" element={<ProtectedRoute><Management /></ProtectedRoute>} />
                   <Route path="/dev" element={<ProtectedRoute><DevPanel /></ProtectedRoute>} />
                   <Route path="/admin-console" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
