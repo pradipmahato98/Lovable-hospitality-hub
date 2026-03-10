@@ -24,6 +24,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Tables } from "@/integrations/supabase/types";
 import { RoomActionsPanel } from "@/components/rooms/RoomActionsPanel";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
+import { FrontDeskReportsTab } from "@/components/front-desk/FrontDeskReportsTab";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { exportToExcel } from "@/lib/reportExport";
