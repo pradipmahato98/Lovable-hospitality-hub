@@ -23,6 +23,7 @@ import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
+import { ReservationReportsTab } from "@/components/reservations/ReservationReportsTab";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -129,6 +130,10 @@ const Reservations = () => {
               <TabsTrigger value="calendar" className="gap-2">
                 <CalendarDays className="h-4 w-4" />
                 Calendar
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="gap-2">
+                <Receipt className="h-4 w-4" />
+                Reports
               </TabsTrigger>
             </TabsList>
             <div className="flex gap-2">
@@ -306,6 +311,10 @@ const Reservations = () => {
 
           <TabsContent value="calendar">
             <ReservationCalendar />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <ReservationReportsTab />
           </TabsContent>
         </Tabs>
 

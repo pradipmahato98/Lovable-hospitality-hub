@@ -30,7 +30,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -301,7 +301,7 @@ const AdminConsole = () => {
   return (
     <MainLayout title="Admin Console" subtitle="System-wide administrative controls and security">
       <ErrorBoundary>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
             <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">

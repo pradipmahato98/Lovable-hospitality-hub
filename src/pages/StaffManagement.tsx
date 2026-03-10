@@ -21,8 +21,9 @@ import { SecurityTab } from "@/components/staff/SecurityTab";
 import { LogsReportTab } from "@/components/staff/LogsReportTab";
 import { SchedulesTab } from "@/components/staff/SchedulesTab";
 import { AttendanceTab } from "@/components/staff/AttendanceTab";
+import { StaffAnalyticsTab } from "@/components/staff/StaffAnalyticsTab";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Clock as ClockIcon } from "lucide-react";
+import { CalendarDays, Clock as ClockIcon, BarChart3 } from "lucide-react";
 
 const StaffManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,6 +98,11 @@ const StaffManagement = () => {
                 <FileText className="h-4 w-4" />
                 <span className="whitespace-nowrap">Logs Report</span>
               </TabsTrigger>
+
+              <TabsTrigger value="analytics" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <BarChart3 className="h-4 w-4" />
+                <span className="whitespace-nowrap">Analytics</span>
+              </TabsTrigger>
             </TabsList>
           </aside>
 
@@ -131,6 +137,10 @@ const StaffManagement = () => {
 
             <TabsContent value="logs" className="mt-0">
               <LogsReportTab />
+            </TabsContent>
+
+            <TabsContent value="analytics" className="mt-0">
+              <StaffAnalyticsTab />
             </TabsContent>
           </main>
         </div>

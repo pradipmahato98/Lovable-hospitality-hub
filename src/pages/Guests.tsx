@@ -17,7 +17,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
@@ -38,6 +38,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
 import { formatAD, formatCurrency } from "@/lib/utils";
 import { exportToExcel } from "@/lib/reportExport";
+import { GuestReportsTab } from "@/components/guests/GuestReportsTab";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
@@ -243,6 +244,7 @@ const Guests = () => {
             <TabsTrigger value="history" className="gap-2"><Clock className="h-4 w-4" />History</TabsTrigger>
             <TabsTrigger value="messaging" className="gap-2"><Zap className="h-4 w-4" />Messaging</TabsTrigger>
             <TabsTrigger value="dedup" className="gap-2"><GitMerge className="h-4 w-4" />De-dup</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
           </TabsList>
 
           {/* === Guests Tab === */}
@@ -511,6 +513,7 @@ const Guests = () => {
 
           <TabsContent value="messaging"><AutomatedMessaging /></TabsContent>
           <TabsContent value="dedup"><GuestMergeTool /></TabsContent>
+          <TabsContent value="reports"><GuestReportsTab /></TabsContent>
         </Tabs>
 
         {/* Feedback Dialog */}

@@ -97,12 +97,12 @@ export const PersonalDetailsTab = () => {
 
             <div className="grid grid-cols-1 gap-3">
               <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Account Created</p>
-                <p className="text-sm">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Account Status</p>
+                <p className="text-sm">Active</p>
               </div>
               <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Last Sign In</p>
-                <p className="text-sm">{profile?.last_sign_in_at ? new Date(profile.last_sign_in_at).toLocaleDateString() : 'Just now'}</p>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Email</p>
+                <p className="text-sm truncate">{profile?.email || 'N/A'}</p>
               </div>
             </div>
           </CardContent>
