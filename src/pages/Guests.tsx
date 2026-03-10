@@ -244,6 +244,7 @@ const Guests = () => {
             <TabsTrigger value="history" className="gap-2"><Clock className="h-4 w-4" />History</TabsTrigger>
             <TabsTrigger value="messaging" className="gap-2"><Zap className="h-4 w-4" />Messaging</TabsTrigger>
             <TabsTrigger value="dedup" className="gap-2"><GitMerge className="h-4 w-4" />De-dup</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
           </TabsList>
 
           {/* === Guests Tab === */}
