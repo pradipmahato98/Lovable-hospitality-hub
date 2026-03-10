@@ -1,14 +1,25 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useSearchParams } from "react-router-dom";
 import { Package, Truck, Warehouse, ArrowUpDown, FolderTree, ArrowRightLeft, BarChart3 } from "lucide-react";
 import { ItemsTab, CategoriesTab, SuppliersTab, PurchaseOrdersTab, StockMovementsTab, TransfersTab, ReportsTab } from "@/components/inventory";
 
 const Inventory = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "items";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
+
   return (
     <MainLayout title="Inventory Management" subtitle="Track stock, suppliers, purchase orders, transfers & reports">
       <ErrorBoundary>
-        <Tabs defaultValue="items" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="flex-wrap">
             <TabsTrigger value="items" className="gap-2"><Package className="h-4 w-4" />Items</TabsTrigger>
             <TabsTrigger value="categories" className="gap-2"><FolderTree className="h-4 w-4" />Categories</TabsTrigger>

@@ -45,6 +45,23 @@ export const PreferencesTab = () => {
 
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-3">
+            <Zap className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-medium">Sidebar Dropdowns</p>
+              <p className="text-sm text-muted-foreground">Show nested pages as dropdowns in the sidebar.</p>
+            </div>
+          </div>
+          <Switch
+            checked={uiPrefs?.sidebar_dropdowns_enabled}
+            onCheckedChange={(checked) => {
+              updateUI.mutate({ ...uiPrefs!, sidebar_dropdowns_enabled: checked });
+              trackActivity("Update UI Preferences", "preferences_update", { sidebar_dropdowns_enabled: checked });
+            }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center gap-3">
             <Bell className="h-5 w-5" />
             <div>
               <p className="font-medium">Push Notifications</p>

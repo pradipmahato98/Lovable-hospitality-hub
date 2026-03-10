@@ -7,6 +7,9 @@ interface SidebarContextType {
   isMobile: boolean;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  openGroups: string[];
+  toggleGroup: (group: string) => void;
+  setOpenGroups: (groups: string[]) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -15,6 +18,13 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
+
+  const toggleGroup = (group: string) => {
+    setOpenGroups(prev =>
+      prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]
+    );
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -38,7 +48,10 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
       toggleCollapsed, 
       isMobile, 
       mobileOpen, 
-      setMobileOpen 
+      setMobileOpen,
+      openGroups,
+      toggleGroup,
+      setOpenGroups
     }}>
       {children}
     </SidebarContext.Provider>

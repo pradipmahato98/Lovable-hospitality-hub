@@ -1,9 +1,9 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, CalendarDays, Users, BedDouble, Receipt, Package, BarChart3, Settings,
   ChevronLeft, ChevronRight, Hotel, LogOut, UserCog, Code2, ShoppingCart, UserCheck,
-  Globe, Sparkles, Wrench, DollarSign, PartyPopper, ShieldCheck, Moon, Lock,
+  Globe, Sparkles, Wrench, DollarSign, PartyPopper, ShieldCheck, Moon, Lock, ChevronDown, LucideIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,18 +11,65 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
+import { useUIPreferences } from "@/hooks/useSettings";
+import { useEffect } from "react";
 
-const navItems = [
+interface NavSubItem {
+  label: string;
+  tab: string;
+}
+
+interface NavItemConfig {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  subItems?: NavSubItem[];
+}
+
+const navItems: NavItemConfig[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: CalendarDays, label: "Reservations", path: "/reservations" },
   { icon: Users, label: "Guests", path: "/guests" },
   { icon: BedDouble, label: "Front Desk", path: "/front-desk" },
   { icon: Sparkles, label: "Housekeeping", path: "/housekeeping" },
   { icon: Wrench, label: "Engineering", path: "/engineering" },
-  { icon: ShoppingCart, label: "POS", path: "/pos" },
-  { icon: Package, label: "Inventory", path: "/inventory" },
+  {
+    icon: ShoppingCart,
+    label: "POS",
+    path: "/pos",
+    subItems: [
+      { label: "Dashboard", tab: "dashboard" },
+      { label: "Terminal", tab: "terminal" },
+      { label: "History", tab: "history" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: Package,
+    label: "Inventory",
+    path: "/inventory",
+    subItems: [
+      { label: "Items", tab: "items" },
+      { label: "Categories", tab: "categories" },
+      { label: "Suppliers", tab: "suppliers" },
+      { label: "Orders", tab: "orders" },
+      { label: "Movements", tab: "movements" },
+      { label: "Transfers", tab: "transfers" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
   { icon: Globe, label: "Channel Manager", path: "/channel-manager" },
-  { icon: DollarSign, label: "Finance/Account", path: "/finance" },
+  {
+    icon: DollarSign,
+    label: "Finance/Account",
+    path: "/finance",
+    subItems: [
+      { label: "Dashboard", tab: "dashboard" },
+      { label: "Setup", tab: "setup" },
+      { label: "Transactions", tab: "transactions" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
   { icon: PartyPopper, label: "Banquet", path: "/banquet" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
@@ -32,46 +79,156 @@ const operationsNavItems = [
   { icon: Lock, label: "Day Close", path: "/day-close" },
 ];
 
-const adminNavItems = [
+const adminNavItems: NavItemConfig[] = [
   { icon: UserCog, label: "User Management", path: "/users" },
-  { icon: Users, label: "Staff Management", path: "/staff" },
+  {
+    icon: Users,
+    label: "Staff Management",
+    path: "/staff",
+    subItems: [
+      { label: "Directory", tab: "directory" },
+      { label: "Attendance", tab: "attendance" },
+      { label: "Schedules", tab: "schedules" },
+      { label: "Alerts", tab: "alerts" },
+      { label: "Logs", tab: "logs" },
+      { label: "Security", tab: "security" },
+      { label: "About", tab: "about" },
+    ]
+  },
   { icon: UserCheck, label: "HR", path: "/hr" },
   { icon: Settings, label: "Settings", path: "/settings" },
   { icon: ShieldCheck, label: "Admin Console", path: "/admin-console" },
   { icon: Code2, label: "Dev Panel", path: "/dev" },
 ];
 
-function NavItem({ item, isActive, collapsed, isMobile, onNavClick }: {
-  item: { icon: any; label: string; path: string };
+function NavItem({
+  item,
+  isActive,
+  collapsed,
+  isMobile,
+  onNavClick,
+  dropdownsEnabled
+}: {
+  item: NavItemConfig;
   isActive: boolean;
   collapsed: boolean;
   isMobile: boolean;
   onNavClick?: () => void;
+  dropdownsEnabled: boolean;
 }) {
+  const { openGroups, toggleGroup, setOpenGroups } = useSidebar();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isExpanded = openGroups.includes(item.label);
+  const hasSubItems = item.subItems && item.subItems.length > 0 && dropdownsEnabled;
+
+  useEffect(() => {
+    if (isActive && hasSubItems && !isExpanded) {
+      setOpenGroups([...openGroups, item.label]);
+    }
+  }, [isActive, hasSubItems]);
+
+  const isSubActive = (subTab: string) => {
+    return isActive && searchParams.get("tab") === subTab;
+  };
+
+  const handleSubItemClick = (e: React.MouseEvent, subTab: string) => {
+    if (isActive) {
+      e.preventDefault();
+      setSearchParams(prev => {
+        prev.set("tab", subTab);
+        return prev;
+      });
+    }
+    if (onNavClick) onNavClick();
+  };
+
   const link = (
-    <Link
-      to={item.path}
-      onClick={onNavClick}
-      className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 relative",
-        isActive
-          ? "bg-sidebar-accent text-primary"
-          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground",
-        collapsed && !isMobile && "justify-center px-2"
+    <div className="flex flex-col w-full">
+      <div className="flex items-center w-full group">
+        <Link
+          to={item.path}
+          onClick={(e) => {
+            if (hasSubItems && !collapsed) {
+              // On desktop, clicking the label just navigates
+              // The chevron handles the toggle
+            }
+            if (onNavClick) onNavClick();
+          }}
+          className={cn(
+            "flex-1 flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 relative",
+            isActive
+              ? "bg-sidebar-accent text-primary"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground",
+            collapsed && !isMobile && "justify-center px-2",
+            hasSubItems && !collapsed && "rounded-r-none"
+          )}
+        >
+          {isActive && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />
+          )}
+          <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", isActive && "text-primary")} />
+          {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+        </Link>
+
+        {hasSubItems && !collapsed && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleGroup(item.label);
+            }}
+            className={cn(
+              "px-2 py-2 rounded-lg rounded-l-none transition-colors",
+              isActive ? "bg-sidebar-accent text-primary" : "text-sidebar-foreground/40 hover:bg-sidebar-accent/60 hover:text-foreground"
+            )}
+          >
+            <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
+          </button>
+        )}
+      </div>
+
+      {hasSubItems && isExpanded && !collapsed && (
+        <div className="ml-9 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border/40 pl-2">
+          {item.subItems?.map((sub) => (
+            <Link
+              key={sub.tab}
+              to={`${item.path}?tab=${sub.tab}`}
+              onClick={(e) => handleSubItemClick(e, sub.tab)}
+              className={cn(
+                "px-3 py-1.5 text-xs rounded-md transition-colors",
+                isSubActive(sub.tab)
+                  ? "text-primary font-medium bg-sidebar-accent/50"
+                  : "text-sidebar-foreground/60 hover:text-foreground hover:bg-sidebar-accent/30"
+              )}
+            >
+              {sub.label}
+            </Link>
+          ))}
+        </div>
       )}
-    >
-      {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />
-      )}
-      <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", isActive && "text-primary")} />
-      {(!collapsed || isMobile) && <span>{item.label}</span>}
-    </Link>
+    </div>
   );
 
   if (collapsed && !isMobile) {
     return (
       <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          <Link
+            to={item.path}
+            className={cn(
+              "flex items-center justify-center rounded-lg h-9 w-9 transition-all duration-200 relative",
+              isActive
+                ? "bg-sidebar-accent text-primary"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground"
+            )}
+          >
+            {isActive && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />
+            )}
+            <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", isActive && "text-primary")} />
+          </Link>
+        </TooltipTrigger>
         <TooltipContent side="right" sideOffset={8} className="text-xs">
           {item.label}
         </TooltipContent>
@@ -87,6 +244,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { data: uiPrefs } = useUIPreferences();
+  const dropdownsEnabled = uiPrefs?.sidebar_dropdowns_enabled ?? true;
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -94,7 +253,10 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
   };
 
-  const isItemActive = (path: string) => location.pathname === path;
+  const isItemActive = (path: string) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -123,7 +285,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto">
+      <nav className="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto scrollbar-hide">
         {navItems.map((item) => (
           <NavItem
             key={item.path}
@@ -132,6 +294,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             collapsed={collapsed}
             isMobile={isMobile}
             onNavClick={onNavClick}
+            dropdownsEnabled={dropdownsEnabled}
           />
         ))}
 
@@ -152,6 +315,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             collapsed={collapsed}
             isMobile={isMobile}
             onNavClick={onNavClick}
+            dropdownsEnabled={dropdownsEnabled}
           />
         ))}
         
@@ -174,6 +338,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                 collapsed={collapsed}
                 isMobile={isMobile}
                 onNavClick={onNavClick}
+                dropdownsEnabled={dropdownsEnabled}
               />
             ))}
           </>

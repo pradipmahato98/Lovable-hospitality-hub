@@ -176,13 +176,15 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
 }
 
 export default function Finance() {
-  const [searchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab") || "dashboard";
-  const [activeTab, setActiveTab] = useState(tabFromUrl);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "dashboard";
 
-  useEffect(() => {
-    setActiveTab(tabFromUrl);
-  }, [tabFromUrl]);
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   const { data: accounts } = useAccounts();
   const { data: journalEntries } = useJournalEntries();
@@ -229,7 +231,7 @@ export default function Finance() {
       }
     >
       <div className="space-y-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
               <TabsTrigger value="dashboard" className={tabTriggerClass}>

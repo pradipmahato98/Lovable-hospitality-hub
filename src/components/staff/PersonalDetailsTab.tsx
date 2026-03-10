@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Mail, Phone, MapPin, Loader2, Camera } from "lucide-react";
+import { User, Mail, Phone, MapPin, Loader2, Camera, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { trackActivity } from "@/utils/auditLogger";
@@ -81,7 +81,34 @@ export const PersonalDetailsTab = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card className="md:col-span-1">
+      <div className="md:col-span-1 space-y-6">
+        <Card className="bg-[#0F172A] text-slate-100 border-none overflow-hidden rounded-2xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-amber-400" />
+              Account Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">User ID</p>
+              <p className="text-sm font-mono truncate text-amber-200/90">{profile?.id}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Account Created</p>
+                <p className="text-sm">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+              <div className="bg-[#1E293B]/50 p-3 rounded-xl border border-white/5">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Last Sign In</p>
+                <p className="text-sm">{profile?.last_sign_in_at ? new Date(profile.last_sign_in_at).toLocaleDateString() : 'Just now'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white dark:bg-card">
         <CardHeader>
           <CardTitle>Profile Picture</CardTitle>
         </CardHeader>
@@ -116,6 +143,7 @@ export const PersonalDetailsTab = () => {
           <p className="text-[10px] text-muted-foreground">JPG, GIF or PNG. Max size 2MB</p>
         </CardContent>
       </Card>
+      </div>
 
       <Card className="md:col-span-2">
         <CardHeader>
