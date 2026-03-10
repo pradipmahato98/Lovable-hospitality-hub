@@ -21,8 +21,9 @@ import { SecurityTab } from "@/components/staff/SecurityTab";
 import { LogsReportTab } from "@/components/staff/LogsReportTab";
 import { SchedulesTab } from "@/components/staff/SchedulesTab";
 import { AttendanceTab } from "@/components/staff/AttendanceTab";
+import { StaffAnalyticsTab } from "@/components/staff/StaffAnalyticsTab";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Clock as ClockIcon } from "lucide-react";
+import { CalendarDays, Clock as ClockIcon, BarChart3 } from "lucide-react";
 
 const StaffManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
