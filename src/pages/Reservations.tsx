@@ -131,6 +131,10 @@ const Reservations = () => {
                 <CalendarDays className="h-4 w-4" />
                 Calendar
               </TabsTrigger>
+              <TabsTrigger value="reports" className="gap-2">
+                <Receipt className="h-4 w-4" />
+                Reports
+              </TabsTrigger>
             </TabsList>
             <div className="flex gap-2">
               <DropdownMenu>
