@@ -17,7 +17,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
