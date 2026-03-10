@@ -30,7 +30,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
