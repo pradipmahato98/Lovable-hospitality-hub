@@ -513,6 +513,7 @@ const Guests = () => {
 
           <TabsContent value="messaging"><AutomatedMessaging /></TabsContent>
           <TabsContent value="dedup"><GuestMergeTool /></TabsContent>
+          <TabsContent value="reports"><GuestReportsTab /></TabsContent>
         </Tabs>
 
         {/* Feedback Dialog */}

@@ -138,6 +138,10 @@ const StaffManagement = () => {
             <TabsContent value="logs" className="mt-0">
               <LogsReportTab />
             </TabsContent>
+
+            <TabsContent value="analytics" className="mt-0">
+              <StaffAnalyticsTab />
+            </TabsContent>
           </main>
         </div>
       </Tabs>
