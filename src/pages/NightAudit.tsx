@@ -20,6 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
+import { DailyFlashReport } from "@/components/reports/DailyFlashReport";
 
 type AuditStep = 'validation' | 'posting' | 'closing' | 'summary';
 
@@ -128,8 +129,9 @@ function NightAudit() {
   return (
     <MainLayout title="Night Audit" subtitle="End-of-day processing and automated billing">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
           <TabsTrigger value="audit" className="gap-2"><Moon className="h-4 w-4" />Run Audit</TabsTrigger>
+          <TabsTrigger value="daily-flash" className="gap-2"><FileText className="h-4 w-4" />Daily Flash</TabsTrigger>
           <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4" />Audit History</TabsTrigger>
         </TabsList>
 
@@ -355,6 +357,13 @@ function NightAudit() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        {/* Daily Flash Report Tab */}
+        <TabsContent value="daily-flash">
+          <div className="max-w-5xl mx-auto">
+            <DailyFlashReport />
           </div>
         </TabsContent>
 

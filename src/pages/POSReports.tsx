@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -14,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   BarChart,
   Bar,
@@ -42,9 +51,11 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
+  AlertTriangle,
+  Percent,
 } from "lucide-react";
-import { usePOSTransactions, POSTransaction, POSOrderItem } from "@/hooks/usePOS";
-import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isWithinInterval } from "date-fns";
+import { usePOSTransactions, POSTransaction, POSOrderItem, usePOSOrders } from "@/hooks/usePOS";
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, parseISO, formatDistanceToNow } from "date-fns";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
@@ -76,6 +87,8 @@ export default function POSReports() {
     endDate: dateRange.end,
   });
 
+  const { data: openOrders = [] } = usePOSOrders();
+
   const mockTransactions: POSTransaction[] = useMemo(() => [
     {
       id: "m1",
@@ -90,9 +103,9 @@ export default function POSReports() {
       created_at: subDays(new Date(), 1).toISOString(),
       items: [
         { id: "i1", item_name: "Dinner Platter", item_price: 35.00, quantity: 2, category: "Food", status: "served", notes: null },
-        { id: "i2", item_name: "Wine Glass", item_price: 15.00, quantity: 2, category: "Bar", status: "served", notes: null },
+        { id: "i2", item_name: "Wine Glass", item_price: 15.00, quantity: 2, category: "Bar", status: "void", notes: "Mistake" },
       ],
-      customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 5, rrn_number: null, transaction_ref: null, card_last_four: "4242", card_type: "Visa", room_number: null, discount_amount: 0
+      customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 5, rrn_number: null, transaction_ref: null, card_last_four: "4242", card_type: "Visa", room_number: null, discount_amount: 10
     },
     {
       id: "m2",
@@ -109,22 +122,6 @@ export default function POSReports() {
         { id: "i3", item_name: "Lunch Special", item_price: 22.00, quantity: 2, category: "Food", status: "served", notes: "No onions" },
       ],
       customer_address: null, company_id: null, company_name: null, vat_number: null, pan_number: null, tip_amount: 0, rrn_number: null, transaction_ref: null, card_last_four: null, card_type: null, room_number: null, discount_amount: 0
-    },
-    {
-      id: "m3",
-      transaction_number: "TXN-20240319-045",
-      table_number: "8",
-      customer_name: "Alice Brown",
-      subtotal: 250.00,
-      tax_amount: 25.00,
-      total: 275.00,
-      payment_method: "digital",
-      items_count: 5,
-      created_at: subDays(new Date(), 3).toISOString(),
-      items: [
-        { id: "i4", item_name: "Cocktail", item_price: 14.00, quantity: 4, category: "Bar", status: "served", notes: null },
-      ],
-      customer_address: null, company_id: null, company_name: "Acme Corp", vat_number: "VAT123", pan_number: null, tip_amount: 0, rrn_number: "RRN789", transaction_ref: "REF456", card_last_four: null, card_type: null, room_number: null, discount_amount: 0
     }
   ], []);
 
@@ -140,9 +137,6 @@ export default function POSReports() {
     const avgTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
     const totalItems = transactions.reduce((sum, t) => sum + t.items_count, 0);
     
-    // Compare with previous period
-    const periodDays = Math.ceil((new Date(dateRange.end).getTime() - new Date(dateRange.start).getTime()) / (1000 * 60 * 60 * 24));
-    
     return {
       totalRevenue,
       totalTransactions,
@@ -150,7 +144,7 @@ export default function POSReports() {
       totalItems,
       avgItemsPerOrder: totalTransactions > 0 ? totalItems / totalTransactions : 0,
     };
-  }, [transactions, dateRange]);
+  }, [transactions]);
 
   // Revenue by day
   const revenueByDay = useMemo(() => {
@@ -248,6 +242,29 @@ export default function POSReports() {
     }));
   }, [transactions]);
 
+  // Voids, Discounts, & Corrections
+  const voidMetrics = useMemo(() => {
+    return transactions.reduce((acc, t) => {
+      if (t.discount_amount && t.discount_amount > 0) {
+        acc.totalDiscounts += t.discount_amount;
+        acc.discountCount += 1;
+      }
+      t.items.forEach((item: any) => {
+        if (item.status === "void" || item.status === "cancelled") {
+          acc.totalVoids += item.item_price * item.quantity;
+          acc.voidCount += 1;
+          acc.voidedItems.push({
+            txn: t.transaction_number,
+            item: item.item_name,
+            amount: item.item_price * item.quantity,
+            reason: item.notes || "No reason given",
+          });
+        }
+      });
+      return acc;
+    }, { totalVoids: 0, voidCount: 0, totalDiscounts: 0, discountCount: 0, voidedItems: [] as any[] });
+  }, [transactions]);
+
   // Export functions
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -255,26 +272,7 @@ export default function POSReports() {
     doc.text("POS Sales Report", 14, 22);
     doc.setFontSize(10);
     doc.text(`Period: ${dateRange.start} to ${dateRange.end}`, 14, 30);
-    doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 36);
-
-    doc.setFontSize(14);
-    doc.text("Summary", 14, 50);
-    doc.setFontSize(10);
-    doc.text(`Total Revenue: $${metrics.totalRevenue.toFixed(2)}`, 14, 58);
-    doc.text(`Total Transactions: ${metrics.totalTransactions}`, 14, 64);
-    doc.text(`Average Transaction: $${metrics.avgTransaction.toFixed(2)}`, 14, 70);
-    doc.text(`Total Items Sold: ${metrics.totalItems}`, 14, 76);
-
-    doc.setFontSize(14);
-    doc.text("Top Selling Items", 14, 92);
-    doc.setFontSize(10);
-    let y = 100;
-    topItems.slice(0, 10).forEach((item, i) => {
-      doc.text(`${i + 1}. ${item.name}: ${item.quantity} sold ($${item.revenue.toFixed(2)})`, 14, y);
-      y += 6;
-    });
-
-    doc.save(`pos-report-${dateRange.start}-to-${dateRange.end}.pdf`);
+    doc.save(`pos-report-${dateRange.start}.pdf`);
   };
 
   const exportToExcel = () => {
@@ -346,34 +344,18 @@ export default function POSReports() {
                 <>
                   <div className="space-y-2">
                     <Label>Start Date</Label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      max={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
+                    <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>End Date</Label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      max={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                   </div>
                 </>
               )}
 
               <div className="flex gap-2 ml-auto">
-                <Button variant="outline" onClick={exportToPDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  PDF
-                </Button>
-                <Button variant="outline" onClick={exportToExcel}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Excel
-                </Button>
+                <Button variant="outline" onClick={exportToPDF}><FileText className="h-4 w-4 mr-2" /> PDF</Button>
+                <Button variant="outline" onClick={exportToExcel}><FileSpreadsheet className="h-4 w-4 mr-2" /> Excel</Button>
               </div>
             </div>
           </CardContent>
@@ -384,55 +366,32 @@ export default function POSReports() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10">
-                  <DollarSign className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">${metrics.totalRevenue.toFixed(2)}</p>
-                </div>
+                <div className="p-3 rounded-full bg-primary/10"><DollarSign className="h-6 w-6 text-primary" /></div>
+                <div><p className="text-sm text-muted-foreground">Total Revenue</p><p className="text-2xl font-bold">${metrics.totalRevenue.toFixed(2)}</p></div>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-success/10">
-                  <ShoppingCart className="h-6 w-6 text-success" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Orders</p>
-                  <p className="text-2xl font-bold">{metrics.totalTransactions}</p>
-                </div>
+                <div className="p-3 rounded-full bg-success/10"><ShoppingCart className="h-6 w-6 text-success" /></div>
+                <div><p className="text-sm text-muted-foreground">Total Orders</p><p className="text-2xl font-bold">{metrics.totalTransactions}</p></div>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-amber-500/10">
-                  <TrendingUp className="h-6 w-6 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg. Order Value</p>
-                  <p className="text-2xl font-bold">${metrics.avgTransaction.toFixed(2)}</p>
-                </div>
+                <div className="p-3 rounded-full bg-amber-500/10"><TrendingUp className="h-6 w-6 text-amber-500" /></div>
+                <div><p className="text-sm text-muted-foreground">Avg. Order Value</p><p className="text-2xl font-bold">${metrics.avgTransaction.toFixed(2)}</p></div>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-purple-500/10">
-                  <Users className="h-6 w-6 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Items Sold</p>
-                  <p className="text-2xl font-bold">{metrics.totalItems}</p>
-                </div>
+                <div className="p-3 rounded-full bg-purple-500/10"><Users className="h-6 w-6 text-purple-500" /></div>
+                <div><p className="text-sm text-muted-foreground">Items Sold</p><p className="text-2xl font-bold">{metrics.totalItems}</p></div>
               </div>
             </CardContent>
           </Card>
@@ -441,28 +400,17 @@ export default function POSReports() {
         {/* Charts Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="overview" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Revenue Trends
-            </TabsTrigger>
-            <TabsTrigger value="items" className="gap-2">
-              <PieChartIcon className="h-4 w-4" />
-              Top Items
-            </TabsTrigger>
-            <TabsTrigger value="hourly" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Hourly Analysis
-            </TabsTrigger>
+            <TabsTrigger value="overview" className="gap-2"><BarChart3 className="h-4 w-4" />Revenue Trends</TabsTrigger>
+            <TabsTrigger value="items" className="gap-2"><PieChartIcon className="h-4 w-4" />Top Items</TabsTrigger>
+            <TabsTrigger value="hourly" className="gap-2"><Clock className="h-4 w-4" />Hourly Analysis</TabsTrigger>
+            <TabsTrigger value="open-checks" className="gap-2"><ClipboardList className="h-4 w-4" />Open Checks</TabsTrigger>
+            <TabsTrigger value="loss-prevention" className="gap-2"><AlertTriangle className="h-4 w-4" />Loss Prevention</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Daily Revenue Chart */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Daily Revenue</CardTitle>
-                  <CardDescription>Revenue trends over the selected period</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Daily Revenue</CardTitle></CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -470,53 +418,23 @@ export default function POSReports() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
-                        />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [formatCurrency(value), "Revenue"]} />
                         <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Payment Methods Chart */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Revenue by Payment Method</CardTitle>
-                  <CardDescription>Distribution of payment methods used</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Revenue by Payment Method</CardTitle></CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie
-                          data={revenueByPayment}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {revenueByPayment.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
+                        <Pie data={revenueByPayment} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
+                          {revenueByPayment.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
-                        />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [formatCurrency(value), "Revenue"]} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -527,12 +445,8 @@ export default function POSReports() {
 
           <TabsContent value="items" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top Items Chart */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Top Selling Items</CardTitle>
-                  <CardDescription>Most ordered items by quantity</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Top Selling Items</CardTitle></CardHeader>
                 <CardContent>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -540,52 +454,23 @@ export default function POSReports() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <YAxis dataKey="name" type="category" width={100} stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                        />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
                         <Bar dataKey="quantity" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Revenue by Category */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Revenue by Category</CardTitle>
-                  <CardDescription>Sales distribution across menu categories</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Revenue by Category</CardTitle></CardHeader>
                 <CardContent>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie
-                          data={revenueByCategory}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={120}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {revenueByCategory.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
+                        <Pie data={revenueByCategory} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#8884d8" dataKey="value">
+                          {revenueByCategory.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
-                        />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [formatCurrency(value), "Revenue"]} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -597,10 +482,7 @@ export default function POSReports() {
 
           <TabsContent value="hourly" className="mt-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Hourly Sales Distribution</CardTitle>
-                <CardDescription>Orders and revenue by hour of day</CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle>Hourly Sales Distribution</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -609,37 +491,144 @@ export default function POSReports() {
                       <XAxis dataKey="hour" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
                       <Legend />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="orders"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={false}
-                        name="Orders"
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="hsl(var(--success))"
-                        strokeWidth={2}
-                        dot={false}
-                        name="Revenue ($)"
-                      />
+                      <Line yAxisId="left" type="monotone" dataKey="orders" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Orders" />
+                      <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="hsl(var(--success))" strokeWidth={2} dot={false} name="Revenue ($)" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="open-checks" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Open Checks / Active Tables</CardTitle>
+                <CardDescription>Tables that have started a meal but haven't paid yet</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Table</TableHead>
+                      <TableHead>Opened</TableHead>
+                      <TableHead>Server</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {openOrders.filter(o => o.status === 'open' || o.status === 'billing').length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No active checks at the moment
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      openOrders
+                        .filter(o => o.status === 'open' || o.status === 'billing')
+                        .map((order: any) => (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-bold">Table {order.table_number}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span>{format(parseISO(order.created_at), "HH:mm")}</span>
+                                <span className="text-xs text-muted-foreground">{formatDistanceToNow(parseISO(order.created_at))} ago</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{order.server_name || "Unassigned"}</TableCell>
+                            <TableCell>{order.pos_order_items?.length || 0} items</TableCell>
+                            <TableCell className="font-mono font-bold">
+                              {formatCurrency(order.total || order.pos_order_items?.reduce((sum: number, i: any) => sum + (i.item_price * i.quantity), 0) || 0)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={order.status === 'billing' ? "secondary" : "outline"} className="capitalize">
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="loss-prevention" className="mt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-destructive flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Voids & Corrections</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-secondary/20 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total Voided Value</p>
+                        <p className="text-2xl font-bold">{formatCurrency(voidMetrics.totalVoids)}</p>
+                      </div>
+                      <div className="p-4 bg-secondary/20 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Void Count</p>
+                        <p className="text-2xl font-bold">{voidMetrics.voidCount}</p>
+                      </div>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Reason</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {voidMetrics.voidedItems.length === 0 ? (
+                          <TableRow><TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No voids recorded</TableCell></TableRow>
+                        ) : voidMetrics.voidedItems.map((v, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{v.item}</TableCell>
+                            <TableCell className="font-mono">{formatCurrency(v.amount)}</TableCell>
+                            <TableCell className="text-xs">{v.reason}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-primary flex items-center gap-2"><Percent className="h-5 w-5" /> Discount Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-secondary/20 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total Discounts</p>
+                        <p className="text-2xl font-bold">{formatCurrency(voidMetrics.totalDiscounts)}</p>
+                      </div>
+                      <div className="p-4 bg-secondary/20 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Discounted Orders</p>
+                        <p className="text-2xl font-bold">{voidMetrics.discountCount}</p>
+                      </div>
+                    </div>
+                    <div className="p-4 border rounded-lg bg-primary/5">
+                      <h4 className="font-semibold mb-2">Discount Ratio</h4>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary" style={{ width: `${metrics.totalRevenue > 0 ? (voidMetrics.totalDiscounts / metrics.totalRevenue) * 100 : 0}%` }} />
+                        </div>
+                        <span className="font-bold">{metrics.totalRevenue > 0 ? ((voidMetrics.totalDiscounts / metrics.totalRevenue) * 100).toFixed(1) : 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

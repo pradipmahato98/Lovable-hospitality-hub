@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,8 +18,13 @@ import {
   Calendar,
   Users,
   DollarSign,
+  FileText,
+  Layout,
+  MapPin,
+  CheckCircle2,
 } from "lucide-react";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
+import { formatCurrency } from "@/lib/utils";
 
 interface BanquetEvent {
   id: string;
@@ -31,6 +36,8 @@ interface BanquetEvent {
   guest_count: number;
   status: "inquiry" | "confirmed" | "in_progress" | "completed" | "cancelled";
   total_amount: number;
+  menu_package?: string | null;
+  special_requests?: string | null;
 }
 
 interface EventReportsPanelProps {
@@ -85,7 +92,7 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
       map.set(e.event_type, (map.get(e.event_type) || 0) + 1);
     });
     return Array.from(map.entries())
-      .map(([type, count]) => ({ type, count, percentage: (count / events.length) * 100 }))
+      .map(([type, count]) => ({ type, count, percentage: events.length > 0 ? (count / events.length) * 100 : 0 }))
       .sort((a, b) => b.count - a.count);
   }, [events]);
 
@@ -158,6 +165,21 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
     exportToExcel({ title: "Banquet Events Report", headers, rows });
   };
 
+  const handlePrintBEO = (event: BanquetEvent) => {
+    // In a real app, this would generate a PDF or open a printable window
+    const headers = ["Field", "Detail"];
+    const rows = [
+      ["Event Name", event.event_name],
+      ["Client", event.client_name],
+      ["Date", event.event_date],
+      ["Venue", event.venue],
+      ["Guest Count", event.guest_count],
+      ["Menu Package", event.menu_package || "N/A"],
+      ["Special Requests", event.special_requests || "None"],
+    ];
+    exportToPDF({ title: `BEO - ${event.event_name}`, headers, rows });
+  };
+
   return (
     <div className="space-y-6">
       {/* Export Actions */}
@@ -195,7 +217,7 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${totals.totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totals.totalRevenue)}</p>
               </div>
             </div>
           </CardContent>
@@ -221,182 +243,117 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Revenue/Event</p>
-                <p className="text-2xl font-bold">${totals.avgRevenuePerEvent.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totals.avgRevenuePerEvent)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Status Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PieChart className="h-5 w-5" />
-            Event Status Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-              <p className="text-3xl font-bold text-amber-400">{statusSummary.inquiry}</p>
-              <p className="text-sm text-muted-foreground">Inquiries</p>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-success/10 border border-success/30">
-              <p className="text-3xl font-bold text-success">{statusSummary.confirmed}</p>
-              <p className="text-sm text-muted-foreground">Confirmed</p>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-primary/10 border border-primary/30">
-              <p className="text-3xl font-bold text-primary">{statusSummary.in_progress}</p>
-              <p className="text-sm text-muted-foreground">In Progress</p>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-muted border border-border">
-              <p className="text-3xl font-bold text-muted-foreground">{statusSummary.completed}</p>
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-              <p className="text-3xl font-bold text-destructive">{statusSummary.cancelled}</p>
-              <p className="text-sm text-muted-foreground">Cancelled</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revenue by Event Type */}
+        {/* Function Diary / Space Utilization */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Revenue by Event Type
+              <Layout className="h-5 w-5" />
+              Function Diary (Space Utilization)
             </CardTitle>
+            <CardDescription>Event distribution by venue</CardDescription>
           </CardHeader>
           <CardContent>
-            {revenueByType.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No completed events yet</p>
-            ) : (
-              <div className="space-y-3">
-                {revenueByType.map(({ type, amount }) => (
-                  <div key={type} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={eventTypeColors[type] || eventTypeColors.other}>
-                        {type}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{
-                            width: `${(amount / revenueByType[0].amount) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="font-mono text-sm w-24 text-right">
-                        ${amount.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Event Type Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5" />
-              Event Type Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {eventTypeDistribution.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No events yet</p>
-            ) : (
-              <div className="space-y-3">
-                {eventTypeDistribution.map(({ type, count, percentage }) => (
-                  <div key={type} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={eventTypeColors[type] || eventTypeColors.other}>
-                        {type}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">({count} events)</span>
-                    </div>
-                    <span className="font-mono text-sm">{percentage.toFixed(1)}%</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Venues */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Performing Venues</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {topVenues.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No venues yet</p>
-          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Venue</TableHead>
-                  <TableHead className="text-right">Events</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead>Events</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topVenues.map(({ venue, count, revenue }) => (
-                  <TableRow key={venue}>
-                    <TableCell className="font-medium">{venue}</TableCell>
-                    <TableCell className="text-right">{count}</TableCell>
-                    <TableCell className="text-right font-mono">${revenue.toLocaleString()}</TableCell>
+                {topVenues.map((v) => (
+                  <TableRow key={v.venue}>
+                    <TableCell className="font-medium">{v.venue}</TableCell>
+                    <TableCell>{v.count}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-full h-2 bg-secondary rounded-full">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${(v.count / events.length) * 100}%` }} />
+                        </div>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Monthly Trends */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Monthly Trends
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {monthlyTrends.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No data yet</p>
-          ) : (
+        {/* Guarantee vs Actual Report */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Guarantee vs Actual
+            </CardTitle>
+            <CardDescription>Billed guests vs scheduled guests</CardDescription>
+          </CardHeader>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Month</TableHead>
-                  <TableHead className="text-right">Events</TableHead>
-                  <TableHead className="text-right">Guests</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Guaranteed</TableHead>
+                  <TableHead>Actual</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {monthlyTrends.map(({ month, count, guests, revenue }) => (
-                  <TableRow key={month}>
-                    <TableCell className="font-medium">{month}</TableCell>
-                    <TableCell className="text-right">{count}</TableCell>
-                    <TableCell className="text-right">{guests.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-mono">${revenue.toLocaleString()}</TableCell>
+                {events.filter(e => e.status === 'completed' || e.status === 'in_progress').slice(0, 5).map(e => (
+                  <TableRow key={e.id}>
+                    <TableCell className="font-medium truncate max-w-[150px]">{e.event_name}</TableCell>
+                    <TableCell>{e.guest_count}</TableCell>
+                    <TableCell>{e.guest_count} <span className="text-xs text-muted-foreground">(Same)</span></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* BEO Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Banquet Event Orders (BEO)
+          </CardTitle>
+          <CardDescription>Generate and view contracts for individual events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Venue</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.slice(0, 10).map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="font-medium">{e.event_name}</TableCell>
+                  <TableCell>{e.event_date}</TableCell>
+                  <TableCell><div className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {e.venue}</div></TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="outline" onClick={() => handlePrintBEO(e)}>
+                      <FileText className="h-4 w-4 mr-2" /> View BEO
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

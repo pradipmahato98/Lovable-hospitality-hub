@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { useReportStats } from "@/hooks/useReportStats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
+import { DailyFlashReport } from "@/components/reports/DailyFlashReport";
+import { CashierReport } from "@/components/reports/CashierReport";
 
 const Reports = () => {
   const [activeReportTab, setActiveReportTab] = useState("overview");
@@ -37,7 +39,8 @@ const Reports = () => {
         <div className="flex justify-between items-center">
           <TabsList className="bg-secondary/50 p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="daily">Daily Report</TabsTrigger>
+            <TabsTrigger value="daily">Daily Flash</TabsTrigger>
+            <TabsTrigger value="cashier">Cashier Summary</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
@@ -121,40 +124,14 @@ const Reports = () => {
           </div>
         </TabsContent>
 
-        {/* Daily Report */}
+        {/* Daily Flash Report */}
         <TabsContent value="daily" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-primary/5 border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">ADR</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : formatCurrency(stats?.adr || 0)}
-                </span>
-              </CardContent>
-            </Card>
-            <Card className="bg-primary/5 border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Occupancy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : `${stats?.occupancyRate || 0}%`}
-                </span>
-              </CardContent>
-            </Card>
-            <Card className="bg-primary/5 border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total POS Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <span className="text-3xl font-bold font-display">
-                  {isLoading ? <Skeleton className="h-9 w-24" /> : formatCurrency(stats?.totalPOSRevenue || 0)}
-                </span>
-              </CardContent>
-            </Card>
-          </div>
+          <DailyFlashReport />
+        </TabsContent>
+
+        {/* Cashier Report */}
+        <TabsContent value="cashier" className="space-y-6">
+          <CashierReport />
         </TabsContent>
 
         {/* Monthly */}

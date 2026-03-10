@@ -44,6 +44,8 @@ import { useMenuItems, useMenuCategories } from "@/hooks/useMenuItems";
 import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
+import { CashierReport } from "@/components/reports/CashierReport";
+import { Monitor } from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -232,7 +234,7 @@ const POSTerminal = () => {
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 lg:w-auto lg:inline-flex">
             <TabsTrigger value="tables" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
               Tables
@@ -244,6 +246,10 @@ const POSTerminal = () => {
             <TabsTrigger value="billing" className="gap-2">
               <Receipt className="h-4 w-4" />
               Billing
+            </TabsTrigger>
+            <TabsTrigger value="cashier" className="gap-2">
+              <Monitor className="h-4 w-4" />
+              End of Shift
             </TabsTrigger>
             <TabsTrigger value="clock" className="gap-2">
               <Clock className="h-4 w-4" />
@@ -262,6 +268,11 @@ const POSTerminal = () => {
          {/* Clock In/Out Tab */}
          <TabsContent value="clock">
            <StaffClockPanel />
+         </TabsContent>
+
+         {/* Cashier Report Tab */}
+         <TabsContent value="cashier">
+           <CashierReport />
          </TabsContent>
 
         {/* Order Tab - Menu Items & Cart */}
