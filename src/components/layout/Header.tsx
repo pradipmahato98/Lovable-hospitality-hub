@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Bell, Search, Plus, Menu, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +13,16 @@ import {
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  actions?: ReactNode;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle, actions }: HeaderProps) {
   const { isMobile, setMobileOpen } = useSidebar();
   const { setNewBookingOpen, setCommandPaletteOpen } = useQuickActions();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-4">
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Mobile Menu Button */}
         {isMobile && (
           <Button
@@ -33,13 +35,18 @@ export function Header({ title, subtitle }: HeaderProps) {
           </Button>
         )}
         
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate">{title}</h1>
           {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
         </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        {actions && (
+          <div className="hidden sm:block">
+            {actions}
+          </div>
+        )}
         {/* Command Palette Trigger */}
         <Tooltip>
           <TooltipTrigger asChild>

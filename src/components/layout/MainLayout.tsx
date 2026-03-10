@@ -16,16 +16,16 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
   const { collapsed, isMobile } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-background transition-all duration-300">
+    <div className="h-screen overflow-hidden bg-background transition-all duration-300">
       <Sidebar />
       <div 
         className={cn(
-          "transition-all duration-300 min-h-screen flex flex-col",
+          "transition-all duration-300 h-screen flex flex-col overflow-hidden",
           isMobile ? "ml-0" : collapsed ? "ml-20" : "ml-64"
         )}
       >
-        <Header title={title} subtitle={subtitle} />
-        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
+        <Header title={title} subtitle={subtitle} actions={actions} />
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
