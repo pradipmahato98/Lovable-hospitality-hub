@@ -8,7 +8,8 @@ import {
   ShieldCheck,
   FileText,
   Loader2,
-  Info
+  Info,
+  Smartphone
 } from "lucide-react";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -24,24 +25,17 @@ import { cn } from "@/lib/utils";
 import { CalendarDays, Clock as ClockIcon } from "lucide-react";
 
 const StaffManagement = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
   const { isManager, isLoading: loadingManager } = useIsManager();
 
-  const activeTab = searchParams.get("tab") || (isAdmin || isManager ? "directory" : "about");
-  const subTab = searchParams.get("sub") || "details";
+  const activeTab = searchParams.get("tab") || (isAdmin || isManager ? "directory" : "details");
 
   const handleTabChange = (value: string) => {
-    if (value === "about") {
-      navigate(`/staff?tab=about&sub=${subTab}`, { replace: true });
-    } else {
-      navigate(`/staff?tab=${value}`, { replace: true });
-    }
-  };
-
-  const handleSubTabChange = (value: string) => {
-    navigate(`/staff?tab=about&sub=${value}`, { replace: true });
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
   };
 
   if (loadingAdmin || loadingManager) {
@@ -69,9 +63,19 @@ const StaffManagement = () => {
                 </TabsTrigger>
               )}
 
-              <TabsTrigger value="about" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
-                <Info className="h-4 w-4" />
-                <span className="whitespace-nowrap">About Staff</span>
+              <TabsTrigger value="details" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <UserCircle className="h-4 w-4" />
+                <span className="whitespace-nowrap">My Profile</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="preferences" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <Settings className="h-4 w-4" />
+                <span className="whitespace-nowrap">Preferences</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="attendance" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <ClockIcon className="h-4 w-4" />
+                <span className="whitespace-nowrap">Attendance</span>
               </TabsTrigger>
 
               <TabsTrigger value="schedules" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
@@ -79,9 +83,14 @@ const StaffManagement = () => {
                 <span className="whitespace-nowrap">Schedules</span>
               </TabsTrigger>
 
-              <TabsTrigger value="attendance" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
-                <ClockIcon className="h-4 w-4" />
-                <span className="whitespace-nowrap">Attendance</span>
+              <TabsTrigger value="alerts" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <Bell className="h-4 w-4" />
+                <span className="whitespace-nowrap">Alerts</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="security" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="whitespace-nowrap">Security</span>
               </TabsTrigger>
 
               <TabsTrigger value="logs" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
@@ -96,42 +105,20 @@ const StaffManagement = () => {
               {canSeeRestricted && <StaffDirectoryTab />}
             </TabsContent>
 
-            <TabsContent value="about" className="mt-0">
-              <Tabs value={subTab} onValueChange={handleSubTabChange} className="w-full">
-                <div className="mb-6 overflow-x-auto pb-1">
-                  <TabsList className="bg-muted/50 p-1 h-auto inline-flex">
-                    <TabsTrigger value="details" className="gap-2 px-4 py-2">
-                      <UserCircle className="h-4 w-4" />
-                      Details
-                    </TabsTrigger>
-                    <TabsTrigger value="preferences" className="gap-2 px-4 py-2">
-                      <Settings className="h-4 w-4" />
-                      Preferences
-                    </TabsTrigger>
-                    <TabsTrigger value="alerts" className="gap-2 px-4 py-2">
-                      <Bell className="h-4 w-4" />
-                      Alerts
-                    </TabsTrigger>
-                    <TabsTrigger value="security" className="gap-2 px-4 py-2">
-                      <ShieldCheck className="h-4 w-4" />
-                      Security
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+            <TabsContent value="details" className="mt-0">
+              <PersonalDetailsTab />
+            </TabsContent>
 
-                <TabsContent value="details" className="mt-0">
-                  <PersonalDetailsTab />
-                </TabsContent>
-                <TabsContent value="preferences" className="mt-0">
-                  <PreferencesTab />
-                </TabsContent>
-                <TabsContent value="alerts" className="mt-0">
-                  <AlertsTab />
-                </TabsContent>
-                <TabsContent value="security" className="mt-0">
-                  <SecurityTab />
-                </TabsContent>
-              </Tabs>
+            <TabsContent value="preferences" className="mt-0">
+              <PreferencesTab />
+            </TabsContent>
+
+            <TabsContent value="alerts" className="mt-0">
+              <AlertsTab />
+            </TabsContent>
+
+            <TabsContent value="security" className="mt-0">
+              <SecurityTab />
             </TabsContent>
 
             <TabsContent value="schedules" className="mt-0">

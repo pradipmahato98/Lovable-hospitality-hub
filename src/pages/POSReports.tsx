@@ -44,6 +44,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { usePOSTransactions, POSTransaction, POSOrderItem } from "@/hooks/usePOS";
+import { useSearchParams } from "react-router-dom";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isWithinInterval } from "date-fns";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -54,7 +55,15 @@ export default function POSReports() {
   const [period, setPeriod] = useState<"today" | "week" | "month" | "custom">("week");
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   // Get date range based on period
   const dateRange = useMemo(() => {
@@ -439,7 +448,7 @@ export default function POSReports() {
         </div>
 
         {/* Charts Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="h-4 w-4" />

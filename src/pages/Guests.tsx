@@ -31,7 +31,7 @@ import { FeedbackResponseDialog } from "@/components/guests/FeedbackResponseDial
 import { LoyaltyActionsDialog } from "@/components/guests/LoyaltyActionsDialog";
 import { NewGuestDialog } from "@/components/quick-actions/NewGuestDialog";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats, GuestFeedback, LoyaltyMember } from "@/hooks/useGuestManagement";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -67,6 +67,8 @@ const getGuestStatus = (guest: Guest): "vip" | "regular" | "new" => {
 
 const Guests = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "guests";
   const { data: guests = [], isLoading } = useGuests();
   const { data: feedback = [], createFeedback, respondToFeedback, updateStatus } = useGuestFeedback();
   const { data: loyaltyMembers = [], enrollMember, addPoints, redeemPoints } = useLoyaltyMembers();
@@ -78,8 +80,14 @@ const Guests = () => {
   const [newGuestOpen, setNewGuestOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("guests");
   const [gridSearch, setGridSearch] = useState("");
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   // Feedback response dialog
   const [respondFeedback, setRespondFeedback] = useState<GuestFeedback | null>(null);
@@ -221,7 +229,7 @@ const Guests = () => {
   return (
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="flex-wrap">
             <TabsTrigger value="guests" className="gap-2"><Users className="h-4 w-4" />Guests</TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2">
@@ -323,7 +331,7 @@ const Guests = () => {
               </div>
               {selectedGuest && viewMode === "grid" && (
                 <div className="lg:col-span-1">
-                  <GuestProfilePanel guest={selectedGuest} onEdit={() => setEditDialogOpen(true)} onViewDocuments={() => setActiveTab("documents")} onViewHistory={() => setActiveTab("history")} onClose={() => setSelectedGuest(null)} />
+                  <GuestProfilePanel guest={selectedGuest} onEdit={() => setEditDialogOpen(true)} onViewDocuments={() => handleTabChange("documents")} onViewHistory={() => handleTabChange("history")} onClose={() => setSelectedGuest(null)} />
                 </div>
               )}
             </div>

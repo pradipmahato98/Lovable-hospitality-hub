@@ -15,11 +15,20 @@ import {
 import { toast } from "sonner";
 import { useReportStats } from "@/hooks/useReportStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSearchParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 
 const Reports = () => {
-  const [activeReportTab, setActiveReportTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeReportTab = searchParams.get("tab") || "overview";
   const { data: stats, isLoading } = useReportStats();
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   const reportTypes = [
     { icon: TrendingUp, title: "Revenue Report", description: "Detailed financial analysis", value: stats ? formatCurrency(stats.totalReservationRevenue) : "—" },
@@ -33,7 +42,7 @@ const Reports = () => {
 
   return (
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
-      <Tabs defaultValue="overview" className="space-y-8" onValueChange={setActiveReportTab}>
+      <Tabs value={activeReportTab} onValueChange={handleTabChange} className="space-y-8">
         <div className="flex justify-between items-center">
           <TabsList className="bg-secondary/50 p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>

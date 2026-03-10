@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { formatAD, formatCurrency } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { NewReservationDialog } from "@/components/reservations/NewReservationDialog";
 import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { EditReservationDialog } from "@/components/reservations/EditReservationDialog";
@@ -47,10 +47,18 @@ const allStatuses = ["all", "pending", "confirmed", "checked-in", "checked-out",
 
 const Reservations = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "list";
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("list");
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -111,7 +119,7 @@ const Reservations = () => {
   return (
     <MainLayout title="Reservations" subtitle="Manage all bookings and reservations">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <TabsList>
               <TabsTrigger value="list" className="gap-2">

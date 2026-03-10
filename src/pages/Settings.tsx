@@ -13,7 +13,7 @@ import {
   CheckInFieldSettings, PaymentSettings, PropertySettings, NotificationSettings, QuickMenuSettings,
 } from "@/hooks/useSettings";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,8 +26,16 @@ import {
 type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("checkin");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get("tab") as SettingsTab) || "checkin";
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
+
+  const handleTabChange = (value: SettingsTab) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: checkInSettings, isLoading: isLoadingCheckIn } = useCheckInSettings();
@@ -143,7 +151,7 @@ const Settings = () => {
                 key={item.id}
                 variant={activeTab === item.id ? "secondary" : "ghost"}
                 className="justify-start gap-3 whitespace-nowrap flex-shrink-0"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
               >
                 <item.icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{item.label}</span>

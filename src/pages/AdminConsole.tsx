@@ -92,9 +92,17 @@ const AdminConsole = () => {
   }, []);
 
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [isExporting, setIsExporting] = useState(false);
 
   // Realtime hook
@@ -401,7 +409,7 @@ const AdminConsole = () => {
                 <Button
                   variant="outline"
                   className="justify-start gap-2"
-                  onClick={() => setActiveTab("integrations")}
+                  onClick={() => handleTabChange("integrations")}
                 >
                   <Key className="h-4 w-4" />
                   Rotate API Keys

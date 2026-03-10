@@ -18,17 +18,25 @@ import { cn, formatCurrency, formatAD } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import jsPDF from "jspdf";
 
 type AuditStep = 'validation' | 'posting' | 'closing' | 'summary';
 
 function NightAudit() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "audit";
   const { businessDate, isDateLoading, usePendingArrivals, useStayOvers, postCharges, closeDay } = useNightAudit();
   const [currentStep, setCurrentStep] = useState<AuditStep>('validation');
   const [auditProgress, setAuditProgress] = useState(0);
-  const [activeTab, setActiveTab] = useState("audit");
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
 
   const { data: arrivals = [], isLoading: arrivalsLoading } = usePendingArrivals(businessDate || "");
   const { data: stayOvers = [], isLoading: stayOversLoading } = useStayOvers(businessDate || "");
@@ -127,7 +135,7 @@ function NightAudit() {
 
   return (
     <MainLayout title="Night Audit" subtitle="End-of-day processing and automated billing">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
           <TabsTrigger value="audit" className="gap-2"><Moon className="h-4 w-4" />Run Audit</TabsTrigger>
           <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4" />Audit History</TabsTrigger>

@@ -39,6 +39,7 @@ import { MCPConfigPanel } from "@/components/dev/MCPConfig";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
+import { useSearchParams } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 
 type AppRole = DbTypes["public"]["Enums"]["app_role"];
@@ -75,6 +76,15 @@ interface SystemHealthStatus {
 const DevPanel = () => {
   useAdminRealtime();
   const { isAdmin, isLoading } = useIsAdmin();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "status";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -328,7 +338,7 @@ const DevPanel = () => {
 
   return (
     <MainLayout title="Developer Panel" subtitle="System monitoring and diagnostics (Admin only)">
-      <Tabs defaultValue="status" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
             <TabsTrigger value="status" className="gap-2 whitespace-nowrap flex-shrink-0">
