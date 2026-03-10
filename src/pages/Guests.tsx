@@ -38,6 +38,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
 import { formatAD, formatCurrency } from "@/lib/utils";
 import { exportToExcel } from "@/lib/reportExport";
+import { GuestReportsTab } from "@/components/guests/GuestReportsTab";
 
 const statusColors = {
   vip: "bg-primary/20 text-primary border-primary/30",
