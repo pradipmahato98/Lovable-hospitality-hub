@@ -12,9 +12,10 @@ import {
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  actions?: React.ReactNode;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle, actions }: HeaderProps) {
   const { isMobile, setMobileOpen } = useSidebar();
   const { setNewBookingOpen, setCommandPaletteOpen } = useQuickActions();
 
@@ -44,6 +45,11 @@ export function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        {actions && (
+          <div className="hidden sm:block">
+            {actions}
+          </div>
+        )}
         {/* Command Palette Trigger */}
         <Tooltip>
           <TooltipTrigger asChild>

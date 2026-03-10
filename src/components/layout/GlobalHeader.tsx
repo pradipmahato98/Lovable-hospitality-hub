@@ -31,6 +31,7 @@ import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  actions?: React.ReactNode;
 }
 
 interface Notification {
@@ -51,7 +52,7 @@ const categoryColors: Record<string, string> = {
   info: "bg-muted-foreground",
 };
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle, actions }: HeaderProps) {
   const { isMobile, setMobileOpen } = useSidebar();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -121,6 +122,11 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+          {actions && (
+            <div className="hidden sm:block mr-2">
+              {actions}
+            </div>
+          )}
           {isMobile && !mobileSearchOpen && (
             <Button
               variant="ghost"

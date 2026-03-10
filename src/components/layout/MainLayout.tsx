@@ -9,9 +9,10 @@ interface MainLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
+  actions?: ReactNode;
 }
 
-export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
+export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
 
   return (
@@ -25,7 +26,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           !isMobile && (collapsed ? "pl-20" : "pl-64")
         )}
       >
-        <Header title={title} subtitle={subtitle} />
+        <Header title={title} subtitle={subtitle} actions={actions} />
         <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden scrollbar-hide">{children}</main>
       </div>
     </div>
