@@ -74,7 +74,7 @@ interface TimeEntry {
        const { data, error } = await db
          .from("staff_time_clock")
          .select("*")
-         .eq("user_id", user.id)
+         .eq("staff_id", user.id)
          .gte("clock_in", startOfDay(today).toISOString())
          .lte("clock_in", endOfDay(today).toISOString())
          .order("clock_in", { ascending: false });
