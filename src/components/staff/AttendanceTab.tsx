@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { Calendar, Loader2, Clock } from "lucide-react";
+import { Calendar, Loader2, Clock, Download, FileText } from "lucide-react";
 import { useTimeClock } from "@/hooks/useHR";
 import { formatAD } from "@/lib/utils";
 import { format } from "date-fns";
+import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 
 export function AttendanceTab() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
