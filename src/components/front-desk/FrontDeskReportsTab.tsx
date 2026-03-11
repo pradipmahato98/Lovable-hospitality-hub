@@ -187,6 +187,9 @@ export const FrontDeskReportsTab = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cashier Report */}
+      <FrontDeskCashierReport />
     </div>
   );
 };
