@@ -7,7 +7,7 @@ import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 import { formatCurrency } from "@/lib/utils";
 import { Download, FileText, Banknote } from "lucide-react";
 
-interface BanquetEvent {
+interface BanquetCashierEvent {
   id: string;
   event_name: string;
   client_name: string;
@@ -18,7 +18,7 @@ interface BanquetEvent {
 }
 
 interface BanquetCashierReportProps {
-  events: BanquetEvent[];
+  events: BanquetCashierEvent[];
 }
 
 export function BanquetCashierReport({ events }: BanquetCashierReportProps) {
