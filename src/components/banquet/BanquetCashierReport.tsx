@@ -7,18 +7,16 @@ import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 import { formatCurrency } from "@/lib/utils";
 import { Download, FileText, Banknote } from "lucide-react";
 
-interface BanquetCashierEvent {
-  id: string;
-  event_name: string;
-  client_name: string;
-  event_date: string;
-  total_amount: number;
-  deposit_amount: number | null;
-  status: string;
-}
-
 interface BanquetCashierReportProps {
-  events: BanquetCashierEvent[];
+  events: {
+    id: string;
+    event_name: string;
+    client_name: string;
+    event_date: string;
+    total_amount: number;
+    deposit_amount?: number | null;
+    status: string;
+  }[];
 }
 
 export function BanquetCashierReport({ events }: BanquetCashierReportProps) {
