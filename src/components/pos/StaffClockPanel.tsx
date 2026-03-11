@@ -107,7 +107,7 @@ interface TimeEntry {
        const { data, error } = await db
          .from("staff_time_clock")
          .insert({
-           user_id: user.id,
+           staff_id: user.id,
            clock_in: new Date().toISOString(),
            notes: notes || null,
          })
