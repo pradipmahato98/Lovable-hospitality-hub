@@ -400,6 +400,9 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Cashier Report */}
+      <BanquetCashierReport events={events} />
     </div>
   );
 }
