@@ -20,6 +20,7 @@ interface OpenTableDialogProps {
 
 export function OpenTableDialog({ open, onOpenChange, table, onOpenTable }: OpenTableDialogProps) {
   const [guestCount, setGuestCount] = useState("2");
+  const [orderType, setOrderType] = useState("dine_in");
 
   if (!table) return null;
 
@@ -28,6 +29,7 @@ export function OpenTableDialog({ open, onOpenChange, table, onOpenTable }: Open
     const guests = parseInt(guestCount) || 1;
     onOpenTable(Math.min(guests, table.capacity));
     setGuestCount("2");
+    setOrderType("dine_in");
   };
 
   return (
