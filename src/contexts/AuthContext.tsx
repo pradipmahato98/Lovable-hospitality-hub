@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
  import { lovable } from "@/integrations/lovable/index";
@@ -146,6 +146,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setProfile(null);
   };
+
+  // Session timeout: auto-logout after 4 hours of inactivity
+  const TIMEOUT_MS = 4 * 60 * 60 * 1000;
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const resetTimeout = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (user) {
+      timeoutRef.current = setTimeout(() => {
+        signOut();
+      }, TIMEOUT_MS);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach(e => window.addEventListener(e, resetTimeout, { passive: true }));
+    resetTimeout();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetTimeout));
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [user, resetTimeout]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error("No user logged in") };

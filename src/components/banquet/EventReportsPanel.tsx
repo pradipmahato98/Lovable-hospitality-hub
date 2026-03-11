@@ -20,6 +20,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
+import { BanquetCashierReport } from "./BanquetCashierReport";
 
 interface BanquetEvent {
   id: string;
@@ -399,6 +400,9 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Cashier Report */}
+      <BanquetCashierReport events={events} />
     </div>
   );
 }

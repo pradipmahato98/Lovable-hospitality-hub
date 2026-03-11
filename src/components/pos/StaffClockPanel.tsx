@@ -37,9 +37,9 @@
  // eslint-disable-next-line @typescript-eslint/no-explicit-any
  const db = supabase as any;
  
- interface TimeEntry {
+interface TimeEntry {
    id: string;
-   user_id: string;
+   staff_id: string;
    clock_in: string;
    clock_out: string | null;
    break_minutes: number;
@@ -74,7 +74,7 @@
        const { data, error } = await db
          .from("staff_time_clock")
          .select("*")
-         .eq("user_id", user.id)
+         .eq("staff_id", user.id)
          .gte("clock_in", startOfDay(today).toISOString())
          .lte("clock_in", endOfDay(today).toISOString())
          .order("clock_in", { ascending: false });
@@ -107,7 +107,7 @@
        const { data, error } = await db
          .from("staff_time_clock")
          .insert({
-           user_id: user.id,
+           staff_id: user.id,
            clock_in: new Date().toISOString(),
            notes: notes || null,
          })

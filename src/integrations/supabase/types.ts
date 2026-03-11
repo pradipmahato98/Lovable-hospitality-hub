@@ -2611,6 +2611,7 @@ export type Database = {
           discount_amount: number | null
           guests: number | null
           id: string
+          order_type: string
           server_name: string | null
           start_time: string | null
           status: string
@@ -2627,6 +2628,7 @@ export type Database = {
           discount_amount?: number | null
           guests?: number | null
           id?: string
+          order_type?: string
           server_name?: string | null
           start_time?: string | null
           status?: string
@@ -2643,6 +2645,7 @@ export type Database = {
           discount_amount?: number | null
           guests?: number | null
           id?: string
+          order_type?: string
           server_name?: string | null
           start_time?: string | null
           status?: string

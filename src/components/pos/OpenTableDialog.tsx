@@ -20,6 +20,7 @@ interface OpenTableDialogProps {
 
 export function OpenTableDialog({ open, onOpenChange, table, onOpenTable }: OpenTableDialogProps) {
   const [guestCount, setGuestCount] = useState("2");
+  const [orderType, setOrderType] = useState("dine_in");
 
   if (!table) return null;
 
@@ -28,6 +29,7 @@ export function OpenTableDialog({ open, onOpenChange, table, onOpenTable }: Open
     const guests = parseInt(guestCount) || 1;
     onOpenTable(Math.min(guests, table.capacity));
     setGuestCount("2");
+    setOrderType("dine_in");
   };
 
   return (
@@ -63,6 +65,28 @@ export function OpenTableDialog({ open, onOpenChange, table, onOpenTable }: Open
               max={table.capacity}
               className="w-24"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Order Type</Label>
+            <div className="flex gap-2">
+              {[
+                { value: "dine_in", label: "Dine In" },
+                { value: "takeaway", label: "Takeaway" },
+                { value: "delivery", label: "Delivery" },
+              ].map((type) => (
+                <Button
+                  key={type.value}
+                  type="button"
+                  variant={orderType === type.value ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setOrderType(type.value)}
+                >
+                  {type.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
           <Button type="submit" variant="gold" className="w-full">

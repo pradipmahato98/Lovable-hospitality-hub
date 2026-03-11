@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { Calendar, Loader2, Clock } from "lucide-react";
+import { Calendar, Loader2, Clock, Download, FileText } from "lucide-react";
 import { useTimeClock } from "@/hooks/useHR";
 import { formatAD } from "@/lib/utils";
 import { format } from "date-fns";
+import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 
 export function AttendanceTab() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
@@ -21,11 +23,43 @@ export function AttendanceTab() {
     return sum + (diff / 3600000) - (e.break_minutes || 0) / 60;
   }, 0);
 
+  const handleExportPDF = () => {
+    exportToPDF({
+      title: `Attendance Report - ${formatAD(selectedDate)}`,
+      headers: ["Staff", "Clock In", "Clock Out", "Break (min)", "Status"],
+      rows: entries.map((e: any) => [
+        `${e.staff?.first_name || ""} ${e.staff?.last_name || ""}`,
+        format(new Date(e.clock_in), "HH:mm"),
+        e.clock_out ? format(new Date(e.clock_out), "HH:mm") : "—",
+        e.break_minutes || 0,
+        e.clock_out ? "Completed" : "Active",
+      ]),
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      title: `Attendance_${selectedDate}`,
+      headers: ["Staff", "Clock In", "Clock Out", "Break (min)", "Status"],
+      rows: entries.map((e: any) => [
+        `${e.staff?.first_name || ""} ${e.staff?.last_name || ""}`,
+        format(new Date(e.clock_in), "HH:mm"),
+        e.clock_out ? format(new Date(e.clock_out), "HH:mm") : "—",
+        e.break_minutes || 0,
+        e.clock_out ? "Completed" : "Active",
+      ]),
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Calendar className="h-5 w-5 text-primary" />
         <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-48" />
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportPDF}><FileText className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4" /></Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
