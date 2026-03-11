@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 import { formatCurrency } from "@/lib/utils";
 import { Download, FileText, Bed, Users, Receipt, Clock } from "lucide-react";
+import { FrontDeskCashierReport } from "./FrontDeskCashierReport";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";

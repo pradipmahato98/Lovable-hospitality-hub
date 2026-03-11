@@ -158,6 +158,9 @@ export const ReservationReportsTab = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Cashier Report */}
+      <ReservationCashierReport />
     </div>
   );
 };

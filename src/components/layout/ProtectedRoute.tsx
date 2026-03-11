@@ -15,10 +15,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { data: lockdownEnabled, isLoading: loadingSettings } = useSettings<boolean>("system_lockdown", false);
   const { isAdmin, isLoading: loadingRole } = useIsAdmin();
 
-  if (import.meta.env.DEV) {
-    return <>{children}</>;
-  }
-
   if (loading || loadingSettings || loadingRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
