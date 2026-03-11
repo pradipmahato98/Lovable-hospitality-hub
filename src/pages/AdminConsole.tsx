@@ -244,9 +244,13 @@ const AdminConsole = () => {
   };
 
   const handleAddAPIKey = () => {
+    const array = new Uint8Array(24);
+    window.crypto.getRandomValues(array);
+    const secretKey = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: `sk_${secretKey}`,
       is_secret: true,
       description: "Auto-generated system key"
     };
