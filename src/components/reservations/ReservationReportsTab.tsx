@@ -5,6 +5,7 @@ import { useReservations } from "@/hooks/useReservations";
 import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 import { formatCurrency } from "@/lib/utils";
 import { Download, FileText, CalendarDays, TrendingUp, XCircle, CreditCard } from "lucide-react";
+import { ReservationCashierReport } from "./ReservationCashierReport";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { differenceInDays, parseISO, format } from "date-fns";
