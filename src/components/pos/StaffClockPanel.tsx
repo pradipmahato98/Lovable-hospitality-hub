@@ -37,9 +37,9 @@
  // eslint-disable-next-line @typescript-eslint/no-explicit-any
  const db = supabase as any;
  
- interface TimeEntry {
+interface TimeEntry {
    id: string;
-   user_id: string;
+   staff_id: string;
    clock_in: string;
    clock_out: string | null;
    break_minutes: number;
