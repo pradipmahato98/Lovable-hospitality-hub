@@ -462,6 +462,10 @@ export default function POSReports() {
               <Clock className="h-4 w-4" />
               Hourly Analysis
             </TabsTrigger>
+            <TabsTrigger value="detailed" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Detailed Reports
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
@@ -647,6 +651,97 @@ export default function POSReports() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="detailed" className="mt-6 space-y-6">
+            {/* Item Sales Report */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Item Sales Report</CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const wb = XLSX.utils.book_new();
+                    const data = [["Item", "Category", "Qty Sold", "Revenue", "Avg Price"], ...topItems.map(i => [i.name, "—", i.quantity, i.revenue.toFixed(2), (i.revenue / i.quantity).toFixed(2)])];
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "Item Sales");
+                    XLSX.writeFile(wb, "item-sales-report.xlsx");
+                  }}><Download className="h-4 w-4 mr-1" />Excel</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 font-medium text-muted-foreground">Item Name</th>
+                        <th className="text-right py-2 font-medium text-muted-foreground">Qty Sold</th>
+                        <th className="text-right py-2 font-medium text-muted-foreground">Revenue</th>
+                        <th className="text-right py-2 font-medium text-muted-foreground">Avg Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topItems.length === 0 ? (
+                        <tr><td colSpan={4} className="text-center text-muted-foreground py-6">No item data</td></tr>
+                      ) : topItems.map((item, i) => (
+                        <tr key={i} className="border-b border-border/50">
+                          <td className="py-2 font-medium">{item.name}</td>
+                          <td className="py-2 text-right">{item.quantity}</td>
+                          <td className="py-2 text-right font-mono">{formatCurrency(item.revenue)}</td>
+                          <td className="py-2 text-right font-mono">{formatCurrency(item.revenue / item.quantity)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Server Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Server Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const serverStats: Record<string, { orders: number; revenue: number }> = {};
+                  transactions.forEach(t => {
+                    const server = t.customer_name || "Walk-in";
+                    if (!serverStats[server]) serverStats[server] = { orders: 0, revenue: 0 };
+                    serverStats[server].orders++;
+                    serverStats[server].revenue += t.total;
+                  });
+                  const servers = Object.entries(serverStats)
+                    .map(([name, d]) => ({ name, ...d, avgTicket: d.orders > 0 ? d.revenue / d.orders : 0 }))
+                    .sort((a, b) => b.revenue - a.revenue);
+
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 font-medium text-muted-foreground">Server</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Orders</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Revenue</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Avg Ticket</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {servers.length === 0 ? (
+                            <tr><td colSpan={4} className="text-center text-muted-foreground py-6">No server data</td></tr>
+                          ) : servers.map((s, i) => (
+                            <tr key={i} className="border-b border-border/50">
+                              <td className="py-2 font-medium">{s.name}</td>
+                              <td className="py-2 text-right">{s.orders}</td>
+                              <td className="py-2 text-right font-mono">{formatCurrency(s.revenue)}</td>
+                              <td className="py-2 text-right font-mono">{formatCurrency(s.avgTicket)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>

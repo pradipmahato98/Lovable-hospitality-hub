@@ -343,6 +343,62 @@ export function EngineeringReportsTab() {
               </div>
             </CardContent>
           </Card>
+          {/* Asset Downtime Log */}
+          <Card variant="elevated">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" /> Asset Downtime Log</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => {
+                  if (!reportData) return;
+                  const completed = reportData.requests?.filter((r: any) => r.status === "completed" && r.completed_at) || [];
+                  exportToPDF({
+                    title: "Asset Downtime Log",
+                    headers: ["Location", "Issue", "Priority", "Created", "Resolved", "Downtime (hrs)"],
+                    rows: completed.map((r: any) => {
+                      const hrs = Math.round((new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 3600000);
+                      return [r.room, r.issue, r.priority, format(new Date(r.created_at), "yyyy-MM-dd"), format(new Date(r.completed_at), "yyyy-MM-dd"), hrs];
+                    }),
+                  });
+                }}><Download className="h-4 w-4 mr-1" />PDF</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const completed = reportData?.requests?.filter((r: any) => r.status === "completed" && r.completed_at) || [];
+                return (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 font-medium text-muted-foreground">Location</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Issue</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Priority</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Created</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Resolved</th>
+                        <th className="text-right py-2 font-medium text-muted-foreground">Downtime</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completed.length === 0 ? (
+                        <tr><td colSpan={6} className="text-center text-muted-foreground py-6">No resolved requests</td></tr>
+                      ) : completed.slice(0, 20).map((r: any, i: number) => {
+                        const hrs = Math.round((new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 3600000);
+                        return (
+                          <tr key={i} className="border-b border-border/50">
+                            <td className="py-2 font-medium">{r.room}</td>
+                            <td className="py-2">{r.issue}</td>
+                            <td className="py-2 capitalize">{r.priority}</td>
+                            <td className="py-2">{format(new Date(r.created_at), "MMM d")}</td>
+                            <td className="py-2">{format(new Date(r.completed_at), "MMM d")}</td>
+                            <td className="py-2 text-right font-mono font-bold">{hrs}h</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

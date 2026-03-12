@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Download, TrendingUp, Users, BedDouble, DollarSign, Filter,
   ArrowUpRight, ArrowDownRight, Loader2
@@ -19,6 +20,10 @@ import { useSearchParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { DailyManagementReport } from "@/components/reports/DailyManagementReport";
 import { useManagement } from "@/hooks/useManagement";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { exportToPDF } from "@/lib/reportExport";
+import { format, parseISO } from "date-fns";
 
 const Reports = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,11 +52,12 @@ const Reports = () => {
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
       <Tabs value={activeReportTab} onValueChange={handleTabChange} className="space-y-8">
         <div className="flex justify-between items-center">
-          <TabsList className="bg-secondary/50 p-1">
+          <TabsList className="bg-secondary/50 p-1 flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
             <TabsTrigger value="daily">Daily Stats</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
+            <TabsTrigger value="financial">Financial Summary</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Filter Range</Button>
@@ -201,10 +207,136 @@ const Reports = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Financial Summary */}
+        <TabsContent value="financial" className="space-y-6">
+          <FinancialSummaryReport />
+        </TabsContent>
       </Tabs>
     </MainLayout>
   );
 };
+
+function FinancialSummaryReport() {
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["fin-summary-reservations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("reservations").select("total_amount, check_in_date").eq("status", "checked_out");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const { data: posTransactions = [] } = useQuery({
+    queryKey: ["fin-summary-pos"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("pos_transactions").select("total, created_at");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const { data: expenses = [] } = useQuery({
+    queryKey: ["fin-summary-expenses"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("expenses").select("amount, expense_date").eq("status", "approved");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const { data: banquetEvents = [] } = useQuery({
+    queryKey: ["fin-summary-banquet"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("banquet_events").select("total_amount, event_date").eq("status", "completed");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const monthlyData = useMemo(() => {
+    const byMonth: Record<string, { rooms: number; pos: number; banquet: number; expenses: number }> = {};
+    reservations.forEach((r: any) => {
+      const m = (r.check_in_date || "").slice(0, 7);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { rooms: 0, pos: 0, banquet: 0, expenses: 0 };
+      byMonth[m].rooms += r.total_amount || 0;
+    });
+    posTransactions.forEach((t: any) => {
+      const m = (t.created_at || "").slice(0, 7);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { rooms: 0, pos: 0, banquet: 0, expenses: 0 };
+      byMonth[m].pos += t.total || 0;
+    });
+    banquetEvents.forEach((e: any) => {
+      const m = (e.event_date || "").slice(0, 7);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { rooms: 0, pos: 0, banquet: 0, expenses: 0 };
+      byMonth[m].banquet += e.total_amount || 0;
+    });
+    expenses.forEach((e: any) => {
+      const m = (e.expense_date || "").slice(0, 7);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { rooms: 0, pos: 0, banquet: 0, expenses: 0 };
+      byMonth[m].expenses += e.amount || 0;
+    });
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 12)
+      .reverse()
+      .map(([month, d]) => ({
+        month,
+        rooms: d.rooms,
+        pos: d.pos,
+        banquet: d.banquet,
+        totalRevenue: d.rooms + d.pos + d.banquet,
+        expenses: d.expenses,
+        netProfit: d.rooms + d.pos + d.banquet - d.expenses,
+      }));
+  }, [reservations, posTransactions, banquetEvents, expenses]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Financial Summary by Month</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => exportToPDF({
+            title: "Financial Summary Report",
+            headers: ["Month", "Room Revenue", "POS Revenue", "Banquet Revenue", "Total Revenue", "Expenses", "Net Profit"],
+            rows: monthlyData.map(m => [m.month, formatCurrency(m.rooms), formatCurrency(m.pos), formatCurrency(m.banquet), formatCurrency(m.totalRevenue), formatCurrency(m.expenses), formatCurrency(m.netProfit)]),
+          })}><Download className="h-4 w-4 mr-1" />PDF</Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Month</TableHead>
+              <TableHead className="text-right">Rooms</TableHead>
+              <TableHead className="text-right">POS</TableHead>
+              <TableHead className="text-right">Banquet</TableHead>
+              <TableHead className="text-right">Total Revenue</TableHead>
+              <TableHead className="text-right">Expenses</TableHead>
+              <TableHead className="text-right">Net Profit</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {monthlyData.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No financial data</TableCell></TableRow>
+            ) : monthlyData.map((m) => (
+              <TableRow key={m.month}>
+                <TableCell className="font-medium">{m.month}</TableCell>
+                <TableCell className="text-right font-mono">{formatCurrency(m.rooms)}</TableCell>
+                <TableCell className="text-right font-mono">{formatCurrency(m.pos)}</TableCell>
+                <TableCell className="text-right font-mono">{formatCurrency(m.banquet)}</TableCell>
+                <TableCell className="text-right font-mono font-bold text-primary">{formatCurrency(m.totalRevenue)}</TableCell>
+                <TableCell className="text-right font-mono text-destructive">{formatCurrency(m.expenses)}</TableCell>
+                <TableCell className="text-right font-mono font-bold text-success">{formatCurrency(m.netProfit)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
 
 const ReportsPage = () => (
   <ErrorBoundary>

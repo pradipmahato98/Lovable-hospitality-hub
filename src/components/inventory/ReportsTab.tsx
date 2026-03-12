@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function ReportsTab() {
   const { data: items = [] } = useInventoryItems();
@@ -230,6 +233,89 @@ export function ReportsTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Supplier Performance */}
+      <SupplierPerformanceReport />
     </div>
+  );
+}
+
+function SupplierPerformanceReport() {
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ["inventory-supplier-performance"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("id, supplier_id, status, total, order_date, expected_delivery, received_date");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["inventory-suppliers-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("suppliers").select("id, name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const supplierPerf = useMemo(() => {
+    const supplierMap = new Map(suppliers.map((s: any) => [s.id, s.name]));
+    const bySupplier: Record<string, { name: string; poCount: number; totalValue: number; onTime: number; pending: number }> = {};
+    purchaseOrders.forEach((po: any) => {
+      const sid = po.supplier_id || "unknown";
+      const name = supplierMap.get(sid) || "Unknown";
+      if (!bySupplier[sid]) bySupplier[sid] = { name, poCount: 0, totalValue: 0, onTime: 0, pending: 0 };
+      bySupplier[sid].poCount++;
+      bySupplier[sid].totalValue += po.total || 0;
+      if (po.status === "received" && po.received_date && po.expected_delivery && po.received_date <= po.expected_delivery) {
+        bySupplier[sid].onTime++;
+      }
+      if (po.status === "pending" || po.status === "ordered") bySupplier[sid].pending++;
+    });
+    return Object.values(bySupplier).sort((a, b) => b.totalValue - a.totalValue);
+  }, [purchaseOrders, suppliers]);
+
+  return (
+    <Card variant="elevated">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" />Supplier Performance</CardTitle><CardDescription>{supplierPerf.length} suppliers tracked</CardDescription></div>
+          <Button variant="outline" size="sm" onClick={() => exportToPDF({
+            title: "Supplier Performance Report",
+            headers: ["Supplier", "PO Count", "Total Value", "On-Time", "Pending"],
+            rows: supplierPerf.map(s => [s.name, s.poCount, formatCurrency(s.totalValue), s.onTime, s.pending]),
+          })}><Download className="h-4 w-4 mr-1" />PDF</Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Supplier</TableHead>
+              <TableHead className="text-right">PO Count</TableHead>
+              <TableHead className="text-right">Total Value</TableHead>
+              <TableHead className="text-right">On-Time</TableHead>
+              <TableHead className="text-right">Pending</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {supplierPerf.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No purchase order data</TableCell></TableRow>
+            ) : supplierPerf.map((s, i) => (
+              <TableRow key={i}>
+                <TableCell className="font-medium">{s.name}</TableCell>
+                <TableCell className="text-right">{s.poCount}</TableCell>
+                <TableCell className="text-right font-mono font-bold">{formatCurrency(s.totalValue)}</TableCell>
+                <TableCell className="text-right text-success font-bold">{s.onTime}</TableCell>
+                <TableCell className="text-right">{s.pending}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
