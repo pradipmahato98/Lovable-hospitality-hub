@@ -193,7 +193,7 @@ export const StaffAnalyticsTab = () => {
               title: "Overtime Report",
               headers: ["Staff", "Department", "Regular Hrs", "Overtime Hrs", "Total Hrs"],
               rows: (() => {
-                const staffMap = new Map(staffMembers.map((s: any) => [s.id, { name: `${s.first_name} ${s.last_name}`, dept: s.department || "—" }]));
+                const staffMap = new Map<string, { name: string; dept: string }>(staffMembers.map((s: any) => [s.id, { name: `${s.first_name} ${s.last_name}`, dept: s.department || "—" }]));
                 const byStaff: Record<string, { name: string; dept: string; totalMin: number }> = {};
                 timeClock.forEach((tc: any) => {
                   if (tc.clock_in && tc.clock_out) {
