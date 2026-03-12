@@ -89,6 +89,44 @@ export const GuestReportsTab = () => {
     });
   };
 
+  // Guest Retention Report
+  const retentionReport = useMemo(() => {
+    return [...guests]
+      .filter((g) => (g.total_visits || 0) > 0)
+      .sort((a, b) => (b.total_visits || 0) - (a.total_visits || 0))
+      .slice(0, 20)
+      .map((g) => ({
+        name: `${g.first_name} ${g.last_name}`,
+        visits: g.total_visits || 0,
+        firstVisit: g.created_at ? g.created_at.split("T")[0] : "—",
+        lifetime: g.total_spending || 0,
+        vip: g.is_vip ? "Yes" : "No",
+      }));
+  }, [guests]);
+
+  // Communication Log Summary
+  const { data: commDetails = [] } = useQuery({
+    queryKey: ["guest-comm-details"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("guest_communications")
+        .select("channel, direction");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const commSummary = useMemo(() => {
+    const byChannel: Record<string, { sent: number; received: number; total: number }> = {};
+    commDetails.forEach((c: any) => {
+      if (!byChannel[c.channel]) byChannel[c.channel] = { sent: 0, received: 0, total: 0 };
+      byChannel[c.channel].total++;
+      if (c.direction === "outbound") byChannel[c.channel].sent++;
+      else byChannel[c.channel].received++;
+    });
+    return Object.entries(byChannel).map(([channel, d]) => ({ channel, ...d }));
+  }, [commDetails]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -171,6 +209,77 @@ export const GuestReportsTab = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Guest Retention Report */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Guest Retention Report</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => exportToPDF({
+              title: "Guest Retention Report",
+              headers: ["Guest", "Visits", "First Visit", "Lifetime Value", "VIP"],
+              rows: retentionReport.map(r => [r.name, r.visits, r.firstVisit, formatCurrency(r.lifetime), r.vip]),
+            })}><Download className="h-4 w-4 mr-1" />PDF</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Guest</TableHead>
+                <TableHead className="text-right">Visits</TableHead>
+                <TableHead>First Visit</TableHead>
+                <TableHead className="text-right">Lifetime Value</TableHead>
+                <TableHead>VIP</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {retentionReport.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No returning guests</TableCell></TableRow>
+              ) : retentionReport.map((r, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell className="text-right font-bold">{r.visits}</TableCell>
+                  <TableCell>{r.firstVisit}</TableCell>
+                  <TableCell className="text-right font-mono">{formatCurrency(r.lifetime)}</TableCell>
+                  <TableCell>{r.vip === "Yes" ? <span className="text-amber-500 font-bold">VIP</span> : "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Communication Log Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Communication Log Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Channel</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Sent</TableHead>
+                <TableHead className="text-right">Received</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {commSummary.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No communications</TableCell></TableRow>
+              ) : commSummary.map((c) => (
+                <TableRow key={c.channel}>
+                  <TableCell className="font-medium capitalize">{c.channel}</TableCell>
+                  <TableCell className="text-right font-bold">{c.total}</TableCell>
+                  <TableCell className="text-right">{c.sent}</TableCell>
+                  <TableCell className="text-right">{c.received}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
