@@ -220,7 +220,7 @@ export const StaffAnalyticsTab = () => {
             timeClock.forEach((tc: any) => {
               if (tc.clock_in && tc.clock_out) {
                 const sid = tc.staff_id || "unknown";
-                const s = staffMap.get(sid) || { name: "Unknown", dept: "—" };
+                const s: { name: string; dept: string } = staffMap.get(sid) || { name: "Unknown", dept: "—" };
                 if (!byStaff[sid]) byStaff[sid] = { name: s.name, dept: s.dept, totalMin: 0 };
                 byStaff[sid].totalMin += differenceInMinutes(parseISO(tc.clock_out), parseISO(tc.clock_in)) - (tc.break_minutes || 0);
               }
