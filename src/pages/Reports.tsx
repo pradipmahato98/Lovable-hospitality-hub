@@ -202,6 +202,11 @@ const Reports = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Financial Summary */}
+        <TabsContent value="financial" className="space-y-6">
+          <FinancialSummaryReport />
+        </TabsContent>
       </Tabs>
     </MainLayout>
   );
