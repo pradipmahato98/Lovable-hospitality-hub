@@ -462,6 +462,10 @@ export default function POSReports() {
               <Clock className="h-4 w-4" />
               Hourly Analysis
             </TabsTrigger>
+            <TabsTrigger value="detailed" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Detailed Reports
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
