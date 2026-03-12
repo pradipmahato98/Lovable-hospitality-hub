@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Download, TrendingUp, Users, BedDouble, DollarSign, Filter,
   ArrowUpRight, ArrowDownRight, Loader2
@@ -19,6 +20,10 @@ import { useSearchParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { DailyManagementReport } from "@/components/reports/DailyManagementReport";
 import { useManagement } from "@/hooks/useManagement";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { exportToPDF } from "@/lib/reportExport";
+import { format, parseISO } from "date-fns";
 
 const Reports = () => {
   const [searchParams, setSearchParams] = useSearchParams();

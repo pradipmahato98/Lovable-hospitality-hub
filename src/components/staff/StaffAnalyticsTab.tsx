@@ -183,6 +183,86 @@ export const StaffAnalyticsTab = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Overtime Report */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Overtime Report</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => exportToPDF({
+              title: "Overtime Report",
+              headers: ["Staff", "Department", "Regular Hrs", "Overtime Hrs", "Total Hrs"],
+              rows: (() => {
+                const staffMap = new Map(staffMembers.map((s: any) => [s.id, { name: `${s.first_name} ${s.last_name}`, dept: s.department || "—" }]));
+                const byStaff: Record<string, { name: string; dept: string; totalMin: number }> = {};
+                timeClock.forEach((tc: any) => {
+                  if (tc.clock_in && tc.clock_out) {
+                    const sid = tc.staff_id || "unknown";
+                    const s = staffMap.get(sid) || { name: "Unknown", dept: "—" };
+                    if (!byStaff[sid]) byStaff[sid] = { name: s.name, dept: s.dept, totalMin: 0 };
+                    byStaff[sid].totalMin += differenceInMinutes(parseISO(tc.clock_out), parseISO(tc.clock_in)) - (tc.break_minutes || 0);
+                  }
+                });
+                return Object.values(byStaff).map(s => {
+                  const totalHrs = Math.round(s.totalMin / 60);
+                  const regularHrs = Math.min(totalHrs, 160);
+                  const overtimeHrs = Math.max(0, totalHrs - 160);
+                  return [s.name, s.dept, regularHrs, overtimeHrs, totalHrs];
+                });
+              })(),
+            })}><Download className="h-4 w-4 mr-1" />PDF</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const staffMap = new Map(staffMembers.map((s: any) => [s.id, { name: `${s.first_name} ${s.last_name}`, dept: s.department || "—" }]));
+            const byStaff: Record<string, { name: string; dept: string; totalMin: number }> = {};
+            timeClock.forEach((tc: any) => {
+              if (tc.clock_in && tc.clock_out) {
+                const sid = tc.staff_id || "unknown";
+                const s = staffMap.get(sid) || { name: "Unknown", dept: "—" };
+                if (!byStaff[sid]) byStaff[sid] = { name: s.name, dept: s.dept, totalMin: 0 };
+                byStaff[sid].totalMin += differenceInMinutes(parseISO(tc.clock_out), parseISO(tc.clock_in)) - (tc.break_minutes || 0);
+              }
+            });
+            const rows = Object.values(byStaff)
+              .map(s => {
+                const totalHrs = Math.round(s.totalMin / 60);
+                const regularHrs = Math.min(totalHrs, 160);
+                const overtimeHrs = Math.max(0, totalHrs - 160);
+                return { ...s, totalHrs, regularHrs, overtimeHrs };
+              })
+              .sort((a, b) => b.overtimeHrs - a.overtimeHrs);
+
+            return (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Staff</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead className="text-right">Regular Hrs</TableHead>
+                    <TableHead className="text-right">Overtime Hrs</TableHead>
+                    <TableHead className="text-right">Total Hrs</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No clock data</TableCell></TableRow>
+                  ) : rows.map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell>{r.dept}</TableCell>
+                      <TableCell className="text-right">{r.regularHrs}</TableCell>
+                      <TableCell className="text-right font-bold text-amber-500">{r.overtimeHrs > 0 ? r.overtimeHrs : "—"}</TableCell>
+                      <TableCell className="text-right font-mono font-bold">{r.totalHrs}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            );
+          })()}
+        </CardContent>
+      </Card>
     </div>
   );
 };
