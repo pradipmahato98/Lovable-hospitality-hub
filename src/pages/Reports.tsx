@@ -47,11 +47,12 @@ const Reports = () => {
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
       <Tabs value={activeReportTab} onValueChange={handleTabChange} className="space-y-8">
         <div className="flex justify-between items-center">
-          <TabsList className="bg-secondary/50 p-1">
+          <TabsList className="bg-secondary/50 p-1 flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
             <TabsTrigger value="daily">Daily Stats</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
+            <TabsTrigger value="financial">Financial Summary</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Filter Range</Button>
