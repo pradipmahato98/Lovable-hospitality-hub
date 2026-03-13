@@ -16,6 +16,8 @@ import {
   todayBS,
   type NepaliDate,
 } from "@/lib/nepaliDate";
+import { getHoliday } from "@/lib/holidays";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NepaliDateInputProps {
   /** ISO string value (YYYY-MM-DD) in AD */
@@ -221,32 +223,49 @@ export function NepaliDateInput({
                       {locSettings?.language === "np" ? d.np : d.en}
                     </div>
                   ))}
-                  {calendarDays.map((day, idx) => (
-                    <div key={idx} className="aspect-square flex items-center justify-center">
-                      {day ? (
-                        <button
-                          type="button"
-                          disabled={isFuture(day)}
-                          onClick={() => {
-                            handleBSChange(bsYear, bsMonth, day);
-                            setCalendarOpen(false);
-                          }}
-                          className={cn(
-                            "h-7 w-7 rounded-md text-xs font-medium transition-colors",
-                            isFuture(day)
-                              ? "text-muted-foreground/40 cursor-not-allowed"
-                              : isSelected(day)
-                              ? "bg-primary text-primary-foreground"
-                              : isToday(day)
-                              ? "bg-accent text-accent-foreground font-bold"
-                              : "hover:bg-secondary text-foreground"
-                          )}
-                        >
-                          {day}
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
+                  {calendarDays.map((day, idx) => {
+                    const holiday = day ? getHoliday(bsMonth, day) : null;
+                    return (
+                      <div key={idx} className="aspect-square flex items-center justify-center">
+                        {day ? (
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                disabled={isFuture(day)}
+                                onClick={() => {
+                                  handleBSChange(bsYear, bsMonth, day);
+                                  setCalendarOpen(false);
+                                }}
+                                className={cn(
+                                  "h-7 w-7 rounded-md text-xs font-medium transition-colors relative",
+                                  isFuture(day)
+                                    ? "text-muted-foreground/40 cursor-not-allowed"
+                                    : isSelected(day)
+                                    ? "bg-primary text-primary-foreground"
+                                    : isToday(day)
+                                    ? "bg-accent text-accent-foreground font-bold"
+                                    : holiday
+                                    ? "bg-destructive/10 text-destructive font-bold"
+                                    : "hover:bg-secondary text-foreground"
+                                )}
+                              >
+                                {day}
+                                {holiday && (
+                                  <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-destructive" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            {holiday && (
+                              <TooltipContent side="top" className="text-[10px] p-2">
+                                <p className="font-bold">{locSettings?.language === "np" ? holiday.name_np : holiday.name}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Today Button */}

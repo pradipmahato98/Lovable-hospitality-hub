@@ -41,7 +41,8 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
       settings?.currency || "NPR",
       settings?.language === "np" ? "ne-NP" : "en-NP",
       settings?.number_standard || "international",
-      settings?.currency_display || "symbol"
+      settings?.currency_display || "symbol",
+      settings?.digit_standard === "devanagari"
     );
   }, [settings]);
 
@@ -49,7 +50,8 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
     return formatNumber(
       num,
       settings?.number_standard || "international",
-      settings?.language === "np" ? "ne-NP" : "en-NP"
+      settings?.language === "np" ? "ne-NP" : "en-NP",
+      settings?.digit_standard === "devanagari"
     );
   }, [settings]);
 
@@ -57,18 +59,19 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
     if (!date) return "—";
     const d = typeof date === "string" ? new Date(date) : date;
     const timeFormat = settings?.time_format || "12h";
+    const bsFormat = settings?.date_format_bs || "short";
+    const adFormat = settings?.date_format_ad || "dd/MM/yyyy";
 
     if (settings?.calendar_mode === "BS") {
       try {
         const bsDate = adToBS(d);
-        // Note: formatBSDate currently doesn't support timeFormat, but we can extend it if needed
-        return formatBSDate(bsDate, withTime ? "long" : "short");
+        return formatBSDate(bsDate, withTime ? "long" : bsFormat);
       } catch (e) {
-        return formatAD(d, withTime, timeFormat);
+        return formatAD(d, withTime, timeFormat, adFormat);
       }
     }
-    return formatAD(d, withTime, timeFormat);
-  }, [settings?.calendar_mode, settings?.time_format]);
+    return formatAD(d, withTime, timeFormat, adFormat);
+  }, [settings]);
 
   return (
     <LocalizationContext.Provider value={{

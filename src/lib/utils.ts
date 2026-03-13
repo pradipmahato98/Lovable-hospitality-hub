@@ -21,7 +21,8 @@ export function formatCurrency(
   currency: string = "NPR",
   locale: string = "en-NP",
   standard: "national" | "international" = "international",
-  display: "symbol" | "code" | "both" = "symbol"
+  display: "symbol" | "code" | "both" = "symbol",
+  useDevanagari: boolean = false
 ): string {
   if (amount === null || amount === undefined) return "—";
 
@@ -43,10 +44,15 @@ export function formatCurrency(
       result = `${currency} ${result}`;
     }
 
+    if (useDevanagari) {
+      return toDevanagariDigits(result);
+    }
+
     return result;
   } catch {
     // Fallback for unsupported locales
-    return `${currency} ${amount.toLocaleString()}`;
+    const fallback = `${currency} ${amount.toLocaleString()}`;
+    return useDevanagari ? toDevanagariDigits(fallback) : fallback;
   }
 }
 
@@ -54,25 +60,34 @@ export function formatCurrency(
 export function formatNumber(
   num: number,
   standard: "national" | "international" = "international",
-  locale: string = "en-NP"
+  locale: string = "en-NP",
+  useDevanagari: boolean = false
 ): string {
   const targetLocale = standard === "national" ? "en-IN" : locale;
-  return new Intl.NumberFormat(targetLocale).format(num);
+  const result = new Intl.NumberFormat(targetLocale).format(num);
+  return useDevanagari ? toDevanagariDigits(result) : result;
+}
+
+/** Utility to convert Latin digits to Devanagari */
+export function toDevanagariDigits(num: number | string): string {
+  const nepaliDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return String(num).replace(/[0-9]/g, (d) => nepaliDigits[parseInt(d)]);
 }
 
 /** Format a date in standard AD format (dd/MM/yyyy) */
 export function formatAD(
   date: Date | string,
   withTime?: "time" | "seconds",
-  timeFormat: "12h" | "24h" = "12h"
+  timeFormat: "12h" | "24h" = "12h",
+  baseFormat: string = AD_DATE_FORMAT
 ): string {
   const d = typeof date === "string" ? new Date(date) : date;
 
-  let formatString = AD_DATE_FORMAT;
+  let formatString = baseFormat;
   if (withTime === "time") {
-    formatString = timeFormat === "24h" ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy hh:mm a";
+    formatString = timeFormat === "24h" ? `${baseFormat} HH:mm` : `${baseFormat} hh:mm a`;
   } else if (withTime === "seconds") {
-    formatString = timeFormat === "24h" ? "dd/MM/yyyy HH:mm:ss" : "dd/MM/yyyy hh:mm:ss a";
+    formatString = timeFormat === "24h" ? `${baseFormat} HH:mm:ss` : `${baseFormat} hh:mm:ss a`;
   }
 
   return fnsFormat(d, formatString);
