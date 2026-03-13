@@ -193,7 +193,7 @@ export function LeaveManagement() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="gold" className="gap-2">
+              <Button variant="blue" className="gap-2">
                 <Plus className="h-4 w-4" />
                 New Request
               </Button>
@@ -285,7 +285,7 @@ export function LeaveManagement() {
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="gold">
+                  <Button type="submit" variant="blue">
                     Submit Request
                   </Button>
                 </div>

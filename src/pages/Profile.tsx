@@ -55,7 +55,7 @@ export default function Profile() {
             <div className="relative">
               <Avatar className="h-24 w-24">
                 <AvatarImage src={profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-gradient-gold text-primary-foreground text-2xl font-semibold">
+                <AvatarFallback className="bg-gradient-blue text-primary-foreground text-2xl font-semibold">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
@@ -144,7 +144,7 @@ export default function Profile() {
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
-                <Button type="submit" variant="gold" disabled={isLoading}>
+                <Button type="submit" variant="blue" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

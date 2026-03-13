@@ -49,7 +49,7 @@ export const QueueManager = () => {
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case 'vip': return <Badge className="bg-gold text-white"><Star className="h-3 w-3 mr-1 fill-white" /> VIP</Badge>;
+      case 'vip': return <Badge className="bg-primary text-white"><Star className="h-3 w-3 mr-1 fill-white" /> VIP</Badge>;
       case 'urgent': return <Badge variant="destructive">Urgent</Badge>;
       default: return <Badge variant="secondary">Normal</Badge>;
     }

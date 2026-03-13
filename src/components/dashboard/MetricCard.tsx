@@ -36,7 +36,7 @@ export function MetricCard({
         )}
       >
         {/* Subtle top accent line */}
-        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-blue opacity-0 group-hover:opacity-100 transition-opacity" />
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">

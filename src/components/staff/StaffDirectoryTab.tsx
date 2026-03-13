@@ -304,7 +304,7 @@ export const StaffDirectoryTab = () => {
                 if (!open) resetForm();
               }}>
                 <DialogTrigger asChild>
-                  <Button variant="gold" className="gap-2">
+                  <Button variant="blue" className="gap-2">
                     <Plus className="h-4 w-4" />
                     Add Staff
                   </Button>
@@ -447,7 +447,7 @@ export const StaffDirectoryTab = () => {
                       </Button>
                       <Button
                         type="submit"
-                        variant="gold"
+                        variant="blue"
                         disabled={createStaff.isPending || updateStaff.isPending}
                       >
                         {createStaff.isPending || updateStaff.isPending ? (

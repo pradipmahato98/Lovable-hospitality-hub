@@ -153,7 +153,7 @@ const Reservations = () => {
                 <UserPlus className="h-4 w-4" />
                 Walk-in
               </Button>
-              <Button variant="gold" className="gap-2" onClick={() => setNewDialogOpen(true)}>
+              <Button variant="blue" className="gap-2" onClick={() => setNewDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New Reservation
               </Button>

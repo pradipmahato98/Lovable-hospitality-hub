@@ -49,7 +49,7 @@ const statusColors = {
 const tierColors: Record<string, string> = {
   bronze: "bg-amber-700/20 text-amber-600",
   silver: "bg-slate-400/20 text-slate-300",
-  gold: "bg-yellow-500/20 text-yellow-400",
+  gold: "bg-primary/20 text-primary",
   platinum: "bg-purple-500/20 text-purple-400",
 };
 
@@ -124,7 +124,7 @@ const Guests = () => {
       render: (guest) => (
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedGuest(guest)}>
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">
+            <AvatarFallback className="bg-gradient-blue text-primary-foreground text-xs">
               {guest.first_name[0]}{guest.last_name[0]}
             </AvatarFallback>
           </Avatar>
@@ -262,7 +262,7 @@ const Guests = () => {
                 <Button variant="outline" size="sm" className="gap-2" onClick={handleExportGuests}>
                   <Download className="h-4 w-4" /> Export
                 </Button>
-                <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewGuestOpen(true)}>
+                <Button variant="blue" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewGuestOpen(true)}>
                   <Plus className="h-4 w-4" /> Add Guest
                 </Button>
               </div>
@@ -295,7 +295,7 @@ const Guests = () => {
                               <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-12 w-12">
-                                    <AvatarFallback className="bg-gradient-gold text-primary-foreground font-semibold">{guest.first_name[0]}{guest.last_name[0]}</AvatarFallback>
+                                    <AvatarFallback className="bg-gradient-blue text-primary-foreground font-semibold">{guest.first_name[0]}{guest.last_name[0]}</AvatarFallback>
                                   </Avatar>
                                   <div>
                                     <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -404,7 +404,7 @@ const Guests = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <Card><CardContent className="pt-4"><p className="text-sm text-muted-foreground">Total Members</p><p className="text-2xl font-bold">{stats.loyaltyMembers}</p></CardContent></Card>
               <Card><CardContent className="pt-4"><p className="text-sm text-muted-foreground">Platinum</p><p className="text-2xl font-bold text-purple-400">{stats.platinumMembers}</p></CardContent></Card>
-              <Card><CardContent className="pt-4"><p className="text-sm text-muted-foreground">Gold</p><p className="text-2xl font-bold text-yellow-400">{stats.goldMembers}</p></CardContent></Card>
+              <Card><CardContent className="pt-4"><p className="text-sm text-muted-foreground">Gold</p><p className="text-2xl font-bold text-primary">{stats.goldMembers}</p></CardContent></Card>
               <Card><CardContent className="pt-4"><p className="text-sm text-muted-foreground">Active Rate</p><p className="text-2xl font-bold text-success">{guests.length > 0 ? ((stats.loyaltyMembers / guests.length) * 100).toFixed(0) : 0}%</p></CardContent></Card>
             </div>
             <Card variant="elevated">
@@ -466,7 +466,7 @@ const Guests = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                     {guests.map((g) => (
                       <Button key={g.id} variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => setSelectedGuest(g)}>
-                        <Avatar className="h-8 w-8"><AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">{g.first_name[0]}{g.last_name[0]}</AvatarFallback></Avatar>
+                        <Avatar className="h-8 w-8"><AvatarFallback className="bg-gradient-blue text-primary-foreground text-xs">{g.first_name[0]}{g.last_name[0]}</AvatarFallback></Avatar>
                         <div className="text-left"><p className="font-medium">{g.first_name} {g.last_name}</p><p className="text-xs text-muted-foreground">{g.email || g.phone || "No contact"}</p></div>
                       </Button>
                     ))}
@@ -493,7 +493,7 @@ const Guests = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                     {guests.map((g) => (
                       <Button key={g.id} variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => setSelectedGuest(g)}>
-                        <Avatar className="h-8 w-8"><AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">{g.first_name[0]}{g.last_name[0]}</AvatarFallback></Avatar>
+                        <Avatar className="h-8 w-8"><AvatarFallback className="bg-gradient-blue text-primary-foreground text-xs">{g.first_name[0]}{g.last_name[0]}</AvatarFallback></Avatar>
                         <div className="text-left"><p className="font-medium">{g.first_name} {g.last_name}</p><p className="text-xs text-muted-foreground">{g.email || g.phone || "No contact"}</p></div>
                       </Button>
                     ))}

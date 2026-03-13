@@ -146,7 +146,7 @@ export function AddCompanyDialog({ open, onOpenChange, onCompanyAdded, initialVa
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="gold" disabled={createCompany.isPending || !name.trim()}>
+            <Button type="submit" variant="blue" disabled={createCompany.isPending || !name.trim()}>
               {createCompany.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Add Company
             </Button>

@@ -542,7 +542,7 @@ export function CheckInOutDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button variant="gold" onClick={handleWalkIn} disabled={isLoading}>
+              <Button variant="blue" onClick={handleWalkIn} disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -569,7 +569,7 @@ export function CheckInOutDialog({
                 Cancel
               </Button>
               <Button
-                variant={mode === "check-out" ? "destructive" : "gold"}
+                variant={mode === "check-out" ? "destructive" : "blue"}
                 onClick={mode === "check-in" ? handleCheckIn : handleCheckOut}
                 disabled={isLoading}
               >

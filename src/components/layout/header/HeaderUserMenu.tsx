@@ -24,7 +24,7 @@ export function HeaderUserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="rounded-full flex items-center gap-2 px-1 sm:px-2 py-1 h-auto hover:bg-transparent">
-          <div className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center ring-2 ring-primary/10 shadow-3d-gold flex-shrink-0">
+          <div className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center ring-2 ring-primary/10 shadow-3d-blue flex-shrink-0">
             <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
           </div>
           <div className="hidden sm:flex items-center gap-1.5 min-w-0">

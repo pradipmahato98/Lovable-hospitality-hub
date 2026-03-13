@@ -106,7 +106,7 @@ export function PurchaseOrdersTab() {
         <div className="flex items-center justify-between">
           <div><CardTitle className="flex items-center gap-2"><Warehouse className="h-5 w-5" />Purchase Orders</CardTitle><CardDescription>{orders.length} orders</CardDescription></div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild><Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />New Order</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="blue" className="gap-2"><Plus className="h-4 w-4" />New Order</Button></DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader><DialogTitle>Create Purchase Order</DialogTitle><DialogDescription>Select supplier and add items</DialogDescription></DialogHeader>
               <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">

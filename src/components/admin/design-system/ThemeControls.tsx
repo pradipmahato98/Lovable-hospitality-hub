@@ -62,7 +62,7 @@ export const ThemeControls = ({ prefs, onUpdate }: ThemeControlsProps) => {
                 <Input
                   value={prefs.primary_color}
                   onChange={(e) => onUpdate({ primary_color: e.target.value })}
-                  placeholder="38 92% 55%"
+                  placeholder="215 100% 50%"
                 />
                 <div
                   className="w-10 h-10 rounded border border-border shadow-sm"

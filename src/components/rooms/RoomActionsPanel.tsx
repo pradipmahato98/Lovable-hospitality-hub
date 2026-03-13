@@ -437,7 +437,7 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
             <Button variant="outline" onClick={() => setActionDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="gold" onClick={executeAction}>
+            <Button variant="blue" onClick={executeAction}>
               Confirm
             </Button>
           </div>

@@ -47,7 +47,7 @@ export function TransfersTab() {
         <div className="flex items-center justify-between">
           <div><CardTitle className="flex items-center gap-2"><ArrowRightLeft className="h-5 w-5" />Stock Transfers</CardTitle><CardDescription>{transfers.length} transfers</CardDescription></div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />New Transfer</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="blue" className="gap-2"><Plus className="h-4 w-4" />New Transfer</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Create Stock Transfer</DialogTitle></DialogHeader>
               <div className="space-y-4 py-4">

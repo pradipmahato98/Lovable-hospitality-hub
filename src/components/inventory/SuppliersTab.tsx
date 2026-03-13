@@ -59,7 +59,7 @@ export function SuppliersTab() {
         <div className="flex items-center justify-between">
           <div><CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5" />Suppliers</CardTitle><CardDescription>{suppliers.length} registered</CardDescription></div>
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditId(null); setForm(emptyForm); } }}>
-            <DialogTrigger asChild><Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />Add Supplier</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="blue" className="gap-2"><Plus className="h-4 w-4" />Add Supplier</Button></DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editId ? "Edit" : "Add"} Supplier</DialogTitle></DialogHeader>
               <div className="grid grid-cols-2 gap-4 py-4">

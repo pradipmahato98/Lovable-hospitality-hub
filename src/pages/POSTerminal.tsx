@@ -387,7 +387,7 @@ const POSTerminal = () => {
                   </div>
                 </div>
 
-                <Button variant="gold" className="w-full gap-2" onClick={handleOpenCheckout}>
+                <Button variant="blue" className="w-full gap-2" onClick={handleOpenCheckout}>
                   <Receipt className="h-4 w-4" />
                   Checkout
                 </Button>
@@ -652,7 +652,7 @@ const POSTerminal = () => {
                     </div>
                   )}
 
-                  <Button variant="gold" className="w-full" onClick={handleCheckout}>
+                  <Button variant="blue" className="w-full" onClick={handleCheckout}>
                     Complete Payment - ${total.toFixed(2)}
                   </Button>
                 </>

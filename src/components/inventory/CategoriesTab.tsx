@@ -56,7 +56,7 @@ export function CategoriesTab() {
         <div className="flex items-center justify-between">
           <div><CardTitle className="flex items-center gap-2"><FolderTree className="h-5 w-5" />Categories</CardTitle><CardDescription>{categories.length} categories</CardDescription></div>
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditId(null); setForm({ name: "", description: "", parent_id: "" }); } }}>
-            <DialogTrigger asChild><Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />Add Category</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="blue" className="gap-2"><Plus className="h-4 w-4" />Add Category</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editId ? "Edit" : "Add"} Category</DialogTitle></DialogHeader>
               <div className="space-y-4 py-4">

@@ -188,7 +188,7 @@ const defaultUIPreferences: UIPreferences = {
   base_font_size: 16,
   base_radius: 12,
   base_spacing: 4,
-  primary_color: "38 92% 55%", // HSL format
+  primary_color: "215 100% 50%", // HSL format
   accent_color: "222 47% 6%",
   blur_amount: 12,
   background_opacity: 0.6,

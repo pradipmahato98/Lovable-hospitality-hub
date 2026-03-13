@@ -475,7 +475,7 @@ export function SplitBillPanel({
             Cancel
           </Button>
           <Button
-            variant="gold"
+            variant="blue"
             onClick={handleComplete}
             disabled={!isPaymentValid}
             className="flex-1 gap-2"

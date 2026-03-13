@@ -16,7 +16,7 @@ export default function ReservationCalendarPage() {
       <div className="space-y-6">
         <div className="flex justify-end">
           <Button 
-            variant="gold" 
+            variant="blue"
             className="gap-2"
             onClick={() => setWalkInDialogOpen(true)}
           >

@@ -30,8 +30,8 @@ export const ThreeDTableMap: React.FC<ThreeDTableMapProps> = ({ tables: propTabl
   const statusColors = {
     available: "hsl(var(--success))",
     occupied: "hsl(var(--primary))",
-    reserved: "hsl(var(--amber-500))",
-    billing: "hsl(var(--gold))",
+    reserved: "hsl(var(--info))",
+    billing: "hsl(var(--primary))",
   };
 
   const getIsoCoords = (x: number, y: number) => {

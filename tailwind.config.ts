@@ -74,6 +74,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "digital-blue": {
+          "50": "#e5f0ff",
+          "100": "#cce0ff",
+          "200": "#99c2ff",
+          "300": "#66a3ff",
+          "400": "#3385ff",
+          "500": "#0066ff",
+          "600": "#0052cc",
+          "700": "#003d99",
+          "800": "#002966",
+          "900": "#001433",
+          "950": "#000e24",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -90,8 +103,8 @@ export default {
           to: { height: "0" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(38 92% 55% / 0.15)" },
-          "50%": { boxShadow: "0 0 40px hsl(38 92% 55% / 0.3)" },
+          "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.15)" },
+          "50%": { boxShadow: "0 0 40px hsl(var(--primary) / 0.3)" },
         },
         "shimmer": {
           "0%": { backgroundPosition: "-200% 0" },

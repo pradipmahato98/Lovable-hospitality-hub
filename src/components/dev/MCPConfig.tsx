@@ -305,7 +305,7 @@ export const MCPConfigPanel = () => {
             </div>
 
             <div className="pt-2">
-              <Button variant="gold" className="w-full gap-2" asChild>
+              <Button variant="blue" className="w-full gap-2" asChild>
                 <a href={`https://supabase.com/dashboard/project/${status.projectId}/auth/providers`} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-4 w-4" />
                   Configure Google Provider

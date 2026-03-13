@@ -167,7 +167,7 @@ export function ItemsTab() {
           </Button>
         </div>
         <Dialog open={addItemOpen} onOpenChange={(o) => { setAddItemOpen(o); if (o) setForm(emptyForm); }}>
-          <DialogTrigger asChild><Button variant="gold" className="gap-2"><Plus className="h-4 w-4" />Add Item</Button></DialogTrigger>
+          <DialogTrigger asChild><Button variant="blue" className="gap-2"><Plus className="h-4 w-4" />Add Item</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Add Inventory Item</DialogTitle><DialogDescription>Add a new item to your inventory</DialogDescription></DialogHeader>
             <ItemForm onSubmit={handleCreate} isPending={createItem.isPending} submitLabel="Add Item" />

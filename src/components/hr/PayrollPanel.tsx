@@ -175,7 +175,7 @@ export function PayrollPanel() {
               <p className="text-sm text-muted-foreground">{format(currentTime, "EEEE, MMMM d, yyyy")}</p>
             </div>
           </div>
-          <Button variant="gold" className="gap-2" onClick={() => setClockInDialogOpen(true)}>
+          <Button variant="blue" className="gap-2" onClick={() => setClockInDialogOpen(true)}>
             <Play className="h-4 w-4" />
             Clock In
           </Button>
@@ -390,7 +390,7 @@ export function PayrollPanel() {
               <p className="text-sm text-muted-foreground">Current Time</p>
               <p className="text-3xl font-bold font-mono">{format(currentTime, "HH:mm:ss")}</p>
             </div>
-            <Button variant="gold" className="w-full gap-2" onClick={handleClockIn}>
+            <Button variant="blue" className="w-full gap-2" onClick={handleClockIn}>
               <Play className="h-4 w-4" />
               Clock In Now
             </Button>
@@ -427,7 +427,7 @@ export function PayrollPanel() {
                   <span className="text-primary">${selectedPayroll.netPay.toLocaleString()}</span>
                 </div>
               </div>
-              <Button variant="gold" className="w-full" onClick={handleProcessPayroll}>
+              <Button variant="blue" className="w-full" onClick={handleProcessPayroll}>
                 Confirm & Process
               </Button>
             </div>

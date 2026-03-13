@@ -159,7 +159,7 @@ const FrontDesk = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button variant="gold" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewRoomOpen(true)}>
+                  <Button variant="blue" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewRoomOpen(true)}>
                     <Plus className="h-4 w-4" />Add Room
                   </Button>
                 </div>
@@ -190,7 +190,7 @@ const FrontDesk = () => {
                     {filteredRooms.map((room, index) => (
                       <Card key={room.id} variant="elevated" className={cn("animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group", selectedRoom?.id === room.id && "ring-2 ring-primary")} style={{ animationDelay: `${index * 50}ms` }} onClick={() => setSelectedRoom(room)}>
                         <div className="h-32 bg-gradient-card flex items-center justify-center relative">
-                          <span className="text-5xl font-display font-bold text-gradient-gold">{room.room_number}</span>
+                          <span className="text-5xl font-display font-bold text-gradient-blue">{room.room_number}</span>
                           <Badge variant="outline" className={cn("absolute top-3 right-3", statusStyles[room.status as keyof typeof statusStyles] || statusStyles.available)}>{room.status}</Badge>
                         </div>
                         <CardContent className="p-4">
