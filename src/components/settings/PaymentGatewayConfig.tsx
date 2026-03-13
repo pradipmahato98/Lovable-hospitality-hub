@@ -194,12 +194,12 @@ export const PaymentGatewayConfigPanel = () => {
     <div className="space-y-6 px-1 sm:px-0">
       <div className="relative py-12 overflow-hidden">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
+          <div className="w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_4px_20px_rgba(0,102,255,0.3)]" />
         </div>
         <div className="relative flex flex-col items-center gap-4 px-4 text-center">
-          <div className="bg-background px-4 sm:px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-2 sm:gap-3 group hover:border-gold/40 transition-all duration-500 max-w-full">
-            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700 shrink-0">
-              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-gold" />
+          <div className="bg-background px-4 sm:px-8 py-3 rounded-full border-2 border-primary/20 shadow-elevated flex items-center gap-2 sm:gap-3 group hover:border-primary/40 transition-all duration-500 max-w-full">
+            <div className="p-1 rounded-full bg-primary/10 group-hover:rotate-180 transition-transform duration-700 shrink-0">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
             <span className="text-[10px] sm:text-xs font-black text-foreground uppercase tracking-[0.2em] sm:tracking-[0.3em] truncate">
               National Gateway Systems
@@ -211,7 +211,7 @@ export const PaymentGatewayConfigPanel = () => {
         </div>
       </div>
 
-      <Card variant="elevated" className="border-gold/20 shadow-glow">
+      <Card variant="elevated" className="border-primary/20 shadow-glow">
         <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4">
             {nationalGateways.map((gateway) => (
@@ -223,12 +223,12 @@ export const PaymentGatewayConfigPanel = () => {
 
       <div className="relative py-12 overflow-hidden">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent shadow-[0_4px_20px_rgba(197,160,89,0.5)]" />
+          <div className="w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_4px_20px_rgba(0,102,255,0.3)]" />
         </div>
         <div className="relative flex flex-col items-center gap-4 px-4 text-center">
-          <div className="bg-background px-4 sm:px-8 py-3 rounded-full border-2 border-gold/20 shadow-elevated flex items-center gap-2 sm:gap-3 group hover:border-gold/40 transition-all duration-500 max-w-full">
-            <div className="p-1 rounded-full bg-gold/10 group-hover:rotate-180 transition-transform duration-700 shrink-0">
-              <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-gold" />
+          <div className="bg-background px-4 sm:px-8 py-3 rounded-full border-2 border-primary/20 shadow-elevated flex items-center gap-2 sm:gap-3 group hover:border-primary/40 transition-all duration-500 max-w-full">
+            <div className="p-1 rounded-full bg-primary/10 group-hover:rotate-180 transition-transform duration-700 shrink-0">
+              <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
             <span className="text-[10px] sm:text-xs font-black text-foreground uppercase tracking-[0.2em] sm:tracking-[0.3em] truncate">
               International Gateway Systems
@@ -240,7 +240,7 @@ export const PaymentGatewayConfigPanel = () => {
         </div>
       </div>
 
-      <Card variant="elevated" className="border-gold/20 shadow-glow">
+      <Card variant="elevated" className="border-primary/20 shadow-glow">
         <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4">
             {internationalGateways.map((gateway) => (

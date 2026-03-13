@@ -43,13 +43,13 @@ export function GuestTrendLineChart() {
                   dataKey="week"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "hsl(215, 16%, 47%)", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                   dy={8}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "hsl(215, 16%, 47%)", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                   width={36}
                 />
                 <Tooltip
@@ -65,9 +65,9 @@ export function GuestTrendLineChart() {
                 <Line
                   type="monotone"
                   dataKey="checkIns"
-                  stroke="hsl(38, 92%, 50%)"
+                  stroke="hsl(var(--primary))"
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: "hsl(38, 92%, 50%)" }}
+                  dot={{ r: 3, fill: "hsl(var(--primary))" }}
                   activeDot={{ r: 5 }}
                   name="Check-ins"
                 />

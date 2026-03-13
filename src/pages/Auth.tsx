@@ -230,10 +230,10 @@ export default function Auth() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-gold shadow-glow mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-blue shadow-glow mb-4">
               <Hotel className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="font-display text-3xl font-bold text-gradient-gold">LuxeStay</h1>
+            <h1 className="font-display text-3xl font-bold text-gradient-blue">LuxeStay</h1>
             <p className="text-muted-foreground mt-2">Enterprise Hospitality Management</p>
           </div>
 
@@ -297,7 +297,7 @@ export default function Auth() {
                     </div>
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
-                  <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
+                  <Button type="submit" variant="blue" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -321,10 +321,10 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-gold shadow-glow mb-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-blue shadow-glow mb-4">
             <Hotel className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-gradient-gold">LuxeStay</h1>
+          <h1 className="font-display text-3xl font-bold text-gradient-blue">LuxeStay</h1>
           <p className="text-muted-foreground mt-2">Enterprise Hospitality Management</p>
         </div>
 
@@ -446,7 +446,7 @@ export default function Auth() {
                       </div>
                       {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                     </div>
-                    <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
+                    <Button type="submit" variant="blue" className="w-full" disabled={isLoading}>
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -494,7 +494,7 @@ export default function Auth() {
                       </div>
                     )}
 
-                    <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
+                    <Button type="submit" variant="blue" className="w-full" disabled={isLoading}>
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -618,7 +618,7 @@ export default function Auth() {
                     {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                   </div>
 
-                  <Button type="submit" variant="gold" className="w-full" disabled={isLoading}>
+                  <Button type="submit" variant="blue" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

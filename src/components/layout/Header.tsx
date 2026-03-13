@@ -73,7 +73,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         {/* Quick Action */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="gold" size="sm" className="gap-2" onClick={() => setNewBookingOpen(true)}>
+            <Button variant="blue" size="sm" className="gap-2" onClick={() => setNewBookingOpen(true)}>
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Booking</span>
             </Button>

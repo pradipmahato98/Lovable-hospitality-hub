@@ -575,7 +575,7 @@ export const GuestFolioManager = () => {
                       Void Folio
                     </Button>
                         <Button
-                          variant="gold"
+                          variant="blue"
                           size="sm"
                           className="gap-2"
                           onClick={() => closeFolio.mutate(selectedFolio.id)}
@@ -744,17 +744,17 @@ export const GuestFolioManager = () => {
               </Card>
               <Card
                 variant="glass"
-                className="p-4 flex items-center gap-4 group cursor-pointer hover:bg-gold/5 transition-colors"
+                className="p-4 flex items-center gap-4 group cursor-pointer hover:bg-primary/5 transition-colors"
                 onClick={handleCreateSubFolio}
               >
-                <div className="h-12 w-12 rounded-full bg-gold/10 flex items-center justify-center text-gold group-hover:scale-110 transition-transform">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <ArrowRightLeft className="h-6 w-6" />
                 </div>
                 <div>
                   <h4 className="font-semibold">Split Folio</h4>
                   <p className="text-sm text-muted-foreground">Create a second folio for this stay to split charges.</p>
                 </div>
-                <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-gold group-hover:translate-x-1 transition-all" />
+                <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
               </Card>
               <Card
                 variant="glass"

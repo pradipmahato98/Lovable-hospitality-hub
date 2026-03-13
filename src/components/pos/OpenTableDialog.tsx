@@ -89,7 +89,7 @@ export function OpenTableDialog({ open, onOpenChange, table, onOpenTable }: Open
             </div>
           </div>
 
-          <Button type="submit" variant="gold" className="w-full">
+          <Button type="submit" variant="blue" className="w-full">
             Open Table
           </Button>
         </form>

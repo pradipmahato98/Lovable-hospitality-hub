@@ -283,7 +283,7 @@ export function SplitBillDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button variant="gold" onClick={handleSplit}>
+            <Button variant="blue" onClick={handleSplit}>
               <Split className="h-4 w-4 mr-2" />
               Split Bill
             </Button>

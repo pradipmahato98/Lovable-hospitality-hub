@@ -168,7 +168,7 @@ export function ReportsTab() {
           <div className="flex items-center justify-between">
             <div><CardTitle className="flex items-center gap-2"><Trash className="h-5 w-5" />Wastage & Damage</CardTitle><CardDescription>Total cost impact: {formatCurrency(totalWastageCost)}</CardDescription></div>
             <Dialog open={wastageOpen} onOpenChange={setWastageOpen}>
-              <DialogTrigger asChild><Button variant="gold" className="gap-2"><Trash className="h-4 w-4" />Report Wastage</Button></DialogTrigger>
+              <DialogTrigger asChild><Button variant="blue" className="gap-2"><Trash className="h-4 w-4" />Report Wastage</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Report Wastage</DialogTitle></DialogHeader>
                 <div className="space-y-4 py-4">

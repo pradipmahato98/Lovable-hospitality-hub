@@ -70,7 +70,7 @@ export const StripeConnect = () => {
           </div>
         ) : (
           <Button
-            variant="gold"
+            variant="blue"
             className="w-full gap-2"
             onClick={handleConnect}
             disabled={isLoading}

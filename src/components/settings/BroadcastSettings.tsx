@@ -73,7 +73,7 @@ export const BroadcastSettings = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
-              variant="gold"
+              variant="blue"
               className="gap-2"
               onClick={handleSendBroadcast}
               disabled={isSending}

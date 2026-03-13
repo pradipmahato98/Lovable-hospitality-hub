@@ -41,7 +41,7 @@ export function RecentBookings() {
               >
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9 flex-shrink-0">
-                    <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs font-semibold">
+                    <AvatarFallback className="bg-gradient-blue text-primary-foreground text-xs font-semibold">
                       {booking.guest.split(" ").map((n) => n[0]).join("")}
                     </AvatarFallback>
                   </Avatar>

@@ -110,7 +110,7 @@ export function POSDashboard() {
                   label={data.hour}
                   value={data.value}
                   maxValue={maxHourlyValue}
-                  color={data.value > 1500 ? "hsl(var(--gold))" : "hsl(var(--primary))"}
+                  color={data.value > 1500 ? "hsl(var(--primary))" : "hsl(var(--primary))"}
                 />
               ))}
             </div>

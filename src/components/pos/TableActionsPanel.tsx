@@ -178,7 +178,7 @@ export function TableActionsPanel({
               <Button variant="outline" onClick={() => setMergeDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="gold" onClick={handleMerge} disabled={!targetTable}>
+              <Button variant="blue" onClick={handleMerge} disabled={!targetTable}>
                 Merge Tables
               </Button>
             </div>
@@ -220,7 +220,7 @@ export function TableActionsPanel({
               <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="gold" onClick={handleTransfer} disabled={!targetTable}>
+              <Button variant="blue" onClick={handleTransfer} disabled={!targetTable}>
                 Transfer Order
               </Button>
             </div>

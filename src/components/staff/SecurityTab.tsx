@@ -165,7 +165,7 @@ export const SecurityTab = () => {
           </div>
 
           <Button
-            variant="gold"
+            variant="blue"
             onClick={handleUpdatePassword}
             disabled={loading || !passwords.new || passwords.new !== passwords.confirm}
             className="w-full sm:w-auto"

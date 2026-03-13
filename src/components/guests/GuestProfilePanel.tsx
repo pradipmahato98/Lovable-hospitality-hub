@@ -41,7 +41,7 @@ export function GuestProfilePanel({ guest, onEdit, onViewDocuments, onViewHistor
     <Card variant="elevated" className="sticky top-4">
       <CardHeader className="text-center pb-2">
         <Avatar className="h-16 w-16 mx-auto mb-2">
-          <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xl font-bold">
+          <AvatarFallback className="bg-gradient-blue text-primary-foreground text-xl font-bold">
             {guest.first_name[0]}{guest.last_name[0]}
           </AvatarFallback>
         </Avatar>

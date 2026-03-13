@@ -480,11 +480,11 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* Logo */}
       <div className="flex h-14 items-center justify-between px-4 border-b border-sidebar-border/60">
         <Link to="/" className="flex items-center gap-2.5" onClick={onNavClick}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-gold flex-shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blue flex-shrink-0">
             <Hotel className="h-4 w-4 text-primary-foreground" />
           </div>
           {(!collapsed || isMobile) && (
-            <span className="font-display text-lg font-semibold text-gradient-gold">
+            <span className="font-display text-lg font-semibold text-gradient-blue">
               LuxeStay
             </span>
           )}
@@ -566,7 +566,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {(!collapsed || isMobile) && (
         <div className="p-3 border-t border-sidebar-border/60 mt-auto">
           <Link to="/profile" onClick={onNavClick} className="flex items-center gap-2.5 mb-2 hover:opacity-80 transition-opacity">
-            <div className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center flex-shrink-0 ring-2 ring-primary/10">
+            <div className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center flex-shrink-0 ring-2 ring-primary/10">
               <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -588,7 +588,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         <div className="p-2 border-t border-sidebar-border/60 mt-auto flex flex-col items-center gap-1.5">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Link to="/profile" className="h-8 w-8 rounded-full bg-gradient-gold flex items-center justify-center hover:opacity-80 ring-2 ring-primary/10">
+              <Link to="/profile" className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center hover:opacity-80 ring-2 ring-primary/10">
                 <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
               </Link>
             </TooltipTrigger>

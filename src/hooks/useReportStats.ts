@@ -44,9 +44,9 @@ export const useReportStats = () => {
 
       // Revenue by source
       const revenueBySource = [
-        { source: "Room Bookings", amount: totalReservationRevenue, color: "hsl(38, 92%, 55%)" },
+        { source: "Room Bookings", amount: totalReservationRevenue, color: "hsl(var(--primary))" },
         { source: "Restaurant (POS)", amount: totalPOSRevenue, color: "hsl(142, 71%, 45%)" },
-        { source: "Invoiced", amount: totalInvoiceRevenue, color: "hsl(222, 84%, 50%)" },
+        { source: "Invoiced", amount: totalInvoiceRevenue, color: "hsl(var(--info))" },
       ].filter(s => s.amount > 0);
 
       // ADR

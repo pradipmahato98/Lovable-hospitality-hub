@@ -44,7 +44,7 @@ export function GuestCommunicationsTab({ guests }: Props) {
               {guests.map((g) => (
                 <Button key={g.id} variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => setSelectedGuest(g)}>
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs">{g.first_name[0]}{g.last_name[0]}</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-blue text-primary-foreground text-xs">{g.first_name[0]}{g.last_name[0]}</AvatarFallback>
                   </Avatar>
                   <div className="text-left">
                     <p className="font-medium">{g.first_name} {g.last_name}</p>

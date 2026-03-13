@@ -33,13 +33,13 @@ export function OccupancyBarChart() {
                   dataKey="day"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "hsl(215, 16%, 47%)", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                   dy={8}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "hsl(215, 16%, 47%)", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                   tickFormatter={(v) => `${v}%`}
                   width={42}
                 />
@@ -57,7 +57,7 @@ export function OccupancyBarChart() {
                     name === "occupancy" ? "Occupied" : "Available",
                   ]}
                 />
-                <Bar dataKey="occupancy" fill="hsl(38, 92%, 50%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="occupancy" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="available" fill="hsl(152, 60%, 42%)" radius={[4, 4, 0, 0]} opacity={0.6} />
               </BarChart>
             </ResponsiveContainer>

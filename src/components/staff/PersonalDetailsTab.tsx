@@ -114,7 +114,7 @@ export const PersonalDetailsTab = () => {
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <div
-            className="group relative h-32 w-32 rounded-full bg-gradient-gold flex items-center justify-center text-4xl font-bold text-primary-foreground overflow-hidden cursor-pointer"
+            className="group relative h-32 w-32 rounded-full bg-gradient-blue flex items-center justify-center text-4xl font-bold text-primary-foreground overflow-hidden cursor-pointer"
             onClick={handleAvatarClick}
           >
             {profile?.avatar_url ? (
@@ -189,7 +189,7 @@ export const PersonalDetailsTab = () => {
               />
             </div>
           </div>
-          <Button variant="gold" onClick={handleSave} disabled={loading} className="w-full sm:w-auto">
+          <Button variant="blue" onClick={handleSave} disabled={loading} className="w-full sm:w-auto">
             {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
             Save Changes
           </Button>
