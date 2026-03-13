@@ -327,12 +327,6 @@ function NavItem({
   const isExpanded = openGroups.includes(item.label);
   const hasSubItems = item.subItems && item.subItems.length > 0 && dropdownsEnabled;
 
-  useEffect(() => {
-    if (isActive && hasSubItems && !isExpanded) {
-      setOpenGroups([...openGroups, item.label]);
-    }
-  }, [isActive, hasSubItems]);
-
   const isSubActive = (sub: NavSubItem, defaultTab?: string) => {
     if (sub.path) {
       // If the sub-item has a path, check if it matches the current pathname
@@ -364,23 +358,20 @@ function NavItem({
 
   const link = (
     <div className="flex flex-col w-full">
-      <div className="flex items-center w-full group">
+      <div className={cn(
+        "flex items-center w-full group rounded-lg transition-all duration-200",
+        isActive
+          ? "bg-sidebar-accent text-primary"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground"
+      )}>
         <Link
           to={item.path}
           onClick={(e) => {
-            if (hasSubItems && !collapsed) {
-              // On desktop, clicking the label just navigates
-              // The chevron handles the toggle
-            }
             if (onNavClick) onNavClick();
           }}
           className={cn(
-            "flex-1 flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 relative",
-            isActive
-              ? "bg-sidebar-accent text-primary"
-              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground",
-            collapsed && !isMobile && "justify-center px-2",
-            hasSubItems && !collapsed && "rounded-r-none"
+            "flex-1 flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-all duration-200 relative",
+            collapsed && !isMobile && "justify-center px-2"
           )}
         >
           {isActive && (
@@ -398,8 +389,8 @@ function NavItem({
               toggleGroup(item.label);
             }}
             className={cn(
-              "px-2 py-2 rounded-lg rounded-l-none transition-colors",
-              isActive ? "bg-sidebar-accent text-primary" : "text-sidebar-foreground/40 hover:bg-sidebar-accent/60 hover:text-foreground"
+              "px-2 py-2 transition-colors",
+              isActive ? "text-primary" : "text-sidebar-foreground/40"
             )}
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
@@ -415,9 +406,9 @@ function NavItem({
               to={sub.path || `${item.path}?tab=${sub.tab}`}
               onClick={(e) => handleSubItemClick(e, sub)}
               className={cn(
-                "px-3 py-1.5 text-xs rounded-md transition-colors",
+                "px-3 py-1.5 text-xs rounded-md transition-colors font-bold",
                 isSubActive(sub, item.defaultTab)
-                  ? "text-primary font-medium bg-sidebar-accent/50"
+                  ? "text-primary bg-sidebar-accent/50"
                   : "text-sidebar-foreground/60 hover:text-foreground hover:bg-sidebar-accent/30"
               )}
             >
