@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, Moon, Sun, Calendar } from "lucide-react";
+import { Menu, Moon, Sun, Calendar, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -9,6 +9,7 @@ import { HeaderUserMenu } from "./header/HeaderUserMenu";
 import { todayBS, formatBSDate } from "@/lib/nepaliDate";
 import { formatAD } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocalizationSettings, useUpdateLocalizationSettings } from "@/hooks/useSettings";
 
 interface HeaderProps {
   title: string;
@@ -31,6 +32,17 @@ export function Header({ title, subtitle }: HeaderProps) {
   const bsToday = todayBS();
   const bsFormatted = formatBSDate(bsToday, "short");
   const adFormatted = formatAD(new Date());
+  const { data: locSettings } = useLocalizationSettings();
+  const updateLoc = useUpdateLocalizationSettings();
+
+  const toggleCalendar = () => {
+    if (locSettings) {
+      updateLoc.mutate({
+        ...locSettings,
+        calendar_mode: locSettings.calendar_mode === "AD" ? "BS" : "AD"
+      });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4">
@@ -53,16 +65,23 @@ export function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-        {/* BS Date Badge */}
+        {/* BS/AD Toggle Badge */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/8 border border-primary/15 cursor-help mr-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleCalendar}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 h-auto rounded-md bg-primary/8 border border-primary/15 hover:bg-primary/15 mr-1"
+            >
               <Calendar className="h-3 w-3 text-primary" />
-              <span className="text-[10px] sm:text-xs font-medium text-primary">{bsFormatted} BS</span>
-            </div>
+              <span className="text-[10px] sm:text-xs font-medium text-primary uppercase">
+                {locSettings?.calendar_mode === "BS" ? `${bsFormatted} BS` : `${adFormatted}`}
+              </span>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p className="text-xs">{adFormatted} (AD)</p>
+            <p className="text-xs">Switch to {locSettings?.calendar_mode === "BS" ? "AD" : "BS"} calendar</p>
           </TooltipContent>
         </Tooltip>
 

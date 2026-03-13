@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
+import { useLocalizationSettings } from "@/hooks/useSettings";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -42,6 +43,10 @@ export function NepaliDateInput({
   disabled = false,
   hideModeLabel = false,
 }: NepaliDateInputProps) {
+  const { data: locSettings } = useLocalizationSettings();
+  const calendarMode = locSettings?.calendar_mode || "AD";
+  const effectiveShowDual = showDual && calendarMode === "BS";
+
   const todayISO = new Date().toISOString().slice(0, 10);
   const bsDate = useMemo(() => {
     if (!value) return todayBS();
@@ -110,9 +115,9 @@ export function NepaliDateInput({
     <div className={cn("space-y-2", className)}>
       {label && <Label className="text-xs font-medium">{label}</Label>}
       
-      <div className={cn("flex gap-2", showDual ? "flex-col sm:flex-row" : "")}>
+      <div className={cn("flex gap-2", effectiveShowDual ? "flex-col sm:flex-row" : "")}>
         {/* AD Date Input */}
-        {showDual && (
+        {effectiveShowDual && (
           <div className="flex-1 space-y-1">
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">AD Date</span>
             <Input
@@ -130,7 +135,7 @@ export function NepaliDateInput({
         <div className="flex-1 space-y-1">
           {!hideModeLabel && (
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-              {showDual ? "BS मिति" : "मिति (BS)"}
+              {calendarMode === "BS" ? (effectiveShowDual ? "BS मिति" : "मिति (BS)") : "Date (AD)"}
             </span>
           )}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>

@@ -27,10 +27,11 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
-import { formatISOasBS, todayBS, bsToAD, adToBS } from "@/lib/nepaliDate";
+import { formatISOasBS, todayBS, bsToAD, adToBS, formatBSDate } from "@/lib/nepaliDate";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocalizationSettings } from "@/hooks/useSettings";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type VoucherType = "journal" | "receipt" | "payment" | "contra";
@@ -244,6 +245,8 @@ export default function NewJournalEntry() {
   const { data: accounts } = useAccounts();
   const createJournalEntry = useCreateJournalEntry();
   const postJournalEntry = usePostJournalEntry();
+  const { data: locSettings } = useLocalizationSettings();
+  const calendarMode = locSettings?.calendar_mode || "AD";
 
   // ── Derived ──
   const isHeaderComplete = !!transactionDate && !!voucherType;
@@ -575,30 +578,33 @@ export default function NewJournalEntry() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Transaction AD *</Label>
-                <Input
-                  type="date"
-                  value={transactionDate}
-                  min={minDate}
-                  max={maxDate}
-                  onChange={e => {
-                    const v = e.target.value;
-                    if (v >= minDate && v <= maxDate) setTransactionDate(v);
-                  }}
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <NepaliDateInput
-                  label="नेपाली मिति *"
-                  value={transactionDate}
-                  onChange={v => {
-                    if (v >= minDate && v <= maxDate) setTransactionDate(v);
-                  }}
-                  showDual={false}
-                />
-              </div>
+              {calendarMode === "AD" ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Transaction Date (AD) *</Label>
+                  <Input
+                    type="date"
+                    value={transactionDate}
+                    min={minDate}
+                    max={maxDate}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v >= minDate && v <= maxDate) setTransactionDate(v);
+                    }}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <NepaliDateInput
+                    label="कारोबार मिति (BS) *"
+                    value={transactionDate}
+                    onChange={v => {
+                      if (v >= minDate && v <= maxDate) setTransactionDate(v);
+                    }}
+                    showDual={false}
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Voucher Type *</Label>
                 <Select value={voucherType} onValueChange={(v) => setVoucherType(v as VoucherType)}>
