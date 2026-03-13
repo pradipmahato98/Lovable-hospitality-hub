@@ -8,7 +8,18 @@
     "loading": "लोड हुँदैछ...",
     "today": "आज",
     "settings": "सेटिङहरू",
-    "localization": "स्थानीयकरण"
+    "localization": "स्थानीयकरण",
+    "view_all": "सबै हेर्नुहोस्",
+    "actions": "कार्यहरू",
+    "filter": "फिल्टर",
+    "export": "निर्यात गर्नुहोस्",
+    "import": "आयात गर्नुहोस्",
+    "active": "सक्रिय",
+    "inactive": "निष्क्रिय",
+    "status": "अवस्था",
+    "date": "मिति",
+    "amount": "रकम",
+    "details": "विवरण"
   },
   "nav": {
     "dashboard": "ड्यासबोर्ड",
@@ -23,19 +34,43 @@
     "marketing": "मार्केटिङ",
     "management": "व्यवस्थापन",
     "staff": "कर्मचारी",
-    "settings": "सेटिङहरू"
+    "settings": "सेटिङहरू",
+    "reports": "रिपोर्टहरू",
+    "users": "प्रयोगकर्ताहरू",
+    "hr": "मानव संसाधन",
+    "admin_console": "एडमिन कन्सोल"
   },
   "localization": {
     "title": "स्थानीयकरण सेटिङहरू",
+    "description": "क्षेत्रीय सेटिङहरू, भाषा र मिति ढाँचाहरू व्यवस्थापन गर्नुहोस्।",
     "language": "भाषा",
     "calendar_mode": "पात्रो मोड",
     "number_standard": "संख्या मानक",
+    "currency": "मुद्रा",
     "number_format": "संख्या ढाँचा",
     "national": "राष्ट्रिय (लाख/करोड)",
     "international": "अन्तर्राष्ट्रिय (मिलियन/बिलियन)",
     "nepali": "नेपाली",
     "english": "अङ्ग्रेजी",
     "ad": "ई.सं. (AD)",
-    "bs": "वि.सं. (BS)"
+    "bs": "वि.सं. (BS)",
+    "switch_calendar": "{{mode}} पात्रोमा परिवर्तन गर्नुहोस्"
+  },
+  "finance": {
+    "title": "वित्त व्यवस्थापन",
+    "journal_entries": "जर्नल प्रविष्टिहरू",
+    "new_entry": "नयाँ प्रविष्टि",
+    "balance_sheet": "वासलात",
+    "profit_loss": "नाफा नोक्सान",
+    "cash_flow": "नगद प्रवाह",
+    "general_ledger": "खातापाता"
+  },
+  "dashboard": {
+    "welcome": "स्वागत छ",
+    "occupancy": "अकुपेन्सी",
+    "revenue": "राजस्व",
+    "adr": "ए.डी.आर (ADR)",
+    "revpar": "रेभ.पार (RevPAR)",
+    "recent_activity": "हालैका गतिविधिहरू"
   }
 }

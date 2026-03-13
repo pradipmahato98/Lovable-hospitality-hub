@@ -138,9 +138,20 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  body.font-nepali {
+    font-family: 'Noto Sans Devanagari', 'Inter', sans-serif !important;
+  }
+
   h1, h2, h3 {
     font-family: var(--font-display);
     letter-spacing: -0.01em;
+  }
+
+  .font-nepali h1,
+  .font-nepali h2,
+  .font-nepali h3,
+  .font-nepali .font-display {
+    font-family: 'Noto Sans Devanagari', serif !important;
   }
 }
 
