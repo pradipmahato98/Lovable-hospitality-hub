@@ -163,9 +163,14 @@ const AdminConsole = () => {
 
       const headers = Object.keys(data[0]).join(",");
       const rows = data.map(log =>
-        Object.values(log).map(val =>
-          typeof val === 'object' ? `"${JSON.stringify(val).replace(/"/g, '""')}"` : `"${String(val).replace(/"/g, '""')}"`
-        ).join(",")
+        Object.values(log).map(val => {
+          let strVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+          // Sanitize for CSV injection (Formula Injection)
+          if (strVal.match(/^[=+\-@]/)) {
+            strVal = `'${strVal}`;
+          }
+          return `"${strVal.replace(/"/g, '""')}"`;
+        }).join(",")
       );
       const csv = [headers, ...rows].join("\n");
 
@@ -244,9 +249,14 @@ const AdminConsole = () => {
   };
 
   const handleAddAPIKey = () => {
+    // Generate a cryptographically secure 48-character hex key
+    const array = new Uint8Array(24);
+    window.crypto.getRandomValues(array);
+    const secureKey = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: `sk_${secureKey}`,
       is_secret: true,
       description: "Auto-generated system key"
     };

@@ -17,3 +17,13 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-12 - CSV Formula Injection in Audit Log Exports
+**Vulnerability:** The audit log export functionality in `AdminConsole.tsx` did not sanitize user-generated or system-generated data. Values starting with `=`, `+`, `-`, or `@` could trigger formula execution in spreadsheet applications like Excel or Google Sheets.
+**Learning:** Exporting database content directly to CSV without sanitizing leading characters is a common but dangerous oversight. Even system logs can contain characters that trigger unintended behavior in spreadsheet software.
+**Prevention:** Sanitize all exported CSV fields by prepending a single quote (`'`) to any value that begins with a character that can trigger a formula (`=`, `+`, `-`, `@`).
+
+## 2026-02-12 - Insecure PRNG for API Key Generation
+**Vulnerability:** API keys were generated using `Math.random()`, which is not cryptographically secure and could lead to predictable keys.
+**Learning:** Using `Math.random()` for security-critical identifiers like API keys or tokens is a significant vulnerability.
+**Prevention:** Always use `window.crypto.getRandomValues()` or a similar cryptographically secure random number generator for any security-sensitive strings.
