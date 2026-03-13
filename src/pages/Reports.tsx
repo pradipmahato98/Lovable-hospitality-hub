@@ -103,7 +103,7 @@ const Reports = () => {
                         <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                         <Tooltip />
                         <Legend />
-                        <Line yAxisId="left" type="monotone" dataKey="reservations" stroke="hsl(142, 71%, 45%)" name="Reservations" strokeWidth={3} />
+                        <Line yAxisId="left" type="monotone" dataKey="reservations" stroke="hsl(var(--success))" name="Reservations" strokeWidth={3} />
                         <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" name="Revenue ($)" strokeWidth={3} />
                       </LineChart>
                     </ResponsiveContainer>

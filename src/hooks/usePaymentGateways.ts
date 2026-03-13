@@ -315,7 +315,7 @@ export async function processPayment(
             contact: customerInfo?.phone,
           },
           theme: {
-            color: "#C5A059", // Gold theme
+            color: "#0066ff", // Digital Blue
           },
         };
 
