@@ -26,7 +26,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user && !import.meta.env.DEV) {
+  if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
