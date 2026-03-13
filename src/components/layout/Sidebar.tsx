@@ -372,11 +372,11 @@ function NavItem({
             if (onNavClick) onNavClick();
           }}
           className={cn(
-            "flex-1 flex items-center gap-3 px-3 py-2.5 text-[13.5px] font-semibold transition-all duration-200",
+            "flex-1 flex items-center gap-3 px-3 py-2 text-[13px] font-semibold transition-all duration-200",
             collapsed && !isMobile && "justify-center px-2"
           )}
         >
-          <item.icon className={cn("h-[19px] w-[19px] flex-shrink-0 transition-all group-hover:scale-110", isActive && "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]")} />
+          <item.icon className={cn("h-[19px] w-[19px] flex-shrink-0 transition-all group-hover:scale-110", isActive && "text-primary")} />
           {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
         </Link>
 
@@ -616,7 +616,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar backdrop-blur-xl border-r border-sidebar-border/60 transition-all duration-300 shadow-float",
+        "fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border/60 transition-all duration-300 shadow-sm",
         collapsed ? "w-20" : "w-64"
       )}
     >
