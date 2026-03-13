@@ -20,7 +20,8 @@ export function formatCurrency(
   amount: number | null | undefined,
   currency: string = "NPR",
   locale: string = "en-NP",
-  standard: "national" | "international" = "international"
+  standard: "national" | "international" = "international",
+  display: "symbol" | "code" | "both" = "symbol"
 ): string {
   if (amount === null || amount === undefined) return "—";
 
@@ -28,12 +29,21 @@ export function formatCurrency(
   const targetLocale = standard === "national" ? "en-IN" : locale;
 
   try {
-    return new Intl.NumberFormat(targetLocale, {
+    const formatter = new Intl.NumberFormat(targetLocale, {
       style: "currency",
       currency,
+      currencyDisplay: display === "both" ? "symbol" : (display === "code" ? "code" : "symbol"),
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    }).format(amount);
+    });
+
+    let result = formatter.format(amount);
+
+    if (display === "both") {
+      result = `${currency} ${result}`;
+    }
+
+    return result;
   } catch {
     // Fallback for unsupported locales
     return `${currency} ${amount.toLocaleString()}`;
@@ -51,9 +61,19 @@ export function formatNumber(
 }
 
 /** Format a date in standard AD format (dd/MM/yyyy) */
-export function formatAD(date: Date | string, withTime?: "time" | "seconds"): string {
+export function formatAD(
+  date: Date | string,
+  withTime?: "time" | "seconds",
+  timeFormat: "12h" | "24h" = "12h"
+): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  if (withTime === "seconds") return fnsFormat(d, AD_DATETIME_SEC_FORMAT);
-  if (withTime === "time") return fnsFormat(d, AD_DATETIME_FORMAT);
-  return fnsFormat(d, AD_DATE_FORMAT);
+
+  let formatString = AD_DATE_FORMAT;
+  if (withTime === "time") {
+    formatString = timeFormat === "24h" ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy hh:mm a";
+  } else if (withTime === "seconds") {
+    formatString = timeFormat === "24h" ? "dd/MM/yyyy HH:mm:ss" : "dd/MM/yyyy hh:mm:ss a";
+  }
+
+  return fnsFormat(d, formatString);
 }

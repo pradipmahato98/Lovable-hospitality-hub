@@ -83,11 +83,37 @@ export function NepaliDateInput({
   const calendarDays = useMemo(() => {
     const firstDayAD = bsToAD({ year: bsYear, month: bsMonth, day: 1 });
     const startDayOfWeek = firstDayAD.getDay(); // 0=Sun
+    const firstDayPref = locSettings?.first_day_of_week ?? 0; // 0=Sun, 1=Mon
+
+    // Adjust start offset based on preference
+    // If startDayOfWeek is 0 (Sun) and firstDayPref is 1 (Mon), offset should be 6
+    // If startDayOfWeek is 1 (Mon) and firstDayPref is 1 (Mon), offset should be 0
+    let offset = (startDayOfWeek - firstDayPref + 7) % 7;
+
     const days: (number | null)[] = [];
-    for (let i = 0; i < startDayOfWeek; i++) days.push(null);
+    for (let i = 0; i < offset; i++) days.push(null);
     for (let d = 1; d <= daysInMonth; d++) days.push(d);
     return days;
-  }, [bsYear, bsMonth, daysInMonth]);
+  }, [bsYear, bsMonth, daysInMonth, locSettings?.first_day_of_week]);
+
+  const weekDays = useMemo(() => {
+    const baseDays = [
+      { id: 0, en: "Su", np: "आइत" },
+      { id: 1, en: "Mo", np: "सोम" },
+      { id: 2, en: "Tu", np: "मंगल" },
+      { id: 3, en: "We", np: "बुध" },
+      { id: 4, en: "Th", np: "बिही" },
+      { id: 5, en: "Fr", np: "शुक्र" },
+      { id: 6, en: "Sa", np: "शनि" },
+    ];
+    const firstDayPref = locSettings?.first_day_of_week ?? 0;
+    const sorted = [...baseDays];
+    for (let i = 0; i < firstDayPref; i++) {
+      const day = sorted.shift();
+      if (day) sorted.push(day);
+    }
+    return sorted;
+  }, [locSettings?.first_day_of_week]);
 
   const today = todayBS();
   const isToday = (d: number) => d === today.day && bsMonth === today.month && bsYear === today.year;
@@ -190,8 +216,10 @@ export function NepaliDateInput({
 
                 {/* Day Grid */}
                 <div className="grid grid-cols-7 gap-0.5 text-center">
-                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-                    <div key={d} className="text-[10px] font-medium text-muted-foreground py-1">{d}</div>
+                  {weekDays.map((d) => (
+                    <div key={d.id} className="text-[10px] font-medium text-muted-foreground py-1">
+                      {locSettings?.language === "np" ? d.np : d.en}
+                    </div>
                   ))}
                   {calendarDays.map((day, idx) => (
                     <div key={idx} className="aspect-square flex items-center justify-center">
