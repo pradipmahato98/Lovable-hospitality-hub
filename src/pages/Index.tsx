@@ -20,7 +20,7 @@ const Index = () => {
 
   if (isLoading) {
     return (
-      <MainLayout title="Dashboard" subtitle="Syncing property data...">
+      <MainLayout title={t('nav.dashboard')} subtitle={t('dashboard.syncing')}>
         <div className="flex h-96 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -36,9 +36,9 @@ const Index = () => {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
               <ShieldAlert className="h-4 w-4" />
-              SECURITY ADVISORY
+              {t('dashboard.security_advisory')}
             </CardTitle>
-            <Badge variant="destructive">Action Required</Badge>
+            <Badge variant="destructive">{t('dashboard.action_required')}</Badge>
           </CardHeader>
           <CardContent>
             <p className="text-sm">
@@ -52,7 +52,7 @@ const Index = () => {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-6">
         <MetricCard
-          title="Occupancy Rate"
+          title={t('dashboard.occupancy_rate')}
           value={stats?.occupancyRate || "0%"}
           change="+2.1% from yesterday"
           changeType="positive"
@@ -61,7 +61,7 @@ const Index = () => {
           link="/front-desk"
         />
         <MetricCard
-          title="Total Guests"
+          title={t('dashboard.total_guests')}
           value={stats?.totalGuests || 0}
           change="Registered profiles"
           changeType="neutral"
@@ -79,7 +79,7 @@ const Index = () => {
           link="/finance"
         />
         <MetricCard
-          title="Pending Bookings"
+          title={t('dashboard.pending_bookings')}
           value={stats?.pendingBookings || 0}
           change="Require confirmation"
           changeType="neutral"
