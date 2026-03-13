@@ -11,12 +11,12 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { todayBS, formatBSDate } from "@/lib/nepaliDate";
-import { formatAD } from "@/lib/utils";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 const Index = () => {
   const { data: stats, isLoading } = useDashboardStats();
   const { isAdmin } = useIsAdmin();
+  const { formatDate, formatAmount, t } = useLocalization();
 
   if (isLoading) {
     return (
@@ -28,10 +28,8 @@ const Index = () => {
     );
   }
 
-  const bsToday = formatBSDate(todayBS(), "short");
-
   return (
-    <MainLayout title="Dashboard" subtitle={`${formatAD(new Date())} • ${bsToday} BS`}>
+    <MainLayout title={t('nav.dashboard')} subtitle={formatDate(new Date())}>
       {/* Security Alert */}
       {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
         <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">
@@ -72,8 +70,8 @@ const Index = () => {
           link="/guests"
         />
         <MetricCard
-          title="Today's Revenue"
-          value={stats?.todayRevenue || "$0"}
+          title={t('dashboard.revenue')}
+          value={stats?.todayRevenue ? formatAmount(parseFloat(stats.todayRevenue.replace(/[^0-9.-]+/g,""))) : formatAmount(0)}
           change="New revenue streams"
           changeType="positive"
           icon={TrendingUp}
