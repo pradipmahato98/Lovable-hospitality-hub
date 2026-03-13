@@ -13,7 +13,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUIPreferences } from "@/hooks/useSettings";
-import { useEffect } from "react";
 
 interface NavSubItem {
   label: string;
@@ -359,25 +358,25 @@ function NavItem({
   const link = (
     <div className="flex flex-col w-full">
       <div className={cn(
-        "flex items-center w-full group rounded-lg transition-all duration-200",
+        "flex items-center w-full group rounded-lg transition-all duration-200 relative",
         isActive
-          ? "bg-sidebar-accent text-primary"
+          ? "bg-sidebar-accent shadow-sm text-primary"
           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-foreground"
       )}>
+        {isActive && !collapsed && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-5 rounded-r-full bg-primary" />
+        )}
         <Link
           to={item.path}
           onClick={(e) => {
             if (onNavClick) onNavClick();
           }}
           className={cn(
-            "flex-1 flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-all duration-200 relative",
+            "flex-1 flex items-center gap-3 px-3 py-2.5 text-[13.5px] font-semibold transition-all duration-200",
             collapsed && !isMobile && "justify-center px-2"
           )}
         >
-          {isActive && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />
-          )}
-          <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", isActive && "text-primary")} />
+          <item.icon className={cn("h-[19px] w-[19px] flex-shrink-0 transition-all group-hover:scale-110", isActive && "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]")} />
           {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
         </Link>
 
@@ -389,17 +388,17 @@ function NavItem({
               toggleGroup(item.label);
             }}
             className={cn(
-              "px-2 py-2 transition-colors",
+              "px-3 py-2.5 transition-colors flex items-center justify-center",
               isActive ? "text-primary" : "text-sidebar-foreground/40"
             )}
           >
-            <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
+            <ChevronDown className={cn("h-4 w-4 transition-transform duration-300 ease-in-out", isExpanded && "rotate-180")} />
           </button>
         )}
       </div>
 
       {hasSubItems && isExpanded && !collapsed && (
-        <div className="ml-9 mt-1 flex flex-col gap-0.5 border-l border-sidebar-border/40 pl-2">
+        <div className="ml-9 mt-1.5 flex flex-col gap-1.5 border-l-2 border-primary/20 pl-4 animate-in slide-in-from-top-2 duration-300">
           {item.subItems?.map((sub) => (
             <Link
               key={sub.path || sub.tab}
@@ -495,7 +494,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto scrollbar-hide">
+      <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto scrollbar-hide">
         {navItems.map((item) => (
           <NavItem
             key={item.path}
@@ -617,7 +616,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar backdrop-blur-xl border-r border-sidebar-border/60 transition-all duration-300 shadow-float",
         collapsed ? "w-20" : "w-64"
       )}
     >
