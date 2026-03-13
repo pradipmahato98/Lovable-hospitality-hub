@@ -378,7 +378,36 @@ export function useUpdateAPIKeysSettings() {
 }
 
 export function useLocalizationSettings() {
-  return useSettings<LocalizationSettings>("localization_settings", defaultLocalizationSettings);
+  const queryClient = useQueryClient();
+  const { data: user } = useAuth();
+
+  return useQuery({
+    queryKey: ["settings", "localization_settings"],
+    queryFn: async () => {
+      // In development or if not logged in, return defaults to avoid block
+      if (!user && import.meta.env.DEV) return defaultLocalizationSettings;
+
+      try {
+        const { data, error } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("key", "localization_settings")
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching localization settings:", error);
+          return defaultLocalizationSettings;
+        }
+        if (!data) return defaultLocalizationSettings;
+        return data.value as unknown as LocalizationSettings;
+      } catch (e) {
+        return defaultLocalizationSettings;
+      }
+    },
+    // Don't retry infinitely on auth errors
+    retry: false,
+    staleTime: 1000 * 60 * 5, // 5 min
+  });
 }
 
 export function useUpdateLocalizationSettings() {
