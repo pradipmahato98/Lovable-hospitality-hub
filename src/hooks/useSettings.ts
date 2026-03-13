@@ -120,6 +120,11 @@ export interface LocalizationSettings {
   language: "en" | "np";
   number_standard: "national" | "international";
   currency: string;
+  time_format: "12h" | "24h";
+  first_day_of_week: 0 | 1; // 0 for Sunday, 1 for Monday
+  measurement_system: "metric" | "imperial";
+  currency_display: "symbol" | "code" | "both";
+  fiscal_year_start_month: number; // 1-12
 }
 
 // Default values
@@ -231,6 +236,11 @@ const defaultLocalizationSettings: LocalizationSettings = {
   language: "en",
   number_standard: "international",
   currency: "NPR",
+  time_format: "12h",
+  first_day_of_week: 0,
+  measurement_system: "metric",
+  currency_display: "symbol",
+  fiscal_year_start_month: 4, // Default to April (common for many accounting cycles including NP)
 };
 
 // Generic settings fetch hook

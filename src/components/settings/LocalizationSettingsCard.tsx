@@ -108,7 +108,7 @@ export function LocalizationSettingsCard({
 
             {/* Currency */}
             <div className="space-y-2">
-              <Label>Currency</Label>
+              <Label>{t('localization.currency')}</Label>
               <Select
                 value={effectiveSettings.currency}
                 onValueChange={(v) => onSettingChange("currency", v)}
@@ -121,6 +121,107 @@ export function LocalizationSettingsCard({
                   <SelectItem value="NPR">NPR (रू)</SelectItem>
                   <SelectItem value="USD">USD ($)</SelectItem>
                   <SelectItem value="INR">INR (₹)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Time Format */}
+            <div className="space-y-2">
+              <Label>{t('localization.time_format')}</Label>
+              <Select
+                value={effectiveSettings.time_format}
+                onValueChange={(v) => onSettingChange("time_format", v)}
+                disabled={isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12h">12-hour (AM/PM)</SelectItem>
+                  <SelectItem value="24h">24-hour</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* First Day of Week */}
+            <div className="space-y-2">
+              <Label>{t('localization.first_day_of_week')}</Label>
+              <Select
+                value={String(effectiveSettings.first_day_of_week)}
+                onValueChange={(v) => onSettingChange("first_day_of_week", Number(v))}
+                disabled={isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">{t('localization.sunday')}</SelectItem>
+                  <SelectItem value="1">{t('localization.monday')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Measurement System */}
+            <div className="space-y-2">
+              <Label>{t('localization.measurement_system')}</Label>
+              <Select
+                value={effectiveSettings.measurement_system}
+                onValueChange={(v) => onSettingChange("measurement_system", v)}
+                disabled={isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="metric">{t('localization.metric')}</SelectItem>
+                  <SelectItem value="imperial">{t('localization.imperial')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Currency Display */}
+            <div className="space-y-2">
+              <Label>{t('localization.currency_display')}</Label>
+              <Select
+                value={effectiveSettings.currency_display}
+                onValueChange={(v) => onSettingChange("currency_display", v)}
+                disabled={isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="symbol">{t('localization.symbol')}</SelectItem>
+                  <SelectItem value="code">{t('localization.code')}</SelectItem>
+                  <SelectItem value="both">{t('localization.both')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fiscal Year Start */}
+            <div className="space-y-2">
+              <Label>{t('localization.fiscal_year_start')}</Label>
+              <Select
+                value={String(effectiveSettings.fiscal_year_start_month)}
+                onValueChange={(v) => onSettingChange("fiscal_year_start_month", Number(v))}
+                disabled={isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">{t('localization.january')}</SelectItem>
+                  <SelectItem value="2">{t('localization.february')}</SelectItem>
+                  <SelectItem value="3">{t('localization.march')}</SelectItem>
+                  <SelectItem value="4">{t('localization.april')}</SelectItem>
+                  <SelectItem value="5">{t('localization.may')}</SelectItem>
+                  <SelectItem value="6">{t('localization.june')}</SelectItem>
+                  <SelectItem value="7">{t('localization.july')}</SelectItem>
+                  <SelectItem value="8">{t('localization.august')}</SelectItem>
+                  <SelectItem value="9">{t('localization.september')}</SelectItem>
+                  <SelectItem value="10">{t('localization.october')}</SelectItem>
+                  <SelectItem value="11">{t('localization.november')}</SelectItem>
+                  <SelectItem value="12">{t('localization.december')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

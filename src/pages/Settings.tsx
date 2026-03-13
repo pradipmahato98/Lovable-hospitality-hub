@@ -184,6 +184,11 @@ const Settings = () => {
                     language: "en",
                     number_standard: "international",
                     currency: "NPR",
+                    time_format: "12h",
+                    first_day_of_week: 0,
+                    measurement_system: "metric",
+                    currency_display: "symbol",
+                    fiscal_year_start_month: 4,
                   };
                   updateLocalization.mutate({ ...current, [key]: value });
                 }}

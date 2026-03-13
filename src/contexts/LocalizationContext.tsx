@@ -40,7 +40,8 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
       amount,
       settings?.currency || "NPR",
       settings?.language === "np" ? "ne-NP" : "en-NP",
-      settings?.number_standard || "international"
+      settings?.number_standard || "international",
+      settings?.currency_display || "symbol"
     );
   }, [settings]);
 
@@ -55,17 +56,19 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
   const formatDate = useCallback((date: Date | string, withTime?: "time" | "seconds") => {
     if (!date) return "—";
     const d = typeof date === "string" ? new Date(date) : date;
+    const timeFormat = settings?.time_format || "12h";
 
     if (settings?.calendar_mode === "BS") {
       try {
         const bsDate = adToBS(d);
+        // Note: formatBSDate currently doesn't support timeFormat, but we can extend it if needed
         return formatBSDate(bsDate, withTime ? "long" : "short");
       } catch (e) {
-        return formatAD(d, withTime);
+        return formatAD(d, withTime, timeFormat);
       }
     }
-    return formatAD(d, withTime);
-  }, [settings?.calendar_mode]);
+    return formatAD(d, withTime, timeFormat);
+  }, [settings?.calendar_mode, settings?.time_format]);
 
   return (
     <LocalizationContext.Provider value={{
