@@ -37,5 +37,19 @@
     "english": "English",
     "ad": "AD (Gregorian)",
     "bs": "BS (Bikram Sambat)"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "occupancy": "Occupancy",
+    "occupancy_rate": "Occupancy Rate",
+    "total_guests": "Total Guests",
+    "pending_bookings": "Pending Bookings",
+    "revenue": "Revenue",
+    "adr": "ADR",
+    "revpar": "RevPAR",
+    "recent_activity": "Recent Activity",
+    "syncing": "Syncing property data...",
+    "security_advisory": "SECURITY ADVISORY",
+    "action_required": "Action Required"
   }
 }

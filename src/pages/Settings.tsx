@@ -22,6 +22,7 @@ import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
+  LocalizationSettingsCard,
 } from "@/components/settings";
 
 type SettingsTab = "checkin" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
@@ -177,7 +178,15 @@ const Settings = () => {
                 settings={localizationSettings}
                 isLoading={isLoadingLocalization}
                 isPending={updateLocalization.isPending}
-                onSettingChange={(key, value) => localizationSettings && updateLocalization.mutate({ ...localizationSettings, [key]: value })}
+                onSettingChange={(key, value) => {
+                  const current = localizationSettings || {
+                    calendar_mode: "AD",
+                    language: "en",
+                    number_standard: "international",
+                    currency: "NPR",
+                  };
+                  updateLocalization.mutate({ ...current, [key]: value });
+                }}
               />
             )}
             {activeTab === "payment" && (

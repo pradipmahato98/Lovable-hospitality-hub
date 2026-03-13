@@ -68,9 +68,15 @@
   "dashboard": {
     "welcome": "स्वागत छ",
     "occupancy": "अकुपेन्सी",
+    "occupancy_rate": "अकुपेन्सी दर",
+    "total_guests": "कुल पाहुनाहरू",
+    "pending_bookings": "बाँकी आरक्षणहरू",
     "revenue": "राजस्व",
     "adr": "ए.डी.आर (ADR)",
     "revpar": "रेभ.पार (RevPAR)",
-    "recent_activity": "हालैका गतिविधिहरू"
+    "recent_activity": "हालैका गतिविधिहरू",
+    "syncing": "डाटा सिङ्क हुँदैछ...",
+    "security_advisory": "सुरक्षा सल्लाह",
+    "action_required": "कार्य आवश्यक"
   }
 }
