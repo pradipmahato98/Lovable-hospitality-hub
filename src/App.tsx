@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DesignSystemProvider } from "@/components/theme/DesignSystemProvider";
 import { DynamicIslandProvider } from "@/components/ui/ios/DynamicIslandProvider";
+import { LocalizationProvider } from "@/contexts/LocalizationContext";
 import { QuickActionsProvider } from "@/contexts/QuickActionsContext";
 import { GlobalQuickActions } from "@/components/quick-actions";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
@@ -85,6 +86,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <SidebarProvider>
+            <LocalizationProvider>
             <DesignSystemProvider>
             <DynamicIslandProvider>
             <QuickActionsProvider>
@@ -128,6 +130,7 @@ const App = () => (
             </QuickActionsProvider>
             </DynamicIslandProvider>
             </DesignSystemProvider>
+            </LocalizationProvider>
             </SidebarProvider>
           </AuthProvider>
         </BrowserRouter>

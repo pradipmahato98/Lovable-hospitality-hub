@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface NavSubItem {
   label: string;
@@ -321,11 +322,15 @@ function NavItem({
   onNavClick?: () => void;
   dropdownsEnabled: boolean;
 }) {
+  const { t } = useTranslation();
   const { openGroups, toggleGroup, setOpenGroups } = useSidebar();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isExpanded = openGroups.includes(item.label);
   const hasSubItems = item.subItems && item.subItems.length > 0 && dropdownsEnabled;
+
+  const translationKey = `nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  const translatedLabel = t(translationKey, item.label);
 
   const isSubActive = (sub: NavSubItem, defaultTab?: string) => {
     if (sub.path) {
@@ -378,7 +383,7 @@ function NavItem({
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />
           )}
           <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", isActive && "text-primary")} />
-          {(!collapsed || isMobile) && <span className="truncate">{item.label}</span>}
+          {(!collapsed || isMobile) && <span className="truncate">{translatedLabel}</span>}
         </Link>
 
         {hasSubItems && !collapsed && (
@@ -468,6 +473,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     return location.pathname.startsWith(path);
   };
 
+  const { t } = useTranslation();
+
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
@@ -512,7 +519,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {(!collapsed || isMobile) && (
           <div className="mt-4 mb-1 px-3">
             <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
-              Operations
+              {t('common.operations', 'Operations')}
             </p>
           </div>
         )}
@@ -535,7 +542,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             {(!collapsed || isMobile) && (
               <div className="mt-4 mb-1 px-3">
                 <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
-                  Admin
+                  {t('common.admin', 'Admin')}
                 </p>
               </div>
             )}

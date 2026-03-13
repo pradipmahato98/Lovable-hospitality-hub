@@ -3,6 +3,7 @@ export { PaymentSettingsCard } from "./PaymentSettingsCard";
 export { NotificationSettingsCard } from "./NotificationSettingsCard";
 export { PropertySettingsCard } from "./PropertySettingsCard";
 export { SecuritySettingsCard } from "./SecuritySettingsCard";
+export * from "./LocalizationSettingsCard";
 export { BookingSourcesCard } from "./BookingSourcesCard";
 export { RatePlansCard } from "./RatePlansCard";
 export { QuickMenuSettingsCard } from "./QuickMenuSettingsCard";

@@ -239,6 +239,14 @@ export function toNepaliDigits(num: number | string): string {
 }
 
 /**
+ * Convert Nepali digits to English digits
+ */
+export function toEnglishDigits(num: string): string {
+  const nepaliDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return num.replace(/[०-९]/g, (d) => String(nepaliDigits.indexOf(d)));
+}
+
+/**
  * Get BS month name
  */
 export function getBSMonthName(month: number, lang: "en" | "np" = "en"): string {

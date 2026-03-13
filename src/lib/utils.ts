@@ -19,11 +19,16 @@ export const AD_DATETIME_SEC_FORMAT = "dd/MM/yyyy HH:mm:ss";
 export function formatCurrency(
   amount: number | null | undefined,
   currency: string = "NPR",
-  locale: string = "en-NP"
+  locale: string = "en-NP",
+  standard: "national" | "international" = "international"
 ): string {
   if (amount === null || amount === undefined) return "—";
+
+  // For 'national' (Lakh/Crore) standard in Nepal/India
+  const targetLocale = standard === "national" ? "en-IN" : locale;
+
   try {
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(targetLocale, {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
@@ -33,6 +38,16 @@ export function formatCurrency(
     // Fallback for unsupported locales
     return `${currency} ${amount.toLocaleString()}`;
   }
+}
+
+/** Format a large number with Lakh/Crore vs Million/Billion */
+export function formatNumber(
+  num: number,
+  standard: "national" | "international" = "international",
+  locale: string = "en-NP"
+): string {
+  const targetLocale = standard === "national" ? "en-IN" : locale;
+  return new Intl.NumberFormat(targetLocale).format(num);
 }
 
 /** Format a date in standard AD format (dd/MM/yyyy) */

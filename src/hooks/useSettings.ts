@@ -115,6 +115,13 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
+export interface LocalizationSettings {
+  calendar_mode: "AD" | "BS";
+  language: "en" | "np";
+  number_standard: "national" | "international";
+  currency: string;
+}
+
 // Default values
 const defaultCheckInSettings: CheckInFieldSettings = {
   id_required: true,
@@ -217,6 +224,13 @@ const defaultUITemplates: UITemplatesSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
+};
+
+const defaultLocalizationSettings: LocalizationSettings = {
+  calendar_mode: "AD",
+  language: "en",
+  number_standard: "international",
+  currency: "NPR",
 };
 
 // Generic settings fetch hook
@@ -361,6 +375,14 @@ export function useAPIKeysSettings() {
 
 export function useUpdateAPIKeysSettings() {
   return useUpdateSettings<APIKeysSettings>("api_keys");
+}
+
+export function useLocalizationSettings() {
+  return useSettings<LocalizationSettings>("localization_settings", defaultLocalizationSettings);
+}
+
+export function useUpdateLocalizationSettings() {
+  return useUpdateSettings<LocalizationSettings>("localization_settings");
 }
 
 export function useBusinessDate() {

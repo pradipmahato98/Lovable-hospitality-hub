@@ -1,0 +1,41 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading...",
+    "today": "Today",
+    "settings": "Settings",
+    "localization": "Localization"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "reservations": "Reservations",
+    "front_desk": "Front Desk",
+    "finance": "Finance",
+    "inventory": "Inventory",
+    "pos": "POS",
+    "housekeeping": "Housekeeping",
+    "engineering": "Engineering",
+    "guests": "Guests",
+    "marketing": "Marketing",
+    "management": "Management",
+    "staff": "Staff",
+    "settings": "Settings"
+  },
+  "localization": {
+    "title": "Localization Settings",
+    "language": "Language",
+    "calendar_mode": "Calendar Mode",
+    "number_standard": "Number Standard",
+    "number_format": "Number Format",
+    "national": "National (Lakh/Crore)",
+    "international": "International (Million/Billion)",
+    "nepali": "Nepali (नेपाली)",
+    "english": "English",
+    "ad": "AD (Gregorian)",
+    "bs": "BS (Bikram Sambat)"
+  }
+}

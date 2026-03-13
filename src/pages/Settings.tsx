@@ -10,7 +10,8 @@ import {
   usePropertySettings, useUpdatePropertySettings,
   useNotificationSettings, useUpdateNotificationSettings,
   useQuickMenuSettings, useUpdateQuickMenuSettings,
-  CheckInFieldSettings, PaymentSettings, PropertySettings, NotificationSettings, QuickMenuSettings,
+  useLocalizationSettings, useUpdateLocalizationSettings,
+  CheckInFieldSettings, PaymentSettings, PropertySettings, NotificationSettings, QuickMenuSettings, LocalizationSettings,
 } from "@/hooks/useSettings";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate, useSearchParams } from "react-router-dom";
@@ -23,7 +24,7 @@ import {
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
+type SettingsTab = "checkin" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,6 +53,8 @@ const Settings = () => {
   const updateNotifications = useUpdateNotificationSettings();
   const { data: quickMenuSettings, isLoading: isLoadingQuickMenu } = useQuickMenuSettings();
   const updateQuickMenu = useUpdateQuickMenuSettings();
+  const { data: localizationSettings, isLoading: isLoadingLocalization } = useLocalizationSettings();
+  const updateLocalization = useUpdateLocalizationSettings();
 
   if (isLoadingRole) {
     return (
@@ -69,6 +72,7 @@ const Settings = () => {
 
   const tabs = [
     { id: "checkin" as const, icon: ClipboardCheck, label: "Check-in Settings" },
+    { id: "localization" as const, icon: Globe, label: "Localization" },
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },
     { id: "rates" as const, icon: Tags, label: "Rate Plans" },
@@ -166,6 +170,14 @@ const Settings = () => {
                 isLoading={isLoadingCheckIn}
                 isPending={updateCheckIn.isPending}
                 onSettingChange={(key, value) => checkInSettings && updateCheckIn.mutate({ ...checkInSettings, [key]: value })}
+              />
+            )}
+            {activeTab === "localization" && (
+              <LocalizationSettingsCard
+                settings={localizationSettings}
+                isLoading={isLoadingLocalization}
+                isPending={updateLocalization.isPending}
+                onSettingChange={(key, value) => localizationSettings && updateLocalization.mutate({ ...localizationSettings, [key]: value })}
               />
             )}
             {activeTab === "payment" && (
