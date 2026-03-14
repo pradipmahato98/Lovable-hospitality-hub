@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-03-20 - Insecure API Key Generation
+**Vulnerability:** API keys were being generated using `Math.random()`, which is not cryptographically secure and can be predictable.
+**Learning:** Using standard JavaScript `Math.random()` for security-sensitive identifiers like API keys or secrets is a common but high-risk anti-pattern.
+**Prevention:** Always use `window.crypto.getRandomValues()` for generating tokens, keys, or any value where high entropy and unpredictability are required.
