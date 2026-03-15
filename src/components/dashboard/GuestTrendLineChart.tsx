@@ -29,7 +29,7 @@ export function GuestTrendLineChart() {
               <span className="text-[10px] text-muted-foreground font-medium">Check-ins</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "hsl(210, 80%, 56%)" }} />
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "hsl(var(--accent))" }} />
               <span className="text-[10px] text-muted-foreground font-medium">Check-outs</span>
             </div>
           </div>
@@ -74,9 +74,9 @@ export function GuestTrendLineChart() {
                 <Line
                   type="monotone"
                   dataKey="checkOuts"
-                  stroke="hsl(210, 80%, 56%)"
+                  stroke="hsl(var(--accent))"
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: "hsl(210, 80%, 56%)" }}
+                  dot={{ r: 3, fill: "hsl(var(--accent))" }}
                   activeDot={{ r: 5 }}
                   name="Check-outs"
                 />
