@@ -21,21 +21,30 @@ export function HeaderUserMenu() {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="rounded-full flex items-center gap-2 px-1 sm:px-2 py-1 h-auto hover:bg-transparent">
-          <div className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center ring-2 ring-primary/10 shadow-3d-blue flex-shrink-0">
+    <div className="flex items-center gap-1 sm:gap-2">
+      <Link to="/profile" className="flex-shrink-0">
+        <Button variant="ghost" className="p-0 h-8 w-8 rounded-full hover:bg-transparent flex-shrink-0 group">
+          <div className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center ring-2 ring-primary/10 shadow-3d-blue transition-transform group-hover:scale-105">
             <span className="text-xs font-semibold text-primary-foreground">{getInitials()}</span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 min-w-0">
-            <span className="text-sm font-medium text-foreground truncate max-w-[100px]">
-              {profile?.first_name || "User"}
-            </span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      </Link>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="flex items-center gap-1 px-1 sm:px-2 py-1 h-8 hover:bg-secondary/50 rounded-lg">
+            <div className="hidden sm:flex items-center gap-1.5 min-w-0">
+              <span className="text-sm font-medium text-foreground truncate max-w-[100px]">
+                {profile?.first_name || "User"}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+            <div className="sm:hidden">
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div>
             <p className="font-medium">{profile?.first_name} {profile?.last_name}</p>
@@ -44,13 +53,13 @@ export function HeaderUserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to="/staff?tab=about&sub=details" className="flex items-center gap-2 cursor-pointer">
+          <Link to="/staff?tab=details" className="flex items-center gap-2 cursor-pointer">
             <User className="h-4 w-4" />
             My Account
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/staff?tab=about&sub=preferences" className="flex items-center gap-2 cursor-pointer">
+          <Link to="/staff?tab=preferences" className="flex items-center gap-2 cursor-pointer">
             <Settings className="h-4 w-4" />
             Preferences
           </Link>
@@ -62,5 +71,6 @@ export function HeaderUserMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </div>
   );
 }

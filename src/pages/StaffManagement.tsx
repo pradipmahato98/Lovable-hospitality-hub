@@ -22,8 +22,11 @@ import { LogsReportTab } from "@/components/staff/LogsReportTab";
 import { SchedulesTab } from "@/components/staff/SchedulesTab";
 import { AttendanceTab } from "@/components/staff/AttendanceTab";
 import { StaffAnalyticsTab } from "@/components/staff/StaffAnalyticsTab";
+import { PayrollTab } from "@/components/staff/PayrollTab";
+import { LeaveTab } from "@/components/staff/LeaveTab";
+import { PerformanceTab } from "@/components/staff/PerformanceTab";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Clock as ClockIcon, BarChart3 } from "lucide-react";
+import { CalendarDays, Clock as ClockIcon, BarChart3, DollarSign, CalendarX, Award } from "lucide-react";
 
 const StaffManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -84,6 +87,21 @@ const StaffManagement = () => {
                 <span className="whitespace-nowrap">Schedules</span>
               </TabsTrigger>
 
+              <TabsTrigger value="payroll" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <DollarSign className="h-4 w-4" />
+                <span className="whitespace-nowrap">Payroll</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="leave" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <CalendarX className="h-4 w-4" />
+                <span className="whitespace-nowrap">Leave</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="performance" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
+                <Award className="h-4 w-4" />
+                <span className="whitespace-nowrap">Performance</span>
+              </TabsTrigger>
+
               <TabsTrigger value="alerts" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
                 <Bell className="h-4 w-4" />
                 <span className="whitespace-nowrap">Alerts</span>
@@ -129,6 +147,18 @@ const StaffManagement = () => {
 
             <TabsContent value="schedules" className="mt-0">
               <SchedulesTab />
+            </TabsContent>
+
+            <TabsContent value="payroll" className="mt-0">
+              <PayrollTab />
+            </TabsContent>
+
+            <TabsContent value="leave" className="mt-0">
+              <LeaveTab />
+            </TabsContent>
+
+            <TabsContent value="performance" className="mt-0">
+              <PerformanceTab />
             </TabsContent>
 
             <TabsContent value="attendance" className="mt-0">

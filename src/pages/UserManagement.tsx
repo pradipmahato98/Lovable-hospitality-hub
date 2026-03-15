@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, History, ShieldAlert, Loader2, Activity, Download, UserCog } from "lucide-react";
+import { Users, History, ShieldAlert, Loader2, Activity, Download, UserCog, Shield, UserPlus } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
-import { UsersTable, AuditLogTable } from "@/components/users";
+import { UsersTable, AuditLogTable, PermissionsTab, InvitationsTab } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { format, formatDistanceToNow } from "date-fns";
@@ -156,6 +156,14 @@ const UserManagement = () => {
               <TabsTrigger value="bulk" className="gap-2 whitespace-nowrap">
                 <UserCog className="h-4 w-4" />
                 Bulk Actions
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="gap-2 whitespace-nowrap">
+                <Shield className="h-4 w-4" />
+                Permissions
+              </TabsTrigger>
+              <TabsTrigger value="invitations" className="gap-2 whitespace-nowrap">
+                <UserPlus className="h-4 w-4" />
+                Invitations
               </TabsTrigger>
               <TabsTrigger value="audit" className="gap-2 whitespace-nowrap">
                 <History className="h-4 w-4" />
@@ -313,6 +321,14 @@ const UserManagement = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="permissions">
+            <PermissionsTab />
+          </TabsContent>
+
+          <TabsContent value="invitations">
+            <InvitationsTab />
           </TabsContent>
 
           <TabsContent value="audit">
