@@ -17,3 +17,13 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-03-05 - CSV Formula Injection in Audit Logs
+**Vulnerability:** Audit logs exported as CSV were not sanitized for formula characters (`=`, `+`, `-`, `@`), allowing potential code execution in spreadsheet software.
+**Learning:** Even internal administrative tools must treat all exported data as untrusted if it can be influenced by users (e.g., via actions that generate log entries).
+**Prevention:** Sanitize all fields in CSV exports by prepending a single quote (`'`) to any value starting with formula-triggering characters.
+
+## 2026-03-05 - Insecure API Key Generation
+**Vulnerability:** API keys were generated using `Math.random()`, which is not cryptographically secure and could lead to predictable keys.
+**Learning:** Developers often default to `Math.random()` for convenience, but for security-sensitive identifiers like API keys, a CSPRNG is mandatory.
+**Prevention:** Always use `window.crypto.getRandomValues()` for generating security tokens, keys, or any value requiring high entropy.
