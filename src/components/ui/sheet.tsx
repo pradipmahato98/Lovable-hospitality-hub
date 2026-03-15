@@ -48,8 +48,6 @@ const sheetVariants = cva(
   },
 );
 
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
-
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {}

@@ -425,6 +425,7 @@ export async function savePOSTables(tables: POSTable[]) {
         server_name: table.server_name,
         start_time: table.start_time,
         merged_with: table.merged_with,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         current_order: currentOrder as any,
       })
       .eq("table_number", table.table_number);

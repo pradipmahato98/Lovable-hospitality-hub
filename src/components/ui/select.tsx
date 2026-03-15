@@ -59,9 +59,6 @@ const SelectScrollDownButton = React.forwardRef<
 ));
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName;
 
-import { X } from "lucide-react";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
-
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
@@ -80,7 +77,7 @@ const SelectContent = React.forwardRef<
           className,
         )}
         position={position}
-        onInteractOutside={handleInteractionOutside}
+        onPointerDownOutside={handleInteractionOutside}
         onEscapeKeyDown={handleInteractionOutside}
         {...props}
       >
@@ -113,7 +110,8 @@ const SelectContent = React.forwardRef<
       <SelectScrollDownButton />
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
-));
+);
+});
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectLabel = React.forwardRef<

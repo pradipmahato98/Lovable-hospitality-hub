@@ -163,7 +163,7 @@ export function GlobalSearch() {
     const filteredGuests = Array.from(guestMap.values()).slice(0, 5);
 
     // Deduplicate staff by ID and signature
-    const staffMap = new Map<string, any>();
+    const staffMap = new Map<string, Record<string, unknown>>();
     const seenStaffSignatures = new Set<string>();
 
     staff.forEach(s => {
@@ -217,7 +217,9 @@ export function GlobalSearch() {
   };
 
   const handleGuestAction = useCallback((e: React.MouseEvent | { stopPropagation: () => void }, guest: Guest, action: "check-in" | "check-out" | "profile") => {
-    e.stopPropagation();
+    if (e && 'stopPropagation' in e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
     setIsOpen(false);
     setQuery("");
     if (action === "profile") {
@@ -415,7 +417,7 @@ export function GlobalSearch() {
                             "group flex flex-col p-3 rounded-md cursor-pointer transition-colors",
                             selectedIndex === absoluteIndex ? "bg-muted" : "hover:bg-muted/50"
                           )}
-                          onClick={() => handleGuestAction({ stopPropagation: () => {} } as any, g, "profile")}
+                          onClick={() => handleGuestAction({ stopPropagation: () => {} }, g, "profile")}
                           onMouseEnter={() => setSelectedIndex(absoluteIndex)}
                         >
                           <div className="flex items-center justify-between mb-2">

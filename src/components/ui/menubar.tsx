@@ -78,9 +78,6 @@ const MenubarSubContent = React.forwardRef<
 ));
 MenubarSubContent.displayName = MenubarPrimitive.SubContent.displayName;
 
-import { X } from "lucide-react";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
-
 const MenubarContent = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.Content>

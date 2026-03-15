@@ -53,9 +53,6 @@ const ContextMenuSubContent = React.forwardRef<
 ));
 ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 
-import { X } from "lucide-react";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
-
 const ContextMenuContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
@@ -75,12 +72,12 @@ const ContextMenuContent = React.forwardRef<
         )}
         onInteractOutside={(e) => {
           handleInteractionOutside(e);
-          // @ts-ignore
+          // @ts-expect-error - Radix types might be strict but we want to pass the event up
           onInteractOutside?.(e);
         }}
         onEscapeKeyDown={(e) => {
           handleInteractionOutside(e);
-          // @ts-ignore
+          // @ts-expect-error - Radix types might be strict but we want to pass the event up
           onEscapeKeyDown?.(e);
         }}
       >

@@ -82,8 +82,8 @@ export function Header({ title, subtitle, headerActions }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6 gap-2">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 md:flex-initial">
+      <header className="sticky top-0 z-30 flex h-16 items-center border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-6">
+        <div className="flex-[1_0_0%] flex items-center gap-2 sm:gap-3 min-w-0">
           {isMobile && (
             <Button
               variant="ghost"
@@ -95,14 +95,15 @@ export function Header({ title, subtitle, headerActions }: HeaderProps) {
             </Button>
           )}
 
-          <div className="min-w-0 flex-1 md:flex-initial">
+          <div className="min-w-0">
             <h1 className="text-base sm:text-xl lg:text-2xl font-display font-semibold text-foreground truncate leading-tight">{title}</h1>
             {subtitle && <p className="text-[10px] sm:text-sm text-muted-foreground truncate leading-tight">{subtitle}</p>}
           </div>
         </div>
 
         <div className={cn(
-          "flex-1 max-w-md mx-1 sm:mx-4 min-w-0",
+          "mx-1 sm:mx-4 min-w-0 z-10",
+          !isMobile && "flex-shrink-0 w-full max-w-md",
           isMobile && !mobileSearchOpen && "hidden",
           isMobile && mobileSearchOpen && "absolute inset-0 bg-background z-50 flex items-center px-4 animate-in slide-in-from-top duration-200"
         )}>
@@ -121,7 +122,7 @@ export function Header({ title, subtitle, headerActions }: HeaderProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+        <div className="flex-[1_0_0%] flex items-center justify-end gap-1 sm:gap-3">
           {headerActions && (
             <div className="hidden md:flex items-center mr-2">
               {headerActions}
