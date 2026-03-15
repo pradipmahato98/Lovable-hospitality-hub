@@ -189,6 +189,10 @@ const Settings = () => {
                     measurement_system: "metric",
                     currency_display: "symbol",
                     fiscal_year_start_month: 4,
+                    digit_standard: "latin",
+                    date_format_bs: "short",
+                    date_format_ad: "dd/MM/yyyy",
+                    timezone: "Asia/Kathmandu",
                   };
                   updateLocalization.mutate({ ...current, [key]: value });
                 }}

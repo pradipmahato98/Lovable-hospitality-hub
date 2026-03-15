@@ -37,6 +37,13 @@
     "english": "English",
     "ad": "AD (Gregorian)",
     "bs": "BS (Bikram Sambat)",
+    "presets": "Presets",
+    "nepal_standard_preset": "Nepal Standard",
+    "digit_standard": "Digit Script",
+    "latin": "Latin (1, 2, 3)",
+    "devanagari_digits": "Devanagari (१, २, ३)",
+    "date_format": "Date Format",
+    "timezone": "Timezone",
     "time_format": "Time Format",
     "first_day_of_week": "First Day of Week",
     "measurement_system": "Measurement System",
@@ -60,7 +67,12 @@
     "september": "September",
     "october": "October",
     "november": "November",
-    "december": "December"
+    "december": "December",
+    "translation_health": "Translation Health",
+    "translation_progress": "Progress",
+    "missing_keys": "Missing translations",
+    "no_missing_keys": "All keys translated!",
+    "translation_hint": "Missing keys will fall back to English."
   },
   "dashboard": {
     "welcome": "Welcome",

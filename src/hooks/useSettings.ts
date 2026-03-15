@@ -125,6 +125,10 @@ export interface LocalizationSettings {
   measurement_system: "metric" | "imperial";
   currency_display: "symbol" | "code" | "both";
   fiscal_year_start_month: number; // 1-12
+  digit_standard: "latin" | "devanagari";
+  date_format_bs: "short" | "long" | "nepali";
+  date_format_ad: "dd/MM/yyyy" | "MM/dd/yyyy" | "yyyy-MM-dd";
+  timezone: string;
 }
 
 // Default values
@@ -241,6 +245,10 @@ const defaultLocalizationSettings: LocalizationSettings = {
   measurement_system: "metric",
   currency_display: "symbol",
   fiscal_year_start_month: 4, // Default to April (common for many accounting cycles including NP)
+  digit_standard: "latin",
+  date_format_bs: "short",
+  date_format_ad: "dd/MM/yyyy",
+  timezone: "Asia/Kathmandu",
 };
 
 // Generic settings fetch hook
