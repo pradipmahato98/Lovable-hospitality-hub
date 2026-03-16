@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, X, User, Users, Home, ClipboardList, ArrowRight } from "lucide-react";
+import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -104,13 +104,44 @@ export function HeaderSearch() {
     }
   }, [selectedIndex]);
 
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
   return (
     <>
+      <Button
+        variant="outline"
+        onClick={() => setSearchOpen(true)}
+        className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[450px] h-9 px-3 text-muted-foreground hover:text-foreground bg-secondary/30 border-border/40 hover:bg-secondary/50 transition-all rounded-full group"
+      >
+        <div className="flex items-center gap-2">
+          <Search className="h-3.5 w-3.5 shrink-0 transition-colors group-hover:text-primary" />
+          <span className="text-xs font-normal">Global Search...</span>
+        </div>
+        <div className="ml-auto flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+            <Command className="h-2 w-2" />
+          </kbd>
+          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+            K
+          </kbd>
+        </div>
+      </Button>
+
       <Button 
         variant="ghost" 
         size="icon" 
         onClick={() => setSearchOpen(true)}
-        className="text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
+        className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
       >
         <Search className="h-4 w-4" />
       </Button>
