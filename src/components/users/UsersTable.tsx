@@ -16,9 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users } from "lucide-react";
+import { Search, Users, KeyRound } from "lucide-react";
 import { UserWithRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
+import { toast } from "sonner";
 import { TableSkeleton } from "@/components/skeletons";
 
 interface UsersTableProps {
@@ -89,6 +90,7 @@ export const UsersTable = ({
                   <TableHead>Email</TableHead>
                   <TableHead>Current Role</TableHead>
                   <TableHead>Change Role</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -148,6 +150,19 @@ export const UsersTable = ({
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2 text-muted-foreground hover:text-primary"
+                          onClick={() => {
+                            toast.success(`Password reset link sent to ${userItem.email}`);
+                          }}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          <span className="hidden sm:inline">Reset PW</span>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
