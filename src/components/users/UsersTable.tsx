@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Select, 
   SelectContent, 
@@ -16,11 +17,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, Users, KeyRound } from "lucide-react";
+import { Search, Users, KeyRound, Loader2 } from "lucide-react";
 import { UserWithRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { RoleBadge, MultiRoleBadge } from "./RoleBadge";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/skeletons";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 
 interface UsersTableProps {
   users: UserWithRole[] | undefined;
@@ -39,6 +42,24 @@ export const UsersTable = ({
   onRoleChange,
   isUpdating,
 }: UsersTableProps) => {
+  const [resettingId, setResettingId] = useState<string | null>(null);
+
+  const handleResetPassword = async (email: string, id: string) => {
+    if (!email) return;
+    setResettingId(id);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?tab=reset-password`,
+      });
+      if (error) throw error;
+      toast.success(`Password reset link sent to ${email}`);
+    } catch (error: any) {
+      toast.error("Failed to send reset link: " + error.message);
+    } finally {
+      setResettingId(null);
+    }
+  };
+
   const filteredUsers = users?.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -96,7 +117,7 @@ export const UsersTable = ({
               <TableBody>
                 {filteredUsers?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -156,11 +177,14 @@ export const UsersTable = ({
                           variant="ghost"
                           size="sm"
                           className="gap-2 text-muted-foreground hover:text-primary"
-                          onClick={() => {
-                            toast.success(`Password reset link sent to ${userItem.email}`);
-                          }}
+                          onClick={() => handleResetPassword(userItem.email || "", userItem.id)}
+                          disabled={resettingId === userItem.id}
                         >
-                          <KeyRound className="h-4 w-4" />
+                          {resettingId === userItem.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <KeyRound className="h-4 w-4" />
+                          )}
                           <span className="hidden sm:inline">Reset PW</span>
                         </Button>
                       </TableCell>
