@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, X, User, Users, Home, ClipboardList, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 export function HeaderSearch() {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export function HeaderSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -28,11 +31,16 @@ export function HeaderSearch() {
 
     setSearching(true);
     try {
-      const [{ data: guests }, { data: rooms }, { data: reservations }] = await Promise.all([
+      const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }] = await Promise.all([
         supabase
           .from("guests")
           .select("id, first_name, last_name, email, phone")
           .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
+          .limit(5),
+        supabase
+          .from("profiles")
+          .select("user_id, first_name, last_name, email")
+          .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)
           .limit(5),
         supabase
           .from("rooms")
@@ -46,11 +54,14 @@ export function HeaderSearch() {
           .limit(5),
       ]);
 
-      setSearchResults([
+      const results = [
         ...(guests || []).map(g => ({ type: "guest", ...g })),
+        ...(profiles || []).map(p => ({ type: "staff", ...p })),
         ...(rooms || []).map(r => ({ type: "room", ...r })),
         ...(reservations || []).map(r => ({ type: "reservation", ...r })),
-      ]);
+      ];
+      setSearchResults(results);
+      setSelectedIndex(0);
     } catch (error) {
       console.error("Search error:", error);
     } finally {
@@ -64,9 +75,34 @@ export function HeaderSearch() {
     setSearchResults([]);
     
     if (result.type === "guest") navigate("/guests");
+    else if (result.type === "staff") navigate("/staff");
     else if (result.type === "room") navigate("/rooms");
     else if (result.type === "reservation") navigate("/reservations");
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (searchResults.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev + 1) % searchResults.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev - 1 + searchResults.length) % searchResults.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      handleResultClick(searchResults[selectedIndex]);
+    }
+  };
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const selectedElement = scrollContainerRef.current.children[selectedIndex] as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }, [selectedIndex]);
 
   return (
     <>
@@ -74,71 +110,148 @@ export function HeaderSearch() {
         variant="ghost" 
         size="icon" 
         onClick={() => setSearchOpen(true)}
-        className="text-muted-foreground hover:text-foreground hover:bg-secondary"
+        className="text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
       >
         <Search className="h-4 w-4" />
       </Button>
 
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Search</DialogTitle>
+        <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-4 border-b bg-muted/30">
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-primary" />
+              <span>Global Search</span>
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+
+          <div className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search guests, rooms, reservations..."
+                placeholder="Search guests, staff, rooms, reservations..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9"
+                onKeyDown={handleKeyDown}
+                className="pl-9 h-12 text-base bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary/50"
                 autoFocus
               />
               {searchQuery && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-transparent"
                   onClick={() => { setSearchQuery(""); setSearchResults([]); }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </Button>
               )}
             </div>
+          </div>
             
+          <div className="flex flex-col min-h-[100px] max-h-[450px] overflow-hidden">
             {searching && (
-              <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Search className="h-8 w-8 animate-pulse mb-2" />
+                <p className="text-sm">Searching the database...</p>
+              </div>
             )}
 
             {!searching && searchResults.length > 0 && (
-              <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+              <div
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto p-2 space-y-1"
+              >
                 {searchResults.map((result, index) => (
                   <div
                     key={index}
-                    className="p-3 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
+                    className={cn(
+                      "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200",
+                      selectedIndex === index ? "bg-primary text-primary-foreground shadow-md scale-[1.01]" : "hover:bg-secondary"
+                    )}
                     onClick={() => handleResultClick(result)}
                   >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs capitalize font-normal">{result.type}</Badge>
-                      <span className="font-medium text-sm">
-                        {result.type === "guest" && `${result.first_name} ${result.last_name}`}
-                        {result.type === "room" && `Room ${result.room_number}`}
-                        {result.type === "reservation" && result.reservation_code}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        selectedIndex === index ? "bg-white/20" : "bg-muted"
+                      )}>
+                        {result.type === "guest" && <User className="h-4 w-4" />}
+                        {result.type === "staff" && <Users className="h-4 w-4" />}
+                        {result.type === "room" && <Home className="h-4 w-4" />}
+                        {result.type === "reservation" && <ClipboardList className="h-4 w-4" />}
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">
+                            {result.type === "guest" && `${result.first_name} ${result.last_name}`}
+                            {result.type === "staff" && `${result.first_name} ${result.last_name}`}
+                            {result.type === "room" && `Room ${result.room_number}`}
+                            {result.type === "reservation" && result.reservation_code}
+                          </span>
+                          <Badge
+                            variant={selectedIndex === index ? "secondary" : "outline"}
+                            className={cn(
+                              "text-[10px] uppercase font-bold px-1.5 h-4",
+                              selectedIndex === index ? "bg-white/20 border-none text-white" : ""
+                            )}
+                          >
+                            {result.type}
+                          </Badge>
+                        </div>
+                        <p className={cn(
+                          "text-xs mt-0.5",
+                          selectedIndex === index ? "text-white/80" : "text-muted-foreground"
+                        )}>
+                          {result.type === "guest" && (result.email || result.phone)}
+                          {result.type === "staff" && result.email}
+                          {result.type === "room" && result.room_type}
+                          {result.type === "reservation" && `Status: ${result.status}`}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 ml-[calc(theme(spacing.2)+3.5rem)]">
-                      {result.type === "guest" && (result.email || result.phone)}
-                      {result.type === "room" && result.room_type}
-                      {result.type === "reservation" && `Status: ${result.status}`}
-                    </p>
+                    <ArrowRight className={cn(
+                      "h-4 w-4 transition-transform group-hover:translate-x-1",
+                      selectedIndex === index ? "opacity-100" : "opacity-0"
+                    )} />
                   </div>
                 ))}
               </div>
             )}
 
             {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No results found</p>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Search className="h-8 w-8 mb-2 opacity-20" />
+                <p className="text-sm">No results found for "{searchQuery}"</p>
+              </div>
             )}
+
+            {searchQuery.length < 2 && !searching && (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <p className="text-sm">Type at least 2 characters to search...</p>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t bg-muted/30 p-3 flex items-center justify-between">
+            <div className="flex gap-4">
+              <button
+                onClick={() => { setSearchOpen(false); navigate("/guests"); }}
+                className="text-xs font-medium text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+              >
+                View all Guests <ArrowRight className="h-3 w-3" />
+              </button>
+              <button
+                onClick={() => { setSearchOpen(false); navigate("/staff"); }}
+                className="text-xs font-medium text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+              >
+                View all Staff <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-muted border shadow-sm text-foreground font-sans">↑↓</kbd> Navigate</span>
+              <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-muted border shadow-sm text-foreground font-sans">↵</kbd> Select</span>
+              <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-muted border shadow-sm text-foreground font-sans">esc</kbd> Close</span>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
