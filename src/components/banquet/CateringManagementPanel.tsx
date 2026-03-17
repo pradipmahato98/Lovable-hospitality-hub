@@ -59,6 +59,7 @@ import {
   useUpdateCateringOrder,
   CateringOrder
 } from "@/hooks/useBanquetData";
+import { useInventoryRecipes } from "@/hooks/useInventory";
 
 interface BanquetEvent {
   id: string;
@@ -120,6 +121,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
 
   // Database persistence for catering orders
   const { data: cateringOrders = [], isLoading } = useCateringOrders();
+  const { data: recipes = [] } = useInventoryRecipes();
   const createOrderMutation = useCreateCateringOrder();
   const updateOrderMutation = useUpdateCateringOrder();
 
@@ -130,6 +132,33 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
     beverages: [] as string[],
     special_notes: "",
   });
+
+  // Calculate stock availability for a package
+  const stockCheck = useMemo(() => {
+    if (!selectedEvent || !newOrder.menu_package) return null;
+
+    const pkgName = menuPackages.find(p => p.id === newOrder.menu_package)?.name;
+    const recipe = recipes.find(r => r.name.toLowerCase().includes(pkgName?.toLowerCase() || ""));
+
+    if (!recipe || !recipe.items) return null;
+
+    const shortages = recipe.items.map((ri: any) => {
+      const required = ri.quantity * selectedEvent.guest_count;
+      const available = ri.item?.current_stock || 0;
+      return {
+        name: ri.item?.name || "Unknown Item",
+        required,
+        available,
+        shortage: Math.max(0, required - available)
+      };
+    }).filter(s => s.shortage > 0);
+
+    return {
+      recipeName: recipe.name,
+      shortages,
+      isAvailable: shortages.length === 0
+    };
+  }, [selectedEvent, newOrder.menu_package, recipes]);
 
   // Get catering order for an event
   const getOrderForEvent = (eventId: string) => {
@@ -630,6 +659,43 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                 rows={3}
               />
             </div>
+
+            {/* Inventory Stock Check */}
+            {stockCheck && (
+              <Card className={`border-l-4 ${stockCheck.isAvailable ? "border-l-success bg-success/5" : "border-l-destructive bg-destructive/5"}`}>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Package className={`h-4 w-4 ${stockCheck.isAvailable ? "text-success" : "text-destructive"}`} />
+                    Inventory Stock Check: {stockCheck.recipeName}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="py-0 pb-3">
+                  {stockCheck.isAvailable ? (
+                    <p className="text-xs text-success font-medium flex items-center gap-1">
+                      <Leaf className="h-3 w-3" />
+                      All ingredients are available in stock for {selectedEvent?.guest_count} guests.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-destructive font-medium flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Insufficient stock for {stockCheck.shortages.length} ingredients:
+                      </p>
+                      <div className="space-y-1">
+                        {stockCheck.shortages.map((s, i) => (
+                          <div key={i} className="flex justify-between text-[10px]">
+                            <span>{s.name}</span>
+                            <span className="font-mono text-destructive">
+                              Need {s.required.toFixed(1)}, Have {s.available.toFixed(1)} (Short: {s.shortage.toFixed(1)})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Estimated Cost */}
             {selectedEvent && (
