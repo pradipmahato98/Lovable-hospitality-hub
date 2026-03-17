@@ -639,29 +639,29 @@ export default function Banquet() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="events" className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              Events
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="catering" className="gap-2">
-              <UtensilsCrossed className="h-4 w-4" />
-              Catering
-            </TabsTrigger>
-            <TabsTrigger value="venue" className="gap-2">
-              <Layout className="h-4 w-4" />
-              Venue Setup
-            </TabsTrigger>
+            <TabsList className="flex-wrap h-auto mb-4">
+              <TabsTrigger value="events" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                Events
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="gap-2">
+                <Clock className="h-4 w-4" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger value="catering" className="gap-2">
+                <UtensilsCrossed className="h-4 w-4" />
+                Catering
+              </TabsTrigger>
+              <TabsTrigger value="venue" className="gap-2">
+                <Layout className="h-4 w-4" />
+                Venue Setup
+              </TabsTrigger>
               <TabsTrigger value="reports" className="gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Reports
@@ -670,325 +670,350 @@ export default function Banquet() {
           </motion.div>
 
           <AnimatePresence mode="wait">
-            <TabsContent key={activeTab} value={activeTab} className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="events" value="events" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="space-y-4"
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-1 items-center gap-2 max-w-2xl">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search events or clients..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Status" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="inquiry">Inquiry</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Event Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="wedding">Wedding</SelectItem>
+                        <SelectItem value="corporate">Corporate</SelectItem>
+                        <SelectItem value="birthday">Birthday</SelectItem>
+                        <SelectItem value="conference">Conference</SelectItem>
+                        <SelectItem value="social">Social</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New Event
+                  </Button>
+                </div>
+
+                <Card>
+                  <CardContent className="p-0">
+                    {isLoading ? (
+                      <div className="p-8 text-center text-muted-foreground">Loading events...</div>
+                    ) : filteredEvents.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">No events found</div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12"></TableHead>
+                            <TableHead
+                              className="cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => handleSort("event_name")}
+                            >
+                              <div className="flex items-center gap-1">
+                                Event
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead
+                              className="cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => handleSort("client_name")}
+                            >
+                              <div className="flex items-center gap-1">
+                                Client
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead
+                              className="cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => handleSort("event_date")}
+                            >
+                              <div className="flex items-center gap-1">
+                                Date & Time
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead>Venue</TableHead>
+                            <TableHead
+                              className="cursor-pointer hover:text-primary transition-colors text-right"
+                              onClick={() => handleSort("guest_count")}
+                            >
+                              <div className="flex items-center justify-end gap-1">
+                                Guests
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead
+                              className="cursor-pointer hover:text-primary transition-colors text-right"
+                              onClick={() => handleSort("total_amount")}
+                            >
+                              <div className="flex items-center justify-end gap-1">
+                                Amount
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredEvents.map((event, index) => (
+                            <motion.tr
+                              key={event.id}
+                              className="group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.03 }}
+                            >
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  onClick={() => handleViewDetails(event)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium group-hover:text-primary transition-colors">{event.event_name}</p>
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] h-4 px-1.5 ${
+                                      eventTypeColors[event.event_type] || eventTypeColors.other
+                                    }`}
+                                  >
+                                    {event.event_type}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{event.client_name}</p>
+                                  {event.client_phone && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {event.client_phone}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{event.event_date}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    {event.start_time} - {event.end_time}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-sm">
+                                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                                  {event.venue}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{event.guest_count}</TableCell>
+                              <TableCell className="text-right font-mono font-bold text-primary">
+                                {formatCurrency(event.total_amount)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`${statusColors[event.status]} capitalize`}>
+                                  {event.status.replace("_", " ")}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
+                                      onPointerDownOutside={handlePointerDownOutside}
+                                      onEscapeKeyDown={handleEscapeKeyDown}
+                                    >
+                                      <div className="flex items-center justify-between px-2 py-1.5">
+                                        <DropdownMenuLabel className="p-0">Event Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem className="p-0 h-6 w-6 flex items-center justify-center rounded-full focus:bg-accent focus:text-accent-foreground">
+                                          <XCircle className="h-4 w-4 text-muted-foreground" />
+                                        </DropdownMenuItem>
+                                      </div>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => handleViewDetails(event)}>
+                                        <Eye className="mr-2 h-4 w-4" /> View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+                                        <FileText className="mr-2 h-4 w-4" /> Edit Event
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
+                                      <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'inquiry' })}>
+                                        Inquiry
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'confirmed' })}>
+                                        Confirmed
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'in_progress' })}>
+                                        In Progress
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'completed' })}>
+                                        Completed
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="text-destructive" onClick={() => updateStatus.mutate({ id: event.id, status: 'cancelled' })}>
+                                        Cancelled
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </TableCell>
+                            </motion.tr>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent key="calendar" value="calendar" className="focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
-                {activeTab === "events" && (
-                  <div className="space-y-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex flex-1 items-center gap-2 max-w-2xl">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search events or clients..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Status" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="inquiry">Inquiry</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Event Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="wedding">Wedding</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
-                    <SelectItem value="birthday">Birthday</SelectItem>
-                    <SelectItem value="conference">Conference</SelectItem>
-                    <SelectItem value="social">Social</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Event
-              </Button>
-            </div>
+                <DraggableBanquetCalendar
+                  events={events.map(e => ({
+                    id: e.id,
+                    event_name: e.event_name,
+                    event_type: e.event_type,
+                    client_name: e.client_name,
+                    event_date: e.event_date,
+                    start_time: e.start_time,
+                    end_time: e.end_time,
+                    venue: e.venue,
+                    guest_count: e.guest_count,
+                    status: e.status,
+                    total_amount: e.total_amount,
+                  }))}
+                  onEventClick={(event) => {
+                    toast.info(`Selected: ${event.event_name}`);
+                  }}
+                  onDateClick={(date) => {
+                    setNewEvent(prev => ({ ...prev, event_date: date }));
+                    setEventDialogOpen(true);
+                  }}
+                  onEventDrop={handleEventDrop}
+                />
+              </motion.div>
+            </TabsContent>
 
-            <Card>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">Loading events...</div>
-                ) : filteredEvents.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">No events found</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12"></TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => handleSort("event_name")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Event
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => handleSort("client_name")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Client
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => handleSort("event_date")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Date & Time
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead>Venue</TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:text-primary transition-colors text-right"
-                          onClick={() => handleSort("guest_count")}
-                        >
-                          <div className="flex items-center justify-end gap-1">
-                            Guests
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer hover:text-primary transition-colors text-right"
-                          onClick={() => handleSort("total_amount")}
-                        >
-                          <div className="flex items-center justify-end gap-1">
-                            Amount
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-[100px] text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEvents.map((event, index) => (
-                        <motion.tr
-                          key={event.id}
-                          className="group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.03 }}
-                        >
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-primary"
-                              onClick={() => handleViewDetails(event)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium group-hover:text-primary transition-colors">{event.event_name}</p>
-                              <Badge
-                                variant="outline"
-                                className={`text-[10px] h-4 px-1.5 ${
-                                  eventTypeColors[event.event_type] || eventTypeColors.other
-                                }`}
-                              >
-                                {event.event_type}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{event.client_name}</p>
-                              {event.client_phone && (
-                                <p className="text-xs text-muted-foreground">
-                                  {event.client_phone}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm font-medium">{event.event_date}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              <span>
-                                {event.start_time} - {event.end_time}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm">
-                              <MapPin className="h-3 w-3 text-muted-foreground" />
-                              {event.venue}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{event.guest_count}</TableCell>
-                          <TableCell className="text-right font-mono font-bold text-primary">
-                            {formatCurrency(event.total_amount)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`${statusColors[event.status]} capitalize`}>
-                              {event.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
-                                  onPointerDownOutside={handlePointerDownOutside}
-                                  onEscapeKeyDown={handleEscapeKeyDown}
-                                >
-                                  <div className="flex items-center justify-between px-2 py-1.5">
-                                    <DropdownMenuLabel className="p-0">Event Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem className="p-0 h-6 w-6 flex items-center justify-center rounded-full focus:bg-accent focus:text-accent-foreground">
-                                      <XCircle className="h-4 w-4 text-muted-foreground" />
-                                    </DropdownMenuItem>
-                                  </div>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => handleViewDetails(event)}>
-                                    <Eye className="mr-2 h-4 w-4" /> View Details
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditEvent(event)}>
-                                    <FileText className="mr-2 h-4 w-4" /> Edit Event
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'inquiry' })}>
-                                    Inquiry
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'confirmed' })}>
-                                    Confirmed
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'in_progress' })}>
-                                    In Progress
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'completed' })}>
-                                    Completed
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive" onClick={() => updateStatus.mutate({ id: event.id, status: 'cancelled' })}>
-                                    Cancelled
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
+            <TabsContent key="catering" value="catering" className="focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <CateringManagementPanel
+                  events={events.map(e => ({
+                    id: e.id,
+                    event_name: e.event_name,
+                    event_type: e.event_type,
+                    client_name: e.client_name,
+                    event_date: e.event_date,
+                    venue: e.venue,
+                    guest_count: e.guest_count,
+                    status: e.status,
+                    menu_package: e.menu_package,
+                    special_requests: e.special_requests,
+                  }))}
+                  onViewDetails={handleViewDetails}
+                />
+              </motion.div>
+            </TabsContent>
 
-                {activeTab === "calendar" && (
-                  <DraggableBanquetCalendar
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                start_time: e.start_time,
-                end_time: e.end_time,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-                total_amount: e.total_amount,
-              }))}
-              onEventClick={(event) => {
-                toast.info(`Selected: ${event.event_name}`);
-              }}
-              onDateClick={(date) => {
-                setNewEvent(prev => ({ ...prev, event_date: date }));
-                setEventDialogOpen(true);
-              }}
-              onEventDrop={handleEventDrop}
-                  />
-                )}
+            <TabsContent key="venue" value="venue" className="focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <VenueSetupPanel
+                  events={events.map(e => ({
+                    id: e.id,
+                    event_name: e.event_name,
+                    event_type: e.event_type,
+                    client_name: e.client_name,
+                    event_date: e.event_date,
+                    venue: e.venue,
+                    guest_count: e.guest_count,
+                    status: e.status,
+                  }))}
+                  onViewDetails={handleViewDetails}
+                />
+              </motion.div>
+            </TabsContent>
 
-                {activeTab === "catering" && (
-                  <CateringManagementPanel
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-                menu_package: e.menu_package,
-                special_requests: e.special_requests,
-              }))}
-              onViewDetails={handleViewDetails}
-                  />
-                )}
-
-                {activeTab === "venue" && (
-                  <VenueSetupPanel
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-              }))}
-              onViewDetails={handleViewDetails}
-                  />
-                )}
-
-                {activeTab === "reports" && (
-                  <EventReportsPanel
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-                total_amount: e.total_amount,
-              }))}
-                  />
-                )}
+            <TabsContent key="reports" value="reports" className="focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <EventReportsPanel
+                  events={events.map(e => ({
+                    id: e.id,
+                    event_name: e.event_name,
+                    event_type: e.event_type,
+                    client_name: e.client_name,
+                    event_date: e.event_date,
+                    venue: e.venue,
+                    guest_count: e.guest_count,
+                    status: e.status,
+                    total_amount: e.total_amount,
+                  }))}
+                />
               </motion.div>
             </TabsContent>
           </AnimatePresence>
