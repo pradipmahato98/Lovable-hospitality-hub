@@ -19,7 +19,7 @@ export function PageTransition({ children, className }: PageTransitionProps) {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className={className}
     >
       {children}

@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Search, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,16 +23,19 @@ export function HeaderSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
+  const performSearch = useCallback(async (query: string) => {
     setSearching(true);
     try {
       const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }] = await Promise.all([
@@ -80,6 +86,24 @@ export function HeaderSearch() {
     } finally {
       setSearching(false);
     }
+  }, []);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      performSearch(query);
+    }, 400);
   };
 
   const handleResultClick = (result: any) => {
