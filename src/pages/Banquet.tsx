@@ -480,6 +480,12 @@ export default function Banquet() {
     toast.success("BEO PDF generated successfully");
   };
  
+   const getPreviousDue = (clientName: string, currentEventId?: string) => {
+     return events
+       .filter(e => e.client_name === clientName && e.id !== currentEventId && e.status !== 'cancelled')
+       .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
+   };
+
    const handleSaveEvent = () => {
      if (!newEvent.event_name || !newEvent.client_name || !newEvent.venue) {
        toast.error("Please fill in event name, client name, and venue");
@@ -1317,7 +1323,7 @@ export default function Banquet() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Total Amount ($)</Label>
                 <Input
@@ -1340,6 +1346,12 @@ export default function Banquet() {
                     }))
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-destructive">Previous Due ($)</Label>
+                <div className="h-10 px-3 flex items-center rounded-md border border-input bg-muted/50 font-mono font-bold text-destructive">
+                   {formatCurrency(getPreviousDue(newEvent.client_name, editingEvent?.id))}
+                </div>
               </div>
             </div>
 

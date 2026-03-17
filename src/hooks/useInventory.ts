@@ -1176,33 +1176,74 @@ export function useInventoryStockCounts() {
 export function useInventoryStats() {
   const { data: items } = useInventoryItems();
   const { data: movements } = useStockMovements();
+  const { data: settings } = useInventorySettings();
+  const { data: purchaseItems } = useQuery({
+    queryKey: ["all-purchase-items"],
+    queryFn: async () => {
+      const { data } = await db.from("purchase_order_items").select("*, purchase_order:purchase_orders(status, order_date)").eq("purchase_orders.status", "received").order("purchase_orders.order_date", { ascending: false });
+      return data || [];
+    }
+  });
 
   const calculateForecast = () => {
     if (!movements || movements.length < 5) return "+0.0%";
-
-    // Simple logic: compare last 7 days consumption with previous 7 days
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-    const recentConsumption = movements
-      .filter(m => m.movement_type === 'out' && new Date(m.created_at) > weekAgo)
-      .reduce((s, m) => s + m.quantity, 0);
-
-    const prevConsumption = movements
-      .filter(m => m.movement_type === 'out' && new Date(m.created_at) > twoWeeksAgo && new Date(m.created_at) <= weekAgo)
-      .reduce((s, m) => s + m.quantity, 0);
-
+    const recentConsumption = movements.filter(m => m.movement_type === 'out' && new Date(m.created_at) > weekAgo).reduce((s, m) => s + m.quantity, 0);
+    const prevConsumption = movements.filter(m => m.movement_type === 'out' && new Date(m.created_at) > twoWeeksAgo && new Date(m.created_at) <= weekAgo).reduce((s, m) => s + m.quantity, 0);
     if (prevConsumption === 0) return "+0.0%";
     const trend = ((recentConsumption - prevConsumption) / prevConsumption) * 100;
     return `${trend >= 0 ? '+' : ''}${trend.toFixed(1)}%`;
+  };
+
+  const calculateValuation = () => {
+    if (!items) return 0;
+    const method = settings?.costing_method || 'weighted_average';
+
+    if (method === 'weighted_average') {
+      return items.reduce((sum, i) => sum + i.current_stock * (i.avg_cost || i.cost_price), 0);
+    }
+
+    // FIFO/LIFO Logic
+    let totalValue = 0;
+    items.forEach(item => {
+      let remainingQty = item.current_stock;
+      if (remainingQty <= 0) return;
+
+      const itemPurchases = (purchaseItems || [])
+        .filter((pi: any) => pi.item_id === item.id)
+        .sort((a: any, b: any) => {
+           const dateA = new Date(a.purchase_order.order_date).getTime();
+           const dateB = new Date(b.purchase_order.order_date).getTime();
+           return method === 'fifo' ? dateB - dateA : dateA - dateB; // FIFO: Latest first to value current stock, LIFO: Oldest first
+        });
+
+      if (itemPurchases.length === 0) {
+        totalValue += remainingQty * (item.avg_cost || item.cost_price);
+        return;
+      }
+
+      for (const p of itemPurchases) {
+        const qtyToValue = Math.min(remainingQty, p.received_quantity || p.quantity);
+        totalValue += qtyToValue * p.unit_price;
+        remainingQty -= qtyToValue;
+        if (remainingQty <= 0) break;
+      }
+
+      if (remainingQty > 0) {
+        totalValue += remainingQty * (item.avg_cost || item.cost_price);
+      }
+    });
+
+    return totalValue;
   };
 
   return {
     totalItems: items?.length || 0,
     lowStock: items?.filter((i) => i.current_stock <= i.reorder_point).length || 0,
     outOfStock: items?.filter((i) => i.current_stock === 0).length || 0,
-    totalValue: items?.reduce((sum, i) => sum + i.current_stock * (i.avg_cost || i.cost_price), 0) || 0,
+    totalValue: calculateValuation(),
     demandForecast: calculateForecast()
   };
 }

@@ -3,8 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePurchaseOrders } from "@/hooks/useInventory";
-import { formatCurrency } from "@/lib/utils";
-import { AlertTriangle, Clock, ShieldAlert, PackageSearch } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 
 export function ExpiryReport() {
   const { data: orders = [] } = usePurchaseOrders('received');
