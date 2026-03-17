@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, InventoryItem } from "@/hooks/useInventory";
+import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, InventoryItem } from "@/hooks/useInventory";
 import { formatCurrency } from "@/lib/utils";
 
 export function ItemsTab() {
@@ -27,9 +27,15 @@ export function ItemsTab() {
   });
   const { data: categories = [] } = useInventoryCategories();
   const { data: suppliers = [] } = useSuppliers();
+  const { data: uoms = [] } = useInventoryUoMs();
   const stats = useInventoryStats();
 
-  const emptyForm = { name: "", sku: "", category_id: "", supplier_id: "", unit: "pieces", current_stock: 0, min_stock: 0, max_stock: 0, reorder_point: 0, cost_price: 0, selling_price: 0, location: "", department: "" };
+  const emptyForm = {
+    name: "", sku: "", category_id: "", supplier_id: "", uom_id: "", unit: "pieces",
+    current_stock: 0, min_stock: 0, max_stock: 0, reorder_point: 0,
+    cost_price: 0, selling_price: 0, location: "", department: "",
+    item_type: "consumable", shelf_life: "", storage_instructions: "", image_url: ""
+  };
   const [form, setForm] = useState(emptyForm);
   const [stockAdj, setStockAdj] = useState({ quantity: 0, type: "in" as "in" | "out" | "adjustment", notes: "" });
 
@@ -42,6 +48,7 @@ export function ItemsTab() {
       const payload: any = { ...form };
       if (!payload.category_id) delete payload.category_id;
       if (!payload.supplier_id) delete payload.supplier_id;
+      if (!payload.uom_id) delete payload.uom_id;
       if (!payload.location) payload.location = null;
       if (!payload.max_stock) payload.max_stock = null;
       if (!payload.selling_price) payload.selling_price = null;
@@ -58,6 +65,7 @@ export function ItemsTab() {
       const payload: any = { id: selectedItem.id, ...form };
       if (!payload.category_id) payload.category_id = null;
       if (!payload.supplier_id) payload.supplier_id = null;
+      if (!payload.uom_id) payload.uom_id = null;
       if (!payload.location) payload.location = null;
       if (!payload.max_stock) payload.max_stock = null;
       if (!payload.selling_price) payload.selling_price = null;
@@ -87,10 +95,14 @@ export function ItemsTab() {
   const openEdit = (item: InventoryItem) => {
     setSelectedItem(item);
     setForm({
-      name: item.name, sku: item.sku || "", category_id: item.category_id || "", supplier_id: item.supplier_id || "",
-      unit: item.unit, current_stock: item.current_stock, min_stock: item.min_stock, max_stock: item.max_stock || 0,
-      reorder_point: item.reorder_point, cost_price: item.cost_price, selling_price: item.selling_price || 0,
+      name: item.name, sku: item.sku || "", category_id: item.category_id || "",
+      supplier_id: item.supplier_id || "", uom_id: item.uom_id || "",
+      unit: item.unit, current_stock: item.current_stock, min_stock: item.min_stock,
+      max_stock: item.max_stock || 0, reorder_point: item.reorder_point,
+      cost_price: item.cost_price, selling_price: item.selling_price || 0,
       location: item.location || "", department: item.department || "",
+      item_type: item.item_type || "consumable", shelf_life: item.shelf_life || "",
+      storage_instructions: item.storage_instructions || "", image_url: item.image_url || ""
     });
     setEditItemOpen(true);
   };
@@ -103,13 +115,29 @@ export function ItemsTab() {
 
   const ItemForm = ({ onSubmit, isPending, submitLabel }: { onSubmit: () => void; isPending: boolean; submitLabel: string }) => (
     <>
-      <div className="grid grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto">
-        <div className="space-y-2"><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+      <div className="grid grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+        <div className="space-y-2 col-span-2"><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div className="space-y-2"><Label>SKU</Label><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} /></div>
+        <div className="space-y-2"><Label>Item Type</Label>
+          <Select value={form.item_type} onValueChange={(v) => setForm({ ...form, item_type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="consumable">Consumable</SelectItem>
+              <SelectItem value="asset">Asset</SelectItem>
+              <SelectItem value="raw_material">Raw Material</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2"><Label>Category</Label>
           <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
             <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2"><Label>Unit of Measure</Label>
+          <Select value={form.uom_id} onValueChange={(v) => setForm({ ...form, uom_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{uoms.map((u) => <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-2"><Label>Supplier</Label>
@@ -118,19 +146,24 @@ export function ItemsTab() {
             <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <div className="space-y-2"><Label>Unit</Label><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
         <div className="space-y-2"><Label>Department</Label><Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></div>
         <div className="space-y-2"><Label>Location</Label><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
-        <div className="space-y-2"><Label>Initial Stock</Label><Input type="number" value={form.current_stock} onChange={(e) => setForm({ ...form, current_stock: Number(e.target.value) })} /></div>
+        <div className="space-y-2"><Label>Shelf Life</Label><Input value={form.shelf_life} onChange={(e) => setForm({ ...form, shelf_life: e.target.value })} placeholder="e.g. 6 months" /></div>
+
+        <div className="space-y-2 border-t pt-4 mt-2 col-span-2 text-sm font-semibold">Stock & Pricing</div>
+        <div className="space-y-2"><Label>Current Stock</Label><Input type="number" value={form.current_stock} onChange={(e) => setForm({ ...form, current_stock: Number(e.target.value) })} /></div>
+        <div className="space-y-2"><Label>Reorder Point</Label><Input type="number" value={form.reorder_point} onChange={(e) => setForm({ ...form, reorder_point: Number(e.target.value) })} /></div>
         <div className="space-y-2"><Label>Min Stock</Label><Input type="number" value={form.min_stock} onChange={(e) => setForm({ ...form, min_stock: Number(e.target.value) })} /></div>
         <div className="space-y-2"><Label>Max Stock</Label><Input type="number" value={form.max_stock} onChange={(e) => setForm({ ...form, max_stock: Number(e.target.value) })} /></div>
-        <div className="space-y-2"><Label>Reorder Point</Label><Input type="number" value={form.reorder_point} onChange={(e) => setForm({ ...form, reorder_point: Number(e.target.value) })} /></div>
         <div className="space-y-2"><Label>Cost Price</Label><Input type="number" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: Number(e.target.value) })} /></div>
         <div className="space-y-2"><Label>Selling Price</Label><Input type="number" value={form.selling_price} onChange={(e) => setForm({ ...form, selling_price: Number(e.target.value) })} /></div>
+
+        <div className="space-y-2 col-span-2"><Label>Storage Instructions</Label><Input value={form.storage_instructions} onChange={(e) => setForm({ ...form, storage_instructions: e.target.value })} /></div>
+        <div className="space-y-2 col-span-2"><Label>Image URL</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></div>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={() => { setAddItemOpen(false); setEditItemOpen(false); }}>Cancel</Button>
-        <Button onClick={onSubmit} disabled={!form.name || isPending}>
+        <Button onClick={onSubmit} disabled={!form.name || isPending} variant="blue">
           {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {submitLabel}
         </Button>
@@ -186,31 +219,34 @@ export function ItemsTab() {
                 <TableRow>
                   <TableHead>Item</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Cost</TableHead>
-                  <TableHead>Value</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredItems.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No items found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No items found</TableCell></TableRow>
                 ) : (
                   filteredItems.map((item) => {
                     const status = getStockStatus(item.current_stock, item.min_stock, item.reorder_point);
                     return (
                       <TableRow key={item.id}>
                         <TableCell>
-                          <div><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{item.sku || "No SKU"} · {item.supplier?.name || "No supplier"}</p></div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center overflow-hidden">
+                              {item.image_url ? <img src={item.image_url} alt="" className="h-full w-full object-cover" /> : <Package className="h-5 w-5 text-muted-foreground" />}
+                            </div>
+                            <div><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{item.sku || "No SKU"} · {item.supplier?.name || "No supplier"}</p></div>
+                          </div>
                         </TableCell>
                         <TableCell>{item.category?.name || "-"}</TableCell>
-                        <TableCell className="text-sm">{item.location || "-"}</TableCell>
-                        <TableCell><span className="font-semibold">{item.current_stock}</span><span className="text-muted-foreground text-sm ml-1">{item.unit}</span></TableCell>
+                        <TableCell><Badge variant="outline" className="capitalize">{item.item_type?.replace('_', ' ')}</Badge></TableCell>
+                        <TableCell><span className="font-semibold">{item.current_stock}</span><span className="text-muted-foreground text-sm ml-1">{item.uom?.abbreviation || item.unit}</span></TableCell>
                         <TableCell><Badge className={status.color}>{status.label}</Badge></TableCell>
                         <TableCell>{formatCurrency(item.cost_price)}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(item.current_stock * item.cost_price)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(item); setAdjustStockOpen(true); }}><ArrowUpDown className="h-4 w-4" /></Button>
