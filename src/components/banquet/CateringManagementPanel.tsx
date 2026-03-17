@@ -49,8 +49,10 @@ import {
   ArrowUpDown,
   Filter,
   FileText,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import {
   useCateringOrders,
   useCreateCateringOrder,
@@ -69,19 +71,6 @@ interface BanquetEvent {
   status: "inquiry" | "confirmed" | "in_progress" | "completed" | "cancelled";
   menu_package: string | null;
   special_requests: string | null;
-}
-
-interface CateringOrder {
-  id: string;
-  eventId: string;
-  menuPackage: string;
-  courses: string[];
-  dietaryRequirements: string[];
-  servingStyle: string;
-  beverages: string[];
-  specialNotes: string;
-  estimatedCost: number;
-  status: "pending" | "confirmed" | "preparing" | "ready" | "served";
 }
 
 interface CateringManagementPanelProps {
@@ -120,25 +109,26 @@ const beverageOptions = [
   "Signature Cocktails",
 ];
 
-export function CateringManagementPanel({ events }: CateringManagementPanelProps) {
+export function CateringManagementPanel({ events, onViewDetails }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  
+
+  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
+
   // Database persistence for catering orders
   const { data: cateringOrders = [], isLoading } = useCateringOrders();
   const createOrderMutation = useCreateCateringOrder();
   const updateOrderMutation = useUpdateCateringOrder();
 
   const [newOrder, setNewOrder] = useState({
-    menuPackage: "standard",
-    courses: [] as string[],
-    dietaryRequirements: [] as string[],
-    servingStyle: "Buffet",
+    menu_package: "standard",
+    dietary_requirements: [] as string[],
+    serving_style: "Buffet",
     beverages: [] as string[],
-    specialNotes: "",
+    special_notes: "",
   });
 
   // Get catering order for an event
@@ -187,21 +177,19 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     const existingOrder = getOrderForEvent(event.id);
     if (existingOrder) {
       setNewOrder({
-        menuPackage: existingOrder.menuPackage,
-        courses: existingOrder.courses,
-        dietaryRequirements: existingOrder.dietaryRequirements,
-        servingStyle: existingOrder.servingStyle,
+        menu_package: existingOrder.menu_package,
+        dietary_requirements: existingOrder.dietary_requirements,
+        serving_style: existingOrder.serving_style,
         beverages: existingOrder.beverages,
-        specialNotes: existingOrder.specialNotes,
+        special_notes: existingOrder.special_notes || "",
       });
     } else {
       setNewOrder({
-        menuPackage: "standard",
-        courses: [],
-        dietaryRequirements: [],
-        servingStyle: "Buffet",
+        menu_package: "standard",
+        dietary_requirements: [],
+        serving_style: "Buffet",
         beverages: ["Soft Drinks", "Coffee & Tea"],
-        specialNotes: event.special_requests || "",
+        special_notes: event.special_requests || "",
       });
     }
     setOrderDialogOpen(true);
@@ -210,18 +198,18 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
   const handleSaveOrder = async () => {
     if (!selectedEvent) return;
 
-    const pkg = menuPackages.find((p) => p.id === newOrder.menuPackage);
+    const pkg = menuPackages.find((p) => p.id === newOrder.menu_package);
     const estimatedCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
 
     const existingOrder = getOrderForEvent(selectedEvent.id);
 
     const orderData = {
       event_id: selectedEvent.id,
-      menu_package: newOrder.menuPackage,
-      serving_style: newOrder.servingStyle,
-      dietary_requirements: newOrder.dietaryRequirements,
+      menu_package: newOrder.menu_package,
+      serving_style: newOrder.serving_style,
+      dietary_requirements: newOrder.dietary_requirements,
       beverages: newOrder.beverages,
-      special_notes: newOrder.specialNotes || null,
+      special_notes: newOrder.special_notes || null,
       estimated_cost: estimatedCost,
       status: existingOrder?.status || "pending" as const,
     };
@@ -245,9 +233,9 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
   const handleToggleDietary = (diet: string) => {
     setNewOrder((prev) => ({
       ...prev,
-      dietaryRequirements: prev.dietaryRequirements.includes(diet)
-        ? prev.dietaryRequirements.filter((d) => d !== diet)
-        : [...prev.dietaryRequirements, diet],
+      dietary_requirements: prev.dietary_requirements.includes(diet)
+        ? prev.dietary_requirements.filter((d) => d !== diet)
+        : [...prev.dietary_requirements, diet],
     }));
   };
 
@@ -381,6 +369,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12"></TableHead>
                   <TableHead className="cursor-pointer" onClick={() => handleSort("event_name")}>
                     <div className="flex items-center gap-1">Event <ArrowUpDown className="h-3 w-3" /></div>
                   </TableHead>
@@ -403,10 +392,20 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                 {activeEvents.map((event) => {
                   const order = getOrderForEvent(event.id);
                   const pkg = order
-                    ? menuPackages.find((p) => p.id === order.menuPackage)
+                    ? menuPackages.find((p) => p.id === order.menu_package)
                     : null;
                   return (
                     <TableRow key={event.id}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => onViewDetails?.(event)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
@@ -422,22 +421,22 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                       </TableCell>
                       <TableCell>
                         {order ? (
-                          <Badge variant="outline">{pkg?.name || order.menuPackage}</Badge>
+                          <Badge variant="outline">{pkg?.name || order.menu_package}</Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {order && order.dietaryRequirements.length > 0 ? (
+                        {order && order.dietary_requirements.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {order.dietaryRequirements.slice(0, 2).map((d) => (
+                            {order.dietary_requirements.slice(0, 2).map((d) => (
                               <Badge key={d} variant="secondary" className="text-xs">
                                 {d}
                               </Badge>
                             ))}
-                            {order.dietaryRequirements.length > 2 && (
+                            {order.dietary_requirements.length > 2 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{order.dietaryRequirements.length - 2}
+                                +{order.dietary_requirements.length - 2}
                               </Badge>
                             )}
                           </div>
@@ -477,22 +476,24 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => onViewDetails?.(event)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuLabel>Catering Actions</DropdownMenuLabel>
+                            <DropdownMenuContent
+                              align="end"
+                              className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
+                              onPointerDownOutside={handlePointerDownOutside}
+                              onEscapeKeyDown={handleEscapeKeyDown}
+                            >
+                              <div className="flex items-center justify-between px-2 py-1.5">
+                                <DropdownMenuLabel className="p-0">Catering Actions</DropdownMenuLabel>
+                                <DropdownMenuItem className="p-0 h-6 w-6 flex items-center justify-center rounded-full focus:bg-accent focus:text-accent-foreground">
+                                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                                </DropdownMenuItem>
+                              </div>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => handleOpenOrderDialog(event)}>
                                 <FileText className="mr-2 h-4 w-4" /> {order ? "Edit Order" : "Create Order"}
@@ -542,8 +543,8 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <div className="space-y-2">
               <Label>Menu Package</Label>
               <Select
-                value={newOrder.menuPackage}
-                onValueChange={(v) => setNewOrder((p) => ({ ...p, menuPackage: v }))}
+                value={newOrder.menu_package}
+                onValueChange={(v) => setNewOrder((p) => ({ ...p, menu_package: v }))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -569,8 +570,8 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <div className="space-y-2">
               <Label>Serving Style</Label>
               <Select
-                value={newOrder.servingStyle}
-                onValueChange={(v) => setNewOrder((p) => ({ ...p, servingStyle: v }))}
+                value={newOrder.serving_style}
+                onValueChange={(v) => setNewOrder((p) => ({ ...p, serving_style: v }))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -595,7 +596,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                     className="flex items-center space-x-2 p-2 rounded-lg border cursor-pointer hover:bg-secondary/50"
                     onClick={() => handleToggleDietary(diet)}
                   >
-                    <Checkbox checked={newOrder.dietaryRequirements.includes(diet)} />
+                    <Checkbox checked={newOrder.dietary_requirements.includes(diet)} />
                     <span className="text-sm">{diet}</span>
                   </div>
                 ))}
@@ -624,8 +625,8 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
               <Label>Special Notes</Label>
               <Textarea
                 placeholder="Any special requirements, allergies, or preferences..."
-                value={newOrder.specialNotes}
-                onChange={(e) => setNewOrder((p) => ({ ...p, specialNotes: e.target.value }))}
+                value={newOrder.special_notes}
+                onChange={(e) => setNewOrder((p) => ({ ...p, special_notes: e.target.value }))}
                 rows={3}
               />
             </div>
@@ -638,14 +639,14 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                   <span className="text-2xl font-bold">
                     $
                     {(
-                      (menuPackages.find((p) => p.id === newOrder.menuPackage)?.pricePerHead ||
+                      (menuPackages.find((p) => p.id === newOrder.menu_package)?.pricePerHead ||
                         0) * selectedEvent.guest_count
                     ).toLocaleString()}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Based on {selectedEvent.guest_count} guests × $
-                  {menuPackages.find((p) => p.id === newOrder.menuPackage)?.pricePerHead || 0}/head
+                  {menuPackages.find((p) => p.id === newOrder.menu_package)?.pricePerHead || 0}/head
                 </p>
               </div>
             )}

@@ -57,12 +57,14 @@ import {
   MoreVertical,
   ArrowUpDown,
   Filter,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import { 
   DraggableBanquetCalendar,
   EventReportsPanel,
@@ -119,6 +121,8 @@ export default function Banquet() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<{ key: keyof BanquetEvent; direction: 'asc' | 'desc' } | null>(null);
+
+  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -573,6 +577,7 @@ export default function Banquet() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12"></TableHead>
                         <TableHead
                           className="cursor-pointer hover:text-primary transition-colors"
                           onClick={() => handleSort("event_name")}
@@ -627,6 +632,16 @@ export default function Banquet() {
                       {filteredEvents.map((event) => (
                         <TableRow key={event.id} className="group">
                           <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={() => handleViewDetails(event)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                          <TableCell>
                             <div>
                               <p className="font-medium group-hover:text-primary transition-colors">{event.event_name}</p>
                               <Badge
@@ -678,22 +693,24 @@ export default function Banquet() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                onClick={() => handleViewDetails(event)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
+                                  onPointerDownOutside={handlePointerDownOutside}
+                                  onEscapeKeyDown={handleEscapeKeyDown}
+                                >
+                                  <div className="flex items-center justify-between px-2 py-1.5">
+                                    <DropdownMenuLabel className="p-0">Event Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem className="p-0 h-6 w-6 flex items-center justify-center rounded-full focus:bg-accent focus:text-accent-foreground">
+                                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                                    </DropdownMenuItem>
+                                  </div>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={() => handleViewDetails(event)}>
                                     <Eye className="mr-2 h-4 w-4" /> View Details
