@@ -66,8 +66,8 @@ export function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       {/* Center Section: Search Bar (Desktop only centered) */}
-      <div className="hidden lg:flex flex-1 justify-center max-w-md">
-        <div className="w-full flex justify-center">
+      <div className="hidden lg:flex flex-[2_0_0%] justify-center">
+        <div className="w-full max-w-[450px]">
           <HeaderSearch />
         </div>
       </div>
