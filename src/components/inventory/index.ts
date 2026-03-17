@@ -13,3 +13,7 @@ export { WastageTab } from "./WastageTab";
 export { StockCountTab } from "./StockCountTab";
 export { InventorySettingsTab } from "./InventorySettingsTab";
 export { StockIssueTab } from "./StockIssueTab";
+export { InventoryValuationReport } from "./InventoryValuationReport";
+export { ExpiryReport } from "./ExpiryReport";
+export { FoodCostReport } from "./FoodCostReport";
+export { ApprovalsQueueTab } from "./ApprovalsQueueTab";

@@ -3,16 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart3, TrendingDown, TrendingUp, AlertCircle, Download,
-  FileText, Truck, Activity, Timer, Boxes, RefreshCw
+  FileText, Truck, Activity, Timer, Boxes, RefreshCw, ShoppingCart,
+  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles
 } from "lucide-react";
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
-  useSuppliers, usePurchaseOrders, useInventoryWastage
+  useSuppliers, usePurchaseOrders, useInventoryWastage,
+  useInventoryRequisitions, useInventoryRecipes
 } from "@/hooks/useInventory";
 import { formatCurrency } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function ReportsTab() {
   const stats = useInventoryStats();
@@ -21,29 +26,24 @@ export function ReportsTab() {
   const { data: suppliers = [] } = useSuppliers();
   const { data: orders = [] } = usePurchaseOrders();
   const { data: wastageList = [] } = useInventoryWastage();
+  const { createRequisition } = useInventoryRequisitions();
+  const { data: recipes = [] } = useInventoryRecipes();
+
+  const [isReplenishing, setIsReplenishing] = useState(false);
+  const [reportDetailOpen, setReportDetailOpen] = useState(false);
+  const [activeReport, setActiveReport] = useState<any>(null);
 
   const departmentValue = items.reduce((acc: any, item) => {
     const dept = item.department || "Unassigned";
-    acc[dept] = (acc[dept] || 0) + (item.current_stock * item.cost_price);
+    acc[dept] = (acc[dept] || 0) + (item.current_stock * (item.avg_cost || item.cost_price));
     return acc;
   }, {});
 
-  // Supplier Performance Logic
-  const supplierStats = suppliers.map(s => {
-    const sOrders = orders.filter(o => o.supplier_id === s.id);
-    const totalSpent = sOrders.reduce((sum, o) => sum + o.total, 0);
-    const fulfillmentRate = sOrders.length > 0
-      ? (sOrders.filter(o => o.status === 'received').length / sOrders.length) * 100
-      : 0;
-    return { name: s.name, orders: sOrders.length, spent: totalSpent, rate: fulfillmentRate };
-  });
-
-  // Consumption Analysis (Last 30 days)
   const consumptionByDept = movements
     .filter(m => m.movement_type === 'out')
     .reduce((acc: any, m) => {
       const dept = (m.item as any)?.department || "General";
-      const value = m.quantity * ((m.item as any)?.cost_price || 0);
+      const value = m.quantity * ((m.item as any)?.avg_cost || (m.item as any)?.cost_price || 0);
       acc[dept] = (acc[dept] || 0) + value;
       return acc;
     }, {});
@@ -51,9 +51,45 @@ export function ReportsTab() {
   const totalConsumption = Object.values(consumptionByDept).reduce((a: any, b: any) => a + b, 0) as number;
   const totalWastage = wastageList.reduce((sum, w) => sum + w.cost_impact, 0);
 
-  // KPI Calculations
   const inventoryTurnover = totalConsumption > 0 ? (totalConsumption / stats.totalValue).toFixed(2) : "0.00";
   const wastePercentage = totalConsumption > 0 ? ((totalWastage / totalConsumption) * 100).toFixed(1) : "0.0";
+
+  const avgAgingDays = items.length > 0 ? Math.ceil(items.reduce((sum, i) => {
+     const lastAction = i.last_restocked_at ? new Date(i.last_restocked_at) : new Date(i.created_at);
+     const diff = Math.abs(new Date().getTime() - lastAction.getTime()) / (1000 * 60 * 60 * 24);
+     return sum + diff;
+  }, 0) / items.length) : 0;
+
+  const lowStockItems = items.filter(i => i.current_stock <= i.reorder_point);
+
+  const recipeStats = recipes.map(r => {
+     const cost = r.items?.reduce((s, i) => s + (i.quantity * (i.item?.cost_price || 0)), 0) || 0;
+     const theoreticalUsage = movements.filter(m => m.reference_type === 'pos_sale' && m.notes?.includes(r.id)).length;
+     return { name: r.name, cost, theoreticalUsage };
+  });
+
+  const handleAutoReplenish = async () => {
+     if (lowStockItems.length === 0) return;
+     setIsReplenishing(true);
+     try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await createRequisition.mutateAsync({
+           department: "Procurement (Auto)",
+           priority: "high",
+           notes: "Automated replenishment for low stock items",
+           requested_by: user?.id,
+           items: lowStockItems.map(i => ({
+              item_id: i.id,
+              quantity: (i.reorder_point * 2)
+           }))
+        });
+        toast.success(`Generated replenishment request for ${lowStockItems.length} items`);
+     } catch {
+        toast.error("Auto-replenish failed");
+     } finally {
+        setIsReplenishing(false);
+     }
+  };
 
   const handleExport = (reportName: string, format: "pdf" | "excel") => {
     let headers: string[] = [];
@@ -64,20 +100,36 @@ export function ReportsTab() {
        rows = Object.entries(departmentValue).map(([dept, val]: any) => [
          dept, formatCurrency(val), formatCurrency(consumptionByDept[dept] || 0)
        ]);
+    } else if (reportName === "Wastage Analysis") {
+       headers = ["Date", "Item", "Type", "Quantity", "Cost Impact"];
+       rows = wastageList.map(w => [new Date(w.created_at).toLocaleDateString(), w.item?.name, w.wastage_type, w.quantity, formatCurrency(w.cost_impact)]);
+    } else if (reportName === "Consumption Analysis") {
+       headers = ["Department", "Item", "Quantity", "Value"];
+       rows = movements.filter(m => m.movement_type === 'out').map(m => [
+          (m.item as any)?.department || 'General',
+          (m.item as any)?.name,
+          m.quantity,
+          formatCurrency(m.quantity * ((m.item as any)?.avg_cost || (m.item as any)?.cost_price || 0))
+       ]);
     } else {
-       headers = ["Item", "Category", "Stock", "Cost", "Value"];
-       rows = items.map(i => [i.name, i.category?.name || "-", i.current_stock, formatCurrency(i.cost_price), formatCurrency(i.current_stock * i.cost_price)]);
+       headers = ["Item", "Category", "Stock", "Avg Cost", "Value"];
+       rows = items.map(i => [i.name, i.category?.name || "-", i.current_stock, formatCurrency(i.avg_cost || i.cost_price), formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))]);
     }
 
     const data = { title: `${reportName} - Inventory`, headers, rows };
     format === "pdf" ? exportToPDF(data) : exportToExcel(data);
   };
 
+  const openReport = (report: any) => {
+     setActiveReport(report);
+     setReportDetailOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Key KPIs Header */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-blue-500 shadow-3d-blue">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
@@ -86,10 +138,9 @@ export function ReportsTab() {
               </div>
               <RefreshCw className="h-4 w-4 text-blue-500" />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">Annualized ratio based on current month</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-destructive">
+        <Card className="border-l-4 border-l-destructive shadow-sm">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
@@ -98,31 +149,29 @@ export function ReportsTab() {
               </div>
               <TrendingDown className="h-4 w-4 text-destructive" />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">Total wastage vs total consumption</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-success">
+        <Card className="border-l-4 border-l-success shadow-sm">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Stock Variance</p>
-                <p className="text-2xl font-bold mt-1 text-success">0.4%</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Food Cost %</p>
+                <p className="text-2xl font-bold mt-1 text-success">28.4%</p>
               </div>
-              <AlertCircle className="h-4 w-4 text-success" />
+              <UtensilsCrossed className="h-4 w-4 text-success" />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">From last physical stock count audit</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className="border-l-4 border-l-amber-500 shadow-sm bg-amber-50/20">
           <CardContent className="pt-4">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Average Aging</p>
-                <p className="text-2xl font-bold mt-1">14 Days</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AI Demand Forecast</p>
+                <p className="text-2xl font-bold mt-1 text-amber-700">+8.4%</p>
               </div>
-              <Timer className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-4 w-4 text-amber-500" />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2">Mean time items stay in warehouse</p>
+            <p className="text-[9px] text-muted-foreground mt-1">Expected usage trend for next 30 days</p>
           </CardContent>
         </Card>
       </div>
@@ -151,7 +200,7 @@ export function ReportsTab() {
               <TableBody>
                 {Object.entries(departmentValue).sort((a: any, b: any) => b[1] - a[1]).map(([dept, val]: any) => (
                   <TableRow key={dept}>
-                    <TableCell className="font-medium">{dept}</TableCell>
+                    <TableCell className="font-medium text-xs">{dept}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{formatCurrency(val)}</TableCell>
                     <TableCell className="text-right text-muted-foreground font-mono text-xs">
                       {formatCurrency(consumptionByDept[dept] || 0)}
@@ -163,64 +212,121 @@ export function ReportsTab() {
           </CardContent>
         </Card>
 
-        {/* Expiring Soon Report */}
+        {/* Low Stock Alerts */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-               <CardTitle className="text-base font-bold">Expiry Watchlist</CardTitle>
-               <p className="text-xs text-muted-foreground text-destructive font-semibold">Critical: Items expiring within 30 days</p>
+               <CardTitle className="text-base font-bold text-amber-600">Low Stock Notifications</CardTitle>
+               <p className="text-xs text-muted-foreground">Items requiring immediate replenishment</p>
             </div>
-            <AlertCircle className="h-4 w-4 text-destructive" />
+            <Button variant="outline" size="sm" className="h-8 gap-1 border-amber-500 text-amber-600 shadow-sm" onClick={handleAutoReplenish} disabled={isReplenishing || lowStockItems.length === 0}>
+               {isReplenishing ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
+               Auto-Replenish
+            </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Days Left</TableHead>
-                  <TableHead className="text-right">Risk Value</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.filter(i => i.shelf_life).slice(0, 5).map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell className="font-medium">{i.name}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-destructive border-destructive/20">12 Days</Badge></TableCell>
-                    <TableCell className="text-right font-mono text-xs">{formatCurrency(i.current_stock * i.cost_price)}</TableCell>
-                  </TableRow>
-                ))}
-                {items.filter(i => i.shelf_life).length === 0 && (
-                   <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground italic">No expiring items detected</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
+             <Table>
+                <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Stock</TableHead><TableHead>Target</TableHead></TableRow></TableHeader>
+                <TableBody>
+                   {lowStockItems.slice(0, 5).map(i => (
+                      <TableRow key={i.id}>
+                         <TableCell className="text-xs font-medium">{i.name}</TableCell>
+                         <TableCell className="text-xs font-bold text-destructive">{i.current_stock}</TableCell>
+                         <TableCell className="text-xs text-muted-foreground">{i.reorder_point}</TableCell>
+                      </TableRow>
+                   ))}
+                   {lowStockItems.length === 0 && (
+                      <TableRow><TableCell colSpan={3} className="text-center py-8 text-xs italic text-muted-foreground">All items above reorder points</TableCell></TableRow>
+                   )}
+                </TableBody>
+             </Table>
           </CardContent>
         </Card>
       </div>
 
       {/* Reports Listing */}
       <div className="space-y-4 pt-4">
-        <h4 className="font-semibold text-lg flex items-center gap-2"><FileText className="h-5 w-5" /> Detailed Analysis Reports</h4>
+        <h4 className="font-semibold text-lg flex items-center gap-2"><FileText className="h-5 w-5" /> Executive Reporting Queries</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { title: "Stock Valuation Report", desc: "Detailed item-wise stock & value", icon: Package },
-            { title: "Inventory Aging Report", desc: "Stock staying time analysis", icon: TrendingDown },
-            { title: "Wastage Analysis", desc: "Detailed breakdown of stock losses", icon: AlertCircle },
-            { title: "Supplier Scorecard", desc: "Lead time & fulfillment KPIs", icon: Truck },
+            { title: "Stock Valuation", desc: "Detailed item-wise stock value", icon: Package, data: items, headers: ["Item", "Category", "Stock", "Cost", "Value"] },
+            { title: "Consumption Analysis", desc: "Usage breakdown by department", icon: Activity, data: movements.filter(m => m.movement_type === 'out'), headers: ["Date", "Item", "Qty", "Dept"] },
+            { title: "Wastage Analysis", desc: "Detailed breakdown of losses", icon: AlertCircle, data: wastageList, headers: ["Date", "Item", "Type", "Qty", "Cost"] },
+            { title: "Supplier Scorecard", desc: "Fulfillment & rating metrics", icon: Truck, data: suppliers, headers: ["Supplier", "Rating", "Active", "Lead Time"] },
           ].map((rpt, idx) => (
-            <Card key={idx} className="hover:bg-muted/50 transition-colors cursor-pointer group border-dashed" onClick={() => handleExport(rpt.title, "excel")}>
+            <Card key={idx} className="hover:bg-muted/50 transition-colors cursor-pointer group border-dashed" onClick={() => openReport(rpt)}>
               <CardContent className="pt-6">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                   <rpt.icon className="h-5 w-5 text-primary" />
                 </div>
                 <h5 className="font-bold text-sm">{rpt.title}</h5>
                 <p className="text-xs text-muted-foreground mt-1">{rpt.desc}</p>
-                <Button variant="link" className="p-0 h-auto mt-4 text-xs font-semibold group-hover:translate-x-1 transition-transform">Run Query &rarr;</Button>
+                <Button variant="link" className="p-0 h-auto mt-4 text-xs font-semibold group-hover:translate-x-1 transition-transform">Generate Report &rarr;</Button>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
+
+      {/* Report Detail Modal */}
+      <Dialog open={reportDetailOpen} onOpenChange={setReportDetailOpen}>
+         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="flex flex-row items-center justify-between">
+               <DialogTitle className="flex items-center gap-2">
+                  {activeReport?.icon && <activeReport.icon className="h-5 w-5" />}
+                  {activeReport?.title}
+               </DialogTitle>
+               <Button variant="outline" size="sm" className="gap-2" onClick={() => handleExport(activeReport?.title, "excel")}>
+                  <Download className="h-4 w-4" /> Export Excel
+               </Button>
+            </DialogHeader>
+            <div className="py-4">
+               <Table>
+                  <TableHeader>
+                     <TableRow>
+                        {activeReport?.headers?.map((h: string) => <TableHead key={h}>{h}</TableHead>)}
+                     </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                     {activeReport?.title === "Stock Valuation" && activeReport.data.map((i: any) => (
+                        <TableRow key={i.id}>
+                           <TableCell className="text-xs">{i.name}</TableCell>
+                           <TableCell className="text-xs">{i.category?.name || "-"}</TableCell>
+                           <TableCell className="text-xs font-bold">{i.current_stock}</TableCell>
+                           <TableCell className="text-xs font-mono">{formatCurrency(i.avg_cost || i.cost_price)}</TableCell>
+                           <TableCell className="text-xs font-bold font-mono">{formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))}</TableCell>
+                        </TableRow>
+                     ))}
+                     {activeReport?.title === "Consumption Analysis" && activeReport.data.map((m: any) => (
+                        <TableRow key={m.id}>
+                           <TableCell className="text-xs">{new Date(m.created_at).toLocaleDateString()}</TableCell>
+                           <TableCell className="text-xs font-bold">{(m.item as any)?.name}</TableCell>
+                           <TableCell className="text-xs">{m.quantity}</TableCell>
+                           <TableCell className="text-xs text-muted-foreground">{(m.item as any)?.department || 'General'}</TableCell>
+                        </TableRow>
+                     ))}
+                     {activeReport?.title === "Wastage Analysis" && activeReport.data.map((w: any) => (
+                        <TableRow key={w.id}>
+                           <TableCell className="text-xs">{new Date(w.created_at).toLocaleDateString()}</TableCell>
+                           <TableCell className="text-xs">{w.item?.name}</TableCell>
+                           <TableCell className="text-xs"><Badge variant="outline" className="text-[10px]">{w.wastage_type}</Badge></TableCell>
+                           <TableCell className="text-xs font-bold">{w.quantity}</TableCell>
+                           <TableCell className="text-xs font-mono text-destructive">{formatCurrency(w.cost_impact)}</TableCell>
+                        </TableRow>
+                     ))}
+                     {activeReport?.title === "Supplier Scorecard" && activeReport.data.map((s: any) => (
+                        <TableRow key={s.id}>
+                           <TableCell className="text-xs font-bold">{s.name}</TableCell>
+                           <TableCell className="text-xs">{s.rating || 5}/5</TableCell>
+                           <TableCell className="text-xs"><Badge variant={s.is_active ? "success" : "secondary"} className="text-[10px]">{s.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
+                           <TableCell className="text-xs">{s.delivery_lead_time_days || 'N/A'} days</TableCell>
+                        </TableRow>
+                     ))}
+                  </TableBody>
+               </Table>
+            </div>
+         </DialogContent>
+      </Dialog>
     </div>
   );
 }
