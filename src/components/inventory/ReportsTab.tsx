@@ -167,7 +167,9 @@ export function ReportsTab() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AI Demand Forecast</p>
-                <p className="text-2xl font-bold mt-1 text-amber-700">+8.4%</p>
+                <p className={cn("text-2xl font-bold mt-1", (stats.demandForecast?.includes('+') && stats.demandForecast !== '+0.0%') ? "text-destructive" : "text-success")}>
+                  {stats.demandForecast}
+                </p>
               </div>
               <Sparkles className="h-4 w-4 text-amber-500" />
             </div>
