@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Ruler, Loader2, Edit, Trash2, ArrowRightLeft } from "lucide-react";
+import { Plus, Ruler, Loader2, Edit, Trash2, ArrowRightLeft, X } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryUoMs } from "@/hooks/useInventory";
 
@@ -136,31 +136,40 @@ export function UoMTab() {
 
       {/* Conversion Dialog */}
       <Dialog open={isConvOpen} onOpenChange={setIsConvOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Unit Conversion Setup</DialogTitle><DialogDescription>Define how different units relate to each other</DialogDescription></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>From Unit</Label>
+        <DialogContent className="max-w-md bg-[#0F172A] border-[#1E293B] text-white">
+          <DialogHeader>
+             <DialogTitle className="text-xl font-serif">Unit Conversion Setup</DialogTitle>
+             <DialogDescription className="text-gray-400">Define how different units relate to each other</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">From Unit</Label>
                 <Select value={convForm.from_uom_id} onValueChange={(v) => setConvForm({...convForm, from_uom_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="bg-[#1E293B]/50 border-[#334155] h-12"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent className="bg-[#0F172A] border-[#334155] text-white">{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>To Unit</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">To Unit</Label>
                 <Select value={convForm.to_uom_id} onValueChange={(v) => setConvForm({...convForm, to_uom_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="bg-[#1E293B]/50 border-[#334155] h-12"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent className="bg-[#0F172A] border-[#334155] text-white">{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-2"><Label>Conversion Factor</Label><Input type="number" value={convForm.conversion_factor} onChange={(e) => setConvForm({...convForm, conversion_factor: Number(e.target.value)})} placeholder="e.g. 1000" /></div>
-            <p className="text-xs text-muted-foreground p-3 bg-muted rounded italic">
+
+            <div className="space-y-2">
+              <Input type="number" value={convForm.conversion_factor} onChange={(e) => setConvForm({...convForm, conversion_factor: Number(e.target.value)})} className="bg-[#1E293B]/50 border-[#334155] h-12 font-bold text-lg" />
+            </div>
+
+            <div className="p-4 bg-[#1E293B]/30 rounded-lg text-gray-400 text-sm italic border border-[#334155]/20">
               Meaning: 1 {uoms.find(u => u.id === convForm.from_uom_id)?.name || "Selected"} = {convForm.conversion_factor} {uoms.find(u => u.id === convForm.to_uom_id)?.name || "Base"} units
-            </p>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConvOpen(false)}>Cancel</Button>
-            <Button variant="blue" onClick={handleCreateConv} disabled={createConversion.isPending}>
+          <DialogFooter className="gap-3">
+            <Button variant="outline" onClick={() => setIsConvOpen(false)} className="bg-transparent border-[#334155] text-white hover:bg-[#1E293B] rounded-xl px-8">Cancel</Button>
+            <Button onClick={handleCreateConv} disabled={createConversion.isPending} variant="blue" className="rounded-xl px-8 shadow-lg shadow-blue-500/20">
                {createConversion.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                Add Rule
             </Button>
