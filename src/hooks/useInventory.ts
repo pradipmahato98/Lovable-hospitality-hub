@@ -692,6 +692,16 @@ export function usePurchaseOrders(status?: string) {
             reference_id: poId,
             notes: `Received from PO (Batch: ${ri.batchNumber || 'N/A'})`,
           });
+
+          // Low Stock Alert
+          if (newTotalQty <= item.reorder_point) {
+            await db.from('notifications').insert({
+              title: 'Low Stock Alert',
+              message: `Item ${item.name} is at or below reorder point (${newTotalQty} left)`,
+              type: 'warning',
+              category: 'inventory'
+            });
+          }
         }
       }
 
@@ -843,6 +853,17 @@ export function useInventoryIssues() {
           reference_id: sIssue.id,
           notes: `Stock issue to ${issue.department}`,
         });
+
+        // Low Stock Alert
+        const postIssueQty = Math.max(0, (invItem?.current_stock || 0) - finalDeduction);
+        if (postIssueQty <= (invItem?.reorder_point || 0)) {
+          await db.from('notifications').insert({
+            title: 'Low Stock Alert',
+            message: `Item ${invItem?.name} is low after issue to ${issue.department} (${postIssueQty} left)`,
+            type: 'warning',
+            category: 'inventory'
+          });
+        }
       }
 
       const assetAcc = await getInventoryAccount('inventory_gl_account');
@@ -959,35 +980,35 @@ export function useInventoryProduction() {
 export function useInventoryPOS() {
   const queryClient = useQueryClient();
 
-  const deductInventoryForSale = useMutation({
-    mutationFn: async ({ recipeId, quantity, saleId, storeId }: { recipeId: string, quantity: number, saleId: string, storeId?: string }) => {
-      const { data: recipeItems } = await db.from("inventory_recipe_items").select("*").eq("recipe_id", recipeId);
+  const deductBulkInventoryForSale = useMutation({
+    mutationFn: async ({ saleId, items, storeId }: { saleId: string, items: { menu_item_id: string, quantity: number }[], storeId?: string }) => {
+      const { data: recipes } = await db.from("inventory_recipes").select("id, menu_item_id").in("menu_item_id", items.map(i => i.menu_item_id)).eq("is_active", true);
 
-      if (recipeItems) {
-        for (const rItem of recipeItems) {
-          const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id").eq("id", rItem.item_id).single();
+      if (!recipes || recipes.length === 0) return;
 
-          let deductionQty = rItem.quantity * quantity;
-          if (rItem.uom_id && invItem?.uom_id && rItem.uom_id !== invItem.uom_id) {
-             deductionQty = await convertUoM(rItem.uom_id, invItem.uom_id, deductionQty);
+      for (const item of items) {
+        const recipe = recipes.find(r => r.menu_item_id === item.menu_item_id);
+        if (recipe) {
+          const { data: recipeItems } = await db.from("inventory_recipe_items").select("*").eq("recipe_id", recipe.id);
+          if (recipeItems) {
+            for (const rItem of recipeItems) {
+              const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id").eq("id", rItem.item_id).single();
+              let deductionQty = rItem.quantity * item.quantity;
+              if (rItem.uom_id && invItem?.uom_id && rItem.uom_id !== invItem.uom_id) {
+                 deductionQty = await convertUoM(rItem.uom_id, invItem.uom_id, deductionQty);
+              }
+              await db.from("inventory_items").update({ current_stock: Math.max(0, (invItem?.current_stock || 0) - deductionQty) }).eq("id", rItem.item_id);
+              if (storeId) await updateStoreStock(rItem.item_id, storeId, deductionQty, 'decrement');
+              await db.from("stock_movements").insert({
+                item_id: rItem.item_id,
+                movement_type: "out",
+                quantity: deductionQty,
+                reference_type: "pos_sale",
+                reference_id: saleId,
+                notes: `POS Sale deduction (Menu Item: ${item.menu_item_id})`,
+              });
+            }
           }
-
-          await db.from("inventory_items").update({
-            current_stock: Math.max(0, (invItem?.current_stock || 0) - deductionQty)
-          }).eq("id", rItem.item_id);
-
-          if (storeId) {
-             await updateStoreStock(rItem.item_id, storeId, deductionQty, 'decrement');
-          }
-
-          await db.from("stock_movements").insert({
-            item_id: rItem.item_id,
-            movement_type: "out",
-            quantity: deductionQty,
-            reference_type: "pos_sale",
-            reference_id: saleId,
-            notes: `POS Sale deduction (Recipe: ${recipeId})`,
-          });
         }
       }
     },
@@ -997,7 +1018,7 @@ export function useInventoryPOS() {
     },
   });
 
-  return { deductInventoryForSale };
+  return { deductBulkInventoryForSale };
 }
 
 // ============= Transfers =============

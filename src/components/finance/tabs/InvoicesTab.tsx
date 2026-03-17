@@ -34,6 +34,13 @@ export function FinanceInvoicesTab() {
   const [subTab, setSubTab] = useState("invoices");
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+
+  const getPreviousDue = (guestId: string | null) => {
+    if (!guestId || !invoices) return 0;
+    return invoices
+      .filter(inv => inv.guest_id === guestId && inv.status !== 'paid')
+      .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
+  };
   const [searchText, setSearchText] = useState("");
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string } | null>(null);
 
@@ -276,6 +283,12 @@ export function FinanceInvoicesTab() {
                   <SelectTrigger><SelectValue placeholder="Select guest" /></SelectTrigger>
                   <SelectContent>{guests?.map(g => <SelectItem key={g.id} value={g.id}>{g.first_name} {g.last_name}</SelectItem>)}</SelectContent>
                 </Select>
+                {newInvoice.guest_id && getPreviousDue(newInvoice.guest_id) > 0 && (
+                  <p className="text-[10px] text-destructive font-bold flex items-center gap-1 mt-1 animate-pulse">
+                     <FileText className="h-3 w-3" />
+                     Previous Outstanding: {formatCurrency(getPreviousDue(newInvoice.guest_id))}
+                  </p>
+                )}
               </div>
               <NepaliDateInput
                 label="Due Date"

@@ -45,6 +45,7 @@ import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSearchParams } from "react-router-dom";
+import { useInventoryPOS } from "@/hooks/useInventory";
 
 interface CartItem {
   id: string;
@@ -107,6 +108,7 @@ const POSTerminal = () => {
 
   const { data: gatewaysData } = usePaymentGateways();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
+  const { deductBulkInventoryForSale } = useInventoryPOS();
 
   const menuItems = dbMenuItems.map((item: any) => ({
     id: item.id,
@@ -215,6 +217,12 @@ const POSTerminal = () => {
         .single();
 
       if (error) throw error;
+
+      // Trigger inventory deduction
+      await deductBulkInventoryForSale.mutateAsync({
+        saleId: data.id,
+        items: cart.map(i => ({ menu_item_id: i.id, quantity: i.quantity }))
+      });
 
       const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
                     paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;

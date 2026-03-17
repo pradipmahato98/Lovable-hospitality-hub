@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Star, Edit, Trash2, Receipt, Mail, Phone, MapPin, FileText, Clock, Award } from "lucide-react";
+import { Star, Edit, Trash2, Receipt, Mail, Phone, MapPin, FileText, Clock, Award, Wallet } from "lucide-react";
 import { formatCurrency, formatAD } from "@/lib/utils";
 import type { Guest } from "@/hooks/useGuests";
 import { useGuestCRUD } from "@/hooks/useGuestCRUD";
+import { useInvoices } from "@/hooks/useBillingData";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -31,6 +32,11 @@ interface GuestProfilePanelProps {
 export function GuestProfilePanel({ guest, onEdit, onViewDocuments, onViewHistory, onClose }: GuestProfilePanelProps) {
   const navigate = useNavigate();
   const { deleteGuest, toggleVIP } = useGuestCRUD();
+  const { data: invoices = [] } = useInvoices();
+
+  const previousDue = invoices
+    .filter(inv => inv.guest_id === guest.id && inv.status !== 'paid')
+    .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
 
   const handleDelete = async () => {
     await deleteGuest.mutateAsync(guest.id);
@@ -89,6 +95,16 @@ export function GuestProfilePanel({ guest, onEdit, onViewDocuments, onViewHistor
             <p className="text-lg font-bold text-primary">{formatCurrency(guest.total_spending || 0)}</p>
           </div>
         </div>
+
+        {previousDue > 0 && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+               <Wallet className="h-4 w-4 text-destructive" />
+               <span className="text-xs font-bold text-destructive uppercase tracking-tighter">Previous Due</span>
+            </div>
+            <span className="font-mono font-bold text-destructive">{formatCurrency(previousDue)}</span>
+          </div>
+        )}
 
         <Separator />
 

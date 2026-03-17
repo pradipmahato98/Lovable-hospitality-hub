@@ -62,6 +62,43 @@ export function ReportsTab() {
 
   const lowStockItems = items.filter(i => i.current_stock <= i.reorder_point);
 
+  const topConsumed = useMemo(() => {
+    const map = new Map<string, { name: string, qty: number, value: number }>();
+    movements
+      .filter(m => m.movement_type === 'out')
+      .forEach(m => {
+        const item = m.item as any;
+        if (!item) return;
+        const current = map.get(m.item_id) || { name: item.name, qty: 0, value: 0 };
+        current.qty += m.quantity;
+        current.value += m.quantity * (item.avg_cost || item.cost_price || 0);
+        map.set(m.item_id, current);
+      });
+    return Array.from(map.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
+  }, [movements]);
+
+  const supplierPerformance = useMemo(() => {
+    return suppliers.map(s => {
+      const supplierOrders = orders.filter(o => o.supplier_id === s.id);
+      const receivedOrders = supplierOrders.filter(o => o.status === 'received');
+
+      let avgLeadTime = 0;
+      if (receivedOrders.length > 0) {
+        avgLeadTime = receivedOrders.reduce((sum, o) => {
+          const ordered = new Date(o.order_date).getTime();
+          const received = new Date(o.received_date!).getTime();
+          return sum + (received - ordered) / (1000 * 60 * 60 * 24);
+        }, 0) / receivedOrders.length;
+      }
+
+      const fulfillmentRate = supplierOrders.length > 0
+        ? (receivedOrders.length / supplierOrders.length) * 100
+        : 0;
+
+      return { name: s.name, avgLeadTime, fulfillmentRate, totalOrders: supplierOrders.length };
+    });
+  }, [suppliers, orders]);
+
   const recipeStats = recipes.map(r => {
      const cost = r.items?.reduce((s, i) => s + (i.quantity * (i.item?.cost_price || 0)), 0) || 0;
      const theoreticalUsage = movements.filter(m => m.reference_type === 'pos_sale' && m.notes?.includes(r.id)).length;
@@ -244,6 +281,53 @@ export function ReportsTab() {
              </Table>
           </CardContent>
         </Card>
+
+        {/* Top Consumed Items */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-bold">Top Consumed Items (MTD)</CardTitle>
+            <p className="text-xs text-muted-foreground">Highest volume usage by SKU</p>
+          </CardHeader>
+          <CardContent>
+             <Table>
+                <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Value</TableHead></TableRow></TableHeader>
+                <TableBody>
+                   {topConsumed.map((item, idx) => (
+                      <TableRow key={idx}>
+                         <TableCell className="text-xs font-medium">{item.name}</TableCell>
+                         <TableCell className="text-right text-xs font-bold">{item.qty}</TableCell>
+                         <TableCell className="text-right text-xs font-mono">{formatCurrency(item.value)}</TableCell>
+                      </TableRow>
+                   ))}
+                   {topConsumed.length === 0 && (
+                      <TableRow><TableCell colSpan={3} className="text-center py-8 text-xs italic text-muted-foreground">No consumption data</TableCell></TableRow>
+                   )}
+                </TableBody>
+             </Table>
+          </CardContent>
+        </Card>
+
+        {/* Supplier Performance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-bold">Supplier Performance</CardTitle>
+            <p className="text-xs text-muted-foreground">Delivery and fulfillment metrics</p>
+          </CardHeader>
+          <CardContent>
+             <Table>
+                <TableHeader><TableRow><TableHead>Supplier</TableHead><TableHead className="text-right">Lead Time</TableHead><TableHead className="text-right">Fulfill %</TableHead></TableRow></TableHeader>
+                <TableBody>
+                   {supplierPerformance.slice(0, 5).map((s, idx) => (
+                      <TableRow key={idx}>
+                         <TableCell className="text-xs font-medium">{s.name}</TableCell>
+                         <TableCell className="text-right text-xs">{s.avgLeadTime > 0 ? `${s.avgLeadTime.toFixed(1)}d` : 'N/A'}</TableCell>
+                         <TableCell className="text-right text-xs font-bold text-success">{s.fulfillmentRate.toFixed(1)}%</TableCell>
+                      </TableRow>
+                   ))}
+                </TableBody>
+             </Table>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Reports Listing */}
@@ -255,6 +339,7 @@ export function ReportsTab() {
             { title: "Consumption Analysis", desc: "Usage breakdown by department", icon: Activity, data: movements.filter(m => m.movement_type === 'out'), headers: ["Date", "Item", "Qty", "Dept"] },
             { title: "Wastage Analysis", desc: "Detailed breakdown of losses", icon: AlertCircle, data: wastageList, headers: ["Date", "Item", "Type", "Qty", "Cost"] },
             { title: "Supplier Scorecard", desc: "Fulfillment & rating metrics", icon: Truck, data: suppliers, headers: ["Supplier", "Rating", "Active", "Lead Time"] },
+            { title: "Audit Trail", desc: "Manual stock adjustment history", icon: FileText, data: movements.filter(m => m.reference_type === 'manual_adjustment' || m.movement_type === 'adjustment'), headers: ["Date", "Item", "Action", "Qty", "Notes"] },
           ].map((rpt, idx) => (
             <Card key={idx} className="hover:bg-muted/50 transition-colors cursor-pointer group border-dashed" onClick={() => openReport(rpt)}>
               <CardContent className="pt-6">
@@ -322,6 +407,15 @@ export function ReportsTab() {
                            <TableCell className="text-xs">{s.rating || 5}/5</TableCell>
                            <TableCell className="text-xs"><Badge variant={s.is_active ? "success" : "secondary"} className="text-[10px]">{s.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
                            <TableCell className="text-xs">{s.delivery_lead_time_days || 'N/A'} days</TableCell>
+                        </TableRow>
+                     ))}
+                     {activeReport?.title === "Audit Trail" && activeReport.data.map((m: any) => (
+                        <TableRow key={m.id}>
+                           <TableCell className="text-xs">{new Date(m.created_at).toLocaleString()}</TableCell>
+                           <TableCell className="text-xs font-bold">{(m.item as any)?.name}</TableCell>
+                           <TableCell className="text-xs uppercase font-mono">{m.movement_type}</TableCell>
+                           <TableCell className="text-xs">{m.quantity}</TableCell>
+                           <TableCell className="text-xs text-muted-foreground italic">{m.notes || 'No comments'}</TableCell>
                         </TableRow>
                      ))}
                   </TableBody>
