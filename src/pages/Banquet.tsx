@@ -58,6 +58,8 @@ import {
   ArrowUpDown,
   Filter,
   XCircle,
+  AlertTriangle,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,12 +67,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { usePersistentPopup } from "@/hooks/usePersistentPopup";
+import { motion, AnimatePresence } from "framer-motion";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { 
   DraggableBanquetCalendar,
   EventReportsPanel,
   CateringManagementPanel,
   VenueSetupPanel,
 } from "@/components/banquet";
+import {
+  useCateringOrders,
+  useVenueSetups,
+} from "@/hooks/useBanquetData";
+import { useGuests } from "@/hooks/useGuests";
 
 interface BanquetEvent {
   id: string;
@@ -115,6 +125,9 @@ const statusColors: Record<string, string> = {
 
 export default function Banquet() {
   const queryClient = useQueryClient();
+  const { data: cateringOrders = [] } = useCateringOrders();
+  const { data: venueSetups = [] } = useVenueSetups();
+  const { data: guests = [] } = useGuests();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "events";
   const [searchQuery, setSearchQuery] = useState("");
@@ -171,6 +184,17 @@ export default function Banquet() {
 
       return data as BanquetEvent[];
     },
+  });
+
+  const conflicts = events.filter((e) => {
+    // Skip checking against the event being edited
+    if (editingEvent && e.id === editingEvent.id) return false;
+
+    // Check same date and venue
+    if (e.event_date !== newEvent.event_date || e.venue !== newEvent.venue) return false;
+
+    // Check time overlap: (StartA < EndB) and (EndA > StartB)
+    return newEvent.start_time < e.end_time && newEvent.end_time > e.start_time;
   });
 
   // Real-time subscription
@@ -340,10 +364,130 @@ export default function Banquet() {
      setSelectedEventForDetails(event);
      setDetailsDialogOpen(true);
    };
+
+  const generateBEO = (event: BanquetEvent) => {
+    const doc = new jsPDF();
+    const catering = cateringOrders.find(c => c.event_id === event.id);
+    const venue = venueSetups.find(v => v.event_id === event.id);
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(0, 102, 255);
+    doc.text("LuxeStay Hospitality", 105, 20, { align: "center" });
+    doc.setFontSize(16);
+    doc.setTextColor(51, 65, 85);
+    doc.text("Banquet Event Order (BEO)", 105, 30, { align: "center" });
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(20, 35, 190, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 42, { align: "center" });
+
+    // Event Details Table
+    autoTable(doc, {
+      startY: 50,
+      head: [['Event Information', '']],
+      body: [
+        ['Event Name', event.event_name],
+        ['Event Type', event.event_type.toUpperCase()],
+        ['Date', event.event_date],
+        ['Time Slot', `${event.start_time} - ${event.end_time}`],
+        ['Venue', event.venue],
+        ['Expected Guests', event.guest_count.toString()],
+        ['Booking Status', event.status.replace('_', ' ').toUpperCase()],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }
+    });
+
+    // Client Details Table
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Client Contact Details', '']],
+      body: [
+        ['Contact Name', event.client_name],
+        ['Phone Number', event.client_phone || 'N/A'],
+        ['Email Address', event.client_email || 'N/A'],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }
+    });
+
+    // Catering & Requirements
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Catering Details', '']],
+      body: [
+        ['Menu Package', catering?.menu_package || event.menu_package || 'Not selected'],
+        ['Serving Style', catering?.serving_style || 'Not specified'],
+        ['Dietary Requirements', catering?.dietary_requirements?.join(', ') || 'None'],
+        ['Beverages', catering?.beverages?.join(', ') || 'None'],
+        ['Special Notes', catering?.special_notes || event.special_requests || 'None specified.'],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }
+    });
+
+    // Venue Setup Details
+    if (venue) {
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [['Venue Setup Details', '']],
+        body: [
+          ['Layout Type', venue.layout_type],
+          ['Tables / Chairs', `${venue.table_count} Tables / ${venue.chair_count} Chairs`],
+          ['Features', `${venue.stage_required ? 'Stage, ' : ''}${venue.dance_floor ? 'Dance Floor' : ''}`.replace(/, $/, '') || 'Standard'],
+          ['Equipment', venue.equipment?.join(', ') || 'None'],
+          ['Decorations', venue.decorations?.join(', ') || 'None'],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }
+      });
+    }
+
+    // Financials
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Financial Summary', '']],
+      body: [
+        ['Total Quoted Amount', formatCurrency(event.total_amount)],
+        ['Advance Deposit Paid', formatCurrency(event.deposit_amount || 0)],
+        ['Current Balance Due', formatCurrency(event.total_amount - (event.deposit_amount || 0))],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [34, 197, 94], fontSize: 12, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 }, 1: { halign: 'right', fontStyle: 'bold' } }
+    });
+
+    // Footer
+    const finalY = (doc as any).lastAutoTable.finalY;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text("Thank you for choosing LuxeStay Hospitality for your event.", 105, finalY + 20, { align: "center" });
+    doc.text("For any queries, please contact the Banquet Manager.", 105, finalY + 25, { align: "center" });
+
+    doc.save(`BEO_${event.event_name.replace(/\s+/g, '_')}_${event.event_date}.pdf`);
+    toast.success("BEO PDF generated successfully");
+  };
  
    const handleSaveEvent = () => {
      if (!newEvent.event_name || !newEvent.client_name || !newEvent.venue) {
        toast.error("Please fill in event name, client name, and venue");
+       return;
+     }
+
+     if (conflicts.length > 0) {
+       toast.error(`Venue Conflict: ${conflicts[0].event_name} is already scheduled at this time.`);
        return;
      }
  
@@ -496,7 +640,12 @@ export default function Banquet() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex-wrap h-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="events" className="gap-2">
               <CalendarDays className="h-4 w-4" />
               Events
@@ -513,15 +662,25 @@ export default function Banquet() {
               <Layout className="h-4 w-4" />
               Venue Setup
             </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Reports
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="reports" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Reports
+              </TabsTrigger>
+            </TabsList>
+          </motion.div>
 
-          <TabsContent value="events" className="space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex flex-1 items-center gap-2 max-w-2xl">
+          <AnimatePresence mode="wait">
+            <TabsContent key={activeTab} value={activeTab} className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {activeTab === "events" && (
+                  <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex flex-1 items-center gap-2 max-w-2xl">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -629,8 +788,14 @@ export default function Banquet() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEvents.map((event) => (
-                        <TableRow key={event.id} className="group">
+                      {filteredEvents.map((event, index) => (
+                        <motion.tr
+                          key={event.id}
+                          className="group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                        >
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -739,17 +904,18 @@ export default function Banquet() {
                               </DropdownMenu>
                             </div>
                           </TableCell>
-                        </TableRow>
+                        </motion.tr>
                       ))}
                     </TableBody>
                   </Table>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="calendar">
-            <DraggableBanquetCalendar 
+                {activeTab === "calendar" && (
+                  <DraggableBanquetCalendar
               events={events.map(e => ({
                 id: e.id,
                 event_name: e.event_name,
@@ -771,11 +937,11 @@ export default function Banquet() {
                 setEventDialogOpen(true);
               }}
               onEventDrop={handleEventDrop}
-            />
-          </TabsContent>
+                  />
+                )}
 
-          <TabsContent value="catering">
-            <CateringManagementPanel 
+                {activeTab === "catering" && (
+                  <CateringManagementPanel
               events={events.map(e => ({
                 id: e.id,
                 event_name: e.event_name,
@@ -789,11 +955,11 @@ export default function Banquet() {
                 special_requests: e.special_requests,
               }))}
               onViewDetails={handleViewDetails}
-            />
-          </TabsContent>
+                  />
+                )}
 
-          <TabsContent value="venue">
-            <VenueSetupPanel 
+                {activeTab === "venue" && (
+                  <VenueSetupPanel
               events={events.map(e => ({
                 id: e.id,
                 event_name: e.event_name,
@@ -805,11 +971,11 @@ export default function Banquet() {
                 status: e.status,
               }))}
               onViewDetails={handleViewDetails}
-            />
-          </TabsContent>
+                  />
+                )}
 
-          <TabsContent value="reports">
-            <EventReportsPanel 
+                {activeTab === "reports" && (
+                  <EventReportsPanel
               events={events.map(e => ({
                 id: e.id,
                 event_name: e.event_name,
@@ -821,8 +987,11 @@ export default function Banquet() {
                 status: e.status,
                 total_amount: e.total_amount,
               }))}
-            />
-          </TabsContent>
+                  />
+                )}
+              </motion.div>
+            </TabsContent>
+          </AnimatePresence>
         </Tabs>
       </div>
 
@@ -939,7 +1108,17 @@ export default function Banquet() {
                     <div className="flex justify-between items-center pt-2">
                       <span className="text-sm text-muted-foreground">Previous Due</span>
                       <span className="font-mono text-destructive">
-                        {formatCurrency(0)}
+                        {(() => {
+                          const previousDue = events
+                            .filter(e =>
+                              e.client_name === selectedEventForDetails.client_name &&
+                              e.id !== selectedEventForDetails.id &&
+                              new Date(e.event_date) < new Date(selectedEventForDetails.event_date) &&
+                              (e.status === 'completed' || e.status === 'confirmed')
+                            )
+                            .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
+                          return formatCurrency(previousDue);
+                        })()}
                       </span>
                     </div>
                   )}
@@ -950,6 +1129,14 @@ export default function Banquet() {
 
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => selectedEventForDetails && generateBEO(selectedEventForDetails)}
+            >
+              <Download className="h-4 w-4" />
+              Download BEO
+            </Button>
             <Button onClick={() => {
               setDetailsDialogOpen(false);
               if (selectedEventForDetails) handleEditEvent(selectedEventForDetails);
@@ -968,6 +1155,39 @@ export default function Banquet() {
              </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Existing Guest (Optional)</Label>
+              <Select
+                onValueChange={(guestId) => {
+                  const guest = guests.find(g => g.id === guestId);
+                  if (guest) {
+                    setNewEvent(p => ({
+                      ...p,
+                      client_name: `${guest.first_name} ${guest.last_name}`,
+                      client_phone: guest.phone || "",
+                      client_email: guest.email || ""
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Search existing guest database..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {guests.slice(0, 10).map(guest => (
+                    <SelectItem key={guest.id} value={guest.id}>
+                      <div className="flex flex-col">
+                        <span>{guest.first_name} {guest.last_name}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {guest.phone || guest.email || "No contact info"} • {guest.is_vip ? "VIP" : "Regular"}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Event Name *</Label>
@@ -1066,12 +1286,26 @@ export default function Banquet() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Venue *</Label>
+                <Label className="flex items-center gap-2">
+                  Venue *
+                  {conflicts.length > 0 && (
+                    <Badge variant="destructive" className="h-5 px-1.5 gap-1 animate-pulse">
+                      <AlertTriangle className="h-3 w-3" />
+                      Conflict
+                    </Badge>
+                  )}
+                </Label>
                 <Input
                   placeholder="Grand Ballroom"
                   value={newEvent.venue}
                   onChange={(e) => setNewEvent((p) => ({ ...p, venue: e.target.value }))}
+                  className={conflicts.length > 0 ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
+                {conflicts.length > 0 && (
+                  <p className="text-[10px] text-destructive font-medium">
+                    Overlaps with "{conflicts[0].event_name}"
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Menu Package</Label>
