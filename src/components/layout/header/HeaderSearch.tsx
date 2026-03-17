@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -10,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -41,31 +43,43 @@ export function HeaderSearch() {
           .from("guests")
           .select("id, first_name, last_name, email, phone")
           .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
-          .limit(5),
+          .limit(10),
         supabase
           .from("profiles")
           .select("user_id, first_name, last_name, email")
           .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)
-          .limit(5),
+          .limit(10),
         supabase
           .from("rooms")
           .select("id, room_number, room_type")
           .ilike("room_number", `%${query}%`)
-          .limit(5),
+          .limit(10),
         supabase
           .from("reservations")
           .select("id, reservation_code, status")
           .ilike("reservation_code", `%${query}%`)
-          .limit(5),
+          .limit(10),
       ]);
 
-      const results = [
+      const rawResults = [
         ...(guests || []).map(g => ({ type: "guest", ...g })),
         ...(profiles || []).map(p => ({ type: "staff", ...p })),
         ...(rooms || []).map(r => ({ type: "room", ...r })),
         ...(reservations || []).map(r => ({ type: "reservation", ...r })),
       ];
-      setSearchResults(results);
+
+      // De-duplicate results to avoid "repleted" showing
+      // We'll use a Map to keep unique results by a compound key
+      const uniqueMap = new Map();
+      rawResults.forEach(res => {
+        const id = res.id || res.user_id || res.reservation_code || res.room_number;
+        const key = `${res.type}-${id}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, res);
+        }
+      });
+
+      setSearchResults(Array.from(uniqueMap.values()));
       setSelectedIndex(0);
     } catch (error) {
       console.error("Search error:", error);
@@ -140,36 +154,37 @@ export function HeaderSearch() {
   }, []);
 
   return (
-    <>
-      <Button
-        variant="outline"
-        onClick={() => setSearchOpen(true)}
-        className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[450px] h-9 px-3 text-muted-foreground hover:text-foreground bg-secondary/30 border-border/40 hover:bg-secondary/50 transition-all rounded-full group"
-      >
-        <div className="flex items-center gap-2">
-          <Search className="h-3.5 w-3.5 shrink-0 transition-colors group-hover:text-primary" />
-          <span className="text-xs font-normal">Global Search...</span>
-        </div>
-        <div className="ml-auto flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
-            <Command className="h-2 w-2" />
-          </kbd>
-          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
-            K
-          </kbd>
-        </div>
-      </Button>
-
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={() => setSearchOpen(true)}
-        className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
-      >
-        <Search className="h-4 w-4" />
-      </Button>
-
+    <div className="w-full flex justify-center">
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogTrigger asChild>
+          <div className="w-full flex justify-center cursor-pointer">
+            <Button
+              variant="outline"
+              className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[600px] h-10 px-4 text-muted-foreground hover:text-foreground bg-secondary/40 border-border/60 hover:border-primary/30 hover:bg-secondary/60 transition-all rounded-xl group shadow-sm"
+            >
+              <div className="flex items-center gap-2.5">
+                <Search className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+                <span className="text-sm font-normal tracking-tight">Global Search guests, staff, rooms...</span>
+              </div>
+              <div className="ml-auto flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+                  <Command className="h-2.5 w-2.5" />
+                </kbd>
+                <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+                  K
+                </kbd>
+              </div>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogTrigger>
         <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden border-none shadow-2xl">
           <DialogHeader className="p-4 border-b bg-muted/30">
             <DialogTitle className="flex items-center gap-2">
@@ -309,6 +324,6 @@ export function HeaderSearch() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
