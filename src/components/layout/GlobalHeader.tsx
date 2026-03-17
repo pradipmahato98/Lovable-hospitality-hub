@@ -45,8 +45,9 @@ export function Header({ title, subtitle }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4">
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+    <header className="sticky top-0 z-30 flex h-14 items-center border-b border-border/60 bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4">
+      {/* Left Section: Title & Mobile Menu */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-[1_0_0%]">
         {isMobile && (
           <Button
             variant="ghost"
@@ -64,7 +65,20 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+      {/* Center Section: Search Bar (Desktop only centered) */}
+      <div className="hidden lg:flex flex-[2_0_0%] justify-center">
+        <div className="w-full max-w-[450px]">
+          <HeaderSearch />
+        </div>
+      </div>
+
+      {/* Right Section: Actions */}
+      <div className="flex items-center justify-end gap-0.5 sm:gap-1 flex-[1_0_0%]">
+        {/* Mobile Search - only shows when not desktop */}
+        <div className="lg:hidden">
+          <HeaderSearch />
+        </div>
+
         {/* BS/AD Toggle Badge */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -84,8 +98,6 @@ export function Header({ title, subtitle }: HeaderProps) {
             <p className="text-xs">Switch to {locSettings?.calendar_mode === "BS" ? "AD" : "BS"} calendar</p>
           </TooltipContent>
         </Tooltip>
-
-        <HeaderSearch />
 
         <Button 
           variant="ghost" 
