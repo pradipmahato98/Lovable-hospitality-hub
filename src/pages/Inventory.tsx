@@ -6,13 +6,15 @@ import {
   Package, Truck, Warehouse, ArrowUpDown, FolderTree,
   ArrowRightLeft, BarChart3, Settings2, ClipboardList,
   ChefHat, Trash2, Ruler, Store, ScanLine, ListChecks,
-  Boxes, Settings, ArrowUpRight
+  Boxes, Settings, ArrowUpRight, Utensils, ShieldCheck
 } from "lucide-react";
 import {
   ItemsTab, CategoriesTab, SuppliersTab, PurchaseOrdersTab,
   StockMovementsTab, TransfersTab, ReportsTab,
   UoMTab, StoresTab, RequisitionsTab, RecipesTab,
-  WastageTab, StockCountTab, InventorySettingsTab, StockIssueTab
+  WastageTab, StockCountTab, InventorySettingsTab, StockIssueTab,
+  InventoryValuationReport, ExpiryReport, FoodCostReport,
+  ApprovalsQueueTab
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +58,7 @@ const Inventory = () => {
       { id: "settings", label: "Settings", icon: Settings },
     ],
     transactions: [
+      { id: "approvals", label: "Approvals", icon: ShieldCheck },
       { id: "requisitions", label: "Requisitions", icon: ClipboardList },
       { id: "orders", label: "Purchase Orders / GRN", icon: Warehouse },
       { id: "issue", label: "Stock Issue", icon: ArrowUpRight },
@@ -67,6 +70,7 @@ const Inventory = () => {
     reports: [
       { id: "stock-on-hand", label: "Stock on Hand", icon: Package },
       { id: "valuation", label: "Valuation Report", icon: BarChart3 },
+      { id: "food-cost", label: "Food Costing", icon: Utensils },
       { id: "movement-rpt", label: "Movement History", icon: ArrowUpDown },
       { id: "expiry", label: "Expiry Report", icon: ScanLine },
     ]
@@ -117,6 +121,7 @@ const Inventory = () => {
             <TabsContent value="settings"><InventorySettingsTab /></TabsContent>
 
             {/* Transactions Content */}
+            <TabsContent value="approvals"><ApprovalsQueueTab /></TabsContent>
             <TabsContent value="requisitions"><RequisitionsTab /></TabsContent>
             <TabsContent value="orders"><PurchaseOrdersTab /></TabsContent>
             <TabsContent value="issue"><StockIssueTab /></TabsContent>
@@ -127,9 +132,10 @@ const Inventory = () => {
 
             {/* Reports Content */}
             <TabsContent value="stock-on-hand"><ReportsTab /></TabsContent>
-            <TabsContent value="valuation"><div className="p-4 border rounded-lg bg-card text-center text-muted-foreground">Valuation Report coming soon</div></TabsContent>
-            <TabsContent value="movement-rpt"><div className="p-4 border rounded-lg bg-card text-center text-muted-foreground">Movement History Report coming soon</div></TabsContent>
-            <TabsContent value="expiry"><div className="p-4 border rounded-lg bg-card text-center text-muted-foreground">Expiry Report coming soon</div></TabsContent>
+            <TabsContent value="valuation"><InventoryValuationReport /></TabsContent>
+            <TabsContent value="food-cost"><FoodCostReport /></TabsContent>
+            <TabsContent value="movement-rpt"><StockMovementsTab /></TabsContent>
+            <TabsContent value="expiry"><ExpiryReport /></TabsContent>
           </Tabs>
         </ErrorBoundary>
       </div>

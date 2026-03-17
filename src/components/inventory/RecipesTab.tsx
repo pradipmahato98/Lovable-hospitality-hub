@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, ChefHat, Loader2, Edit, Trash2, UtensilsCrossed, Play } from "lucide-react";
+import { Plus, ChefHat, Loader2, Edit, Trash2, UtensilsCrossed, Play, Calculator, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryRecipes, useInventoryItems, useInventoryUoMs, useInventoryProduction } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/utils";
 
 export function RecipesTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -23,10 +24,11 @@ export function RecipesTab() {
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [produceQty, setProduceQty] = useState(1);
 
-  const [form, setForm] = useState({
-    name: "", description: "", portion_size: "1 portion", yield_percentage: 100,
-    items: [] as { item_id: string, quantity: number, uom_id: string, waste_percentage: number }[]
-  });
+  const calculateRecipeCost = (recipe: any) => {
+     return recipe.items?.reduce((sum: number, rItem: any) => {
+        return sum + (rItem.quantity * (rItem.item?.cost_price || 0));
+     }, 0) || 0;
+  };
 
   const handleProduce = async () => {
     if (!selectedRecipe) return;
@@ -60,43 +62,57 @@ export function RecipesTab() {
         ) : recipes.length === 0 ? (
           <div className="col-span-full text-center py-10 border rounded-lg bg-muted/20 text-muted-foreground">No recipes defined</div>
         ) : (
-          recipes.map((recipe) => (
-            <Card key={recipe.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                      <ChefHat className="h-5 w-5 text-orange-500" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-lg">{recipe.name}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{recipe.description || "No description"}</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="flex items-center gap-1"><UtensilsCrossed className="h-3 w-3" /> {recipe.portion_size}</Badge>
-                </div>
-
-                <div className="space-y-2 mb-6">
-                  <p className="text-sm font-semibold mb-2">Ingredients List:</p>
-                  <div className="bg-muted/30 rounded-lg p-3 space-y-1">
-                    {recipe.items?.slice(0, 3).map((item: any) => (
-                      <div key={item.id} className="flex justify-between text-xs">
-                        <span>{item.item?.name}</span>
-                        <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
+          recipes.map((recipe) => {
+            const recipeCost = calculateRecipeCost(recipe);
+            return (
+              <Card key={recipe.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                        <ChefHat className="h-5 w-5 text-orange-500" />
                       </div>
-                    ))}
+                      <div>
+                        <p className="font-bold text-lg">{recipe.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{recipe.description || "No description"}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                       <Badge variant="outline" className="flex items-center gap-1 mb-1"><UtensilsCrossed className="h-3 w-3" /> {recipe.portion_size}</Badge>
+                       <p className="text-[10px] font-bold text-primary">{formatCurrency(recipeCost)} / portion</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" className="gap-1" onClick={() => { setSelectedRecipe(recipe); setIsProduceOpen(true); }}>
-                    <Play className="h-3 w-3" /> Log Production
-                  </Button>
-                  <Button variant="outline" size="sm">Edit BOM</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                  <div className="space-y-2 mb-6">
+                    <div className="flex justify-between items-center mb-1">
+                       <p className="text-sm font-semibold">Ingredients (BOM):</p>
+                       <Badge variant="secondary" className="text-[9px] h-4">Automated Deduction</Badge>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+                      {recipe.items?.map((item: any) => (
+                        <div key={item.id} className="flex justify-between text-xs">
+                          <span>{item.item?.name}</span>
+                          <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center border-t pt-4">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                       <Calculator className="h-3 w-3" /> Costing: {formatCurrency(recipeCost)}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" className="h-8 gap-1" onClick={() => { setSelectedRecipe(recipe); setIsProduceOpen(true); }}>
+                        <Play className="h-3 w-3" /> Produce
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8">Edit</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
 
@@ -106,25 +122,33 @@ export function RecipesTab() {
           <DialogHeader><DialogTitle>Log Production: {selectedRecipe?.name}</DialogTitle><DialogDescription>Deduct ingredients from stock based on quantity produced</DialogDescription></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Portions Produced</Label>
-              <Input type="number" value={produceQty} onChange={(e) => setProduceQty(Number(e.target.value))} />
-              <p className="text-xs text-muted-foreground">Standard portion: {selectedRecipe?.portion_size}</p>
+              <Label>Batch Size (Portions)</Label>
+              <div className="flex items-center gap-4">
+                 <Input type="number" value={produceQty} onChange={(e) => setProduceQty(Number(e.target.value))} className="w-32" />
+                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                 <p className="text-sm font-bold text-primary">Total Est. Cost: {formatCurrency(calculateRecipeCost(selectedRecipe || {}) * produceQty)}</p>
+              </div>
+              <p className="text-xs text-muted-foreground italic">Target: {selectedRecipe?.portion_size} per portion</p>
             </div>
-            <div className="p-3 bg-muted/50 rounded-lg">
-               <p className="text-xs font-bold uppercase mb-2">Ingredient Impact:</p>
+            <div className="p-3 bg-muted/50 rounded-lg border">
+               <p className="text-xs font-bold uppercase mb-2 text-muted-foreground">Inventory Consumption:</p>
                {selectedRecipe?.items?.map((item: any) => (
-                 <div key={item.id} className="flex justify-between text-xs">
+                 <div key={item.id} className="flex justify-between text-xs py-1 border-b border-muted last:border-0">
                    <span>{item.item?.name}</span>
-                   <span className="text-destructive font-mono">-{item.quantity * produceQty} {item.uom?.abbreviation || item.item?.unit}</span>
+                   <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground line-through">{item.item?.current_stock}</span>
+                      <span className="text-destructive font-mono font-bold">-{item.quantity * produceQty}</span>
+                      <span className="text-[10px] font-bold uppercase">{item.uom?.abbreviation || item.item?.unit}</span>
+                   </div>
                  </div>
                ))}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProduceOpen(false)}>Cancel</Button>
-            <Button onClick={handleProduce} disabled={produceBatch.isPending} variant="blue">
+            <Button onClick={handleProduce} disabled={produceBatch.isPending} variant="blue" className="gap-2">
                {produceBatch.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-               Confirm Production
+               Finalize Production
             </Button>
           </DialogFooter>
         </DialogContent>

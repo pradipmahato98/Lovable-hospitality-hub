@@ -11,6 +11,7 @@ export interface InventoryCategory {
   name: string;
   description: string | null;
   parent_id: string | null;
+  sku_prefix: string | null;
   created_at: string;
 }
 
@@ -37,6 +38,17 @@ export interface InventoryUoM {
   created_at: string;
 }
 
+export interface InventoryUoMConversion {
+  id: string;
+  from_uom_id: string;
+  to_uom_id: string;
+  conversion_factor: number;
+  notes: string | null;
+  created_at: string;
+  from_uom?: InventoryUoM;
+  to_uom?: InventoryUoM;
+}
+
 export interface InventoryStore {
   id: string;
   code: string;
@@ -45,6 +57,8 @@ export interface InventoryStore {
   store_manager_id: string | null;
   store_type: string;
   is_active: boolean;
+  temperature_classification: string | null;
+  storage_conditions: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -131,13 +145,15 @@ export interface InventoryTransfer {
   transfer_number: string;
   item_id: string;
   quantity: number;
-  from_location: string;
-  to_location: string;
+  from_store_id: string | null;
+  to_store_id: string | null;
   transferred_by: string | null;
   status: string;
   notes: string | null;
   created_at: string;
   item?: { name: string; sku: string | null; unit: string };
+  from_store?: InventoryStore;
+  to_store?: InventoryStore;
 }
 
 export interface InventoryWastage {
@@ -192,6 +208,86 @@ export interface InventoryStockIssue {
   items?: any[];
 }
 
+export interface InventoryStockCount {
+  id: string;
+  count_number: string;
+  store_id: string | null;
+  counted_by: string | null;
+  count_date: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  store?: InventoryStore;
+  items?: InventoryStockCountItem[];
+}
+
+export interface InventoryStockCountItem {
+  id: string;
+  stock_count_id: string;
+  item_id: string;
+  system_quantity: number;
+  counted_quantity: number;
+  variance: number;
+  notes: string | null;
+  item?: InventoryItem;
+}
+
+// ============= Helper Functions =============
+async function convertUoM(fromId: string, toId: string, quantity: number) {
+  if (!fromId || !toId || fromId === toId) return quantity;
+
+  const { data } = await db.from("inventory_uom_conversions")
+    .select("conversion_factor")
+    .eq("from_uom_id", fromId)
+    .eq("to_uom_id", toId)
+    .maybeSingle();
+
+  if (data) return quantity * data.conversion_factor;
+
+  const { data: revData } = await db.from("inventory_uom_conversions")
+    .select("conversion_factor")
+    .eq("from_uom_id", toId)
+    .eq("to_uom_id", fromId)
+    .maybeSingle();
+
+  if (revData) return quantity / revData.conversion_factor;
+
+  return quantity;
+}
+
+async function createFinanceEntry(description: string, lines: { account_id: string, debit: number, credit: number }[]) {
+  const entryNo = `INV-JE-${Date.now()}`;
+  const { data: je, error: jeErr } = await db.from('journal_entries').insert({
+    entry_number: entryNo,
+    date: new Date().toISOString().split('T')[0],
+    description,
+    is_posted: true
+  }).select().single();
+
+  if (je && !jeErr) {
+    await db.from('journal_lines').insert(lines.map(l => ({ ...l, journal_entry_id: je.id })));
+  }
+}
+
+async function getInventoryAccount(key: string) {
+  const { data } = await db.from('inventory_settings').select('setting_value').eq('setting_key', key).single();
+  return data?.setting_value || 'f2345678-1234-5678-1234-567812345678';
+}
+
+async function updateStoreStock(itemId: string, storeId: string, quantity: number, mode: 'increment' | 'decrement' | 'set') {
+   const { data: existing } = await db.from('inventory_item_stores').select('current_stock').eq('item_id', itemId).eq('store_id', storeId).maybeSingle();
+
+   let newStock = quantity;
+   if (mode === 'increment') newStock = (existing?.current_stock || 0) + quantity;
+   else if (mode === 'decrement') newStock = (existing?.current_stock || 0) - quantity;
+
+   await db.from('inventory_item_stores').upsert({
+      item_id: itemId,
+      store_id: storeId,
+      current_stock: Math.max(0, newStock)
+   }, { onConflict: 'item_id,store_id' });
+}
+
 // ============= Settings =============
 export function useInventorySettings() {
   const queryClient = useQueryClient();
@@ -233,7 +329,7 @@ export function useInventoryCategories() {
   });
 
   const createCategory = useMutation({
-    mutationFn: async (cat: { name: string; description?: string; parent_id?: string }) => {
+    mutationFn: async (cat: { name: string; description?: string; parent_id?: string; sku_prefix?: string }) => {
       const { data, error } = await db.from("inventory_categories").insert(cat).select().single();
       if (error) throw error;
       return data;
@@ -242,7 +338,7 @@ export function useInventoryCategories() {
   });
 
   const updateCategory = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; parent_id?: string | null }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; parent_id?: string | null; sku_prefix?: string | null }) => {
       const { data, error } = await db.from("inventory_categories").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -318,6 +414,17 @@ export function useInventoryUoMs() {
     },
   });
 
+  const conversionsQuery = useQuery({
+    queryKey: ["inventory-uom-conversions"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("inventory_uom_conversions")
+        .select("*, from_uom:inventory_uoms!from_uom_id(name, abbreviation), to_uom:inventory_uoms!to_uom_id(name, abbreviation)");
+      if (error) throw error;
+      return data as InventoryUoMConversion[];
+    },
+  });
+
   const createUoM = useMutation({
     mutationFn: async (uom: { name: string; abbreviation?: string }) => {
       const { data, error } = await db.from("inventory_uoms").insert(uom).select().single();
@@ -327,7 +434,24 @@ export function useInventoryUoMs() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uoms"] }),
   });
 
-  return { ...query, createUoM };
+  const createConversion = useMutation({
+    mutationFn: async (conv: { from_uom_id: string; to_uom_id: string; conversion_factor: number; notes?: string }) => {
+      const { data, error } = await db.from("inventory_uom_conversions").insert(conv).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] }),
+  });
+
+  const deleteConversion = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_uom_conversions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] }),
+  });
+
+  return { ...query, conversions: conversionsQuery.data || [], isConversionsLoading: conversionsQuery.isLoading, createUoM, createConversion, deleteConversion };
 }
 
 // ============= Stores =============
@@ -428,7 +552,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
 
   const adjustStock = useMutation({
     mutationFn: async ({ itemId, storeId, quantity, type, notes }: { itemId: string; storeId?: string; quantity: number; type: "in" | "out" | "adjustment"; notes?: string }) => {
-      const { data: item, error: fetchError } = await db.from("inventory_items").select("current_stock").eq("id", itemId).single();
+      const { data: item, error: fetchError } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", itemId).single();
       if (fetchError) throw fetchError;
 
       const newStock = type === "out" ? item.current_stock - quantity : item.current_stock + quantity;
@@ -446,6 +570,19 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
         notes
       });
       if (movementError) throw movementError;
+
+      if (storeId) {
+         await updateStoreStock(itemId, storeId, quantity, type === 'out' ? 'decrement' : 'increment');
+      }
+
+      const assetAcc = await getInventoryAccount('inventory_gl_account');
+      const adjAcc = await getInventoryAccount('adjustment_gl_account');
+      const impactValue = quantity * (item.avg_cost || item.cost_price);
+
+      await createFinanceEntry(`Inventory Adjustment: ${item.name}`, [
+         { account_id: assetAcc, debit: type === 'in' ? impactValue : 0, credit: type === 'out' ? impactValue : 0 },
+         { account_id: adjAcc, debit: type === 'out' ? impactValue : 0, credit: type === 'in' ? impactValue : 0 }
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
@@ -465,7 +602,7 @@ export function usePurchaseOrders(status?: string) {
     queryFn: async () => {
       let q = db
         .from("purchase_orders")
-        .select(`*, supplier:suppliers(*), items:purchase_order_items(*, item:inventory_items(*))`)
+        .select(`*, supplier:suppliers(*), items:purchase_order_items(*, item:inventory_items(*, uom:inventory_uoms(*)))`)
         .order("created_at", { ascending: false });
       if (status) q = q.eq("status", status);
       const { data, error } = await q;
@@ -510,7 +647,8 @@ export function usePurchaseOrders(status?: string) {
   });
 
   const receivePurchaseOrder = useMutation({
-    mutationFn: async ({ poId, receivedItems }: { poId: string; receivedItems: any[] }) => {
+    mutationFn: async ({ poId, receivedItems, storeId }: { poId: string; receivedItems: any[]; storeId?: string }) => {
+      let totalValueReceived = 0;
       for (const ri of receivedItems) {
         const { error: poItemErr } = await db.from("purchase_order_items").update({
           received_quantity: ri.receivedQty,
@@ -523,17 +661,28 @@ export function usePurchaseOrders(status?: string) {
         if (poItemErr) throw poItemErr;
 
         if (ri.receivedQty > 0) {
-          const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price").eq("id", ri.itemId).single();
+          const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", ri.itemId).single();
           if (fetchErr) throw fetchErr;
 
           const { data: poItem } = await db.from("purchase_order_items").select("unit_price").eq("id", ri.poItemId).single();
+          const unitPrice = poItem?.unit_price || item.cost_price;
+          totalValueReceived += (ri.receivedQty * unitPrice);
+
+          const currentTotalValue = (item.current_stock || 0) * (item.avg_cost || item.cost_price);
+          const newReceivedValue = ri.receivedQty * unitPrice;
+          const newTotalQty = (item.current_stock || 0) + ri.receivedQty;
+          const newWeightedAvg = (currentTotalValue + newReceivedValue) / newTotalQty;
 
           await db.from("inventory_items").update({
-            current_stock: item.current_stock + ri.receivedQty,
+            current_stock: newTotalQty,
             last_restocked_at: new Date().toISOString(),
-            last_purchase_cost: poItem?.unit_price || item.cost_price,
-            avg_cost: (item.cost_price + (poItem?.unit_price || item.cost_price)) / 2
+            last_purchase_cost: unitPrice,
+            avg_cost: newWeightedAvg
           }).eq("id", ri.itemId);
+
+          if (storeId) {
+             await updateStoreStock(ri.itemId, storeId, ri.receivedQty, 'increment');
+          }
 
           await db.from("stock_movements").insert({
             item_id: ri.itemId,
@@ -545,6 +694,13 @@ export function usePurchaseOrders(status?: string) {
           });
         }
       }
+
+      const assetAcc = await getInventoryAccount('inventory_gl_account');
+      const purchaseAcc = await getInventoryAccount('purchase_gl_account');
+      await createFinanceEntry(`GRN for PO ID ${poId}`, [
+         { account_id: assetAcc, debit: totalValueReceived, credit: 0 },
+         { account_id: purchaseAcc, debit: 0, credit: totalValueReceived }
+      ]);
 
       const { data: poItems } = await db.from("purchase_order_items").select("quantity, received_quantity").eq("purchase_order_id", poId);
       const allReceived = poItems?.every((pi: any) => (pi.received_quantity || 0) >= pi.quantity);
@@ -573,7 +729,7 @@ export function useStockMovements(itemId?: string) {
     queryFn: async () => {
       let q = db
         .from("stock_movements")
-        .select(`*, item:inventory_items(name, sku, department, cost_price)`)
+        .select(`*, item:inventory_items(name, sku, department, cost_price, avg_cost)`)
         .order("created_at", { ascending: false })
         .limit(500);
       if (itemId) q = q.eq("item_id", itemId);
@@ -643,8 +799,9 @@ export function useInventoryIssues() {
   });
 
   const createIssue = useMutation({
-    mutationFn: async ({ items, requisition_id, ...issue }: any) => {
+    mutationFn: async ({ items, requisition_id, storeId, ...issue }: any) => {
       const issueNumber = `SIV-${Date.now().toString(36).toUpperCase()}`;
+      let totalIssueValue = 0;
 
       const { data: sIssue, error: issueErr } = await db.from("inventory_stock_issues").insert({
         ...issue,
@@ -654,6 +811,15 @@ export function useInventoryIssues() {
       if (issueErr) throw issueErr;
 
       for (const item of items) {
+        const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id, cost_price, avg_cost").eq("id", item.item_id).single();
+
+        let finalDeduction = item.quantity;
+        if (item.uom_id && invItem?.uom_id && item.uom_id !== invItem.uom_id) {
+           finalDeduction = await convertUoM(item.uom_id, invItem.uom_id, item.quantity);
+        }
+
+        totalIssueValue += (finalDeduction * (invItem?.avg_cost || invItem?.cost_price || 0));
+
         await db.from("inventory_stock_issue_items").insert({
           stock_issue_id: sIssue.id,
           item_id: item.item_id,
@@ -661,20 +827,30 @@ export function useInventoryIssues() {
           batch_number: item.batch_number
         });
 
-        const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", item.item_id).single();
         await db.from("inventory_items").update({
-          current_stock: Math.max(0, (invItem?.current_stock || 0) - item.quantity)
+          current_stock: Math.max(0, (invItem?.current_stock || 0) - finalDeduction)
         }).eq("id", item.item_id);
+
+        if (storeId) {
+           await updateStoreStock(item.item_id, storeId, finalDeduction, 'decrement');
+        }
 
         await db.from("stock_movements").insert({
           item_id: item.item_id,
           movement_type: "out",
-          quantity: item.quantity,
+          quantity: finalDeduction,
           reference_type: "stock_issue",
           reference_id: sIssue.id,
           notes: `Stock issue to ${issue.department}`,
         });
       }
+
+      const assetAcc = await getInventoryAccount('inventory_gl_account');
+      const consumeAcc = await getInventoryAccount('consumption_gl_account');
+      await createFinanceEntry(`Stock Issue to ${issue.department}`, [
+         { account_id: consumeAcc, debit: totalIssueValue, credit: 0 },
+         { account_id: assetAcc, debit: 0, credit: totalIssueValue }
+      ]);
 
       if (requisition_id) {
         await db.from("inventory_requisitions").update({ status: "fully_ordered" }).eq("id", requisition_id);
@@ -729,7 +905,7 @@ export function useInventoryProduction() {
   const queryClient = useQueryClient();
 
   const produceBatch = useMutation({
-    mutationFn: async ({ recipeId, quantity, producedBy, notes }: { recipeId: string, quantity: number, producedBy: string, notes?: string }) => {
+    mutationFn: async ({ recipeId, quantity, producedBy, notes, storeId }: { recipeId: string, quantity: number, producedBy: string, notes?: string, storeId?: string }) => {
       const { data: log, error: logErr } = await db.from("inventory_production_logs").insert({
         recipe_id: recipeId,
         quantity_produced: quantity,
@@ -742,12 +918,20 @@ export function useInventoryProduction() {
 
       if (recipeItems) {
         for (const rItem of recipeItems) {
-          const deductionQty = rItem.quantity * quantity;
+          const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id, cost_price, avg_cost").eq("id", rItem.item_id).single();
 
-          const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", rItem.item_id).single();
+          let deductionQty = rItem.quantity * quantity;
+          if (rItem.uom_id && invItem?.uom_id && rItem.uom_id !== invItem.uom_id) {
+             deductionQty = await convertUoM(rItem.uom_id, invItem.uom_id, deductionQty);
+          }
+
           await db.from("inventory_items").update({
             current_stock: Math.max(0, (invItem?.current_stock || 0) - deductionQty)
           }).eq("id", rItem.item_id);
+
+          if (storeId) {
+             await updateStoreStock(rItem.item_id, storeId, deductionQty, 'decrement');
+          }
 
           await db.from("stock_movements").insert({
             item_id: rItem.item_id,
@@ -771,6 +955,51 @@ export function useInventoryProduction() {
   return { produceBatch };
 }
 
+// ============= POS Integration =============
+export function useInventoryPOS() {
+  const queryClient = useQueryClient();
+
+  const deductInventoryForSale = useMutation({
+    mutationFn: async ({ recipeId, quantity, saleId, storeId }: { recipeId: string, quantity: number, saleId: string, storeId?: string }) => {
+      const { data: recipeItems } = await db.from("inventory_recipe_items").select("*").eq("recipe_id", recipeId);
+
+      if (recipeItems) {
+        for (const rItem of recipeItems) {
+          const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id").eq("id", rItem.item_id).single();
+
+          let deductionQty = rItem.quantity * quantity;
+          if (rItem.uom_id && invItem?.uom_id && rItem.uom_id !== invItem.uom_id) {
+             deductionQty = await convertUoM(rItem.uom_id, invItem.uom_id, deductionQty);
+          }
+
+          await db.from("inventory_items").update({
+            current_stock: Math.max(0, (invItem?.current_stock || 0) - deductionQty)
+          }).eq("id", rItem.item_id);
+
+          if (storeId) {
+             await updateStoreStock(rItem.item_id, storeId, deductionQty, 'decrement');
+          }
+
+          await db.from("stock_movements").insert({
+            item_id: rItem.item_id,
+            movement_type: "out",
+            quantity: deductionQty,
+            reference_type: "pos_sale",
+            reference_id: saleId,
+            notes: `POS Sale deduction (Recipe: ${recipeId})`,
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+    },
+  });
+
+  return { deductInventoryForSale };
+}
+
 // ============= Transfers =============
 export function useInventoryTransfers() {
   const queryClient = useQueryClient();
@@ -780,7 +1009,7 @@ export function useInventoryTransfers() {
     queryFn: async () => {
       const { data, error } = await db
         .from("inventory_transfers")
-        .select(`*, item:inventory_items(name, sku, unit)`)
+        .select(`*, item:inventory_items(name, sku, unit), from_store:inventory_stores!from_store_id(name), to_store:inventory_stores!to_store_id(name)`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as InventoryTransfer[];
@@ -804,12 +1033,14 @@ export function useInventoryTransfers() {
 
       await db.from("stock_movements").insert({
         item_id: transfer.item_id,
-        movement_type: "adjustment",
+        movement_type: "transfer",
         quantity: transfer.quantity,
-        from_location: transfer.from_location,
-        to_location: transfer.to_location,
-        notes: `Transfer ${transfer.transfer_number}: ${transfer.from_location} → ${transfer.to_location}`,
+        store_id: transfer.from_store_id,
+        notes: `Transfer OUT to ${transfer.to_store_id}`,
       });
+
+      if (transfer.from_store_id) await updateStoreStock(transfer.item_id, transfer.from_store_id, transfer.quantity, 'decrement');
+      if (transfer.to_store_id) await updateStoreStock(transfer.item_id, transfer.to_store_id, transfer.quantity, 'increment');
 
       const { error } = await db.from("inventory_transfers").update({ status: "completed" }).eq("id", id);
       if (error) throw error;
@@ -832,7 +1063,7 @@ export function useInventoryWastage() {
     queryFn: async () => {
       const { data, error } = await db
         .from("inventory_wastage")
-        .select(`*, item:inventory_items(name, sku, unit, cost_price)`)
+        .select(`*, item:inventory_items(name, sku, unit, cost_price, avg_cost)`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as InventoryWastage[];
@@ -844,7 +1075,7 @@ export function useInventoryWastage() {
       const { data, error } = await db.from("inventory_wastage").insert(wastage).select().single();
       if (error) throw error;
 
-      const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock").eq("id", wastage.item_id).single();
+      const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", wastage.item_id).single();
       if (fetchErr) throw fetchErr;
 
       await db.from("inventory_items").update({ current_stock: Math.max(0, item.current_stock - wastage.quantity) }).eq("id", wastage.item_id);
@@ -854,6 +1085,15 @@ export function useInventoryWastage() {
         quantity: wastage.quantity,
         notes: `Wastage: ${wastage.wastage_type} - ${wastage.reason || "No reason"}`,
       });
+
+      const assetAcc = await getInventoryAccount('inventory_gl_account');
+      const wasteAcc = await getInventoryAccount('wastage_gl_account');
+      const impactValue = wastage.quantity * (item?.avg_cost || item?.cost_price || 0);
+
+      await createFinanceEntry(`Inventory Wastage: ${wastage.wastage_type}`, [
+         { account_id: wasteAcc, debit: impactValue, credit: 0 },
+         { account_id: assetAcc, debit: 0, credit: impactValue }
+      ]);
 
       return data;
     },
@@ -867,6 +1107,71 @@ export function useInventoryWastage() {
   return { ...query, reportWastage };
 }
 
+// ============= Stock Counts =============
+export function useInventoryStockCounts() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["inventory-stock-counts"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("inventory_stock_counts")
+        .select(`*, store:inventory_stores(*), items:inventory_stock_count_items(*, item:inventory_items(*))`)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as InventoryStockCount[];
+    },
+  });
+
+  const reconcileCount = useMutation({
+    mutationFn: async (id: string) => {
+      const { data: countItems } = await db.from('inventory_stock_count_items').select('*, item:inventory_items(cost_price, avg_cost, name)').eq('stock_count_id', id);
+      let totalVarianceValue = 0;
+
+      const { data: master } = await db.from('inventory_stock_counts').select('store_id').eq('id', id).single();
+
+      if (countItems) {
+        for (const cItem of countItems) {
+          const variance = cItem.counted_quantity - cItem.system_quantity;
+          if (variance !== 0) {
+            totalVarianceValue += (variance * (cItem.item?.avg_cost || cItem.item?.cost_price || 0));
+            await db.from('inventory_items').update({ current_stock: cItem.counted_quantity }).eq('id', cItem.item_id);
+
+            if (master?.store_id) {
+               await updateStoreStock(cItem.item_id, master.store_id, cItem.counted_quantity, 'set');
+            }
+
+            await db.from('stock_movements').insert({
+              item_id: cItem.item_id,
+              movement_type: 'adjustment',
+              quantity: Math.abs(variance),
+              notes: `Audit reconciliation: ${variance > 0 ? '+' : ''}${variance}`
+            });
+          }
+        }
+      }
+
+      const assetAcc = await getInventoryAccount('inventory_gl_account');
+      const adjAcc = await getInventoryAccount('adjustment_gl_account');
+
+      if (totalVarianceValue !== 0) {
+         await createFinanceEntry(`Stock Count Reconciliation`, [
+            { account_id: assetAcc, debit: totalVarianceValue > 0 ? totalVarianceValue : 0, credit: totalVarianceValue < 0 ? Math.abs(totalVarianceValue) : 0 },
+            { account_id: adjAcc, debit: totalVarianceValue < 0 ? Math.abs(totalVarianceValue) : 0, credit: totalVarianceValue > 0 ? totalVarianceValue : 0 }
+         ]);
+      }
+
+      await db.from('inventory_stock_counts').update({ status: 'reconciled' }).eq('id', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-stock-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+    },
+  });
+
+  return { ...query, reconcileCount };
+}
+
 // ============= Stats =============
 export function useInventoryStats() {
   const { data: items } = useInventoryItems();
@@ -875,6 +1180,6 @@ export function useInventoryStats() {
     totalItems: items?.length || 0,
     lowStock: items?.filter((i) => i.current_stock <= i.reorder_point).length || 0,
     outOfStock: items?.filter((i) => i.current_stock === 0).length || 0,
-    totalValue: items?.reduce((sum, i) => sum + i.current_stock * i.cost_price, 0) || 0,
+    totalValue: items?.reduce((sum, i) => sum + i.current_stock * (i.avg_cost || i.cost_price), 0) || 0,
   };
 }

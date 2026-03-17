@@ -7,15 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, ClipboardList, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Plus, ClipboardList, Loader2, CheckCircle, XCircle, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryRequisitions, useInventoryItems } from "@/hooks/useInventory";
+import { useInventoryRequisitions, useInventoryItems, usePurchaseOrders } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 
 export function RequisitionsTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const { data: requisitions = [], isLoading, createRequisition, updateRequisitionStatus } = useInventoryRequisitions();
   const { data: items = [] } = useInventoryItems();
+  const { createPurchaseOrder } = usePurchaseOrders();
 
   const [form, setForm] = useState({
     department: "", required_date: "", priority: "normal", notes: "",
@@ -59,6 +60,33 @@ export function RequisitionsTab() {
     }
   };
 
+  const convertToPO = async (req: any) => {
+     try {
+        const poItems = req.items?.map((i: any) => ({
+           item_id: i.item_id,
+           quantity: i.quantity,
+           unit_price: i.item?.cost_price || 0
+        }));
+
+        await createPurchaseOrder.mutateAsync({
+           supplier_id: req.items?.[0]?.item?.supplier_id || null, // Best guess
+           status: "draft",
+           order_date: new Date().toISOString().split('T')[0],
+           expected_delivery: req.required_date,
+           subtotal: poItems.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0),
+           tax_amount: 0,
+           total: poItems.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0),
+           notes: `Generated from Requisition ${req.requisition_number}`,
+           items: poItems
+        });
+
+        await updateRequisitionStatus.mutateAsync({ id: req.id, status: "partially_ordered" });
+        toast.success("Purchase Order draft created from requisition");
+     } catch {
+        toast.error("Failed to convert to PO");
+     }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -82,7 +110,7 @@ export function RequisitionsTab() {
                   <TableHead>Status</TableHead>
                   <TableHead>Required Date</TableHead>
                   <TableHead>Items</TableHead>
-                  <TableHead className="text-right">Approval</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -102,12 +130,19 @@ export function RequisitionsTab() {
                       <TableCell className="text-xs">{req.required_date ? new Date(req.required_date).toLocaleDateString() : "-"}</TableCell>
                       <TableCell>{req.items?.length || 0} items</TableCell>
                       <TableCell className="text-right">
-                        {req.status === 'pending' && (
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-success" onClick={() => handleStatusUpdate(req.id, 'approved')}><CheckCircle className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleStatusUpdate(req.id, 'rejected')}><XCircle className="h-4 w-4" /></Button>
-                          </div>
-                        )}
+                        <div className="flex justify-end gap-1">
+                          {req.status === 'pending' && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-success" onClick={() => handleStatusUpdate(req.id, 'approved')}><CheckCircle className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleStatusUpdate(req.id, 'rejected')}><XCircle className="h-4 w-4" /></Button>
+                            </>
+                          )}
+                          {req.status === 'approved' && (
+                             <Button variant="outline" size="sm" className="gap-1 h-8" onClick={() => convertToPO(req)}>
+                                <ShoppingCart className="h-3 w-3" /> Create PO
+                             </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

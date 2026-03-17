@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Loader2, FolderTree } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, FolderTree, Barcode } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryCategories, useInventoryItems } from "@/hooks/useInventory";
 
@@ -15,14 +15,19 @@ export function CategoriesTab() {
   const { data: items = [] } = useInventoryItems();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", parent_id: "" });
+  const [form, setForm] = useState({ name: "", description: "", parent_id: "", sku_prefix: "" });
 
   const getItemCount = (catId: string) => items.filter((i) => i.category_id === catId).length;
   const getParentName = (parentId: string | null) => categories.find((c) => c.id === parentId)?.name || "-";
 
   const handleSave = async () => {
     try {
-      const payload: any = { name: form.name, description: form.description || null, parent_id: form.parent_id || null };
+      const payload: any = {
+        name: form.name,
+        description: form.description || null,
+        parent_id: form.parent_id || null,
+        sku_prefix: form.sku_prefix || null
+      };
       if (editId) {
         await updateCategory.mutateAsync({ id: editId, ...payload });
         toast.success("Category updated");
@@ -32,7 +37,7 @@ export function CategoriesTab() {
       }
       setOpen(false);
       setEditId(null);
-      setForm({ name: "", description: "", parent_id: "" });
+      setForm({ name: "", description: "", parent_id: "", sku_prefix: "" });
     } catch { toast.error("Failed to save category"); }
   };
 
@@ -46,7 +51,12 @@ export function CategoriesTab() {
 
   const openEdit = (cat: any) => {
     setEditId(cat.id);
-    setForm({ name: cat.name, description: cat.description || "", parent_id: cat.parent_id || "" });
+    setForm({
+      name: cat.name,
+      description: cat.description || "",
+      parent_id: cat.parent_id || "",
+      sku_prefix: cat.sku_prefix || ""
+    });
     setOpen(true);
   };
 
@@ -54,14 +64,18 @@ export function CategoriesTab() {
     <Card variant="elevated">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div><CardTitle className="flex items-center gap-2"><FolderTree className="h-5 w-5" />Categories</CardTitle><CardDescription>{categories.length} categories</CardDescription></div>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditId(null); setForm({ name: "", description: "", parent_id: "" }); } }}>
+          <div><CardTitle className="flex items-center gap-2"><FolderTree className="h-5 w-5" />Categories</CardTitle><CardDescription>Manage item groups and automatic SKU rules</CardDescription></div>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditId(null); setForm({ name: "", description: "", parent_id: "", sku_prefix: "" }); } }}>
             <DialogTrigger asChild><Button variant="blue" className="gap-2"><Plus className="h-4 w-4" />Add Category</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editId ? "Edit" : "Add"} Category</DialogTitle></DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2"><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+                <div className="space-y-2"><Label className="flex items-center gap-2"><Barcode className="h-4 w-4" /> SKU Prefix</Label>
+                   <Input value={form.sku_prefix} onChange={(e) => setForm({ ...form, sku_prefix: e.target.value.toUpperCase() })} placeholder="e.g. FOD, BEV" maxLength={4} />
+                   <p className="text-[10px] text-muted-foreground italic">Used for automatic SKU generation for items in this category.</p>
+                </div>
                 <div className="space-y-2"><Label>Parent Category</Label>
                   <Select value={form.parent_id} onValueChange={(v) => setForm({ ...form, parent_id: v === "none" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="None (top level)" /></SelectTrigger>
@@ -88,24 +102,27 @@ export function CategoriesTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead>Prefix</TableHead>
               <TableHead>Parent</TableHead>
               <TableHead>Items</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {categories.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No categories yet</TableCell></TableRow>
             ) : (
-              categories.map((cat) => (
+              categories.map((cat: any) => (
                 <TableRow key={cat.id}>
-                  <TableCell className="font-medium">{cat.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{cat.description || "-"}</TableCell>
-                  <TableCell>{getParentName(cat.parent_id)}</TableCell>
-                  <TableCell>{getItemCount(cat.id)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
+                     <div className="font-medium">{cat.name}</div>
+                     <div className="text-[10px] text-muted-foreground line-clamp-1">{cat.description}</div>
+                  </TableCell>
+                  <TableCell><Badge variant="secondary" className="font-mono text-[10px]">{cat.sku_prefix || "NONE"}</Badge></TableCell>
+                  <TableCell className="text-xs">{getParentName(cat.parent_id)}</TableCell>
+                  <TableCell><span className="font-bold text-xs">{getItemCount(cat.id)}</span> items</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}><Edit className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>

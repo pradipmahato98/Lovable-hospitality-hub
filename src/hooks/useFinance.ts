@@ -52,7 +52,6 @@ export interface LedgerEntry {
   entry_number: string;
 }
 
-// Helper to get supabase client with type bypass for new tables
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
@@ -251,14 +250,12 @@ export function useCreateJournalEntry() {
       reference?: string | null;
       lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
     }) => {
-      // Generate entry number
       const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
         Math.random() * 10000
       )
         .toString()
         .padStart(4, "0")}`;
 
-      // Insert journal entry
       const { data: journalEntry, error: entryError } = await db
         .from("journal_entries")
         .insert({
@@ -276,7 +273,6 @@ export function useCreateJournalEntry() {
         throw entryError;
       }
 
-      // Insert journal lines
       const lines = entry.lines.map((line) => ({
         journal_entry_id: journalEntry.id,
         account_id: line.account_id,
@@ -335,7 +331,6 @@ export function useLedger(
   const query = useQuery({
     queryKey: ["ledger", accountId, filters],
     queryFn: async () => {
-      // Fetch all posted journal lines with their entries and accounts
       let q = db
         .from("journal_lines")
         .select(`
@@ -360,7 +355,6 @@ export function useLedger(
           )
         `);
 
-      // Filter by posted status via the inner join
       q = q.eq("journal_entry.is_posted", true);
 
       if (accountId) {
@@ -374,7 +368,6 @@ export function useLedger(
         q = q.lte("journal_entry.date", filters.endDate);
       }
 
-      // Order by created_at as a fallback, but we'll sort in memory by date
       const { data, error } = await q.order("created_at", { ascending: true });
 
       if (error) {
@@ -382,7 +375,6 @@ export function useLedger(
         return [];
       }
 
-      // Sort by date then created_at to ensure chronological order for running balance
       const sortedData = (data || []).sort((a: any, b: any) => {
         const dateA = new Date(a.journal_entry.date).getTime();
         const dateB = new Date(b.journal_entry.date).getTime();
@@ -390,7 +382,6 @@ export function useLedger(
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
 
-      // Calculate running balance per account
       const accountBalances: Record<string, number> = {};
       const ledgerEntries: LedgerEntry[] = [];
 
@@ -402,8 +393,6 @@ export function useLedger(
           accountBalances[line.account_id] = 0;
         }
 
-        // For asset/expense accounts: debit increases, credit decreases
-        // For liability/equity/revenue accounts: credit increases, debit decreases
         const isDebitPositive = ["asset", "expense"].includes(acc?.type);
         const netChange = isDebitPositive
           ? (line.debit || 0) - (line.credit || 0)
@@ -426,8 +415,6 @@ export function useLedger(
         });
       }
 
-      // If viewing all accounts, sort by date descending for the list view
-      // but if viewing a specific account, keep chronological order for running balance
       if (!accountId) {
         return ledgerEntries.reverse();
       }
@@ -479,7 +466,6 @@ export function useTrialBalance(asOfDate?: string) {
         return [];
       }
 
-      // Aggregate by account
       const accountTotals: Record<
         string,
         { account: Account; totalDebit: number; totalCredit: number }

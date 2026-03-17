@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,9 @@ import { useInventoryUoMs } from "@/hooks/useInventory";
 export function UoMTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isConvOpen, setIsConvOpen] = useState(false);
-  const { data: uoms = [], isLoading, createUoM } = useInventoryUoMs();
+  const { data: uoms = [], isLoading, conversions = [], isConversionsLoading, createUoM, createConversion, deleteConversion } = useInventoryUoMs();
   const [form, setForm] = useState({ name: "", abbreviation: "" });
-  const [convForm, setConvForm] = useState({ from_uom_id: "", to_uom_id: "", factor: 1 });
+  const [convForm, setConvForm] = useState({ from_uom_id: "", to_uom_id: "", conversion_factor: 1 });
 
   const handleCreate = async () => {
     try {
@@ -25,6 +25,26 @@ export function UoMTab() {
       setIsAddOpen(false);
       setForm({ name: "", abbreviation: "" });
     } catch { toast.error("Failed to create UoM"); }
+  };
+
+  const handleCreateConv = async () => {
+    try {
+      if (!convForm.from_uom_id || !convForm.to_uom_id) {
+        toast.error("Please select both units");
+        return;
+      }
+      await createConversion.mutateAsync(convForm);
+      toast.success("Conversion rule added");
+      setIsConvOpen(false);
+      setConvForm({ from_uom_id: "", to_uom_id: "", conversion_factor: 1 });
+    } catch { toast.error("Failed to add conversion"); }
+  };
+
+  const handleDeleteConv = async (id: string) => {
+    try {
+      await deleteConversion.mutateAsync(id);
+      toast.success("Conversion rule removed");
+    } catch { toast.error("Failed to remove conversion"); }
   };
 
   return (
@@ -93,20 +113,22 @@ export function UoMTab() {
         <Card>
           <CardHeader><CardTitle className="text-sm">Active Unit Conversions</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {[
-              { from: "Kilogram", to: "Gram", factor: 1000 },
-              { from: "Carton", to: "Bottle", factor: 24 },
-              { from: "Box", to: "Packet", factor: 12 },
-            ].map((c, i) => (
-              <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <Badge variant="blue">1 {c.from}</Badge>
-                  <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                  <Badge variant="outline">{c.factor} {c.to}</Badge>
+            {isConversionsLoading ? (
+               <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+            ) : conversions.length === 0 ? (
+               <p className="text-xs text-muted-foreground text-center py-4">No conversion rules defined</p>
+            ) : (
+              conversions.map((c) => (
+                <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="blue">1 {c.from_uom?.name}</Badge>
+                    <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                    <Badge variant="outline">{c.conversion_factor} {c.to_uom?.name}</Badge>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteConv(c.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
-              </div>
-            ))}
+              ))
+            )}
             <Button variant="link" className="w-full text-xs text-muted-foreground" onClick={() => setIsConvOpen(true)}>Manage all conversions &rarr;</Button>
           </CardContent>
         </Card>
@@ -131,14 +153,17 @@ export function UoMTab() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2"><Label>Conversion Factor</Label><Input type="number" value={convForm.factor} onChange={(e) => setConvForm({...convForm, factor: Number(e.target.value)})} placeholder="e.g. 1000" /></div>
+            <div className="space-y-2"><Label>Conversion Factor</Label><Input type="number" value={convForm.conversion_factor} onChange={(e) => setConvForm({...convForm, conversion_factor: Number(e.target.value)})} placeholder="e.g. 1000" /></div>
             <p className="text-xs text-muted-foreground p-3 bg-muted rounded italic">
-              Meaning: 1 {uoms.find(u => u.id === convForm.from_uom_id)?.name || "Selected"} = {convForm.factor} {uoms.find(u => u.id === convForm.to_uom_id)?.name || "Base"} units
+              Meaning: 1 {uoms.find(u => u.id === convForm.from_uom_id)?.name || "Selected"} = {convForm.conversion_factor} {uoms.find(u => u.id === convForm.to_uom_id)?.name || "Base"} units
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsConvOpen(false)}>Cancel</Button>
-            <Button variant="blue" onClick={() => { toast.success("Conversion rule added"); setIsConvOpen(false); }}>Add Rule</Button>
+            <Button variant="blue" onClick={handleCreateConv} disabled={createConversion.isPending}>
+               {createConversion.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+               Add Rule
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
