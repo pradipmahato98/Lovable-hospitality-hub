@@ -55,8 +55,10 @@ import {
   Filter,
   ClipboardList,
   Settings2,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import {
   useVenueSetups,
   useCreateVenueSetup,
@@ -73,29 +75,6 @@ interface BanquetEvent {
   venue: string;
   guest_count: number;
   status: "inquiry" | "confirmed" | "in_progress" | "completed" | "cancelled";
-}
-
-interface SetupItem {
-  id: string;
-  name: string;
-  category: string;
-  completed: boolean;
-  notes: string;
-}
-
-interface VenueSetup {
-  id: string;
-  eventId: string;
-  layoutType: string;
-  tableCount: number;
-  chairCount: number;
-  stageRequired: boolean;
-  danceFloor: boolean;
-  equipment: string[];
-  decorations: string[];
-  setupItems: SetupItem[];
-  setupStatus: "not_started" | "in_progress" | "completed";
-  setupNotes: string;
 }
 
 interface VenueSetupPanelProps {
@@ -143,7 +122,7 @@ const defaultSetupChecklist: Omit<SetupItem, "id">[] = [
   { name: "Final walkthrough", category: "Preparation", completed: false, notes: "" },
 ];
 
-export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
+export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
@@ -151,20 +130,22 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
+  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
+
   // Database persistence for venue setups
   const { data: venueSetups = [], isLoading } = useVenueSetups();
   const createSetupMutation = useCreateVenueSetup();
   const updateSetupMutation = useUpdateVenueSetup();
 
   const [newSetup, setNewSetup] = useState({
-    layoutType: "banquet",
-    tableCount: 10,
-    chairCount: 80,
-    stageRequired: false,
-    danceFloor: false,
+    layout_type: "banquet",
+    table_count: 10,
+    chair_count: 80,
+    stage_required: false,
+    dance_floor: false,
     equipment: [] as string[],
     decorations: [] as string[],
-    setupNotes: "",
+    setup_notes: "",
   });
 
   // Get setup for an event
@@ -213,25 +194,25 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     const existingSetup = getSetupForEvent(event.id);
     if (existingSetup) {
       setNewSetup({
-        layoutType: existingSetup.layoutType,
-        tableCount: existingSetup.tableCount,
-        chairCount: existingSetup.chairCount,
-        stageRequired: existingSetup.stageRequired,
-        danceFloor: existingSetup.danceFloor,
+        layout_type: existingSetup.layout_type,
+        table_count: existingSetup.table_count,
+        chair_count: existingSetup.chair_count,
+        stage_required: existingSetup.stage_required,
+        dance_floor: existingSetup.dance_floor,
         equipment: existingSetup.equipment,
         decorations: existingSetup.decorations,
-        setupNotes: existingSetup.setupNotes,
+        setup_notes: existingSetup.setup_notes || "",
       });
     } else {
       setNewSetup({
-        layoutType: "banquet",
-        tableCount: Math.ceil(event.guest_count / 8),
-        chairCount: event.guest_count,
-        stageRequired: event.event_type === "wedding" || event.event_type === "corporate",
-        danceFloor: event.event_type === "wedding" || event.event_type === "social",
+        layout_type: "banquet",
+        table_count: Math.ceil(event.guest_count / 8),
+        chair_count: event.guest_count,
+        stage_required: event.event_type === "wedding" || event.event_type === "corporate",
+        dance_floor: event.event_type === "wedding" || event.event_type === "social",
         equipment: [],
         decorations: [],
-        setupNotes: "",
+        setup_notes: "",
       });
     }
     setSetupDialogOpen(true);
@@ -255,15 +236,15 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
 
     const setupData = {
       event_id: selectedEvent.id,
-      layout_type: newSetup.layoutType,
-      table_count: newSetup.tableCount,
-      chair_count: newSetup.chairCount,
-      stage_required: newSetup.stageRequired,
-      dance_floor: newSetup.danceFloor,
+      layout_type: newSetup.layout_type,
+      table_count: newSetup.table_count,
+      chair_count: newSetup.chair_count,
+      stage_required: newSetup.stage_required,
+      dance_floor: newSetup.dance_floor,
       equipment: newSetup.equipment,
       decorations: newSetup.decorations,
       setup_status: existingSetup?.setup_status || "not_started" as const,
-      setup_notes: newSetup.setupNotes || null,
+      setup_notes: newSetup.setup_notes || null,
       checklist: existingSetup?.checklist || initialChecklist,
     };
 
@@ -449,6 +430,7 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12"></TableHead>
                   <TableHead className="cursor-pointer" onClick={() => handleSort("event_name")}>
                     <div className="flex items-center gap-1">Event <ArrowUpDown className="h-3 w-3" /></div>
                   </TableHead>
@@ -470,10 +452,20 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                   const setup = getSetupForEvent(event.id);
                   const progress = getSetupProgress(setup);
                   const layout = setup
-                    ? layoutTypes.find((l) => l.id === setup.layoutType)
+                    ? layoutTypes.find((l) => l.id === setup.layout_type)
                     : null;
                   return (
                     <TableRow key={event.id}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => onViewDetails?.(event)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
@@ -533,22 +525,24 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => onViewDetails?.(event)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuLabel>Venue Actions</DropdownMenuLabel>
+                            <DropdownMenuContent
+                              align="end"
+                              className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
+                              onPointerDownOutside={handlePointerDownOutside}
+                              onEscapeKeyDown={handleEscapeKeyDown}
+                            >
+                              <div className="flex items-center justify-between px-2 py-1.5">
+                                <DropdownMenuLabel className="p-0">Venue Actions</DropdownMenuLabel>
+                                <DropdownMenuItem className="p-0 h-6 w-6 flex items-center justify-center rounded-full focus:bg-accent focus:text-accent-foreground">
+                                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                                </DropdownMenuItem>
+                              </div>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => handleOpenSetupDialog(event)}>
                                 <Settings2 className="mr-2 h-4 w-4" /> {setup ? "Edit Setup" : "Create Setup"}
@@ -609,11 +603,11 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                   <div
                     key={layout.id}
                     className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      newSetup.layoutType === layout.id
+                      newSetup.layout_type === layout.id
                         ? "bg-primary/10 border-primary"
                         : "hover:bg-secondary/50"
                     }`}
-                    onClick={() => setNewSetup((p) => ({ ...p, layoutType: layout.id }))}
+                    onClick={() => setNewSetup((p) => ({ ...p, layout_type: layout.id }))}
                   >
                     <layout.icon className="h-5 w-5" />
                     <span className="text-sm">{layout.name}</span>
@@ -628,9 +622,9 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                 <Label>Number of Tables</Label>
                 <Input
                   type="number"
-                  value={newSetup.tableCount}
+                  value={newSetup.table_count}
                   onChange={(e) =>
-                    setNewSetup((p) => ({ ...p, tableCount: parseInt(e.target.value) || 0 }))
+                    setNewSetup((p) => ({ ...p, table_count: parseInt(e.target.value) || 0 }))
                   }
                 />
               </div>
@@ -638,9 +632,9 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                 <Label>Number of Chairs</Label>
                 <Input
                   type="number"
-                  value={newSetup.chairCount}
+                  value={newSetup.chair_count}
                   onChange={(e) =>
-                    setNewSetup((p) => ({ ...p, chairCount: parseInt(e.target.value) || 0 }))
+                    setNewSetup((p) => ({ ...p, chair_count: parseInt(e.target.value) || 0 }))
                   }
                 />
               </div>
@@ -650,20 +644,20 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             <div className="flex gap-4">
               <div
                 className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer flex-1 ${
-                  newSetup.stageRequired ? "bg-primary/10 border-primary" : ""
+                  newSetup.stage_required ? "bg-primary/10 border-primary" : ""
                 }`}
-                onClick={() => setNewSetup((p) => ({ ...p, stageRequired: !p.stageRequired }))}
+                onClick={() => setNewSetup((p) => ({ ...p, stage_required: !p.stage_required }))}
               >
-                <Checkbox checked={newSetup.stageRequired} />
+                <Checkbox checked={newSetup.stage_required} />
                 <span>Stage Required</span>
               </div>
               <div
                 className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer flex-1 ${
-                  newSetup.danceFloor ? "bg-primary/10 border-primary" : ""
+                  newSetup.dance_floor ? "bg-primary/10 border-primary" : ""
                 }`}
-                onClick={() => setNewSetup((p) => ({ ...p, danceFloor: !p.danceFloor }))}
+                onClick={() => setNewSetup((p) => ({ ...p, dance_floor: !p.dance_floor }))}
               >
-                <Checkbox checked={newSetup.danceFloor} />
+                <Checkbox checked={newSetup.dance_floor} />
                 <span>Dance Floor</span>
               </div>
             </div>
@@ -713,8 +707,8 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
               <Label>Setup Notes</Label>
               <Textarea
                 placeholder="Any special instructions or requirements..."
-                value={newSetup.setupNotes}
-                onChange={(e) => setNewSetup((p) => ({ ...p, setupNotes: e.target.value }))}
+                value={newSetup.setup_notes}
+                onChange={(e) => setNewSetup((p) => ({ ...p, setup_notes: e.target.value }))}
                 rows={3}
               />
             </div>
