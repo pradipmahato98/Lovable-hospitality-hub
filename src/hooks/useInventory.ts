@@ -1175,11 +1175,34 @@ export function useInventoryStockCounts() {
 // ============= Stats =============
 export function useInventoryStats() {
   const { data: items } = useInventoryItems();
+  const { data: movements } = useStockMovements();
+
+  const calculateForecast = () => {
+    if (!movements || movements.length < 5) return "+0.0%";
+
+    // Simple logic: compare last 7 days consumption with previous 7 days
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const recentConsumption = movements
+      .filter(m => m.movement_type === 'out' && new Date(m.created_at) > weekAgo)
+      .reduce((s, m) => s + m.quantity, 0);
+
+    const prevConsumption = movements
+      .filter(m => m.movement_type === 'out' && new Date(m.created_at) > twoWeeksAgo && new Date(m.created_at) <= weekAgo)
+      .reduce((s, m) => s + m.quantity, 0);
+
+    if (prevConsumption === 0) return "+0.0%";
+    const trend = ((recentConsumption - prevConsumption) / prevConsumption) * 100;
+    return `${trend >= 0 ? '+' : ''}${trend.toFixed(1)}%`;
+  };
 
   return {
     totalItems: items?.length || 0,
     lowStock: items?.filter((i) => i.current_stock <= i.reorder_point).length || 0,
     outOfStock: items?.filter((i) => i.current_stock === 0).length || 0,
     totalValue: items?.reduce((sum, i) => sum + i.current_stock * (i.avg_cost || i.cost_price), 0) || 0,
+    demandForecast: calculateForecast()
   };
 }

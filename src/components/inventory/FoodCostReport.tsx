@@ -19,7 +19,10 @@ export function FoodCostReport() {
      // Actual: Value of all ingredient movements linked to this recipe
      const actualUsageValue = movements
         .filter(m => m.reference_type === 'production' && m.reference_id === recipe.id && m.movement_type === 'out')
-        .reduce((s, m) => s + (m.quantity * (items.find(i => i.id === m.item_id)?.cost_price || 0)), 0);
+        .reduce((s, m) => {
+          const item = items.find(i => i.id === m.item_id);
+          return s + (m.quantity * (item?.avg_cost || item?.cost_price || 0));
+        }, 0);
 
      const variance = actualUsageValue - theoreticalCost;
      const variancePercent = theoreticalCost > 0 ? (variance / theoreticalCost) * 100 : 0;
@@ -28,7 +31,7 @@ export function FoodCostReport() {
         name: recipe.name,
         sales: salesCount,
         theoretical: theoreticalCost,
-        actual: actualUsageValue || theoreticalCost * 1.05, // Mock fallback for demo if no production logs
+        actual: actualUsageValue,
         variance,
         variancePercent
      };
