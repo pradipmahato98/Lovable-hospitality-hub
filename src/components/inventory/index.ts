@@ -11,3 +11,5 @@ export { RequisitionsTab } from "./RequisitionsTab";
 export { RecipesTab } from "./RecipesTab";
 export { WastageTab } from "./WastageTab";
 export { StockCountTab } from "./StockCountTab";
+export { InventorySettingsTab } from "./InventorySettingsTab";
+export { StockIssueTab } from "./StockIssueTab";

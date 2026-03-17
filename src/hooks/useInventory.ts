@@ -17,11 +17,14 @@ export interface InventoryCategory {
 export interface Supplier {
   id: string;
   name: string;
+  supplier_code: string | null;
   contact_person: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
   payment_terms: string | null;
+  rating: number | null;
+  is_approved: boolean;
   is_active: boolean;
   notes: string | null;
   created_at: string;
@@ -53,7 +56,7 @@ export interface InventoryItem {
   category_id: string | null;
   supplier_id: string | null;
   uom_id: string | null;
-  unit: string; // Keep for backward compatibility
+  unit: string;
   current_stock: number;
   min_stock: number;
   max_stock: number | null;
@@ -101,6 +104,10 @@ export interface PurchaseOrderItem {
   quantity: number;
   unit_price: number;
   received_quantity: number;
+  batch_number?: string;
+  expiry_date?: string;
+  damaged_quantity?: number;
+  quality_status?: string;
   item?: InventoryItem;
 }
 
@@ -172,6 +179,46 @@ export interface InventoryRecipe {
   items?: any[];
 }
 
+export interface InventoryStockIssue {
+  id: string;
+  requisition_id: string | null;
+  issue_number: string;
+  department: string;
+  issued_to: string | null;
+  issued_by: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  items?: any[];
+}
+
+// ============= Settings =============
+export function useInventorySettings() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["inventory-settings"],
+    queryFn: async () => {
+      const { data, error } = await db.from("inventory_settings").select("*");
+      if (error) throw error;
+      const settingsMap: Record<string, string> = {};
+      data.forEach((s: any) => settingsMap[s.setting_key] = s.setting_value);
+      return settingsMap;
+    },
+  });
+
+  const updateSettings = useMutation({
+    mutationFn: async (updates: Record<string, string>) => {
+      for (const [key, value] of Object.entries(updates)) {
+        await db.from("inventory_settings").upsert({ setting_key: key, setting_value: value }, { onConflict: 'setting_key' });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-settings"] }),
+  });
+
+  return { ...query, updateSettings };
+}
+
 // ============= Categories =============
 export function useInventoryCategories() {
   const queryClient = useQueryClient();
@@ -238,7 +285,7 @@ export function useSuppliers() {
   }, [queryClient]);
 
   const createSupplier = useMutation({
-    mutationFn: async (supplier: Omit<Supplier, "id" | "created_at">) => {
+    mutationFn: async (supplier: Partial<Supplier>) => {
       const { data, error } = await db.from("suppliers").insert(supplier).select().single();
       if (error) throw error;
       return data;
@@ -364,7 +411,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<InventoryItem> & { id: string }) => {
       const { category, supplier, uom, ...clean } = updates as any;
-      const { data, error } = await db.from("inventory_items").update(clean).eq("id", id).select().single();
+      const { data, error) = await db.from("inventory_items").update(clean).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -385,7 +432,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
       if (fetchError) throw fetchError;
 
       const newStock = type === "out" ? item.current_stock - quantity : item.current_stock + quantity;
-      const updates: Record<string, unknown> = { current_stock: newStock };
+      const updates: Record<string, unknown> = { current_stock: Math.max(0, newStock) };
       if (type === "in") updates.last_restocked_at = new Date().toISOString();
 
       const { error: updateError } = await db.from("inventory_items").update(updates).eq("id", itemId);
@@ -463,19 +510,29 @@ export function usePurchaseOrders(status?: string) {
   });
 
   const receivePurchaseOrder = useMutation({
-    mutationFn: async ({ poId, receivedItems }: { poId: string; receivedItems: { poItemId: string; itemId: string; receivedQty: number }[] }) => {
+    mutationFn: async ({ poId, receivedItems }: { poId: string; receivedItems: any[] }) => {
       for (const ri of receivedItems) {
-        const { error } = await db.from("purchase_order_items").update({ received_quantity: ri.receivedQty }).eq("id", ri.poItemId);
-        if (error) throw error;
+        const { error: poItemErr } = await db.from("purchase_order_items").update({
+          received_quantity: ri.receivedQty,
+          batch_number: ri.batchNumber,
+          expiry_date: ri.expiryDate,
+          damaged_quantity: ri.damagedQty,
+          quality_status: ri.qualityStatus
+        }).eq("id", ri.poItemId);
+
+        if (poItemErr) throw poItemErr;
 
         if (ri.receivedQty > 0) {
-          const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock").eq("id", ri.itemId).single();
+          const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price").eq("id", ri.itemId).single();
           if (fetchErr) throw fetchErr;
+
+          const { data: poItem } = await db.from("purchase_order_items").select("unit_price").eq("id", ri.poItemId).single();
 
           await db.from("inventory_items").update({
             current_stock: item.current_stock + ri.receivedQty,
             last_restocked_at: new Date().toISOString(),
-            last_purchase_cost: 0, // Should ideally be from PO item
+            last_purchase_cost: poItem?.unit_price || item.cost_price,
+            avg_cost: (item.cost_price + (poItem?.unit_price || item.cost_price)) / 2
           }).eq("id", ri.itemId);
 
           await db.from("stock_movements").insert({
@@ -484,14 +541,14 @@ export function usePurchaseOrders(status?: string) {
             quantity: ri.receivedQty,
             reference_type: "purchase_order",
             reference_id: poId,
-            notes: `Received from PO`,
+            notes: `Received from PO (Batch: ${ri.batchNumber || 'N/A'})`,
           });
         }
       }
 
       const { data: poItems } = await db.from("purchase_order_items").select("quantity, received_quantity").eq("purchase_order_id", poId);
-      const allReceived = poItems?.every((pi: any) => pi.received_quantity >= pi.quantity);
-      const anyReceived = poItems?.some((pi: any) => pi.received_quantity > 0);
+      const allReceived = poItems?.every((pi: any) => (pi.received_quantity || 0) >= pi.quantity);
+      const anyReceived = poItems?.some((pi: any) => (pi.received_quantity || 0) > 0);
 
       const newStatus = allReceived ? "received" : anyReceived ? "partially_received" : "sent";
       const updates: Record<string, unknown> = { status: newStatus };
@@ -516,9 +573,9 @@ export function useStockMovements(itemId?: string) {
     queryFn: async () => {
       let q = db
         .from("stock_movements")
-        .select(`*, item:inventory_items(name, sku)`)
+        .select(`*, item:inventory_items(name, sku, department, cost_price)`)
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(500);
       if (itemId) q = q.eq("item_id", itemId);
       const { data, error } = await q;
       if (error) throw error;
@@ -557,7 +614,82 @@ export function useInventoryRequisitions() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] }),
   });
 
-  return { ...query, createRequisition };
+  const updateRequisitionStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const { data, error } = await db.from("inventory_requisitions").update({ status }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] }),
+  });
+
+  return { ...query, createRequisition, updateRequisitionStatus };
+}
+
+// ============= Stock Issues =============
+export function useInventoryIssues() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["inventory-issues"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("inventory_stock_issues")
+        .select(`*, items:inventory_stock_issue_items(*, item:inventory_items(*))`)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as InventoryStockIssue[];
+    },
+  });
+
+  const createIssue = useMutation({
+    mutationFn: async ({ items, requisition_id, ...issue }: any) => {
+      const issueNumber = `SIV-${Date.now().toString(36).toUpperCase()}`;
+
+      const { data: sIssue, error: issueErr } = await db.from("inventory_stock_issues").insert({
+        ...issue,
+        requisition_id,
+        issue_number: issueNumber
+      }).select().single();
+      if (issueErr) throw issueErr;
+
+      for (const item of items) {
+        await db.from("inventory_stock_issue_items").insert({
+          stock_issue_id: sIssue.id,
+          item_id: item.item_id,
+          quantity: item.quantity,
+          batch_number: item.batch_number
+        });
+
+        const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", item.item_id).single();
+        await db.from("inventory_items").update({
+          current_stock: Math.max(0, (invItem?.current_stock || 0) - item.quantity)
+        }).eq("id", item.item_id);
+
+        await db.from("stock_movements").insert({
+          item_id: item.item_id,
+          movement_type: "out",
+          quantity: item.quantity,
+          reference_type: "stock_issue",
+          reference_id: sIssue.id,
+          notes: `Stock issue to ${issue.department}`,
+        });
+      }
+
+      if (requisition_id) {
+        await db.from("inventory_requisitions").update({ status: "fully_ordered" }).eq("id", requisition_id);
+      }
+
+      return sIssue;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+    },
+  });
+
+  return { ...query, createIssue };
 }
 
 // ============= Recipes =============
@@ -569,7 +701,7 @@ export function useInventoryRecipes() {
     queryFn: async () => {
       const { data, error } = await db
         .from("inventory_recipes")
-        .select(`*, items:inventory_recipe_items(*, item:inventory_items(*))`)
+        .select(`*, items:inventory_recipe_items(*, item:inventory_items(*), uom:inventory_uoms(*))`)
         .order("name");
       if (error) throw error;
       return data as InventoryRecipe[];
@@ -590,6 +722,53 @@ export function useInventoryRecipes() {
   });
 
   return { ...query, createRecipe };
+}
+
+// ============= Production =============
+export function useInventoryProduction() {
+  const queryClient = useQueryClient();
+
+  const produceBatch = useMutation({
+    mutationFn: async ({ recipeId, quantity, producedBy, notes }: { recipeId: string, quantity: number, producedBy: string, notes?: string }) => {
+      const { data: log, error: logErr } = await db.from("inventory_production_logs").insert({
+        recipe_id: recipeId,
+        quantity_produced: quantity,
+        produced_by: producedBy,
+        notes
+      }).select().single();
+      if (logErr) throw logErr;
+
+      const { data: recipeItems } = await db.from("inventory_recipe_items").select("*").eq("recipe_id", recipeId);
+
+      if (recipeItems) {
+        for (const rItem of recipeItems) {
+          const deductionQty = rItem.quantity * quantity;
+
+          const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", rItem.item_id).single();
+          await db.from("inventory_items").update({
+            current_stock: Math.max(0, (invItem?.current_stock || 0) - deductionQty)
+          }).eq("id", rItem.item_id);
+
+          await db.from("stock_movements").insert({
+            item_id: rItem.item_id,
+            movement_type: "out",
+            quantity: deductionQty,
+            reference_type: "production",
+            reference_id: log.id,
+            notes: `Production consumption for Recipe ID ${recipeId}`,
+          });
+        }
+      }
+
+      return log;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+    },
+  });
+
+  return { produceBatch };
 }
 
 // ============= Transfers =============

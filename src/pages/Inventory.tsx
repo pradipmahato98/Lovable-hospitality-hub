@@ -5,13 +5,14 @@ import { useSearchParams } from "react-router-dom";
 import {
   Package, Truck, Warehouse, ArrowUpDown, FolderTree,
   ArrowRightLeft, BarChart3, Settings2, ClipboardList,
-  ChefHat, Trash2, Ruler, Store, ScanLine, ListChecks
+  ChefHat, Trash2, Ruler, Store, ScanLine, ListChecks,
+  Boxes, Settings, ArrowUpRight
 } from "lucide-react";
 import {
   ItemsTab, CategoriesTab, SuppliersTab, PurchaseOrdersTab,
   StockMovementsTab, TransfersTab, ReportsTab,
   UoMTab, StoresTab, RequisitionsTab, RecipesTab,
-  WastageTab, StockCountTab
+  WastageTab, StockCountTab, InventorySettingsTab, StockIssueTab
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
 
@@ -52,10 +53,12 @@ const Inventory = () => {
       { id: "stores", label: "Stores", icon: Store },
       { id: "suppliers", label: "Suppliers", icon: Truck },
       { id: "recipes", label: "Recipes / BOM", icon: ChefHat },
+      { id: "settings", label: "Settings", icon: Settings },
     ],
     transactions: [
       { id: "requisitions", label: "Requisitions", icon: ClipboardList },
-      { id: "orders", label: "Purchase Orders", icon: Warehouse },
+      { id: "orders", label: "Purchase Orders / GRN", icon: Warehouse },
+      { id: "issue", label: "Stock Issue", icon: ArrowUpRight },
       { id: "movements", label: "Movements", icon: ArrowUpDown },
       { id: "transfers", label: "Transfers", icon: ArrowRightLeft },
       { id: "stock-count", label: "Stock Count", icon: ListChecks },
@@ -63,8 +66,8 @@ const Inventory = () => {
     ],
     reports: [
       { id: "stock-on-hand", label: "Stock on Hand", icon: Package },
-      { id: "valuation", label: "Valuation", icon: BarChart3 },
-      { id: "movement-rpt", label: "Movement Report", icon: ArrowUpDown },
+      { id: "valuation", label: "Valuation Report", icon: BarChart3 },
+      { id: "movement-rpt", label: "Movement History", icon: ArrowUpDown },
       { id: "expiry", label: "Expiry Report", icon: ScanLine },
     ]
   };
@@ -111,10 +114,12 @@ const Inventory = () => {
             <TabsContent value="stores"><StoresTab /></TabsContent>
             <TabsContent value="suppliers"><SuppliersTab /></TabsContent>
             <TabsContent value="recipes"><RecipesTab /></TabsContent>
+            <TabsContent value="settings"><InventorySettingsTab /></TabsContent>
 
             {/* Transactions Content */}
             <TabsContent value="requisitions"><RequisitionsTab /></TabsContent>
             <TabsContent value="orders"><PurchaseOrdersTab /></TabsContent>
+            <TabsContent value="issue"><StockIssueTab /></TabsContent>
             <TabsContent value="movements"><StockMovementsTab /></TabsContent>
             <TabsContent value="transfers"><TransfersTab /></TabsContent>
             <TabsContent value="stock-count"><StockCountTab /></TabsContent>
