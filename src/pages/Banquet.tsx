@@ -32,6 +32,14 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   CalendarDays,
   Users,
   DollarSign,
@@ -45,6 +53,10 @@ import {
   UtensilsCrossed,
   Layout,
   BarChart3,
+  Eye,
+  MoreVertical,
+  ArrowUpDown,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -104,6 +116,9 @@ export default function Banquet() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "events";
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sortConfig, setSortConfig] = useState<{ key: keyof BanquetEvent; direction: 'asc' | 'desc' } | null>(null);
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -112,6 +127,8 @@ export default function Banquet() {
     });
   };
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedEventForDetails, setSelectedEventForDetails] = useState<BanquetEvent | null>(null);
    const [editingEvent, setEditingEvent] = useState<BanquetEvent | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<
     "connecting" | "connected" | "error"
@@ -314,6 +331,11 @@ export default function Banquet() {
      });
      setEventDialogOpen(true);
    };
+
+   const handleViewDetails = (event: BanquetEvent) => {
+     setSelectedEventForDetails(event);
+     setDetailsDialogOpen(true);
+   };
  
    const handleSaveEvent = () => {
      if (!newEvent.event_name || !newEvent.client_name || !newEvent.venue) {
@@ -371,12 +393,36 @@ export default function Banquet() {
     });
   };
 
-  // Filter events
-  const filteredEvents = events.filter(
-    (e) =>
-      e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.client_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter and sort events
+  const filteredEvents = events
+    .filter((e) => {
+      const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || e.status === statusFilter;
+      const matchesType = typeFilter === "all" || e.event_type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      if (!sortConfig) return 0;
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  const handleSort = (key: keyof BanquetEvent) => {
+    setSortConfig((prev) => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+      }
+      return { key, direction: "asc" };
+    });
+  };
 
   // Metrics
   const upcomingEvents = events.filter(
@@ -470,15 +516,46 @@ export default function Banquet() {
           </TabsList>
 
           <TabsContent value="events" className="space-y-4">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-1 items-center gap-2 max-w-2xl">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search events or clients..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Status" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="inquiry">Inquiry</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Event Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="wedding">Wedding</SelectItem>
+                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="birthday">Birthday</SelectItem>
+                    <SelectItem value="conference">Conference</SelectItem>
+                    <SelectItem value="social">Social</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Button onClick={() => setEventDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -496,25 +573,65 @@ export default function Banquet() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Event</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Date & Time</TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleSort("event_name")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Event
+                            <ArrowUpDown className="h-3 w-3" />
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleSort("client_name")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Client
+                            <ArrowUpDown className="h-3 w-3" />
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleSort("event_date")}
+                        >
+                          <div className="flex items-center gap-1">
+                            Date & Time
+                            <ArrowUpDown className="h-3 w-3" />
+                          </div>
+                        </TableHead>
                         <TableHead>Venue</TableHead>
-                        <TableHead>Guests</TableHead>
-                        <TableHead>Amount</TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:text-primary transition-colors text-right"
+                          onClick={() => handleSort("guest_count")}
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            Guests
+                            <ArrowUpDown className="h-3 w-3" />
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:text-primary transition-colors text-right"
+                          onClick={() => handleSort("total_amount")}
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            Amount
+                            <ArrowUpDown className="h-3 w-3" />
+                          </div>
+                        </TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="w-[100px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredEvents.map((event) => (
-                        <TableRow key={event.id}>
+                        <TableRow key={event.id} className="group">
                           <TableCell>
                             <div>
-                              <p className="font-medium">{event.event_name}</p>
+                              <p className="font-medium group-hover:text-primary transition-colors">{event.event_name}</p>
                               <Badge
                                 variant="outline"
-                                className={`text-xs ${
+                                className={`text-[10px] h-4 px-1.5 ${
                                   eventTypeColors[event.event_type] || eventTypeColors.other
                                 }`}
                               >
@@ -535,9 +652,9 @@ export default function Banquet() {
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                              <span>{event.event_date}</span>
+                              <span className="text-sm font-medium">{event.event_date}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               <Clock className="h-3 w-3" />
                               <span>
                                 {event.start_time} - {event.end_time}
@@ -545,48 +662,66 @@ export default function Banquet() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 text-sm">
                               <MapPin className="h-3 w-3 text-muted-foreground" />
                               {event.venue}
                             </div>
                           </TableCell>
-                          <TableCell>{event.guest_count}</TableCell>
-                          <TableCell className="font-mono">
+                          <TableCell className="text-right font-medium">{event.guest_count}</TableCell>
+                          <TableCell className="text-right font-mono font-bold text-primary">
                             {formatCurrency(event.total_amount)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={statusColors[event.status]}>
+                            <Badge variant="outline" className={`${statusColors[event.status]} capitalize`}>
                               {event.status.replace("_", " ")}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <Select
-                              value={event.status}
-                              onValueChange={(v: BanquetEvent["status"]) =>
-                                updateStatus.mutate({ id: event.id, status: v })
-                              }
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="inquiry">Inquiry</SelectItem>
-                                <SelectItem value="confirmed">Confirmed</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
-                              </SelectContent>
-                            </Select>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                onClick={() => handleViewDetails(event)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleViewDetails(event)}>
+                                    <Eye className="mr-2 h-4 w-4" /> View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+                                    <FileText className="mr-2 h-4 w-4" /> Edit Event
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'inquiry' })}>
+                                    Inquiry
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'confirmed' })}>
+                                    Confirmed
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'in_progress' })}>
+                                    In Progress
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'completed' })}>
+                                    Completed
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive" onClick={() => updateStatus.mutate({ id: event.id, status: 'cancelled' })}>
+                                    Cancelled
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </TableCell>
-                           <TableCell>
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => handleEditEvent(event)}
-                             >
-                               Edit
-                             </Button>
-                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -636,6 +771,7 @@ export default function Banquet() {
                 menu_package: e.menu_package,
                 special_requests: e.special_requests,
               }))}
+              onViewDetails={handleViewDetails}
             />
           </TabsContent>
 
@@ -651,6 +787,7 @@ export default function Banquet() {
                 guest_count: e.guest_count,
                 status: e.status,
               }))}
+              onViewDetails={handleViewDetails}
             />
           </TabsContent>
 
@@ -671,6 +808,138 @@ export default function Banquet() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Event Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl">{selectedEventForDetails?.event_name}</DialogTitle>
+                <DialogDescription className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className={selectedEventForDetails ? statusColors[selectedEventForDetails.status] : ""}>
+                    {selectedEventForDetails?.status.replace("_", " ")}
+                  </Badge>
+                  <Badge variant="outline" className={selectedEventForDetails ? eventTypeColors[selectedEventForDetails.event_type] : ""}>
+                    {selectedEventForDetails?.event_type}
+                  </Badge>
+                </DialogDescription>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground font-medium">Total Amount</p>
+                <p className="text-2xl font-bold text-primary">
+                  {selectedEventForDetails && formatCurrency(selectedEventForDetails.total_amount)}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            <Card className="md:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  Event Schedule & Venue
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{selectedEventForDetails?.event_date}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="font-medium">{selectedEventForDetails?.start_time} - {selectedEventForDetails?.end_time}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Venue</p>
+                  <p className="font-medium">{selectedEventForDetails?.venue}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Guest Count</p>
+                  <p className="font-medium">{selectedEventForDetails?.guest_count} guests</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  Client Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Name</p>
+                  <p className="font-medium">{selectedEventForDetails?.client_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="font-medium">{selectedEventForDetails?.client_phone || "N/A"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="font-medium truncate">{selectedEventForDetails?.client_email || "N/A"}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-3">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
+                  Catering & Requirements
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Menu Package</p>
+                    <p className="font-medium">{selectedEventForDetails?.menu_package || "Not selected"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Special Requests</p>
+                    <p className="text-sm italic">
+                      {selectedEventForDetails?.special_requests || "No special requests."}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="text-sm text-muted-foreground">Deposit Paid</span>
+                    <span className="font-mono font-medium text-success">
+                      {selectedEventForDetails?.deposit_amount ? formatCurrency(selectedEventForDetails.deposit_amount) : formatCurrency(0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2 font-bold">
+                    <span className="text-sm">Balance Due</span>
+                    <span className="font-mono text-destructive">
+                      {selectedEventForDetails && formatCurrency(selectedEventForDetails.total_amount - (selectedEventForDetails.deposit_amount || 0))}
+                    </span>
+                  </div>
+                  {selectedEventForDetails && (
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-sm text-muted-foreground">Previous Due</span>
+                      <span className="font-mono text-destructive">
+                        {formatCurrency(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+            <Button onClick={() => {
+              setDetailsDialogOpen(false);
+              if (selectedEventForDetails) handleEditEvent(selectedEventForDetails);
+            }}>Edit Event</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* New Event Dialog */}
       <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
