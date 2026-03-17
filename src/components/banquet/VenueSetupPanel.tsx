@@ -30,6 +30,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Layout,
   Search,
   CheckCircle2,
@@ -41,8 +49,20 @@ import {
   Armchair,
   Lightbulb,
   Mic2,
+  Eye,
+  MoreVertical,
+  ArrowUpDown,
+  Filter,
+  ClipboardList,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useVenueSetups,
+  useCreateVenueSetup,
+  useUpdateVenueSetup,
+  VenueSetup
+} from "@/hooks/useBanquetData";
 
 interface BanquetEvent {
   id: string;
@@ -80,6 +100,7 @@ interface VenueSetup {
 
 interface VenueSetupPanelProps {
   events: BanquetEvent[];
+  onViewDetails?: (event: BanquetEvent) => void;
 }
 
 const layoutTypes = [
@@ -124,12 +145,16 @@ const defaultSetupChecklist: Omit<SetupItem, "id">[] = [
 
 export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // Local state for venue setups (would be DB in production)
-  const [venueSetups, setVenueSetups] = useState<VenueSetup[]>([]);
+  // Database persistence for venue setups
+  const { data: venueSetups = [], isLoading } = useVenueSetups();
+  const createSetupMutation = useCreateVenueSetup();
+  const updateSetupMutation = useUpdateVenueSetup();
 
   const [newSetup, setNewSetup] = useState({
     layoutType: "banquet",
@@ -142,19 +167,45 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     setupNotes: "",
   });
 
-  // Filter active events
-  const activeEvents = useMemo(() => {
-    return events.filter(
-      (e) =>
-        (e.status === "confirmed" || e.status === "in_progress") &&
-        (e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [events, searchQuery]);
-
   // Get setup for an event
   const getSetupForEvent = (eventId: string) => {
-    return venueSetups.find((s) => s.eventId === eventId);
+    return venueSetups.find((s) => s.event_id === eventId);
+  };
+
+  // Filter and sort active events
+  const activeEvents = useMemo(() => {
+    return events
+      .filter((e) => {
+        const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
+        const setup = getSetupForEvent(e.id);
+        const matchesStatus = statusFilter === "all" || (setup?.setup_status === statusFilter) || (statusFilter === "none" && !setup);
+
+        return (e.status === "confirmed" || e.status === "in_progress") && matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (!sortConfig) return 0;
+        let aValue: any = a[sortConfig.key as keyof BanquetEvent];
+        let bValue: any = b[sortConfig.key as keyof BanquetEvent];
+
+        if (sortConfig.key === "progress") {
+          aValue = getSetupProgress(getSetupForEvent(a.id));
+          bValue = getSetupProgress(getSetupForEvent(b.id));
+        }
+
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+  }, [events, searchQuery, statusFilter, venueSetups, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+      }
+      return { key, direction: "asc" };
+    });
   };
 
   const handleOpenSetupDialog = (event: BanquetEvent) => {
@@ -191,42 +242,45 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     setChecklistDialogOpen(true);
   };
 
-  const handleSaveSetup = () => {
+  const handleSaveSetup = async () => {
     if (!selectedEvent) return;
 
     const existingSetup = getSetupForEvent(selectedEvent.id);
     
-    const setup: VenueSetup = {
-      id: existingSetup?.id || crypto.randomUUID(),
-      eventId: selectedEvent.id,
-      layoutType: newSetup.layoutType,
-      tableCount: newSetup.tableCount,
-      chairCount: newSetup.chairCount,
-      stageRequired: newSetup.stageRequired,
-      danceFloor: newSetup.danceFloor,
-      equipment: newSetup.equipment,
-      decorations: newSetup.decorations,
-      setupItems: existingSetup?.setupItems || defaultSetupChecklist.map((item) => ({
-        ...item,
-        id: crypto.randomUUID(),
-      })),
-      setupStatus: existingSetup?.setupStatus || "not_started",
-      setupNotes: newSetup.setupNotes,
-    };
-
-    setVenueSetups((prev) => {
-      const existing = prev.findIndex((s) => s.eventId === selectedEvent.id);
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing] = setup;
-        return updated;
-      }
-      return [...prev, setup];
+    // Convert SetupItem[] to Record<string, boolean> for the checklist field in DB
+    const initialChecklist: Record<string, boolean> = {};
+    defaultSetupChecklist.forEach(item => {
+      initialChecklist[item.name] = false;
     });
 
-    toast.success("Venue setup saved");
-    setSetupDialogOpen(false);
-    setSelectedEvent(null);
+    const setupData = {
+      event_id: selectedEvent.id,
+      layout_type: newSetup.layoutType,
+      table_count: newSetup.tableCount,
+      chair_count: newSetup.chairCount,
+      stage_required: newSetup.stageRequired,
+      dance_floor: newSetup.danceFloor,
+      equipment: newSetup.equipment,
+      decorations: newSetup.decorations,
+      setup_status: existingSetup?.setup_status || "not_started" as const,
+      setup_notes: newSetup.setupNotes || null,
+      checklist: existingSetup?.checklist || initialChecklist,
+    };
+
+    try {
+      if (existingSetup) {
+        await updateSetupMutation.mutateAsync({
+          id: existingSetup.id,
+          updates: setupData
+        });
+      } else {
+        await createSetupMutation.mutateAsync(setupData);
+      }
+      setSetupDialogOpen(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error("Error saving venue setup:", error);
+    }
   };
 
   const handleToggleEquipment = (eq: string) => {
@@ -247,29 +301,34 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
     }));
   };
 
-  const handleToggleChecklistItem = (eventId: string, itemId: string) => {
-    setVenueSetups((prev) =>
-      prev.map((setup) => {
-        if (setup.eventId === eventId) {
-          const updatedItems = setup.setupItems.map((item) =>
-            item.id === itemId ? { ...item, completed: !item.completed } : item
-          );
-          const completedCount = updatedItems.filter((i) => i.completed).length;
-          let newStatus: VenueSetup["setupStatus"] = "not_started";
-          if (completedCount === updatedItems.length) newStatus = "completed";
-          else if (completedCount > 0) newStatus = "in_progress";
-          
-          return { ...setup, setupItems: updatedItems, setupStatus: newStatus };
-        }
-        return setup;
-      })
-    );
+  const handleToggleChecklistItem = (eventId: string, itemName: string) => {
+    const setup = getSetupForEvent(eventId);
+    if (!setup) return;
+
+    const newChecklist = { ...setup.checklist, [itemName]: !setup.checklist[itemName] };
+
+    // Calculate new status
+    const items = Object.values(newChecklist);
+    const completedCount = items.filter(v => v).length;
+    let newStatus: VenueSetup["setup_status"] = "not_started";
+    if (completedCount === items.length) newStatus = "completed";
+    else if (completedCount > 0) newStatus = "in_progress";
+
+    updateSetupMutation.mutate({
+      id: setup.id,
+      updates: {
+        checklist: newChecklist,
+        setup_status: newStatus
+      }
+    });
   };
 
   const getSetupProgress = (setup: VenueSetup | undefined) => {
-    if (!setup) return 0;
-    const completed = setup.setupItems.filter((i) => i.completed).length;
-    return (completed / setup.setupItems.length) * 100;
+    if (!setup || !setup.checklist) return 0;
+    const items = Object.values(setup.checklist);
+    if (items.length === 0) return 0;
+    const completed = items.filter(v => v).length;
+    return (completed / items.length) * 100;
   };
 
   const statusColors: Record<string, string> = {
@@ -281,9 +340,9 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
   // Summary stats
   const stats = useMemo(() => {
     const total = venueSetups.length;
-    const completed = venueSetups.filter((s) => s.setupStatus === "completed").length;
-    const inProgress = venueSetups.filter((s) => s.setupStatus === "in_progress").length;
-    const notStarted = venueSetups.filter((s) => s.setupStatus === "not_started").length;
+    const completed = venueSetups.filter((s) => s.setup_status === "completed").length;
+    const inProgress = venueSetups.filter((s) => s.setup_status === "in_progress").length;
+    const notStarted = venueSetups.filter((s) => s.setup_status === "not_started").length;
     return { total, completed, inProgress, notStarted };
   }, [venueSetups]);
 
@@ -345,8 +404,8 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -356,6 +415,21 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             className="pl-9"
           />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Filter by status" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Setups</SelectItem>
+            <SelectItem value="none">No Setup Yet</SelectItem>
+            <SelectItem value="not_started">Not Started</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Events Table */}
@@ -375,14 +449,20 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("event_name")}>
+                    <div className="flex items-center gap-1">Event <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("event_date")}>
+                    <div className="flex items-center gap-1">Date <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
                   <TableHead>Venue</TableHead>
                   <TableHead>Layout</TableHead>
                   <TableHead>Equipment</TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("progress")}>
+                    <div className="flex items-center gap-1">Progress <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -442,8 +522,8 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                       </TableCell>
                       <TableCell>
                         {setup ? (
-                          <Badge variant="outline" className={statusColors[setup.setupStatus]}>
-                            {setup.setupStatus.replace("_", " ")}
+                          <Badge variant="outline" className={statusColors[setup.setup_status]}>
+                            {setup.setup_status.replace("_", " ")}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-muted">
@@ -451,24 +531,48 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenSetupDialog(event)}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => onViewDetails?.(event)}
                           >
-                            {setup ? "Edit" : "Setup"}
+                            <Eye className="h-4 w-4" />
                           </Button>
-                          {setup && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenChecklist(event)}
-                            >
-                              Checklist
-                            </Button>
-                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel>Venue Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleOpenSetupDialog(event)}>
+                                <Settings2 className="mr-2 h-4 w-4" /> {setup ? "Edit Setup" : "Create Setup"}
+                              </DropdownMenuItem>
+                              {setup && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleOpenChecklist(event)}>
+                                    <ClipboardList className="mr-2 h-4 w-4" /> View Checklist
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { setup_status: "not_started" } })}>
+                                    Not Started
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { setup_status: "in_progress" } })}>
+                                    In Progress
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { setup_status: "completed" } })}>
+                                    Completed
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -641,37 +745,36 @@ export function VenueSetupPanel({ events }: VenueSetupPanelProps) {
                 const setup = getSetupForEvent(selectedEvent.id);
                 if (!setup) return <p className="text-muted-foreground">No setup configured</p>;
 
-                const categories = [...new Set(setup.setupItems.map((i) => i.category))];
+                // Use the checklist from DB or default if empty
+                const checklist = setup.checklist || {};
+                const items = Object.entries(checklist);
                 
-                return categories.map((category) => (
-                  <div key={category} className="space-y-2">
-                    <h4 className="font-medium text-sm text-muted-foreground">{category}</h4>
-                    <div className="space-y-1">
-                      {setup.setupItems
-                        .filter((i) => i.category === category)
-                        .map((item) => (
-                          <div
-                            key={item.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                              item.completed
-                                ? "bg-success/10 border-success/30"
-                                : "hover:bg-secondary/50"
-                            }`}
-                            onClick={() => handleToggleChecklistItem(selectedEvent.id, item.id)}
-                          >
-                            {item.completed ? (
-                              <CheckCircle2 className="h-5 w-5 text-success" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-muted-foreground" />
-                            )}
-                            <span className={item.completed ? "line-through text-muted-foreground" : ""}>
-                              {item.name}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
+                if (items.length === 0) return <p className="text-muted-foreground">No items in checklist</p>;
+
+                return (
+                  <div className="space-y-1">
+                    {items.map(([name, completed]) => (
+                      <div
+                        key={name}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          completed
+                            ? "bg-success/10 border-success/30"
+                            : "hover:bg-secondary/50"
+                        }`}
+                        onClick={() => handleToggleChecklistItem(selectedEvent.id, name)}
+                      >
+                        {completed ? (
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <span className={completed ? "line-through text-muted-foreground" : ""}>
+                          {name}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ));
+                );
               })()}
 
               <div className="pt-4 border-t">

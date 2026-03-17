@@ -29,6 +29,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   UtensilsCrossed,
   Plus,
   Search,
@@ -36,8 +44,19 @@ import {
   AlertTriangle,
   Package,
   Users,
+  Eye,
+  MoreVertical,
+  ArrowUpDown,
+  Filter,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useCateringOrders,
+  useCreateCateringOrder,
+  useUpdateCateringOrder,
+  CateringOrder
+} from "@/hooks/useBanquetData";
 
 interface BanquetEvent {
   id: string;
@@ -67,6 +86,7 @@ interface CateringOrder {
 
 interface CateringManagementPanelProps {
   events: BanquetEvent[];
+  onViewDetails?: (event: BanquetEvent) => void;
 }
 
 const menuPackages = [
@@ -102,11 +122,15 @@ const beverageOptions = [
 
 export function CateringManagementPanel({ events }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   
-  // Local state for catering orders (would be DB in production)
-  const [cateringOrders, setCateringOrders] = useState<CateringOrder[]>([]);
+  // Database persistence for catering orders
+  const { data: cateringOrders = [], isLoading } = useCateringOrders();
+  const createOrderMutation = useCreateCateringOrder();
+  const updateOrderMutation = useUpdateCateringOrder();
 
   const [newOrder, setNewOrder] = useState({
     menuPackage: "standard",
@@ -117,20 +141,45 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     specialNotes: "",
   });
 
-  // Filter active events
-  const activeEvents = useMemo(() => {
-    return events.filter(
-      (e) =>
-        e.status !== "completed" &&
-        e.status !== "cancelled" &&
-        (e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [events, searchQuery]);
-
   // Get catering order for an event
   const getOrderForEvent = (eventId: string) => {
-    return cateringOrders.find((o) => o.eventId === eventId);
+    return cateringOrders.find((o) => o.event_id === eventId);
+  };
+
+  // Filter and sort active events
+  const activeEvents = useMemo(() => {
+    return events
+      .filter((e) => {
+        const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
+        const order = getOrderForEvent(e.id);
+        const matchesStatus = statusFilter === "all" || (order?.status === statusFilter) || (statusFilter === "none" && !order);
+
+        return e.status !== "cancelled" && matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (!sortConfig) return 0;
+        let aValue: any = a[sortConfig.key as keyof BanquetEvent];
+        let bValue: any = b[sortConfig.key as keyof BanquetEvent];
+
+        if (sortConfig.key === "estimated_cost") {
+          aValue = getOrderForEvent(a.id)?.estimated_cost || 0;
+          bValue = getOrderForEvent(b.id)?.estimated_cost || 0;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+  }, [events, searchQuery, statusFilter, cateringOrders, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+      }
+      return { key, direction: "asc" };
+    });
   };
 
   const handleOpenOrderDialog = (event: BanquetEvent) => {
@@ -158,38 +207,39 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     setOrderDialogOpen(true);
   };
 
-  const handleSaveOrder = () => {
+  const handleSaveOrder = async () => {
     if (!selectedEvent) return;
 
     const pkg = menuPackages.find((p) => p.id === newOrder.menuPackage);
     const estimatedCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
 
-    const order: CateringOrder = {
-      id: getOrderForEvent(selectedEvent.id)?.id || crypto.randomUUID(),
-      eventId: selectedEvent.id,
-      menuPackage: newOrder.menuPackage,
-      courses: newOrder.courses,
-      dietaryRequirements: newOrder.dietaryRequirements,
-      servingStyle: newOrder.servingStyle,
+    const existingOrder = getOrderForEvent(selectedEvent.id);
+
+    const orderData = {
+      event_id: selectedEvent.id,
+      menu_package: newOrder.menuPackage,
+      serving_style: newOrder.servingStyle,
+      dietary_requirements: newOrder.dietaryRequirements,
       beverages: newOrder.beverages,
-      specialNotes: newOrder.specialNotes,
-      estimatedCost,
-      status: "pending",
+      special_notes: newOrder.specialNotes || null,
+      estimated_cost: estimatedCost,
+      status: existingOrder?.status || "pending" as const,
     };
 
-    setCateringOrders((prev) => {
-      const existing = prev.findIndex((o) => o.eventId === selectedEvent.id);
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing] = order;
-        return updated;
+    try {
+      if (existingOrder) {
+        await updateOrderMutation.mutateAsync({
+          id: existingOrder.id,
+          updates: orderData
+        });
+      } else {
+        await createOrderMutation.mutateAsync(orderData);
       }
-      return [...prev, order];
-    });
-
-    toast.success("Catering order saved");
-    setOrderDialogOpen(false);
-    setSelectedEvent(null);
+      setOrderDialogOpen(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error("Error saving catering order:", error);
+    }
   };
 
   const handleToggleDietary = (diet: string) => {
@@ -211,10 +261,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
   };
 
   const updateOrderStatus = (orderId: string, status: CateringOrder["status"]) => {
-    setCateringOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
-    );
-    toast.success(`Order status updated to ${status}`);
+    updateOrderMutation.mutate({ id: orderId, updates: { status } });
   };
 
   const statusColors: Record<string, string> = {
@@ -289,8 +336,8 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -300,6 +347,23 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             className="pl-9"
           />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Filter by status" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Orders</SelectItem>
+            <SelectItem value="none">No Order Yet</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="confirmed">Confirmed</SelectItem>
+            <SelectItem value="preparing">Preparing</SelectItem>
+            <SelectItem value="ready">Ready</SelectItem>
+            <SelectItem value="served">Served</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Events with Catering */}
@@ -317,14 +381,22 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Guests</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("event_name")}>
+                    <div className="flex items-center gap-1">Event <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("event_date")}>
+                    <div className="flex items-center gap-1">Date <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("guest_count")}>
+                    <div className="flex items-center gap-1">Guests <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
                   <TableHead>Menu Package</TableHead>
                   <TableHead>Dietary</TableHead>
-                  <TableHead>Est. Cost</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("estimated_cost")}>
+                    <div className="flex items-center gap-1">Est. Cost <ArrowUpDown className="h-3 w-3" /></div>
+                  </TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -374,7 +446,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                         )}
                       </TableCell>
                       <TableCell className="font-mono">
-                        {order ? `$${order.estimatedCost.toLocaleString()}` : "-"}
+                        {order ? `$${order.estimated_cost.toLocaleString()}` : "-"}
                       </TableCell>
                       <TableCell>
                         {order ? (
@@ -384,8 +456,8 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                               updateOrderStatus(order.id, v)
                             }
                           >
-                            <SelectTrigger className="w-28">
-                              <Badge variant="outline" className={statusColors[order.status]}>
+                            <SelectTrigger className="w-28 h-8">
+                              <Badge variant="outline" className={`${statusColors[order.status]} border-none h-5`}>
                                 {order.status}
                               </Badge>
                             </SelectTrigger>
@@ -403,14 +475,42 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenOrderDialog(event)}
-                        >
-                          {order ? "Edit" : "Add"}
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => onViewDetails?.(event)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel>Catering Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleOpenOrderDialog(event)}>
+                                <FileText className="mr-2 h-4 w-4" /> {order ? "Edit Order" : "Create Order"}
+                              </DropdownMenuItem>
+                              {order && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "pending")}>Pending</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "confirmed")}>Confirmed</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "preparing")}>Preparing</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "ready")}>Ready</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "served")}>Served</DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -554,7 +654,12 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
               <Button variant="outline" onClick={() => setOrderDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveOrder}>Save Order</Button>
+              <Button
+                onClick={handleSaveOrder}
+                disabled={createOrderMutation.isPending || updateOrderMutation.isPending}
+              >
+                {createOrderMutation.isPending || updateOrderMutation.isPending ? "Saving..." : "Save Order"}
+              </Button>
             </div>
           </div>
         </DialogContent>

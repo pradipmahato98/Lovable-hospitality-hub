@@ -411,7 +411,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<InventoryItem> & { id: string }) => {
       const { category, supplier, uom, ...clean } = updates as any;
-      const { data, error) = await db.from("inventory_items").update(clean).eq("id", id).select().single();
+      const { data, error } = await db.from("inventory_items").update(clean).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
