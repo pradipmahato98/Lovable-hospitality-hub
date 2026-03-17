@@ -1,7 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useState, useCallback, useRef, useEffect } from "react";
-import { Search, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
 import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,19 +20,16 @@ export function HeaderSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
 
-  const performSearch = useCallback(async (query: string) => {
     setSearching(true);
     try {
       const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }] = await Promise.all([
@@ -69,13 +63,22 @@ export function HeaderSearch() {
       ];
 
       // De-duplicate results to avoid "repleted" showing
-      // We'll use a Map to keep unique results by a compound key
+      // We use a Map to keep unique results. If a person appears as both staff and guest,
+      // we'll prefer one or show both if they have different IDs, but here we try to be smarter.
       const uniqueMap = new Map();
       rawResults.forEach(res => {
+        // Create a identity key based on ID or email or identifiers
         const id = res.id || res.user_id || res.reservation_code || res.room_number;
-        const key = `${res.type}-${id}`;
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, res);
+        const email = res.email?.toLowerCase();
+
+        // If it's a person (guest/staff), try to de-duplicate by email if ID is different
+        let identityKey = `${res.type}-${id}`;
+        if ((res.type === "guest" || res.type === "staff") && email) {
+          identityKey = `person-${email}`;
+        }
+
+        if (!uniqueMap.has(identityKey)) {
+          uniqueMap.set(identityKey, res);
         }
       });
 
@@ -86,24 +89,6 @@ export function HeaderSearch() {
     } finally {
       setSearching(false);
     }
-  }, []);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    if (query.length < 2) {
-      setSearchResults([]);
-      setSearching(false);
-      return;
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      performSearch(query);
-    }, 400);
   };
 
   const handleResultClick = (result: any) => {
@@ -155,36 +140,39 @@ export function HeaderSearch() {
 
   return (
     <div className="w-full flex justify-center">
-      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogTrigger asChild>
-          <div className="w-full flex justify-center cursor-pointer">
-            <Button
-              variant="outline"
-              className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[600px] h-10 px-4 text-muted-foreground hover:text-foreground bg-secondary/40 border-border/60 hover:border-primary/30 hover:bg-secondary/60 transition-all rounded-xl group shadow-sm"
-            >
-              <div className="flex items-center gap-2.5">
-                <Search className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-                <span className="text-sm font-normal tracking-tight">Global Search guests, staff, rooms...</span>
-              </div>
-              <div className="ml-auto flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
-                  <Command className="h-2.5 w-2.5" />
-                </kbd>
-                <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
-                  K
-                </kbd>
-              </div>
-            </Button>
+      <Button
+        variant="outline"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setSearchOpen(true);
+        }}
+        className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[800px] h-11 px-4 text-muted-foreground hover:text-foreground bg-secondary/40 border-border/60 hover:border-primary/40 hover:bg-secondary/60 transition-all rounded-xl group shadow-md"
+      >
+        <div className="flex items-center gap-2.5">
+          <Search className="h-5 w-5 shrink-0 transition-colors group-hover:text-primary" />
+          <span className="text-sm font-medium tracking-tight">Search for anything...</span>
+        </div>
+        <div className="ml-auto flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+            <Command className="h-2.5 w-2.5" />
+          </kbd>
+          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+            K
+          </kbd>
+        </div>
+      </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogTrigger>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setSearchOpen(true)}
+        className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-10 h-10"
+      >
+        <Search className="h-5 w-5" />
+      </Button>
+
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden border-none shadow-2xl">
           <DialogHeader className="p-4 border-b bg-muted/30">
             <DialogTitle className="flex items-center gap-2">
@@ -230,9 +218,11 @@ export function HeaderSearch() {
                 ref={scrollContainerRef}
                 className="flex-1 overflow-y-auto p-2 space-y-1"
               >
-                {searchResults.map((result, index) => (
+                {searchResults.map((result, index) => {
+                  const itemKey = `${result.type}-${result.id || result.user_id || result.room_number || result.reservation_code}`;
+                  return (
                   <div
-                    key={index}
+                    key={itemKey}
                     className={cn(
                       "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200",
                       selectedIndex === index ? "bg-primary text-primary-foreground shadow-md scale-[1.01]" : "hover:bg-secondary"
@@ -283,7 +273,7 @@ export function HeaderSearch() {
                       selectedIndex === index ? "opacity-100" : "opacity-0"
                     )} />
                   </div>
-                ))}
+                )})}
               </div>
             )}
 
