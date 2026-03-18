@@ -86,6 +86,7 @@ import {
   useEventStaffAssignments,
 } from "@/hooks/useBanquetData";
 import { useGuests } from "@/hooks/useGuests";
+import { useBanquetSettings } from "@/hooks/useSettings";
 
 interface BanquetEvent {
   id: string;
@@ -130,6 +131,7 @@ const statusColors: Record<string, string> = {
 
 export default function Banquet() {
   const queryClient = useQueryClient();
+  const { data: banquetSettings } = useBanquetSettings();
   const { data: cateringOrders = [] } = useCateringOrders();
   const { data: venueSetups = [] } = useVenueSetups();
   const { data: allAssignments = [] } = useEventStaffAssignments();
@@ -813,7 +815,8 @@ export default function Banquet() {
           </motion.div>
 
           <AnimatePresence mode="wait">
-            <TabsContent key="events" value="events" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "events" && (
+            <TabsContent key="events" value="events" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1103,8 +1106,10 @@ export default function Banquet() {
                 </Card>
               </motion.div>
             </TabsContent>
+            )}
 
-            <TabsContent key="calendar" value="calendar" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "calendar" && (
+            <TabsContent key="calendar" value="calendar" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1136,8 +1141,10 @@ export default function Banquet() {
                 />
               </motion.div>
             </TabsContent>
+            )}
 
-            <TabsContent key="catering" value="catering" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "catering" && (
+            <TabsContent key="catering" value="catering" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1152,8 +1159,8 @@ export default function Banquet() {
                     client_name: e.client_name,
                     event_date: e.event_date,
                     venue: e.venue,
-                    guest_count: e.guest_count,
-                    status: e.status,
+                    guest_count: e.guest_count || 0,
+                    status: e.status as any,
                     menu_package: e.menu_package,
                     special_requests: e.special_requests,
                   }))}
@@ -1161,8 +1168,10 @@ export default function Banquet() {
                 />
               </motion.div>
             </TabsContent>
+            )}
 
-            <TabsContent key="venue" value="venue" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "venue" && (
+            <TabsContent key="venue" value="venue" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1177,15 +1186,17 @@ export default function Banquet() {
                     client_name: e.client_name,
                     event_date: e.event_date,
                     venue: e.venue,
-                    guest_count: e.guest_count,
-                    status: e.status,
+                    guest_count: e.guest_count || 0,
+                    status: e.status as any,
                   }))}
                   onViewDetails={handleViewDetails}
                 />
               </motion.div>
             </TabsContent>
+            )}
 
-            <TabsContent key="staffing" value="staffing" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "staffing" && (
+            <TabsContent key="staffing" value="staffing" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1199,13 +1210,15 @@ export default function Banquet() {
                     client_name: e.client_name,
                     event_date: e.event_date,
                     venue: e.venue,
-                    guest_count: e.guest_count,
+                    guest_count: e.guest_count || 0,
                   }))}
                 />
               </motion.div>
             </TabsContent>
+            )}
 
-            <TabsContent key="reports" value="reports" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "reports" && (
+            <TabsContent key="reports" value="reports" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1228,8 +1241,10 @@ export default function Banquet() {
                 />
               </motion.div>
             </TabsContent>
+            )}
 
-            <TabsContent key="settings" value="settings" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            {activeTab === "settings" && (
+            <TabsContent key="settings" value="settings" className="mt-0 focus-visible:outline-none focus-visible:ring-0" forceMount>
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1239,6 +1254,7 @@ export default function Banquet() {
                 <BanquetSettingsPanel />
               </motion.div>
             </TabsContent>
+            )}
           </AnimatePresence>
         </Tabs>
       </div>
@@ -1613,12 +1629,22 @@ export default function Banquet() {
                     </Badge>
                   )}
                 </Label>
-                <Input
-                  placeholder="Grand Ballroom"
+                <Select
                   value={newEvent.venue}
-                  onChange={(e) => setNewEvent((p) => ({ ...p, venue: e.target.value }))}
-                  className={conflicts.length > 0 ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
+                  onValueChange={(v) => setNewEvent((p) => ({ ...p, venue: v }))}
+                >
+                  <SelectTrigger className={conflicts.length > 0 ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select Venue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banquetSettings?.venues.map(v => (
+                      <SelectItem key={v.id} value={v.name}>{v.name} (Cap: {v.capacity})</SelectItem>
+                    ))}
+                    {(!banquetSettings?.venues || banquetSettings.venues.length === 0) && (
+                      <SelectItem value="none" disabled>No venues configured</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 {conflicts.length > 0 && (
                   <p className="text-[10px] text-destructive font-medium">
                     Overlaps with "{conflicts[0].event_name}"
@@ -1627,11 +1653,29 @@ export default function Banquet() {
               </div>
               <div className="space-y-2">
                 <Label>Menu Package</Label>
-                <Input
-                  placeholder="Premium Buffet"
-                  value={newEvent.menu_package}
-                  onChange={(e) => setNewEvent((p) => ({ ...p, menu_package: e.target.value }))}
-                />
+                <Select
+                  value={newEvent.menu_package || ""}
+                  onValueChange={(v) => {
+                    const pkg = banquetSettings?.menu_packages.find(p => p.name === v);
+                    setNewEvent((p) => ({
+                      ...p,
+                      menu_package: v,
+                      total_amount: (pkg?.price_per_head || 0) * p.guest_count
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banquetSettings?.menu_packages.map(p => (
+                      <SelectItem key={p.id} value={p.name}>{p.name} - ${p.price_per_head}/head</SelectItem>
+                    ))}
+                    {(!banquetSettings?.menu_packages || banquetSettings.menu_packages.length === 0) && (
+                      <SelectItem value="none" disabled>No packages configured</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
