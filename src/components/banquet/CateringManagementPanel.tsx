@@ -52,7 +52,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import {
   useCateringOrders,
   useCreateCateringOrder,
@@ -116,8 +115,6 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-
-  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
 
   // Database persistence for catering orders
   const { data: cateringOrders = [], isLoading } = useCateringOrders();
@@ -513,9 +510,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
-                              onPointerDownOutside={handlePointerDownOutside}
-                              onEscapeKeyDown={handleEscapeKeyDown}
+                              className="w-52"
                             >
                               <div className="flex items-center justify-between px-2 py-1.5">
                                 <DropdownMenuLabel className="p-0">Catering Actions</DropdownMenuLabel>
