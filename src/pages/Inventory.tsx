@@ -6,7 +6,7 @@ import {
   Package, Truck, Warehouse, ArrowUpDown, FolderTree,
   ArrowRightLeft, BarChart3, Settings2, ClipboardList,
   ChefHat, Trash2, Ruler, Store, ScanLine, ListChecks,
-  Boxes, Settings, ArrowUpRight, Utensils, ShieldCheck
+  Boxes, Settings, ArrowUpRight, Utensils, ShieldCheck, Undo2
 } from "lucide-react";
 import {
   ItemsTab, CategoriesTab, SuppliersTab, PurchaseOrdersTab,
@@ -14,7 +14,7 @@ import {
   UoMTab, StoresTab, RequisitionsTab, RecipesTab,
   WastageTab, StockCountTab, InventorySettingsTab, StockIssueTab,
   InventoryValuationReport, ExpiryReport, FoodCostReport,
-  ApprovalsQueueTab
+  ApprovalsQueueTab, ReturnsTab
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +66,7 @@ const Inventory = () => {
       { id: "transfers", label: "Transfers", icon: ArrowRightLeft },
       { id: "stock-count", label: "Stock Count", icon: ListChecks },
       { id: "wastage", label: "Wastage", icon: Trash2 },
+      { id: "returns", label: "Returns", icon: Undo2 },
     ],
     reports: [
       { id: "stock-on-hand", label: "Stock on Hand", icon: Package },
@@ -129,6 +130,7 @@ const Inventory = () => {
             <TabsContent value="transfers"><TransfersTab /></TabsContent>
             <TabsContent value="stock-count"><StockCountTab /></TabsContent>
             <TabsContent value="wastage"><WastageTab /></TabsContent>
+            <TabsContent value="returns"><ReturnsTab /></TabsContent>
 
             {/* Reports Content */}
             <TabsContent value="stock-on-hand"><ReportsTab /></TabsContent>

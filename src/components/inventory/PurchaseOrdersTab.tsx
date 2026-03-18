@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Loader2, Warehouse, PackageCheck, Eye, X, CheckCircle, ShieldAlert, Calendar, RotateCcw } from "lucide-react";
+import { Plus, Loader2, Warehouse, PackageCheck, Eye, X, CheckCircle, ShieldAlert, Calendar, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs } from "@/hooks/useInventory";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
