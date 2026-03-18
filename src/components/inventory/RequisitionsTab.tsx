@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, ClipboardList, Loader2, CheckCircle, XCircle, ShoppingCart } from "lucide-react";
+import { Plus, ClipboardList, Loader2, CheckCircle, XCircle, ShoppingCart, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryRequisitions, useInventoryItems, usePurchaseOrders } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 export function RequisitionsTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -22,6 +24,21 @@ export function RequisitionsTab() {
     department: "", required_date: "", priority: "normal", notes: "",
     items: [] as { item_id: string, quantity: number }[]
   });
+
+  const { data: budgets } = useQuery({
+    queryKey: ["department-budgets"],
+    queryFn: async () => {
+       const { data } = await supabase.from('budgets').select('*').eq('status', 'active');
+       return data || [];
+    }
+  });
+
+  const calculateTotalValue = () => {
+    return form.items.reduce((sum, ri) => {
+       const item = items.find(i => i.id === ri.item_id);
+       return sum + (ri.quantity * (item?.avg_cost || item?.cost_price || 0));
+    }, 0);
+  };
 
   const addItemToReq = () => {
     setForm({ ...form, items: [...form.items, { item_id: "", quantity: 1 }] });
@@ -38,6 +55,13 @@ export function RequisitionsTab() {
       if (form.items.length === 0) {
         toast.error("Please add at least one item");
         return;
+      }
+
+      const totalValue = calculateTotalValue();
+      const deptBudget = budgets?.find(b => b.name === form.department || b.type === form.department);
+
+      if (deptBudget && totalValue > (deptBudget.total_amount || 0)) {
+         toast.error(`Warning: This requisition (${formatCurrency(totalValue)}) exceeds the departmental budget of ${formatCurrency(deptBudget.total_amount)}`);
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -173,7 +197,13 @@ export function RequisitionsTab() {
             <div className="space-y-2 col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
             <div className="col-span-2 space-y-4 pt-4 border-t">
-              <div className="flex justify-between items-center"><Label className="text-base">Requested Items</Label><Button type="button" variant="outline" size="sm" onClick={addItemToReq}><Plus className="h-4 w-4 mr-2" />Add Item</Button></div>
+              <div className="flex justify-between items-center">
+                <div>
+                   <Label className="text-base">Requested Items</Label>
+                   <p className="text-xs text-muted-foreground italic">Estimated Value: {formatCurrency(calculateTotalValue())}</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addItemToReq}><Plus className="h-4 w-4 mr-2" />Add Item</Button>
+              </div>
               {form.items.map((item, idx) => (
                 <div key={idx} className="flex gap-4 items-end">
                   <div className="flex-1 space-y-1">

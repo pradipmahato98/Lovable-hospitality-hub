@@ -16,7 +16,7 @@ export function ApprovalsQueueTab() {
   const { data: pendingAdjustments = [], refetch: refetchAdj } = useQuery({
      queryKey: ["pending-inventory-adjustments-queue"],
      queryFn: async () => {
-        const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').eq('notes', 'PENDING_APPROVAL');
+        const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
         return data || [];
      }
   });
@@ -26,7 +26,14 @@ export function ApprovalsQueueTab() {
 
   const handleApproveAdj = async (adj: any) => {
      try {
-        await adjustStock.mutateAsync({ itemId: adj.item_id, quantity: adj.quantity, type: adj.movement_type === 'out' ? 'out' : 'in', notes: 'Approved' });
+        const [status, reason, notes] = adj.notes?.split('|') || [];
+        await adjustStock.mutateAsync({
+           itemId: adj.item_id,
+           quantity: adj.quantity,
+           type: adj.movement_type === 'out' ? 'out' : 'in',
+           reason: reason || 'Adjustment',
+           notes: notes || ''
+        });
         await supabase.from('stock_movements').delete().eq('id', adj.id);
         toast.success("Adjustment approved");
         refetchAdj();
@@ -109,8 +116,14 @@ export function ApprovalsQueueTab() {
                      {pendingAdjustments.map((a: any) => (
                         <TableRow key={a.id}>
                            <TableCell className="py-3">
-                              <p className="text-xs font-bold">{a.item?.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{a.movement_type.toUpperCase()} - Qty: {a.quantity}</p>
+                              <div className="flex justify-between items-start">
+                                 <div>
+                                    <p className="text-xs font-bold">{a.item?.name}</p>
+                                    <p className="text-[10px] text-muted-foreground">{a.movement_type.toUpperCase()} - Qty: {a.quantity}</p>
+                                 </div>
+                                 <Badge variant="outline" className="text-[8px] h-4 uppercase">{a.notes?.split('|')[1] || 'Adj'}</Badge>
+                              </div>
+                              {a.notes?.split('|')[2] && <p className="text-[9px] mt-1 italic text-muted-foreground">"{a.notes.split('|')[2]}"</p>}
                            </TableCell>
                            <TableCell className="text-right">
                               <div className="flex justify-end gap-1">

@@ -211,7 +211,7 @@ export function StockIssueTab() {
 
       {/* Direct Issue Modal */}
       <Dialog open={isDirectIssueOpen} onOpenChange={setIsDirectIssueOpen}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Direct Stock Issue (Ad-hoc)</DialogTitle><DialogDescription>Issue items without a pre-existing requisition</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
                <div className="space-y-1"><Label>Recipient Department *</Label><Input value={directIssueForm.department} onChange={(e) => setDirectIssueForm({...directIssueForm, department: e.target.value})} placeholder="e.g. Banquet 01" /></div>

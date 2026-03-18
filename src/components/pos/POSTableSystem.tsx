@@ -65,6 +65,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { SplitBillPanel } from "./SplitBillPanel";
 import { useInventoryPOS } from "@/hooks/useInventory";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
 
 interface TableInfo {
   id: string;
@@ -116,6 +117,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   } = usePOSTables();
   const updateTable = useUpdatePOSTable();
   const createTransaction = useCreatePOSTransaction();
+  const { addFolioItem } = useGuestFolios();
   const { deductBulkInventoryForSale } = useInventoryPOS();
 
   // Transform POSTable to TableInfo format
@@ -440,6 +442,18 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       }
 
       onCheckout(total, selectedTable.orders);
+
+      // Post to Guest Folio if customer has an active folio
+      const { data: activeFolio } = await supabase.from('guest_folios').select('id').eq('table_id', selectedTable.id).eq('status', 'open').maybeSingle();
+      if (activeFolio) {
+         await addFolioItem.mutateAsync({
+           folio_id: activeFolio.id,
+           item_type: 'charge',
+           source: 'restaurant',
+           description: `Table ${selectedTable.number} Bill`,
+           amount: total,
+         });
+      }
 
       // Trigger inventory deduction
       // For real inventory link, the OrderItem name/id should match MenuItem name/id

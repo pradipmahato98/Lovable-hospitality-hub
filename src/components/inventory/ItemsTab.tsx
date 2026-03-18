@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent, Timer, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, useInventoryStores, InventoryItem } from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -39,7 +39,7 @@ export function ItemsTab() {
   const { data: pendingAdjustments = [], refetch: refetchAdj } = useQuery({
      queryKey: ["pending-inventory-adjustments"],
      queryFn: async () => {
-        const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').eq('notes', 'PENDING_APPROVAL');
+        const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
         return data || [];
      }
   });
@@ -50,7 +50,7 @@ export function ItemsTab() {
     tax_applicability: [] as string[]
   };
   const [form, setForm] = useState(emptyForm);
-  const [stockAdj, setStockAdj] = useState({ quantity: 0, type: "adjustment" as any, notes: "", storeId: "" });
+  const [stockAdj, setStockAdj] = useState({ quantity: 0, type: "adjustment" as any, notes: "", storeId: "", reason: "Physical Count" });
 
   const filteredItems = items.filter((item) => {
     const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.sku?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -79,7 +79,7 @@ export function ItemsTab() {
          quantity: stockAdj.quantity,
          store_id: stockAdj.storeId,
          reference_type: 'manual_adjustment',
-         notes: 'PENDING_APPROVAL'
+         notes: `PENDING_APPROVAL|${stockAdj.reason}|${stockAdj.notes}`
       });
       toast.success("Adjustment request submitted");
       setAdjustStockOpen(false);
@@ -89,12 +89,14 @@ export function ItemsTab() {
 
   const approveAdjustment = async (adj: any) => {
      try {
+        const [status, reason, notes] = adj.notes?.split('|') || [];
         const type = adj.movement_type === 'out' ? 'out' : 'in';
         await adjustStock.mutateAsync({
            itemId: adj.item_id,
            quantity: adj.quantity,
            type: type,
-           notes: `Approved Adjustment: ${adj.notes}`
+           reason: reason || 'Adjustment',
+           notes: notes || ''
         });
         await supabase.from('stock_movements').delete().eq('id', adj.id);
         toast.success("Adjustment approved");
@@ -125,11 +127,13 @@ export function ItemsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="pt-4"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Total SKUs</p><p className="text-2xl font-bold">{stats.totalItems}</p></div><Package className="h-8 w-8 text-muted-foreground" /></div></CardContent></Card>
-        <Card className="cursor-pointer hover:border-amber-500/50" onClick={() => setShowLowStock(!showLowStock)}><CardContent className="pt-4"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Low Stock</p><p className="text-2xl font-bold text-amber-500">{stats.lowStock}</p></div><AlertTriangle className="h-8 w-8 text-amber-500" /></div></CardContent></Card>
-        <Card className="cursor-pointer border-blue-500/50 bg-blue-50/50" onClick={() => setPendingAdjOpen(true)}><CardContent className="pt-4"><div className="flex items-center justify-between"><div><p className="text-sm text-blue-600 font-bold uppercase tracking-wider">Pending Adj.</p><p className="text-2xl font-bold text-blue-700">{pendingAdjustments.length}</p></div><ArrowUpDown className="h-8 w-8 text-blue-500" /></div></CardContent></Card>
-        <Card><CardContent className="pt-4"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Asset Value</p><p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalValue)}</p></div><DollarSign className="h-8 w-8 text-primary" /></div></CardContent></Card>
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <Card className="lg:col-span-1"><CardContent className="pt-4 px-3"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter leading-none">Total SKUs</p><p className="text-xl font-bold mt-1">{stats.totalItems}</p></div><Package className="h-5 w-5 text-muted-foreground" /></div></CardContent></Card>
+        <Card className="lg:col-span-1 cursor-pointer hover:border-amber-500/50" onClick={() => setShowLowStock(!showLowStock)}><CardContent className="pt-4 px-3"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter leading-none">Low Stock</p><p className="text-xl font-bold text-amber-500 mt-1">{stats.lowStock}</p></div><AlertTriangle className="h-5 w-5 text-amber-500" /></div></CardContent></Card>
+        <Card className="lg:col-span-1 cursor-pointer border-blue-500/50 bg-blue-50/50" onClick={() => setPendingAdjOpen(true)}><CardContent className="pt-4 px-3"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter leading-none">Pending Adj.</p><p className="text-xl font-bold text-blue-700 mt-1">{pendingAdjustments.length}</p></div><ArrowUpDown className="h-5 w-5 text-blue-500" /></div></CardContent></Card>
+        <Card className="lg:col-span-1"><CardContent className="pt-4 px-3"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter leading-none">Avg Aging</p><p className="text-xl font-bold mt-1">{stats.avgAgingDays}d</p></div><Timer className="h-5 w-5 text-muted-foreground" /></div></CardContent></Card>
+        <Card className="lg:col-span-1"><CardContent className="pt-4 px-3"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter leading-none">Last Variance</p><p className="text-xl font-bold text-destructive mt-1">{stats.stockVariance}</p></div><Activity className="h-5 w-5 text-destructive" /></div></CardContent></Card>
+        <Card className="lg:col-span-1"><CardContent className="pt-4 px-3"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter leading-none">Asset Value</p><p className="text-xl font-bold text-primary mt-1 truncate">{formatCurrency(stats.totalValue)}</p></div><DollarSign className="h-5 w-5 text-primary" /></div></CardContent></Card>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between bg-muted/30 p-4 rounded-xl border border-dashed border-primary/20">
@@ -204,7 +208,7 @@ export function ItemsTab() {
 
       {/* Item Register Dialog */}
       <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
-         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-3xl">
             <DialogHeader><DialogTitle>Item Master Registration</DialogTitle></DialogHeader>
             <div className="grid grid-cols-2 gap-6 py-4 pr-2">
                <div className="col-span-2 space-y-1"><Label className="text-xs">Item Name *</Label><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder="e.g. Absolut Vodka 750ml" /></div>
@@ -259,7 +263,36 @@ export function ItemsTab() {
       </Dialog>
 
       {/* Reusing existing Store and Adjustment dialogs */}
-      <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}><DialogContent><DialogHeader><DialogTitle>Correction: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4 space-y-4"><div className="space-y-2"><Label>Qty</Label><Input type="number" onChange={(e) => setStockAdj({...stockAdj, quantity: Number(e.target.value)})} /></div></div><DialogFooter><Button onClick={handleAdjustRequest}>Submit Request</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}>
+         <DialogContent>
+            <DialogHeader><DialogTitle>Stock Correction: {selectedItem?.name}</DialogTitle></DialogHeader>
+            <div className="py-4 space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1"><Label>Type</Label>
+                     <Select value={stockAdj.type} onValueChange={(v) => setStockAdj({...stockAdj, type: v})}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="in">Increase (+)</SelectItem><SelectItem value="out">Decrease (-)</SelectItem></SelectContent>
+                     </Select>
+                  </div>
+                  <div className="space-y-1"><Label>Quantity</Label><Input type="number" onChange={(e) => setStockAdj({...stockAdj, quantity: Number(e.target.value)})} /></div>
+               </div>
+               <div className="space-y-1"><Label>Reason</Label>
+                  <Select value={stockAdj.reason} onValueChange={(v) => setStockAdj({...stockAdj, reason: v})}>
+                     <SelectTrigger><SelectValue /></SelectTrigger>
+                     <SelectContent>
+                        <SelectItem value="Physical Count">Physical Count Variance</SelectItem>
+                        <SelectItem value="Damage">Damage / Broken</SelectItem>
+                        <SelectItem value="Expiry">Expired Goods</SelectItem>
+                        <SelectItem value="Theft">Missing / Theft</SelectItem>
+                        <SelectItem value="Loss">Processing Loss</SelectItem>
+                     </SelectContent>
+                  </Select>
+               </div>
+               <div className="space-y-1"><Label>Notes</Label><Input placeholder="Additional comments..." onChange={(e) => setStockAdj({...stockAdj, notes: e.target.value})} /></div>
+            </div>
+            <DialogFooter><Button onClick={handleAdjustRequest}>Submit for Approval</Button></DialogFooter>
+         </DialogContent>
+      </Dialog>
       <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.id} className="flex justify-between p-2 border-b text-xs"><span>{s.name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
       <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a: any) => <div key={a.id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
     </div>

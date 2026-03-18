@@ -11,8 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
 import { cn, formatAD, formatCurrency } from "@/lib/utils";
-import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut } from "lucide-react";
+import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut, Wallet, AlertTriangle } from "lucide-react";
 import { useCheckInSettings } from "@/hooks/useSettings";
+import { useInvoices } from "@/hooks/useBillingData";
 
 interface Room {
   id: string;
@@ -40,6 +41,9 @@ export function CheckInOutDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const { data: checkInSettings } = useCheckInSettings();
+  const { data: allInvoices = [] } = useInvoices();
+  const [guestDue, setGuestDue] = useState(0);
+  const [reservation, setReservation] = useState<any>(null);
 
   // Walk-in form state
   const [formData, setFormData] = useState({
@@ -58,10 +62,32 @@ export function CheckInOutDialog({
   });
 
   useEffect(() => {
-    if (open && mode === "walk-in") {
-      fetchAvailableRooms();
+    if (open) {
+      if (mode === "walk-in") {
+        fetchAvailableRooms();
+      } else if (reservationId) {
+        fetchReservationDetails();
+      }
     }
-  }, [open, mode]);
+  }, [open, mode, reservationId]);
+
+  const fetchReservationDetails = async () => {
+    const { data, error } = await supabase
+      .from("reservations")
+      .select("*, guest:guests(*)")
+      .eq("id", reservationId)
+      .single();
+
+    if (!error && data) {
+      setReservation(data);
+      if (data.guest_id) {
+        const due = allInvoices
+          .filter(inv => inv.guest_id === data.guest_id && inv.status !== 'paid')
+          .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
+        setGuestDue(due);
+      }
+    }
+  };
 
   const fetchAvailableRooms = async () => {
     const { data, error } = await supabase
@@ -334,6 +360,22 @@ export function CheckInOutDialog({
               : "Process check-out for this guest."}
           </DialogDescription>
         </DialogHeader>
+
+        {guestDue > 0 && (
+          <div className="mx-0 p-3 bg-destructive/10 border-y border-destructive/20 flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <div className="text-left">
+                <p className="text-[10px] font-bold uppercase tracking-wider leading-none">Outstanding Balance Detected</p>
+                <p className="text-xs font-medium">This guest has unpaid invoices from previous stays.</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-destructive/70 font-bold uppercase">Total Due</p>
+              <p className="text-sm font-bold text-destructive font-mono">{formatCurrency(guestDue)}</p>
+            </div>
+          </div>
+        )}
 
         {mode === "walk-in" ? (
           <div className="space-y-6">
