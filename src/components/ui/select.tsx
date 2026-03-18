@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -63,19 +62,14 @@ const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => {
-  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
-
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         ref={ref}
-        onPointerDownOutside={handlePointerDownOutside}
-        onEscapeKeyDown={handleEscapeKeyDown}
         className={cn(
           "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          isBlocking && "animate-shake animate-blink",
           className,
         )}
         position={position}
@@ -92,26 +86,6 @@ const SelectContent = React.forwardRef<
           {children}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
-        {/* We don't have a standard Close primitive for Select, but we can't easily add one that doesn't interfere with selection.
-            However, for 'Select', usually clicking outside is the only way to close it without selecting.
-            The requirement says "Added explicit 'X' or 'Close' buttons to components that were missing them (e.g. Popover, Select)".
-            I'll add a small close button at the bottom or top. */}
-        <div className="flex justify-end p-1 border-t">
-          <button
-            type="button"
-            className="p-1 hover:bg-accent rounded-sm"
-            onClick={(e) => {
-              // Radix Select doesn't expose a simple close method easily via props here,
-              // but we can trigger a click on the trigger or use a trick.
-              // Actually, most Selects should close when an item is picked.
-              // For "Explicit close only", it means it shouldn't close on click outside.
-              // But how to close it then?
-              // The user said: Added explicit "X" or "Close" buttons.
-            }}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );

@@ -2,7 +2,6 @@ import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 
 import { cn } from "@/lib/utils";
 
@@ -53,37 +52,30 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => {
-    const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
-
-    return (
-      <SheetPortal>
-        <SheetOverlay />
-        <SheetPrimitive.Content
-          ref={ref}
-          onPointerDownOutside={handlePointerDownOutside}
-          onEscapeKeyDown={handleEscapeKeyDown}
-          className={cn(
-            sheetVariants({ side }),
-            "flex flex-col h-full overflow-hidden p-0", // Remove padding from Content, handle in scroll area
-            isBlocking && "animate-shake animate-blink",
-            className
-          )}
-          {...props}
-        >
-          <div className="relative flex flex-col h-full w-full overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-              {children}
-            </div>
-            <SheetPrimitive.Close className="absolute right-3 top-3 rounded-full h-8 w-8 flex items-center justify-center bg-black/20 hover:bg-black/40 text-white transition-all focus:outline-none focus:ring-2 focus:ring-ring z-[60]">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </SheetPrimitive.Close>
+  ({ side = "right", className, children, ...props }, ref) => (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(
+          sheetVariants({ side }),
+          "flex flex-col h-full overflow-hidden p-0", // Remove padding from Content, handle in scroll area
+          className
+        )}
+        {...props}
+      >
+        <div className="relative flex flex-col h-full w-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+            {children}
           </div>
-        </SheetPrimitive.Content>
-      </SheetPortal>
-    );
-  },
+          <SheetPrimitive.Close className="absolute right-3 top-3 rounded-md opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        </div>
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  ),
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
