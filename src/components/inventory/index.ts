@@ -17,3 +17,4 @@ export { InventoryValuationReport } from "./InventoryValuationReport";
 export { ExpiryReport } from "./ExpiryReport";
 export { FoodCostReport } from "./FoodCostReport";
 export { ApprovalsQueueTab } from "./ApprovalsQueueTab";
+export { ReturnsTab } from "./ReturnsTab";

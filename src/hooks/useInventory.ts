@@ -232,6 +232,30 @@ export interface InventoryStockCountItem {
   item?: InventoryItem;
 }
 
+export interface InventorySupplierReturn {
+  id: string;
+  return_number: string;
+  supplier_id: string | null;
+  purchase_order_id: string | null;
+  reason: string | null;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  supplier?: Supplier;
+  items?: InventorySupplierReturnItem[];
+}
+
+export interface InventorySupplierReturnItem {
+  id: string;
+  supplier_return_id: string;
+  item_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  notes: string | null;
+  item?: InventoryItem;
+}
+
 // ============= Helper Functions =============
 async function convertUoM(fromId: string, toId: string, quantity: number) {
   if (!fromId || !toId || fromId === toId) return quantity;
@@ -1199,6 +1223,79 @@ export function useInventoryStockCounts() {
   });
 
   return { ...query, reconcileCount };
+}
+
+// ============= Supplier Returns =============
+export function useInventoryReturns() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["inventory-supplier-returns"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("inventory_supplier_returns")
+        .select(`*, supplier:suppliers(*), items:inventory_supplier_return_items(*, item:inventory_items(*))`)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as InventorySupplierReturn[];
+    },
+  });
+
+  const createReturn = useMutation({
+    mutationFn: async ({ items, ...ret }: any) => {
+      const returnNumber = `RTN-${Date.now().toString(36).toUpperCase()}`;
+      const { data: sRet, error: retErr } = await db.from("inventory_supplier_returns").insert({
+        ...ret,
+        return_number: returnNumber,
+        status: 'completed'
+      }).select().single();
+      if (retErr) throw retErr;
+
+      let totalReturnValue = 0;
+      for (const item of items) {
+        const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", item.item_id).single();
+
+        await db.from("inventory_supplier_return_items").insert({
+          supplier_return_id: sRet.id,
+          item_id: item.item_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.quantity * item.unit_price
+        });
+
+        totalReturnValue += (item.quantity * item.unit_price);
+
+        await db.from("inventory_items").update({
+          current_stock: Math.max(0, (invItem?.current_stock || 0) - item.quantity)
+        }).eq("id", item.item_id);
+
+        await db.from("stock_movements").insert({
+          item_id: item.item_id,
+          movement_type: "out",
+          quantity: item.quantity,
+          reference_type: "supplier_return",
+          reference_id: sRet.id,
+          notes: `Return to supplier: ${ret.reason || 'Damaged/Expired'}`,
+        });
+      }
+
+      const assetAcc = await getInventoryAccount('inventory_gl_account');
+      const purchaseAcc = await getInventoryAccount('purchase_gl_account');
+
+      await createFinanceEntry(`Supplier Return (Debit Note): ${returnNumber}`, [
+         { account_id: purchaseAcc, debit: totalReturnValue, credit: 0 },
+         { account_id: assetAcc, debit: 0, credit: totalReturnValue }
+      ]);
+
+      return sRet;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-supplier-returns"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+    },
+  });
+
+  return { ...query, createReturn };
 }
 
 // ============= Stats =============

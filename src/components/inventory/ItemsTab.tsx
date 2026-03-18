@@ -47,6 +47,8 @@ export function ItemsTab() {
   const emptyForm = {
     name: "", sku: "", category_id: "", supplier_id: "", uom_id: "",
     cost_price: 0, selling_price: 0, item_type: "consumable",
+    min_stock: 0, max_stock: 0, reorder_point: 0,
+    shelf_life: "", storage_instructions: "", temperature_classification: "Ambient",
     tax_applicability: [] as string[]
   };
   const [form, setForm] = useState(emptyForm);
@@ -113,6 +115,15 @@ export function ItemsTab() {
   };
 
   const handleCreate = async () => {
+    if (form.min_stock > form.max_stock && form.max_stock > 0) {
+       toast.error("Min stock cannot be greater than max stock");
+       return;
+    }
+    if (form.reorder_point < form.min_stock) {
+       toast.error("Reorder point should be at least equal to min stock");
+       return;
+    }
+
     try {
       const payload: any = { ...form };
       if (!payload.category_id) delete payload.category_id;
@@ -245,6 +256,23 @@ export function ItemsTab() {
                      </SelectContent>
                   </Select>
                </div>
+
+               <div className="space-y-1"><Label className="text-xs">Min Stock</Label><Input type="number" value={form.min_stock} onChange={(e) => setForm({...form, min_stock: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Max Stock</Label><Input type="number" value={form.max_stock} onChange={(e) => setForm({...form, max_stock: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Reorder Point</Label><Input type="number" value={form.reorder_point} onChange={(e) => setForm({...form, reorder_point: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Temp. Classification</Label>
+                  <Select value={form.temperature_classification} onValueChange={(v) => setForm({...form, temperature_classification: v})}>
+                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                     <SelectContent>
+                        <SelectItem value="Ambient">Ambient / Dry</SelectItem>
+                        <SelectItem value="Chilled">Chilled (0-5°C)</SelectItem>
+                        <SelectItem value="Frozen">Frozen (-18°C)</SelectItem>
+                     </SelectContent>
+                  </Select>
+               </div>
+
+               <div className="space-y-1"><Label className="text-xs">Shelf Life (Days)</Label><Input type="number" value={form.shelf_life} onChange={(e) => setForm({...form, shelf_life: e.target.value})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Storage Instructions</Label><Input value={form.storage_instructions} onChange={(e) => setForm({...form, storage_instructions: e.target.value})} placeholder="e.g. Keep away from light" /></div>
 
                <div className="col-span-2 p-3 bg-muted/50 rounded-xl space-y-2 border">
                   <Label className="text-[10px] font-bold uppercase text-primary flex items-center gap-1"><Percent className="h-3 w-3" /> Tax Applicability</Label>

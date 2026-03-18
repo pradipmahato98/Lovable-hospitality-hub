@@ -7,8 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   BarChart3, TrendingDown, TrendingUp, AlertCircle, Download,
   FileText, Truck, Activity, Timer, Boxes, RefreshCw, ShoppingCart,
-  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles, Star
+  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles, Star, LineChart as LineChartIcon
 } from "lucide-react";
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, LineChart, Line, BarChart, Bar, Cell, ComposedChart
+} from "recharts";
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
   useSuppliers, usePurchaseOrders, useInventoryWastage,
@@ -21,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function ReportsTab() {
   const stats = useInventoryStats();
+  const { data: stockCounts = [] } = useInventoryStockCounts();
   const { data: items = [] } = useInventoryItems();
   const { data: movements = [] } = useStockMovements();
   const { data: suppliers = [] } = useSuppliers();
@@ -111,6 +116,23 @@ export function ReportsTab() {
       };
     }).sort((a, b) => b.totalSpend - a.totalSpend);
   }, [suppliers, orders]);
+
+  const varianceTrend = useMemo(() => {
+    return stockCounts.slice(0, 5).reverse().map(sc => ({
+      date: new Date(sc.count_date).toLocaleDateString(),
+      variance: sc.items?.reduce((sum, i) => sum + Math.abs(i.variance), 0) || 0
+    }));
+  }, [stockCounts]);
+
+  const priceTrend = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+    const received = orders.filter(o => o.status === 'received').slice(0, 10).reverse();
+    return received.map(o => ({
+      date: new Date(o.order_date).toLocaleDateString(),
+      avgPrice: o.subtotal / (o.items?.length || 1),
+      total: o.total
+    }));
+  }, [orders]);
 
   const recipeStats = recipes.map(r => {
      const cost = r.items?.reduce((s, i) => s + (i.quantity * (i.item?.cost_price || 0)), 0) || 0;
@@ -276,6 +298,54 @@ export function ReportsTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         {/* Price Trend Chart */}
+         <Card>
+            <CardHeader>
+               <CardTitle className="text-base font-bold flex items-center gap-2"><LineChartIcon className="h-4 w-4" /> Purchase Price Trend</CardTitle>
+               <p className="text-xs text-muted-foreground">Historical average order value over time</p>
+            </CardHeader>
+            <CardContent>
+               <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                     <AreaChart data={priceTrend}>
+                        <defs>
+                           <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#0066ff" stopOpacity={0.1}/>
+                              <stop offset="95%" stopColor="#0066ff" stopOpacity={0}/>
+                           </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis dataKey="date" fontSize={10} />
+                        <YAxis fontSize={10} tickFormatter={(v) => `\$${v}`} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="avgPrice" stroke="#0066ff" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" />
+                     </AreaChart>
+                  </ResponsiveContainer>
+               </div>
+            </CardContent>
+         </Card>
+
+         {/* Audit Variance Trend */}
+         <Card>
+            <CardHeader>
+               <CardTitle className="text-base font-bold flex items-center gap-2"><Activity className="h-4 w-4" /> Audit Variance Trend</CardTitle>
+               <p className="text-xs text-muted-foreground">Variance volume detected across last 5 audits</p>
+            </CardHeader>
+            <CardContent>
+               <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                     <BarChart data={varianceTrend}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis dataKey="date" fontSize={10} />
+                        <YAxis fontSize={10} />
+                        <Tooltip />
+                        <Bar dataKey="variance" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                     </BarChart>
+                  </ResponsiveContainer>
+               </div>
+            </CardContent>
+         </Card>
+
         {/* Department Analysis */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
