@@ -75,10 +75,12 @@ import {
   EventReportsPanel,
   CateringManagementPanel,
   VenueSetupPanel,
+  StaffingManagementPanel,
 } from "@/components/banquet";
 import {
   useCateringOrders,
   useVenueSetups,
+  useEventStaffAssignments,
 } from "@/hooks/useBanquetData";
 import { useGuests } from "@/hooks/useGuests";
 
@@ -127,12 +129,14 @@ export default function Banquet() {
   const queryClient = useQueryClient();
   const { data: cateringOrders = [] } = useCateringOrders();
   const { data: venueSetups = [] } = useVenueSetups();
+  const { data: allAssignments = [] } = useEventStaffAssignments();
   const { data: guests = [] } = useGuests();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "events";
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [balanceFilter, setBalanceFilter] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<{ key: keyof BanquetEvent; direction: 'asc' | 'desc' } | null>(null);
 
   const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
@@ -145,7 +149,10 @@ export default function Banquet() {
   };
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<BanquetEvent | null>(null);
+  const [selectedEventForPayment, setSelectedEventForPayment] = useState<BanquetEvent | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
    const [editingEvent, setEditingEvent] = useState<BanquetEvent | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<
     "connecting" | "connected" | "error"
@@ -365,10 +372,27 @@ export default function Banquet() {
      setDetailsDialogOpen(true);
    };
 
+   const handleOpenPayment = (event: BanquetEvent) => {
+     setSelectedEventForPayment(event);
+     setPaymentAmount(event.total_amount - (event.deposit_amount || 0));
+     setPaymentDialogOpen(true);
+   };
+
+   const handleRecordPayment = () => {
+     if (!selectedEventForPayment) return;
+     const newDeposit = (selectedEventForPayment.deposit_amount || 0) + paymentAmount;
+     updateEvent.mutate({
+       id: selectedEventForPayment.id,
+       updates: { deposit_amount: newDeposit }
+     });
+     setPaymentDialogOpen(false);
+   };
+
   const generateBEO = (event: BanquetEvent) => {
     const doc = new jsPDF();
     const catering = cateringOrders.find(c => c.event_id === event.id);
     const venue = venueSetups.find(v => v.event_id === event.id);
+    const eventAssignments = allAssignments.filter(a => a.event_id === event.id);
 
     // Header
     doc.setFontSize(22);
@@ -451,6 +475,22 @@ export default function Banquet() {
         headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
         styles: { fontSize: 10, cellPadding: 3 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }
+      });
+    }
+
+    // Staff Assignments
+    if (eventAssignments.length > 0) {
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [['Staff Assignments', 'Role', 'Shift']],
+        body: eventAssignments.map(a => [
+          `${a.staff_member?.first_name} ${a.staff_member?.last_name}`,
+          a.role,
+          `${a.start_time.slice(0, 5)} - ${a.end_time.slice(0, 5)}`
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 3 }
       });
     }
 
@@ -554,7 +594,11 @@ export default function Banquet() {
                           e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || e.status === statusFilter;
       const matchesType = typeFilter === "all" || e.event_type === typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
+      const balance = e.total_amount - (e.deposit_amount || 0);
+      const matchesBalance = balanceFilter === "all" ||
+                           (balanceFilter === "due" && balance > 0) ||
+                           (balanceFilter === "paid" && balance <= 0);
+      return matchesSearch && matchesStatus && matchesType && matchesBalance;
     })
     .sort((a, b) => {
       if (!sortConfig) return 0;
@@ -668,6 +712,10 @@ export default function Banquet() {
                 <Layout className="h-4 w-4" />
                 Venue Setup
               </TabsTrigger>
+              <TabsTrigger value="staffing" className="gap-2">
+                <Users className="h-4 w-4" />
+                Staffing
+              </TabsTrigger>
               <TabsTrigger value="reports" className="gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Reports
@@ -722,6 +770,16 @@ export default function Banquet() {
                         <SelectItem value="birthday">Birthday</SelectItem>
                         <SelectItem value="conference">Conference</SelectItem>
                         <SelectItem value="social">Social</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={balanceFilter} onValueChange={setBalanceFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Balance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Balances</SelectItem>
+                        <SelectItem value="due">Outstanding</SelectItem>
+                        <SelectItem value="paid">Fully Paid</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -853,8 +911,18 @@ export default function Banquet() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-right font-medium">{event.guest_count}</TableCell>
-                              <TableCell className="text-right font-mono font-bold text-primary">
-                                {formatCurrency(event.total_amount)}
+                              <TableCell className="text-right">
+                                <div className="flex flex-col items-end">
+                                  <span className="font-mono font-bold text-primary">
+                                    {formatCurrency(event.total_amount)}
+                                  </span>
+                                  {event.total_amount - (event.deposit_amount || 0) > 0 && (
+                                    <span className="text-[10px] text-destructive flex items-center gap-0.5 font-medium">
+                                      <AlertTriangle className="h-2.5 w-2.5" />
+                                      {formatCurrency(event.total_amount - (event.deposit_amount || 0))} due
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={`${statusColors[event.status]} capitalize`}>
@@ -888,6 +956,9 @@ export default function Banquet() {
                                       <DropdownMenuItem onClick={() => handleEditEvent(event)}>
                                         <FileText className="mr-2 h-4 w-4" /> Edit Event
                                       </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleOpenPayment(event)}>
+                                    <Banknote className="mr-2 h-4 w-4" /> Record Payment
+                                  </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
                                       <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'inquiry' })}>
@@ -996,6 +1067,26 @@ export default function Banquet() {
                     status: e.status,
                   }))}
                   onViewDetails={handleViewDetails}
+                />
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent key="staffing" value="staffing" className="focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <StaffingManagementPanel
+                  events={events.map(e => ({
+                    id: e.id,
+                    event_name: e.event_name,
+                    client_name: e.client_name,
+                    event_date: e.event_date,
+                    venue: e.venue,
+                    guest_count: e.guest_count,
+                  }))}
                 />
               </motion.div>
             </TabsContent>
@@ -1400,6 +1491,36 @@ export default function Banquet() {
                  {createEvent.isPending || updateEvent.isPending
                    ? (editingEvent ? "Updating..." : "Creating...")
                    : (editingEvent ? "Update Event" : "Create Event")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              {selectedEventForPayment?.event_name} - Balance Due: {selectedEventForPayment && formatCurrency(selectedEventForPayment.total_amount - (selectedEventForPayment.deposit_amount || 0))}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Payment Amount ($)</Label>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleRecordPayment}>
+                Confirm Payment
               </Button>
             </div>
           </div>
