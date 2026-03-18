@@ -60,6 +60,7 @@ import {
   CateringOrder
 } from "@/hooks/useBanquetData";
 import { useInventoryRecipes } from "@/hooks/useInventory";
+import { useBanquetSettings } from "@/hooks/useSettings";
 
 interface BanquetEvent {
   id: string;
@@ -79,13 +80,6 @@ interface CateringManagementPanelProps {
   onViewDetails?: (event: BanquetEvent) => void;
 }
 
-const menuPackages = [
-  { id: "standard", name: "Standard Buffet", pricePerHead: 45 },
-  { id: "premium", name: "Premium Buffet", pricePerHead: 75 },
-  { id: "deluxe", name: "Deluxe Plated", pricePerHead: 95 },
-  { id: "gourmet", name: "Gourmet Experience", pricePerHead: 125 },
-  { id: "custom", name: "Custom Menu", pricePerHead: 0 },
-];
 
 const dietaryOptions = [
   "Vegetarian",
@@ -112,6 +106,7 @@ const beverageOptions = [
 
 export function CateringManagementPanel({ events, onViewDetails }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { data: banquetSettings } = useBanquetSettings();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
@@ -126,7 +121,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
   const updateOrderMutation = useUpdateCateringOrder();
 
   const [newOrder, setNewOrder] = useState({
-    menu_package: "standard",
+    menu_package: "",
     dietary_requirements: [] as string[],
     serving_style: "Buffet",
     beverage_selections: [] as string[],
@@ -137,7 +132,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
   const stockCheck = useMemo(() => {
     if (!selectedEvent || !newOrder.menu_package) return null;
 
-    const pkgName = menuPackages.find(p => p.id === newOrder.menu_package)?.name;
+    const pkgName = banquetSettings?.menu_packages.find(p => p.name === newOrder.menu_package)?.name;
     const recipe = recipes.find(r => r.name.toLowerCase().includes(pkgName?.toLowerCase() || ""));
 
     if (!recipe || !recipe.recipe_items) return null;
@@ -214,7 +209,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
       });
     } else {
       setNewOrder({
-        menu_package: "standard",
+        menu_package: banquetSettings?.menu_packages[0]?.name || "standard",
         dietary_requirements: [],
         serving_style: "Buffet",
         beverage_selections: ["Soft Drinks", "Coffee & Tea"],
@@ -227,8 +222,8 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
   const handleSaveOrder = async () => {
     if (!selectedEvent) return;
 
-    const pkg = menuPackages.find((p) => p.id === newOrder.menu_package);
-    const totalCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
+    const pkg = banquetSettings?.menu_packages.find((p) => p.name === newOrder.menu_package);
+    const totalCost = (pkg?.price_per_head || 0) * selectedEvent.guest_count;
 
     const existingOrder = getOrderForEvent(selectedEvent.id);
 
@@ -579,18 +574,21 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {menuPackages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id}>
+                  {banquetSettings?.menu_packages.map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.name}>
                       <div className="flex justify-between items-center gap-4">
                         <span>{pkg.name}</span>
-                        {pkg.pricePerHead > 0 && (
+                        {pkg.price_per_head > 0 && (
                           <span className="text-muted-foreground">
-                            ${pkg.pricePerHead}/head
+                            ${pkg.price_per_head}/head
                           </span>
                         )}
                       </div>
                     </SelectItem>
                   ))}
+                  {(!banquetSettings?.menu_packages || banquetSettings.menu_packages.length === 0) && (
+                    <SelectItem value="none" disabled>No packages configured</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -705,14 +703,14 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                   <span className="text-2xl font-bold">
                     $
                     {(
-                      (menuPackages.find((p) => p.id === newOrder.menu_package)?.pricePerHead ||
+                      (banquetSettings?.menu_packages.find((p) => p.name === newOrder.menu_package)?.price_per_head ||
                         0) * selectedEvent.guest_count
                     ).toLocaleString()}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Based on {selectedEvent.guest_count} guests × $
-                  {menuPackages.find((p) => p.id === newOrder.menu_package)?.pricePerHead || 0}/head
+                  {banquetSettings?.menu_packages.find((p) => p.name === newOrder.menu_package)?.price_per_head || 0}/head
                 </p>
               </div>
             )}
