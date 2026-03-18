@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   BarChart3, TrendingDown, TrendingUp, AlertCircle, Download,
   FileText, Truck, Activity, Timer, Boxes, RefreshCw, ShoppingCart,
-  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles
+  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles, Star
 } from "lucide-react";
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
@@ -80,23 +80,36 @@ export function ReportsTab() {
   const supplierPerformance = useMemo(() => {
     return suppliers.map(s => {
       const supplierOrders = orders.filter(o => o.supplier_id === s.id);
-      const receivedOrders = supplierOrders.filter(o => o.status === 'received');
+      const receivedOrders = supplierOrders.filter(o => (o.status === 'received' || o.status === 'partially_received'));
 
       let avgLeadTime = 0;
+      let totalSpend = 0;
+
       if (receivedOrders.length > 0) {
         avgLeadTime = receivedOrders.reduce((sum, o) => {
+          if (!o.received_date) return sum + 2; // Assume 2 days if not recorded but marked received
           const ordered = new Date(o.order_date).getTime();
-          const received = new Date(o.received_date!).getTime();
-          return sum + (received - ordered) / (1000 * 60 * 60 * 24);
+          const received = new Date(o.received_date).getTime();
+          return sum + Math.max(0, (received - ordered) / (1000 * 60 * 60 * 24));
         }, 0) / receivedOrders.length;
+
+        totalSpend = receivedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
       }
 
       const fulfillmentRate = supplierOrders.length > 0
         ? (receivedOrders.length / supplierOrders.length) * 100
         : 0;
 
-      return { name: s.name, avgLeadTime, fulfillmentRate, totalOrders: supplierOrders.length };
-    });
+      return {
+        id: s.id,
+        name: s.name,
+        avgLeadTime: avgLeadTime.toFixed(1),
+        fulfillmentRate: fulfillmentRate.toFixed(0),
+        totalOrders: supplierOrders.length,
+        totalSpend,
+        rating: s.rating || 5
+      };
+    }).sort((a, b) => b.totalSpend - a.totalSpend);
   }, [suppliers, orders]);
 
   const recipeStats = recipes.map(r => {
@@ -215,6 +228,53 @@ export function ReportsTab() {
         </Card>
       </div>
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+         <Card className="bg-muted/30">
+            <CardContent className="pt-4">
+               <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center"><Timer className="h-4 w-4 text-primary" /></div>
+                  <div>
+                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Inventory Aging</p>
+                     <p className="text-lg font-bold">{stats.avgAgingDays} <span className="text-[10px] font-normal lowercase">days avg</span></p>
+                  </div>
+               </div>
+            </CardContent>
+         </Card>
+         <Card className="bg-muted/30">
+            <CardContent className="pt-4">
+               <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded bg-destructive/10 flex items-center justify-center"><AlertCircle className="h-4 w-4 text-destructive" /></div>
+                  <div>
+                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Stock Variance</p>
+                     <p className="text-lg font-bold text-destructive">{stats.stockVariance} <span className="text-[10px] font-normal lowercase">units</span></p>
+                  </div>
+               </div>
+            </CardContent>
+         </Card>
+         <Card className="bg-muted/30">
+            <CardContent className="pt-4">
+               <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded bg-success/10 flex items-center justify-center"><Boxes className="h-4 w-4 text-success" /></div>
+                  <div>
+                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Available SKUs</p>
+                     <p className="text-lg font-bold text-success">{stats.totalItems - stats.outOfStock}</p>
+                  </div>
+               </div>
+            </CardContent>
+         </Card>
+         <Card className="bg-muted/30">
+            <CardContent className="pt-4">
+               <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded bg-amber-500/10 flex items-center justify-center"><AlertCircle className="h-4 w-4 text-amber-500" /></div>
+                  <div>
+                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Reorder Alerts</p>
+                     <p className="text-lg font-bold text-amber-500">{stats.lowStock}</p>
+                  </div>
+               </div>
+            </CardContent>
+         </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Department Analysis */}
         <Card>
@@ -307,23 +367,28 @@ export function ReportsTab() {
           </CardContent>
         </Card>
 
-        {/* Supplier Performance */}
+        {/* Smart Reorder Suggestions */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold">Supplier Performance</CardTitle>
-            <p className="text-xs text-muted-foreground">Delivery and fulfillment metrics</p>
+            <CardTitle className="text-base font-bold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Smart Reorder Suggestions</CardTitle>
+            <p className="text-xs text-muted-foreground">AI-driven replenishment based on usage trends</p>
           </CardHeader>
           <CardContent>
              <Table>
-                <TableHeader><TableRow><TableHead>Supplier</TableHead><TableHead className="text-right">Lead Time</TableHead><TableHead className="text-right">Fulfill %</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right">Suggested Qty</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                 <TableBody>
-                   {supplierPerformance.slice(0, 5).map((s, idx) => (
+                   {stats.reorderSuggestions?.map((s, idx) => (
                       <TableRow key={idx}>
                          <TableCell className="text-xs font-medium">{s.name}</TableCell>
-                         <TableCell className="text-right text-xs">{s.avgLeadTime > 0 ? `${s.avgLeadTime.toFixed(1)}d` : 'N/A'}</TableCell>
-                         <TableCell className="text-right text-xs font-bold text-success">{s.fulfillmentRate.toFixed(1)}%</TableCell>
+                         <TableCell className="text-right text-xs font-bold">{s.suggestedQty}</TableCell>
+                         <TableCell className="text-right">
+                            <Button variant="outline" size="xs" className="h-7 text-[10px]" onClick={handleAutoReplenish}>Create Req.</Button>
+                         </TableCell>
                       </TableRow>
                    ))}
+                   {(!stats.reorderSuggestions || stats.reorderSuggestions.length === 0) && (
+                      <TableRow><TableCell colSpan={3} className="text-center py-8 text-xs italic text-muted-foreground">No suggestions available</TableCell></TableRow>
+                   )}
                 </TableBody>
              </Table>
           </CardContent>
@@ -353,6 +418,64 @@ export function ReportsTab() {
             </Card>
           ))}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6">
+         {/* Supplier Performance Scorecard */}
+         <Card className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+               <div>
+                  <CardTitle className="text-base font-bold">Supplier Delivery & Performance Analytics</CardTitle>
+                  <p className="text-xs text-muted-foreground">Lead time, fulfillment rates, and spend analysis</p>
+               </div>
+               <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => handleExport("Supplier Performance", "excel")}>
+                  <FileSpreadsheet className="h-3 w-3" /> Export Analytics
+               </Button>
+            </CardHeader>
+            <CardContent>
+               <Table>
+                  <TableHeader>
+                     <TableRow>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead className="text-center">Lead Time (Avg)</TableHead>
+                        <TableHead className="text-center">Fulfillment</TableHead>
+                        <TableHead className="text-right">Total Spend</TableHead>
+                        <TableHead className="text-center">Rating</TableHead>
+                     </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                     {supplierPerformance.slice(0, 6).map((s, idx) => (
+                        <TableRow key={idx}>
+                           <TableCell>
+                              <p className="text-xs font-bold">{s.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{s.totalOrders} total orders</p>
+                           </TableCell>
+                           <TableCell className="text-center">
+                              <Badge variant="secondary" className="text-[10px]">{s.avgLeadTime} days</Badge>
+                           </TableCell>
+                           <TableCell className="text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                 <span className="text-[10px] font-bold">{s.fulfillmentRate}%</span>
+                                 <div className="w-16 h-1 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500" style={{ width: `${s.fulfillmentRate}%` }} />
+                                 </div>
+                              </div>
+                           </TableCell>
+                           <TableCell className="text-right font-mono text-xs font-bold">
+                              {formatCurrency(s.totalSpend)}
+                           </TableCell>
+                           <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-0.5">
+                                 <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                                 <span className="text-xs font-bold">{s.rating}</span>
+                              </div>
+                           </TableCell>
+                        </TableRow>
+                     ))}
+                  </TableBody>
+               </Table>
+            </CardContent>
+         </Card>
       </div>
 
       {/* Report Detail Modal */}
@@ -401,12 +524,13 @@ export function ReportsTab() {
                            <TableCell className="text-xs font-mono text-destructive">{formatCurrency(w.cost_impact)}</TableCell>
                         </TableRow>
                      ))}
-                     {activeReport?.title === "Supplier Scorecard" && activeReport.data.map((s: any) => (
+                     {activeReport?.title === "Supplier Scorecard" && supplierPerformance.map((s: any) => (
                         <TableRow key={s.id}>
                            <TableCell className="text-xs font-bold">{s.name}</TableCell>
-                           <TableCell className="text-xs">{s.rating || 5}/5</TableCell>
-                           <TableCell className="text-xs"><Badge variant={s.is_active ? "success" : "secondary"} className="text-[10px]">{s.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                           <TableCell className="text-xs">{s.delivery_lead_time_days || 'N/A'} days</TableCell>
+                           <TableCell className="text-xs">{s.rating}/5</TableCell>
+                           <TableCell className="text-xs"><Badge variant="outline" className="text-[10px]">{s.fulfillmentRate}% Fulfillment</Badge></TableCell>
+                           <TableCell className="text-xs font-bold">{s.avgLeadTime} Days Lead</TableCell>
+                           <TableCell className="text-xs font-mono">{formatCurrency(s.totalSpend)} Spend</TableCell>
                         </TableRow>
                      ))}
                      {activeReport?.title === "Audit Trail" && activeReport.data.map((m: any) => (

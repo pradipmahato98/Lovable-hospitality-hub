@@ -551,8 +551,8 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   });
 
   const adjustStock = useMutation({
-    mutationFn: async ({ itemId, storeId, quantity, type, notes }: { itemId: string; storeId?: string; quantity: number; type: "in" | "out" | "adjustment"; notes?: string }) => {
-      const { data: item, error: fetchError } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", itemId).single();
+    mutationFn: async ({ itemId, storeId, quantity, type, notes, reason }: { itemId: string; storeId?: string; quantity: number; type: "in" | "out" | "adjustment"; notes?: string, reason?: string }) => {
+      const { data: item, error: fetchError } = await db.from("inventory_items").select("name, current_stock, cost_price, avg_cost").eq("id", itemId).single();
       if (fetchError) throw fetchError;
 
       const newStock = type === "out" ? item.current_stock - quantity : item.current_stock + quantity;
@@ -567,7 +567,8 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
         store_id: storeId,
         movement_type: type,
         quantity,
-        notes
+        reference_type: 'manual_adjustment',
+        notes: `${reason || 'Adjustment'}: ${notes || ''}`.trim()
       });
       if (movementError) throw movementError;
 
@@ -576,12 +577,19 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
       }
 
       const assetAcc = await getInventoryAccount('inventory_gl_account');
-      const adjAcc = await getInventoryAccount('adjustment_gl_account');
+      // Determine offset account based on reason
+      let offsetAcc = await getInventoryAccount('adjustment_gl_account');
+      if (reason === 'Damage' || reason === 'Expiry') {
+         offsetAcc = await getInventoryAccount('wastage_gl_account');
+      } else if (reason === 'Theft' || reason === 'Loss') {
+         offsetAcc = await getInventoryAccount('wastage_gl_account');
+      }
+
       const impactValue = quantity * (item.avg_cost || item.cost_price);
 
-      await createFinanceEntry(`Inventory Adjustment: ${item.name}`, [
+      await createFinanceEntry(`Inv. Adj (${reason || 'Other'}): ${item.name}`, [
          { account_id: assetAcc, debit: type === 'in' ? impactValue : 0, credit: type === 'out' ? impactValue : 0 },
-         { account_id: adjAcc, debit: type === 'out' ? impactValue : 0, credit: type === 'in' ? impactValue : 0 }
+         { account_id: offsetAcc, debit: type === 'out' ? impactValue : 0, credit: type === 'in' ? impactValue : 0 }
       ]);
     },
     onSuccess: () => {
@@ -1198,6 +1206,7 @@ export function useInventoryStats() {
   const { data: items } = useInventoryItems();
   const { data: movements } = useStockMovements();
   const { data: settings } = useInventorySettings();
+  const { data: stockCounts } = useInventoryStockCounts();
   const { data: purchaseItems } = useQuery({
     queryKey: ["all-purchase-items"],
     queryFn: async () => {
@@ -1206,16 +1215,60 @@ export function useInventoryStats() {
     }
   });
 
+  // Check for nearing expiry items and trigger notifications
+  useEffect(() => {
+    if (purchaseItems) {
+      const today = new Date();
+      const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const expiringSoon = purchaseItems.filter((pi: any) => {
+        if (!pi.expiry_date) return false;
+        const expiry = new Date(pi.expiry_date);
+        return expiry > today && expiry <= thirtyDaysFromNow;
+      });
+
+      expiringSoon.forEach(async (pi: any) => {
+        // Check if notification already exists to avoid spamming (simple check)
+        const { data: existing } = await db.from('notifications').select('id').eq('title', 'Expiry Warning').eq('message', `Batch ${pi.batch_number} of item ID ${pi.item_id} expires on ${pi.expiry_date}`).maybeSingle();
+
+        if (!existing) {
+          await db.from('notifications').insert({
+            title: 'Expiry Warning',
+            message: `Batch ${pi.batch_number} of item ID ${pi.item_id} expires on ${pi.expiry_date}`,
+            type: 'warning',
+            category: 'inventory'
+          });
+        }
+      });
+    }
+  }, [purchaseItems]);
+
   const calculateForecast = () => {
-    if (!movements || movements.length < 5) return "+0.0%";
+    if (!movements || movements.length < 5) return { trend: "+0.0%", suggestions: [] };
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
     const recentConsumption = movements.filter(m => m.movement_type === 'out' && new Date(m.created_at) > weekAgo).reduce((s, m) => s + m.quantity, 0);
     const prevConsumption = movements.filter(m => m.movement_type === 'out' && new Date(m.created_at) > twoWeeksAgo && new Date(m.created_at) <= weekAgo).reduce((s, m) => s + m.quantity, 0);
-    if (prevConsumption === 0) return "+0.0%";
-    const trend = ((recentConsumption - prevConsumption) / prevConsumption) * 100;
-    return `${trend >= 0 ? '+' : ''}${trend.toFixed(1)}%`;
+
+    const trendValue = prevConsumption === 0 ? 0 : ((recentConsumption - prevConsumption) / prevConsumption) * 100;
+
+    // Smart Reorder Suggestions
+    const suggestions = (items || [])
+      .filter(i => i.current_stock <= i.reorder_point * 1.2) // Items near or below reorder
+      .map(i => {
+         const itemMovements = movements.filter(m => m.item_id === i.id && m.movement_type === 'out' && new Date(m.created_at) > weekAgo);
+         const avgDailyUsage = itemMovements.reduce((s, m) => s + m.quantity, 0) / 7;
+         const suggestedQty = Math.ceil((avgDailyUsage * 14) + (i.reorder_point * 0.5)); // 2 weeks stock + safety
+         return { id: i.id, name: i.name, suggestedQty };
+      })
+      .slice(0, 5);
+
+    return {
+      trend: `${trendValue >= 0 ? '+' : ''}${trendValue.toFixed(1)}%`,
+      suggestions
+    };
   };
 
   const calculateValuation = () => {
@@ -1260,11 +1313,32 @@ export function useInventoryStats() {
     return totalValue;
   };
 
+  const calculateVariance = () => {
+    if (!stockCounts || stockCounts.length === 0) return 0;
+    const latestCount = stockCounts[0]; // Already sorted by created_at descending
+    return latestCount.items?.reduce((sum, i) => sum + Math.abs(i.variance), 0) || 0;
+  };
+
+  const calculateAging = () => {
+    if (!items || items.length === 0) return 0;
+    const now = new Date();
+    const totalDays = items.reduce((sum, i) => {
+      const date = i.last_restocked_at ? new Date(i.last_restocked_at) : new Date(i.created_at);
+      return sum + (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+    }, 0);
+    return Math.round(totalDays / items.length);
+  };
+
+  const forecastData = calculateForecast();
+
   return {
     totalItems: items?.length || 0,
     lowStock: items?.filter((i) => i.current_stock <= i.reorder_point).length || 0,
     outOfStock: items?.filter((i) => i.current_stock === 0).length || 0,
     totalValue: calculateValuation(),
-    demandForecast: calculateForecast()
+    demandForecast: forecastData.trend,
+    reorderSuggestions: forecastData.suggestions,
+    stockVariance: calculateVariance(),
+    avgAgingDays: calculateAging()
   };
 }

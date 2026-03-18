@@ -45,6 +45,8 @@ import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSearchParams } from "react-router-dom";
+import { useInvoices } from "@/hooks/useFinanceExtended";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
 import { useInventoryPOS } from "@/hooks/useInventory";
 
 interface CartItem {
@@ -94,11 +96,11 @@ const POSTerminal = () => {
 
   // Fetch rooms for room charge
   const { data: rooms = [] } = useQuery({
-    queryKey: ["rooms-occupied"],
+    queryKey: ["rooms-occupied-with-guest"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rooms")
-        .select("id, room_number, room_type")
+        .select("id, room_number, room_type, reservations(guest_id, guests(first_name, last_name))")
         .eq("status", "occupied")
         .order("room_number", { ascending: true });
       if (error) throw error;
@@ -106,7 +108,9 @@ const POSTerminal = () => {
     },
   });
 
+  const { data: allInvoices = [] } = useInvoices();
   const { data: gatewaysData } = usePaymentGateways();
+  const { addFolioItem } = useGuestFolios();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
   const { deductBulkInventoryForSale } = useInventoryPOS();
 
@@ -217,6 +221,23 @@ const POSTerminal = () => {
         .single();
 
       if (error) throw error;
+
+      // Automatically post to active guest folio if Room Charge
+      if (paymentMethod === "room" && roomChargeRoom) {
+         const room: any = rooms.find((r: any) => r.room_number === roomChargeRoom);
+         const { data: folios } = await supabase.from('guest_folios').select('id').eq('room_id', room?.id).eq('status', 'open').maybeSingle();
+
+         if (folios) {
+           await addFolioItem.mutateAsync({
+             folio_id: folios.id,
+             item_type: 'charge',
+             source: 'restaurant',
+             description: `POS Bill #${data.transaction_number}`,
+             amount: total,
+             reference_id: data.id
+           });
+         }
+      }
 
       // Trigger inventory deduction
       await deductBulkInventoryForSale.mutateAsync({
@@ -583,24 +604,46 @@ const POSTerminal = () => {
                       )}
 
                       {paymentMethod === "room" && (
-                        <Select value={roomChargeRoom} onValueChange={setRoomChargeRoom}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select occupied room" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rooms.length === 0 ? (
-                              <SelectItem value="none" disabled>
-                                No occupied rooms
-                              </SelectItem>
-                            ) : (
-                              rooms.map((room) => (
-                                <SelectItem key={room.id} value={room.room_number}>
-                                  Room {room.room_number} ({room.room_type})
+                        <div className="space-y-2">
+                          <Select value={roomChargeRoom} onValueChange={setRoomChargeRoom}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select occupied room" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {rooms.length === 0 ? (
+                                <SelectItem value="none" disabled>
+                                  No occupied rooms
                                 </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+                              ) : (
+                                rooms.map((room: any) => (
+                                  <SelectItem key={room.id} value={room.room_number}>
+                                    Room {room.room_number} ({room.room_type})
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+
+                          {roomChargeRoom && (() => {
+                            const room: any = rooms.find((r: any) => r.room_number === roomChargeRoom);
+                            const guestId = room?.reservations?.[0]?.guest_id;
+                            if (guestId) {
+                              const previousDue = allInvoices
+                                .filter(inv => inv.guest_id === guestId && inv.status !== 'paid')
+                                .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
+
+                              if (previousDue > 0) {
+                                return (
+                                  <div className="p-2 bg-destructive/10 border border-destructive/20 rounded flex justify-between items-center animate-pulse">
+                                    <span className="text-[10px] font-bold text-destructive uppercase">Guest Previous Due</span>
+                                    <span className="text-xs font-mono font-bold text-destructive">{formatCurrency(previousDue)}</span>
+                                  </div>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
+                        </div>
                       )}
                     </div>
                   ) : (

@@ -150,7 +150,7 @@ export function StockCountTab() {
       </div>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className={cn("max-h-[90vh] overflow-y-auto", isMobileMode ? "max-w-md p-4" : "max-w-4xl")}>
+        <DialogContent className={isMobileMode ? "max-w-md" : "max-w-4xl"}>
           <DialogHeader>
              <DialogTitle className="flex items-center gap-2">
                 {isMobileMode ? <Smartphone className="h-5 w-5" /> : <ListChecks className="h-5 w-5" />}

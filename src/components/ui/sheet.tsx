@@ -65,14 +65,17 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
           onEscapeKeyDown={handleEscapeKeyDown}
           className={cn(
             sheetVariants({ side }),
+            "flex flex-col h-full overflow-hidden p-0", // Remove padding from Content, handle in scroll area
             isBlocking && "animate-shake animate-blink",
             className
           )}
           {...props}
         >
-          <div className="relative flex flex-col h-full w-full">
-            {children}
-            <SheetPrimitive.Close className="absolute right-2 top-2 rounded-full h-8 w-8 flex items-center justify-center bg-black/20 hover:bg-black/40 text-white transition-all focus:outline-none focus:ring-2 focus:ring-ring z-[60]">
+          <div className="relative flex flex-col h-full w-full overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+              {children}
+            </div>
+            <SheetPrimitive.Close className="absolute right-3 top-3 rounded-full h-8 w-8 flex items-center justify-center bg-black/20 hover:bg-black/40 text-white transition-all focus:outline-none focus:ring-2 focus:ring-ring z-[60]">
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
             </SheetPrimitive.Close>

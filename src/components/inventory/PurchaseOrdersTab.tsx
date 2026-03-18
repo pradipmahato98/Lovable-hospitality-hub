@@ -23,6 +23,7 @@ export function PurchaseOrdersTab() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
+  const [isMobileMode, setIsMobileMode] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
@@ -260,7 +261,10 @@ export function PurchaseOrdersTab() {
                       <Button variant="ghost" size="icon" onClick={() => { setSelectedPO(po); setDetailOpen(true); }}><Eye className="h-4 w-4" /></Button>
                       {po.status === "draft" && <Button variant="blue" size="sm" onClick={() => handleStatusChange(po.id, "sent")}>Send</Button>}
                       {(po.status === "sent" || po.status === "partially_received") && (
-                        <Button variant="success" size="sm" onClick={() => openReceive(po)}><PackageCheck className="h-4 w-4 mr-1" />GRN</Button>
+                        <div className="flex gap-1">
+                           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => { setIsMobileMode(true); openReceive(po); }} title="Mobile Receipt"><Smartphone className="h-4 w-4" /></Button>
+                           <Button variant="success" size="sm" onClick={() => { setIsMobileMode(false); openReceive(po); }}><PackageCheck className="h-4 w-4 mr-1" />GRN</Button>
+                        </div>
                       )}
                       {po.status === 'received' && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600" onClick={() => openReturn(po)} title="Return Items"><RotateCcw className="h-4 w-4" /></Button>
@@ -329,11 +333,16 @@ export function PurchaseOrdersTab() {
 
       {/* Advanced GRN Dialog */}
       <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Goods Receiving Note (GRN)</DialogTitle></DialogHeader>
+        <DialogContent className={isMobileMode ? "max-w-md" : "max-w-4xl"}>
+          <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+                {isMobileMode ? <Smartphone className="h-5 w-5" /> : <PackageCheck className="h-5 w-5" />}
+                Goods Receiving Note (GRN)
+             </DialogTitle>
+          </DialogHeader>
           <div className="space-y-6 py-4">
             {selectedPO?.items?.map((pi) => (
-              <div key={pi.id} className="border p-4 rounded-xl bg-muted/20 space-y-4">
+              <div key={pi.id} className={cn("border p-4 rounded-xl bg-muted/20 space-y-4", isMobileMode ? "p-3" : "p-4")}>
                 <div className="flex justify-between items-start border-b pb-2">
                   <div>
                     <h4 className="font-bold text-base flex items-center gap-2 text-primary"><PackageCheck className="h-4 w-4" /> {pi.item?.name}</h4>
@@ -349,13 +358,13 @@ export function PurchaseOrdersTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Batch #</Label><Input className="h-8 text-xs" value={receiveData[pi.id]?.batch || ""} onChange={(e) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], batch: e.target.value } })} /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Expiry</Label><Input type="date" className="h-8 text-xs" value={receiveData[pi.id]?.expiry || ""} onChange={(e) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], expiry: e.target.value } })} /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Damaged</Label><Input type="number" className="h-8 text-xs" value={receiveData[pi.id]?.damaged || 0} onChange={(e) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], damaged: Number(e.target.value) } })} /></div>
+                <div className={isMobileMode ? "grid grid-cols-2 gap-3" : "grid grid-cols-4 gap-4"}>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Batch #</Label><Input className={cn("text-xs", isMobileMode ? "h-10" : "h-8")} value={receiveData[pi.id]?.batch || ""} onChange={(e) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], batch: e.target.value } })} /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Expiry</Label><Input type="date" className={cn("text-xs", isMobileMode ? "h-10" : "h-8")} value={receiveData[pi.id]?.expiry || ""} onChange={(e) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], expiry: e.target.value } })} /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Damaged</Label><Input type="number" className={cn("text-xs", isMobileMode ? "h-10" : "h-8")} value={receiveData[pi.id]?.damaged || 0} onChange={(e) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], damaged: Number(e.target.value) } })} /></div>
                   <div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-muted-foreground">Quality</Label>
                     <Select value={receiveData[pi.id]?.quality || "passed"} onValueChange={(v) => setReceiveData({ ...receiveData, [pi.id]: { ...receiveData[pi.id], quality: v } })}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className={cn("text-xs", isMobileMode ? "h-10" : "h-8")}><SelectValue /></SelectTrigger>
                       <SelectContent><SelectItem value="passed">Passed</SelectItem><SelectItem value="failed">Rejected</SelectItem></SelectContent>
                     </Select>
                   </div>
