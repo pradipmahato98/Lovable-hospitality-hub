@@ -58,7 +58,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import {
   useVenueSetups,
   useCreateVenueSetup,
@@ -129,8 +128,6 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-
-  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
 
   // Database persistence for venue setups
   const { data: venueSetups = [], isLoading } = useVenueSetups();
@@ -516,9 +513,7 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
-                              onPointerDownOutside={handlePointerDownOutside}
-                              onEscapeKeyDown={handleEscapeKeyDown}
+                              className="w-52"
                             >
                               <div className="flex items-center justify-between px-2 py-1.5">
                                 <DropdownMenuLabel className="p-0">Venue Actions</DropdownMenuLabel>

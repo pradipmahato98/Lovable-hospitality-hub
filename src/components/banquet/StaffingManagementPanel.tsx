@@ -47,7 +47,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import {
   useEventStaffAssignments,
   useCreateStaffAssignment,
@@ -83,8 +82,6 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-
-  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
 
   // Data fetching
   const { data: staffMembers = [] } = useStaffMembers();
@@ -261,9 +258,7 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
-                            className={`w-48 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
-                            onPointerDownOutside={handlePointerDownOutside}
-                            onEscapeKeyDown={handleEscapeKeyDown}
+                            className="w-48"
                           >
                             <div className="flex items-center justify-between px-2 py-1.5">
                               <DropdownMenuLabel className="p-0">Actions</DropdownMenuLabel>

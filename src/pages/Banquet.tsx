@@ -68,7 +68,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 import { motion, AnimatePresence } from "framer-motion";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -143,8 +142,6 @@ export default function Banquet() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [balanceFilter, setBalanceFilter] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<{ key: keyof BanquetEvent; direction: 'asc' | 'desc' } | null>(null);
-
-  const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -1048,9 +1045,7 @@ export default function Banquet() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent
                                       align="end"
-                                      className={`w-52 ${isBlocking ? "animate-shake border-destructive/50" : ""}`}
-                                      onPointerDownOutside={handlePointerDownOutside}
-                                      onEscapeKeyDown={handleEscapeKeyDown}
+                                      className="w-52"
                                     >
                                       <div className="flex items-center justify-between px-2 py-1.5">
                                         <DropdownMenuLabel className="p-0">Event Actions</DropdownMenuLabel>
