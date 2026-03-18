@@ -96,7 +96,7 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
   const deleteAssignmentMutation = useDeleteStaffAssignment();
 
   const [newAssignment, setNewAssignment] = useState({
-    staff_member_id: "",
+    staff_id: "",
     role: "Server",
     start_time: "09:00",
     end_time: "17:00",
@@ -119,7 +119,7 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
       toast.error("Please select a specific event first");
       return;
     }
-    if (!newAssignment.staff_member_id) {
+    if (!newAssignment.staff_id) {
       toast.error("Please select a staff member");
       return;
     }
@@ -127,7 +127,8 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
     try {
       await createAssignmentMutation.mutateAsync({
         event_id: selectedEventId,
-        staff_member_id: newAssignment.staff_member_id,
+        staff_id: newAssignment.staff_id,
+        staff_name: null,
         role: newAssignment.role,
         start_time: newAssignment.start_time,
         end_time: newAssignment.end_time,
@@ -135,7 +136,7 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
       });
       setAssignmentDialogOpen(false);
       setNewAssignment({
-        staff_member_id: "",
+        staff_id: "",
         role: "Server",
         start_time: "09:00",
         end_time: "17:00",
@@ -303,8 +304,8 @@ export function StaffingManagementPanel({ events }: StaffingManagementPanelProps
             <div className="space-y-2">
               <Label>Select Staff Member</Label>
               <Select
-                value={newAssignment.staff_member_id}
-                onValueChange={(v) => setNewAssignment(p => ({ ...p, staff_member_id: v }))}
+                value={newAssignment.staff_id}
+                onValueChange={(v) => setNewAssignment(p => ({ ...p, staff_id: v }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Search staff members..." />

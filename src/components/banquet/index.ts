@@ -4,3 +4,4 @@ export { EventReportsPanel } from "./EventReportsPanel";
 export { CateringManagementPanel } from "./CateringManagementPanel";
 export { VenueSetupPanel } from "./VenueSetupPanel";
 export { StaffingManagementPanel } from "./StaffingManagementPanel";
+export { BanquetSettingsPanel } from "./BanquetSettingsPanel";

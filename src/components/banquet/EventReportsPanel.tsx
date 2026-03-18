@@ -53,6 +53,7 @@ interface BanquetEvent {
   guest_count: number;
   status: "inquiry" | "confirmed" | "in_progress" | "completed" | "cancelled";
   total_amount: number;
+  deposit_amount?: number | null;
 }
 
 interface EventReportsPanelProps {

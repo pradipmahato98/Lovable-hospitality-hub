@@ -109,17 +109,17 @@ const decorationOptions = [
   { id: "signage", name: "Custom Signage", icon: Layout },
 ];
 
-const defaultSetupChecklist: Omit<SetupItem, "id">[] = [
-  { name: "Clear and clean venue", category: "Preparation", completed: false, notes: "" },
-  { name: "Set up tables", category: "Furniture", completed: false, notes: "" },
-  { name: "Arrange chairs", category: "Furniture", completed: false, notes: "" },
-  { name: "Install table linens", category: "Decor", completed: false, notes: "" },
-  { name: "Set up centerpieces", category: "Decor", completed: false, notes: "" },
-  { name: "Install AV equipment", category: "Technical", completed: false, notes: "" },
-  { name: "Sound check", category: "Technical", completed: false, notes: "" },
-  { name: "Lighting setup", category: "Technical", completed: false, notes: "" },
-  { name: "Place signage", category: "Decor", completed: false, notes: "" },
-  { name: "Final walkthrough", category: "Preparation", completed: false, notes: "" },
+const defaultSetupChecklist = [
+  "Clear and clean venue",
+  "Set up tables",
+  "Arrange chairs",
+  "Install table linens",
+  "Set up centerpieces",
+  "Install AV equipment",
+  "Sound check",
+  "Lighting setup",
+  "Place signage",
+  "Final walkthrough",
 ];
 
 export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps) {
@@ -139,13 +139,10 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
 
   const [newSetup, setNewSetup] = useState({
     layout_type: "banquet",
-    table_count: 10,
-    chair_count: 80,
-    stage_required: false,
-    dance_floor: false,
-    equipment: [] as string[],
-    decorations: [] as string[],
-    setup_notes: "",
+    capacity: 80,
+    equipment_needed: [] as string[],
+    decoration_checklist: {} as Record<string, boolean>,
+    notes: "",
   });
 
   // Get setup for an event
@@ -160,7 +157,7 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
         const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
         const setup = getSetupForEvent(e.id);
-        const matchesStatus = statusFilter === "all" || (setup?.setup_status === statusFilter) || (statusFilter === "none" && !setup);
+        const matchesStatus = statusFilter === "all" || (setup?.status === statusFilter) || (statusFilter === "none" && !setup);
 
         return (e.status === "confirmed" || e.status === "in_progress") && matchesSearch && matchesStatus;
       })
@@ -172,6 +169,11 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
         if (sortConfig.key === "progress") {
           aValue = getSetupProgress(getSetupForEvent(a.id));
           bValue = getSetupProgress(getSetupForEvent(b.id));
+        }
+
+        if (sortConfig.key === "status") {
+          aValue = getSetupForEvent(a.id)?.status || "none";
+          bValue = getSetupForEvent(b.id)?.status || "none";
         }
 
         if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
@@ -195,24 +197,18 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
     if (existingSetup) {
       setNewSetup({
         layout_type: existingSetup.layout_type,
-        table_count: existingSetup.table_count,
-        chair_count: existingSetup.chair_count,
-        stage_required: existingSetup.stage_required,
-        dance_floor: existingSetup.dance_floor,
-        equipment: existingSetup.equipment,
-        decorations: existingSetup.decorations,
-        setup_notes: existingSetup.setup_notes || "",
+        capacity: existingSetup.capacity,
+        equipment_needed: existingSetup.equipment_needed,
+        decoration_checklist: existingSetup.decoration_checklist,
+        notes: existingSetup.notes || "",
       });
     } else {
       setNewSetup({
         layout_type: "banquet",
-        table_count: Math.ceil(event.guest_count / 8),
-        chair_count: event.guest_count,
-        stage_required: event.event_type === "wedding" || event.event_type === "corporate",
-        dance_floor: event.event_type === "wedding" || event.event_type === "social",
-        equipment: [],
-        decorations: [],
-        setup_notes: "",
+        capacity: event.guest_count,
+        equipment_needed: [],
+        decoration_checklist: {},
+        notes: "",
       });
     }
     setSetupDialogOpen(true);
@@ -228,24 +224,20 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
 
     const existingSetup = getSetupForEvent(selectedEvent.id);
     
-    // Convert SetupItem[] to Record<string, boolean> for the checklist field in DB
+    // Convert string[] to Record<string, boolean> for the checklist field in DB
     const initialChecklist: Record<string, boolean> = {};
-    defaultSetupChecklist.forEach(item => {
-      initialChecklist[item.name] = false;
+    defaultSetupChecklist.forEach(name => {
+      initialChecklist[name] = false;
     });
 
     const setupData = {
       event_id: selectedEvent.id,
       layout_type: newSetup.layout_type,
-      table_count: newSetup.table_count,
-      chair_count: newSetup.chair_count,
-      stage_required: newSetup.stage_required,
-      dance_floor: newSetup.dance_floor,
-      equipment: newSetup.equipment,
-      decorations: newSetup.decorations,
-      setup_status: existingSetup?.setup_status || "not_started" as const,
-      setup_notes: newSetup.setup_notes || null,
-      checklist: existingSetup?.checklist || initialChecklist,
+      capacity: newSetup.capacity,
+      equipment_needed: newSetup.equipment_needed,
+      decoration_checklist: existingSetup?.decoration_checklist || initialChecklist,
+      status: existingSetup?.status || "pending" as const,
+      notes: newSetup.notes || null,
     };
 
     try {
@@ -267,18 +259,9 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
   const handleToggleEquipment = (eq: string) => {
     setNewSetup((prev) => ({
       ...prev,
-      equipment: prev.equipment.includes(eq)
-        ? prev.equipment.filter((e) => e !== eq)
-        : [...prev.equipment, eq],
-    }));
-  };
-
-  const handleToggleDecoration = (dec: string) => {
-    setNewSetup((prev) => ({
-      ...prev,
-      decorations: prev.decorations.includes(dec)
-        ? prev.decorations.filter((d) => d !== dec)
-        : [...prev.decorations, dec],
+      equipment_needed: prev.equipment_needed.includes(eq)
+        ? prev.equipment_needed.filter((e) => e !== eq)
+        : [...prev.equipment_needed, eq],
     }));
   };
 
@@ -286,34 +269,34 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
     const setup = getSetupForEvent(eventId);
     if (!setup) return;
 
-    const newChecklist = { ...setup.checklist, [itemName]: !setup.checklist[itemName] };
+    const newChecklist = { ...setup.decoration_checklist, [itemName]: !setup.decoration_checklist[itemName] };
 
     // Calculate new status
     const items = Object.values(newChecklist);
     const completedCount = items.filter(v => v).length;
-    let newStatus: VenueSetup["setup_status"] = "not_started";
+    let newStatus: VenueSetup["status"] = "pending";
     if (completedCount === items.length) newStatus = "completed";
     else if (completedCount > 0) newStatus = "in_progress";
 
     updateSetupMutation.mutate({
       id: setup.id,
       updates: {
-        checklist: newChecklist,
-        setup_status: newStatus
+        decoration_checklist: newChecklist,
+        status: newStatus
       }
     });
   };
 
   const getSetupProgress = (setup: VenueSetup | undefined) => {
-    if (!setup || !setup.checklist) return 0;
-    const items = Object.values(setup.checklist);
+    if (!setup || !setup.decoration_checklist) return 0;
+    const items = Object.values(setup.decoration_checklist);
     if (items.length === 0) return 0;
     const completed = items.filter(v => v).length;
     return (completed / items.length) * 100;
   };
 
   const statusColors: Record<string, string> = {
-    not_started: "bg-muted text-muted-foreground border-muted",
+    pending: "bg-muted text-muted-foreground border-muted",
     in_progress: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     completed: "bg-success/20 text-success border-success/30",
   };
@@ -321,10 +304,10 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
   // Summary stats
   const stats = useMemo(() => {
     const total = venueSetups.length;
-    const completed = venueSetups.filter((s) => s.setup_status === "completed").length;
-    const inProgress = venueSetups.filter((s) => s.setup_status === "in_progress").length;
-    const notStarted = venueSetups.filter((s) => s.setup_status === "not_started").length;
-    return { total, completed, inProgress, notStarted };
+    const completed = venueSetups.filter((s) => s.status === "completed").length;
+    const inProgress = venueSetups.filter((s) => s.status === "in_progress").length;
+    const pending = venueSetups.filter((s) => s.status === "pending").length;
+    return { total, completed, inProgress, pending };
   }, [venueSetups]);
 
   return (
@@ -351,8 +334,8 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                 <Circle className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Not Started</p>
-                <p className="text-2xl font-bold">{stats.notStarted}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold">{stats.pending}</p>
               </div>
             </div>
           </CardContent>
@@ -406,7 +389,7 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
           <SelectContent>
             <SelectItem value="all">All Setups</SelectItem>
             <SelectItem value="none">No Setup Yet</SelectItem>
-            <SelectItem value="not_started">Not Started</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
           </SelectContent>
@@ -482,17 +465,17 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                         )}
                       </TableCell>
                       <TableCell>
-                        {setup && setup.equipment.length > 0 ? (
+                        {setup && setup.equipment_needed && setup.equipment_needed.length > 0 ? (
                           <div className="flex items-center gap-1">
-                            {setup.equipment.slice(0, 2).map((eq) => {
+                            {setup.equipment_needed.slice(0, 2).map((eq) => {
                               const equip = equipmentOptions.find((e) => e.id === eq);
                               return equip ? (
                                 <equip.icon key={eq} className="h-4 w-4 text-muted-foreground" />
                               ) : null;
                             })}
-                            {setup.equipment.length > 2 && (
+                            {setup.equipment_needed.length > 2 && (
                               <span className="text-xs text-muted-foreground">
-                                +{setup.equipment.length - 2}
+                                +{setup.equipment_needed.length - 2}
                               </span>
                             )}
                           </div>
@@ -514,8 +497,8 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                       </TableCell>
                       <TableCell>
                         {setup ? (
-                          <Badge variant="outline" className={statusColors[setup.setup_status]}>
-                            {setup.setup_status.replace("_", " ")}
+                          <Badge variant="outline" className={statusColors[setup.status]}>
+                            {setup.status.replace("_", " ")}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-muted">
@@ -554,13 +537,13 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { setup_status: "not_started" } })}>
-                                    Not Started
+                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { status: "pending" } })}>
+                                    Pending
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { setup_status: "in_progress" } })}>
+                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { status: "in_progress" } })}>
                                     In Progress
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { setup_status: "completed" } })}>
+                                  <DropdownMenuItem onClick={() => updateSetupMutation.mutate({ id: setup.id, updates: { status: "completed" } })}>
                                     Completed
                                   </DropdownMenuItem>
                                 </>
@@ -616,50 +599,16 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
               </div>
             </div>
 
-            {/* Tables and Chairs */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Number of Tables</Label>
-                <Input
-                  type="number"
-                  value={newSetup.table_count}
-                  onChange={(e) =>
-                    setNewSetup((p) => ({ ...p, table_count: parseInt(e.target.value) || 0 }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Number of Chairs</Label>
-                <Input
-                  type="number"
-                  value={newSetup.chair_count}
-                  onChange={(e) =>
-                    setNewSetup((p) => ({ ...p, chair_count: parseInt(e.target.value) || 0 }))
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Special Requirements */}
-            <div className="flex gap-4">
-              <div
-                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer flex-1 ${
-                  newSetup.stage_required ? "bg-primary/10 border-primary" : ""
-                }`}
-                onClick={() => setNewSetup((p) => ({ ...p, stage_required: !p.stage_required }))}
-              >
-                <Checkbox checked={newSetup.stage_required} />
-                <span>Stage Required</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer flex-1 ${
-                  newSetup.dance_floor ? "bg-primary/10 border-primary" : ""
-                }`}
-                onClick={() => setNewSetup((p) => ({ ...p, dance_floor: !p.dance_floor }))}
-              >
-                <Checkbox checked={newSetup.dance_floor} />
-                <span>Dance Floor</span>
-              </div>
+            {/* Capacity */}
+            <div className="space-y-2">
+              <Label>Target Capacity</Label>
+              <Input
+                type="number"
+                value={newSetup.capacity}
+                onChange={(e) =>
+                  setNewSetup((p) => ({ ...p, capacity: parseInt(e.target.value) || 0 }))
+                }
+              />
             </div>
 
             {/* Equipment */}
@@ -670,11 +619,11 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                   <div
                     key={eq.id}
                     className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-secondary/50 ${
-                      newSetup.equipment.includes(eq.id) ? "bg-primary/10 border-primary" : ""
+                      newSetup.equipment_needed.includes(eq.id) ? "bg-primary/10 border-primary" : ""
                     }`}
                     onClick={() => handleToggleEquipment(eq.id)}
                   >
-                    <Checkbox checked={newSetup.equipment.includes(eq.id)} />
+                    <Checkbox checked={newSetup.equipment_needed.includes(eq.id)} />
                     <eq.icon className="h-4 w-4" />
                     <span className="text-sm">{eq.name}</span>
                   </div>
@@ -684,17 +633,23 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
 
             {/* Decorations */}
             <div className="space-y-2">
-              <Label>Decorations</Label>
+              <Label>Decoration Progress</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {decorationOptions.map((dec) => (
                   <div
                     key={dec.id}
                     className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-secondary/50 ${
-                      newSetup.decorations.includes(dec.id) ? "bg-primary/10 border-primary" : ""
+                      newSetup.decoration_checklist[dec.id] ? "bg-primary/10 border-primary" : ""
                     }`}
-                    onClick={() => handleToggleDecoration(dec.id)}
+                    onClick={() => {
+                      const current = newSetup.decoration_checklist[dec.id];
+                      setNewSetup(p => ({
+                        ...p,
+                        decoration_checklist: { ...p.decoration_checklist, [dec.id]: !current }
+                      }));
+                    }}
                   >
-                    <Checkbox checked={newSetup.decorations.includes(dec.id)} />
+                    <Checkbox checked={!!newSetup.decoration_checklist[dec.id]} />
                     <dec.icon className="h-4 w-4" />
                     <span className="text-sm">{dec.name}</span>
                   </div>
@@ -707,8 +662,8 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
               <Label>Setup Notes</Label>
               <Textarea
                 placeholder="Any special instructions or requirements..."
-                value={newSetup.setup_notes}
-                onChange={(e) => setNewSetup((p) => ({ ...p, setup_notes: e.target.value }))}
+                value={newSetup.notes}
+                onChange={(e) => setNewSetup((p) => ({ ...p, notes: e.target.value }))}
                 rows={3}
               />
             </div>
@@ -739,11 +694,11 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                 const setup = getSetupForEvent(selectedEvent.id);
                 if (!setup) return <p className="text-muted-foreground">No setup configured</p>;
 
-                // Use the checklist from DB or default if empty
-                const checklist = setup.checklist || {};
+                // Use the checklist from DB
+                const checklist = setup.decoration_checklist || {};
                 const items = Object.entries(checklist);
                 
-                if (items.length === 0) return <p className="text-muted-foreground">No items in checklist</p>;
+                if (items.length === 0) return <p className="text-muted-foreground">No decoration checklist items.</p>;
 
                 return (
                   <div className="space-y-1">

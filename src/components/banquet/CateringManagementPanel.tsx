@@ -129,8 +129,8 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
     menu_package: "standard",
     dietary_requirements: [] as string[],
     serving_style: "Buffet",
-    beverages: [] as string[],
-    special_notes: "",
+    beverage_selections: [] as string[],
+    special_instructions: "",
   });
 
   // Calculate stock availability for a package
@@ -140,9 +140,9 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
     const pkgName = menuPackages.find(p => p.id === newOrder.menu_package)?.name;
     const recipe = recipes.find(r => r.name.toLowerCase().includes(pkgName?.toLowerCase() || ""));
 
-    if (!recipe || !recipe.items) return null;
+    if (!recipe || !recipe.recipe_items) return null;
 
-    const shortages = recipe.items.map((ri: any) => {
+    const shortages = recipe.recipe_items.map((ri: any) => {
       const required = ri.quantity * selectedEvent.guest_count;
       const available = ri.item?.current_stock || 0;
       return {
@@ -181,9 +181,9 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
         let aValue: any = a[sortConfig.key as keyof BanquetEvent];
         let bValue: any = b[sortConfig.key as keyof BanquetEvent];
 
-        if (sortConfig.key === "estimated_cost") {
-          aValue = getOrderForEvent(a.id)?.estimated_cost || 0;
-          bValue = getOrderForEvent(b.id)?.estimated_cost || 0;
+        if (sortConfig.key === "total_cost") {
+          aValue = getOrderForEvent(a.id)?.total_cost || 0;
+          bValue = getOrderForEvent(b.id)?.total_cost || 0;
         }
 
         if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
@@ -209,16 +209,16 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
         menu_package: existingOrder.menu_package,
         dietary_requirements: existingOrder.dietary_requirements,
         serving_style: existingOrder.serving_style,
-        beverages: existingOrder.beverages,
-        special_notes: existingOrder.special_notes || "",
+        beverage_selections: existingOrder.beverage_selections,
+        special_instructions: existingOrder.special_instructions || "",
       });
     } else {
       setNewOrder({
         menu_package: "standard",
         dietary_requirements: [],
         serving_style: "Buffet",
-        beverages: ["Soft Drinks", "Coffee & Tea"],
-        special_notes: event.special_requests || "",
+        beverage_selections: ["Soft Drinks", "Coffee & Tea"],
+        special_instructions: event.special_requests || "",
       });
     }
     setOrderDialogOpen(true);
@@ -228,7 +228,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
     if (!selectedEvent) return;
 
     const pkg = menuPackages.find((p) => p.id === newOrder.menu_package);
-    const estimatedCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
+    const totalCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
 
     const existingOrder = getOrderForEvent(selectedEvent.id);
 
@@ -237,9 +237,9 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
       menu_package: newOrder.menu_package,
       serving_style: newOrder.serving_style,
       dietary_requirements: newOrder.dietary_requirements,
-      beverages: newOrder.beverages,
-      special_notes: newOrder.special_notes || null,
-      estimated_cost: estimatedCost,
+      beverage_selections: newOrder.beverage_selections,
+      special_instructions: newOrder.special_instructions || null,
+      total_cost: totalCost,
       status: existingOrder?.status || "pending" as const,
     };
 
@@ -271,9 +271,9 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
   const handleToggleBeverage = (bev: string) => {
     setNewOrder((prev) => ({
       ...prev,
-      beverages: prev.beverages.includes(bev)
-        ? prev.beverages.filter((b) => b !== bev)
-        : [...prev.beverages, bev],
+      beverage_selections: prev.beverage_selections.includes(bev)
+        ? prev.beverage_selections.filter((b) => b !== bev)
+        : [...prev.beverage_selections, bev],
     }));
   };
 
@@ -345,7 +345,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
               <div>
                 <p className="text-sm text-muted-foreground">Dietary Requests</p>
                 <p className="text-2xl font-bold">
-                  {cateringOrders.reduce((s, o) => s + o.dietaryRequirements.length, 0)}
+                  {cateringOrders.reduce((s, o) => s + (o.dietary_requirements?.length || 0), 0)}
                 </p>
               </div>
             </div>
@@ -410,7 +410,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                   </TableHead>
                   <TableHead>Menu Package</TableHead>
                   <TableHead>Dietary</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("estimated_cost")}>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("total_cost")}>
                     <div className="flex items-center gap-1">Est. Cost <ArrowUpDown className="h-3 w-3" /></div>
                   </TableHead>
                   <TableHead>Status</TableHead>
@@ -474,7 +474,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                         )}
                       </TableCell>
                       <TableCell className="font-mono">
-                        {order ? `$${order.estimated_cost.toLocaleString()}` : "-"}
+                        {order ? `$${order.total_cost.toLocaleString()}` : "-"}
                       </TableCell>
                       <TableCell>
                         {order ? (
@@ -642,7 +642,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                     className="flex items-center space-x-2 p-2 rounded-lg border cursor-pointer hover:bg-secondary/50"
                     onClick={() => handleToggleBeverage(bev)}
                   >
-                    <Checkbox checked={newOrder.beverages.includes(bev)} />
+                    <Checkbox checked={newOrder.beverage_selections.includes(bev)} />
                     <span className="text-sm">{bev}</span>
                   </div>
                 ))}
@@ -654,8 +654,8 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
               <Label>Special Notes</Label>
               <Textarea
                 placeholder="Any special requirements, allergies, or preferences..."
-                value={newOrder.special_notes}
-                onChange={(e) => setNewOrder((p) => ({ ...p, special_notes: e.target.value }))}
+                value={newOrder.special_instructions}
+                onChange={(e) => setNewOrder((p) => ({ ...p, special_instructions: e.target.value }))}
                 rows={3}
               />
             </div>

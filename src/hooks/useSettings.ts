@@ -115,6 +115,11 @@ export interface APIKeysSettings {
   keys: APIKey[];
 }
 
+export interface BanquetSettings {
+  venues: { id: string; name: string; capacity: number }[];
+  menu_packages: { id: string; name: string; price_per_head: number }[];
+}
+
 export interface LocalizationSettings {
   calendar_mode: "AD" | "BS";
   language: "en" | "np";
@@ -233,6 +238,21 @@ const defaultUITemplates: UITemplatesSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
+};
+
+const defaultBanquetSettings: BanquetSettings = {
+  venues: [
+    { id: "ballroom", name: "Grand Ballroom", capacity: 500 },
+    { id: "crystal", name: "Crystal Room", capacity: 200 },
+    { id: "garden", name: "Royal Garden", capacity: 1000 },
+    { id: "meeting_a", name: "Meeting Room A", capacity: 50 },
+  ],
+  menu_packages: [
+    { id: "standard", name: "Standard Buffet", price_per_head: 45 },
+    { id: "premium", name: "Premium Buffet", price_per_head: 75 },
+    { id: "deluxe", name: "Deluxe Plated", price_per_head: 95 },
+    { id: "gourmet", name: "Gourmet Experience", price_per_head: 125 },
+  ],
 };
 
 const defaultLocalizationSettings: LocalizationSettings = {
@@ -409,4 +429,12 @@ export function useBusinessDate() {
 
 export function useUpdateBusinessDate() {
   return useUpdateSettings<string>("business_date");
+}
+
+export function useBanquetSettings() {
+  return useSettings<BanquetSettings>("banquet_settings", defaultBanquetSettings);
+}
+
+export function useUpdateBanquetSettings() {
+  return useUpdateSettings<BanquetSettings>("banquet_settings");
 }
