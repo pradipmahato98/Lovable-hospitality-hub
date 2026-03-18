@@ -395,18 +395,20 @@ export default function Banquet() {
     const eventAssignments = allAssignments.filter(a => a.event_id === event.id);
 
     // Header
-    doc.setFontSize(22);
-    doc.setTextColor(0, 102, 255);
-    doc.text("LuxeStay Hospitality", 105, 20, { align: "center" });
-    doc.setFontSize(16);
-    doc.setTextColor(51, 65, 85);
-    doc.text("Banquet Event Order (BEO)", 105, 30, { align: "center" });
+    doc.setFillColor(0, 102, 255);
+    doc.rect(0, 0, 210, 40, "F");
 
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, 35, 190, 35);
+    doc.setFontSize(24);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text("LuxeStay Hospitality", 105, 18, { align: "center" });
 
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 42, { align: "center" });
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "normal");
+    doc.text("BANQUET EVENT ORDER (BEO)", 105, 28, { align: "center" });
+
+    doc.setFontSize(8);
+    doc.text(`CONFIDENTIAL | SYSTEM GENERATED: ${new Date().toLocaleString()}`, 200, 36, { align: "right" });
 
     // Event Details Table
     autoTable(doc, {
