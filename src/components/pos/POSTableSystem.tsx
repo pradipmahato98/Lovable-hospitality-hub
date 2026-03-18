@@ -34,6 +34,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useQuickMenuSettings } from "@/hooks/useSettings";
+import { useMenuItems } from "@/hooks/useMenuItems";
 import {
   usePOSTables,
   useUpdatePOSTable,
@@ -63,6 +64,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { SplitBillPanel } from "./SplitBillPanel";
+import { useInventoryPOS } from "@/hooks/useInventory";
 
 interface TableInfo {
   id: string;
@@ -74,24 +76,6 @@ interface TableInfo {
   startTime?: string;
   orders: OrderItem[];
 }
-
-const menuItems = [
-  { id: "1", name: "Coffee", price: 4.50, category: "Beverages", icon: Coffee },
-  { id: "2", name: "Tea", price: 3.50, category: "Beverages", icon: Coffee },
-  { id: "3", name: "Fresh Juice", price: 6.00, category: "Beverages", icon: Coffee },
-  { id: "4", name: "Water", price: 2.00, category: "Beverages", icon: Coffee },
-  { id: "5", name: "Breakfast Combo", price: 15.00, category: "Food", icon: Utensils },
-  { id: "6", name: "Lunch Special", price: 22.00, category: "Food", icon: Utensils },
-  { id: "7", name: "Dinner Platter", price: 35.00, category: "Food", icon: Utensils },
-  { id: "8", name: "Club Sandwich", price: 12.00, category: "Food", icon: Utensils },
-  { id: "9", name: "Caesar Salad", price: 10.00, category: "Food", icon: Utensils },
-  { id: "10", name: "Wine Glass", price: 12.00, category: "Bar", icon: Wine },
-  { id: "11", name: "Cocktail", price: 14.00, category: "Bar", icon: Wine },
-  { id: "12", name: "Beer", price: 8.00, category: "Bar", icon: Wine },
-  { id: "13", name: "Ice Cream", price: 7.00, category: "Desserts", icon: IceCream },
-  { id: "14", name: "Cake Slice", price: 9.00, category: "Desserts", icon: IceCream },
-  { id: "15", name: "Fruit Bowl", price: 8.00, category: "Desserts", icon: IceCream },
-];
 
 const statusColors = {
   available: "bg-success/20 text-success border-success/30",
@@ -114,6 +98,15 @@ interface POSTableSystemProps {
 }
 
 export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
+  const { data: dbMenuItems = [] } = useMenuItems();
+  const menuItems = dbMenuItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    category: item.category?.name || "Other",
+    icon: item.category?.name === "Food" ? Utensils : item.category?.name === "Bar" ? Wine : Coffee
+  }));
+
   // Use backend-backed hooks for real multi-device sync
   const {
     data: posTables,
@@ -123,6 +116,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   } = usePOSTables();
   const updateTable = useUpdatePOSTable();
   const createTransaction = useCreatePOSTransaction();
+  const { deductBulkInventoryForSale } = useInventoryPOS();
 
   // Transform POSTable to TableInfo format
   const tables: TableInfo[] = posTables.map((t) => ({
@@ -446,6 +440,15 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       }
 
       onCheckout(total, selectedTable.orders);
+
+      // Trigger inventory deduction
+      // For real inventory link, the OrderItem name/id should match MenuItem name/id
+      // Assuming OrderItem contains MenuItem ID or name that can be mapped
+      await deductBulkInventoryForSale.mutateAsync({
+        saleId: selectedTable.id, // Or transaction id if available
+        items: selectedTable.orders.map(o => ({ menu_item_id: o.id, quantity: o.quantity }))
+      });
+
       await handleCloseTable();
     } catch (error) {
       console.error("Error during checkout:", error);
