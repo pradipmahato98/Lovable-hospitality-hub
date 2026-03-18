@@ -885,11 +885,28 @@ export default function Banquet() {
                               <TableCell>
                                 <div>
                                   <p className="font-medium">{event.client_name}</p>
-                                  {event.client_phone && (
-                                    <p className="text-xs text-muted-foreground">
-                                      {event.client_phone}
-                                    </p>
-                                  )}
+                              {(() => {
+                                const prevDue = events
+                                  .filter(e =>
+                                    e.client_name === event.client_name &&
+                                    e.id !== event.id &&
+                                    new Date(e.event_date) < new Date(event.event_date) &&
+                                    (e.status === 'completed' || e.status === 'confirmed')
+                                  )
+                                  .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
+                                if (prevDue > 0) {
+                                  return (
+                                    <Badge variant="destructive" className="text-[9px] h-3.5 px-1 font-bold animate-pulse">
+                                      {formatCurrency(prevDue)} PREV. DUE
+                                    </Badge>
+                                  );
+                                }
+                                return event.client_phone && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {event.client_phone}
+                                  </p>
+                                );
+                              })()}
                                 </div>
                               </TableCell>
                               <TableCell>
