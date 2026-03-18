@@ -476,7 +476,7 @@ export function VenueSetupPanel({ events, onViewDetails }: VenueSetupPanelProps)
                       <TableCell>{event.venue}</TableCell>
                       <TableCell>
                         {setup ? (
-                          <Badge variant="outline">{layout?.name || setup.layoutType}</Badge>
+                          <Badge variant="outline">{layout?.name || setup.layout_type}</Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
