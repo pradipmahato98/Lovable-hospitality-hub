@@ -3,15 +3,54 @@ import { formatCurrency } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Hotel, Bed, Coffee, Users, Wrench, Shield, TrendingUp, Sparkles, Building2, UserCheck } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Hotel, Bed, Coffee, Users, Wrench, Shield, TrendingUp, Sparkles, Building2, UserCheck, AlertCircle } from "lucide-react";
 
 interface DMRProps {
   data: any; // Ideally typed to ManagementKPIs + extra operational data
   isLoading?: boolean;
 }
 
+const DMRSkeleton = () => (
+  <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-pulse">
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-64" />
+      <Card className="border-2 border-primary/20 shadow-lg">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </div>
+            ))}
+          </div>
+          <Separator className="my-6" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-12 w-full rounded" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <Skeleton className="h-[250px] w-full rounded-xl" />
+      <Skeleton className="h-[250px] w-full rounded-xl" />
+    </div>
+    <div className="space-y-4">
+      <Skeleton className="h-6 w-48" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => (
+          <Skeleton key={i} className="h-24 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 export const DailyManagementReport = ({ data, isLoading }: DMRProps) => {
-  if (isLoading) return <div className="p-8 text-center">Generating Executive Report...</div>;
+  if (isLoading) return <DMRSkeleton />;
 
   const getComparison = (current: number, previous: number) => {
     if (!previous || previous === 0) return { percent: 0, label: "0%" };
