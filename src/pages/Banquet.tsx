@@ -60,6 +60,8 @@ import {
   XCircle,
   AlertTriangle,
   Download,
+  Banknote,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -76,6 +78,7 @@ import {
   CateringManagementPanel,
   VenueSetupPanel,
   StaffingManagementPanel,
+  BanquetSettingsPanel,
 } from "@/components/banquet";
 import {
   useCateringOrders,
@@ -381,12 +384,89 @@ export default function Banquet() {
    const handleRecordPayment = () => {
      if (!selectedEventForPayment) return;
      const newDeposit = (selectedEventForPayment.deposit_amount || 0) + paymentAmount;
+     const updates: Partial<BanquetEvent> = { deposit_amount: newDeposit };
+
+     // Auto-confirm if it was an inquiry
+     if (selectedEventForPayment.status === 'inquiry' && paymentAmount > 0) {
+       updates.status = 'confirmed';
+     }
+
      updateEvent.mutate({
        id: selectedEventForPayment.id,
-       updates: { deposit_amount: newDeposit }
+       updates
      });
      setPaymentDialogOpen(false);
    };
+
+   const generateInvoice = (event: BanquetEvent) => {
+    const doc = new jsPDF();
+    const prevDue = events
+      .filter(e =>
+        e.client_name === event.client_name &&
+        e.id !== event.id &&
+        new Date(e.event_date) < new Date(event.event_date) &&
+        (e.status === 'completed' || e.status === 'confirmed')
+      )
+      .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(0, 102, 255);
+    doc.text("LuxeStay Hospitality", 105, 20, { align: "center" });
+    doc.setFontSize(16);
+    doc.setTextColor(51, 65, 85);
+    doc.text("INVOICE", 105, 30, { align: "center" });
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(20, 35, 190, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Invoice No: INV-${event.id.slice(0, 8).toUpperCase()}`, 20, 45);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 190, 45, { align: "right" });
+
+    // Client Details
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bill To:", 20, 55);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(event.client_name, 20, 62);
+    if (event.client_phone) doc.text(event.client_phone, 20, 67);
+    if (event.client_email) doc.text(event.client_email, 20, 72);
+
+    // Items Table
+    autoTable(doc, {
+      startY: 80,
+      head: [['Description', 'Amount']],
+      body: [
+        [`Event: ${event.event_name} (${event.event_date})`, formatCurrency(event.total_amount)],
+        ['Previous Outstanding Balance', formatCurrency(prevDue)],
+        ['Total Amount Due', formatCurrency(event.total_amount + prevDue)],
+        ['Less: Payments/Deposits Received', `(${formatCurrency(event.deposit_amount || 0)})`],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [0, 102, 255], fontSize: 11 },
+      styles: { fontSize: 10 },
+      columnStyles: { 1: { halign: 'right' } }
+    });
+
+    // Summary
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(220, 38, 38); // destructive
+    doc.text(`Net Balance Due: ${formatCurrency(event.total_amount + prevDue - (event.deposit_amount || 0))}`, 190, finalY, { align: "right" });
+
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.setFont("helvetica", "normal");
+    doc.text("Please make payments within 7 days of receipt.", 105, finalY + 20, { align: "center" });
+    doc.text("Bank: Digital Blue Bank | Account: 1234567890 | SWIFT: DBBKHNP", 105, finalY + 25, { align: "center" });
+
+    doc.save(`Invoice_${event.client_name.replace(/\s+/g, '_')}_${event.id.slice(0, 4)}.pdf`);
+    toast.success("Invoice generated successfully");
+  };
 
   const generateBEO = (event: BanquetEvent) => {
     const doc = new jsPDF();
@@ -466,10 +546,13 @@ export default function Banquet() {
         head: [['Venue Setup Details', '']],
         body: [
           ['Layout Type', venue.layout_type],
-          ['Tables / Chairs', `${venue.table_count} Tables / ${venue.chair_count} Chairs`],
-          ['Features', `${venue.stage_required ? 'Stage, ' : ''}${venue.dance_floor ? 'Dance Floor' : ''}`.replace(/, $/, '') || 'Standard'],
-          ['Equipment', venue.equipment?.join(', ') || 'None'],
-          ['Decorations', venue.decorations?.join(', ') || 'None'],
+          ['Target Capacity', `${venue.capacity} guests`],
+          ['Equipment', venue.equipment_needed?.join(', ') || 'None'],
+          ['Decorations', Object.entries(venue.decoration_checklist || {})
+            .filter(([_, v]) => v)
+            .map(([k, _]) => k)
+            .join(', ') || 'Standard'],
+          ['Notes', venue.notes || 'None'],
         ],
         theme: 'striped',
         headStyles: { fillColor: [0, 102, 255], fontSize: 12, fontStyle: 'bold' },
@@ -714,16 +797,20 @@ export default function Banquet() {
                 <BarChart3 className="h-4 w-4" />
                 Reports
               </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Setup
+              </TabsTrigger>
             </TabsList>
           </motion.div>
 
           <AnimatePresence mode="wait">
-            <TabsContent key="events" value="events" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="events" value="events" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -970,6 +1057,14 @@ export default function Banquet() {
                                   <DropdownMenuItem onClick={() => handleOpenPayment(event)}>
                                     <Banknote className="mr-2 h-4 w-4" /> Record Payment
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => generateInvoice(event)}>
+                                    <FileText className="mr-2 h-4 w-4" /> Generate Invoice
+                                  </DropdownMenuItem>
+                                  {event.status === 'inquiry' && (
+                                    <DropdownMenuItem onClick={() => handleOpenPayment(event)} className="text-success font-bold">
+                                      <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm & Deposit
+                                    </DropdownMenuItem>
+                                  )}
                                       <DropdownMenuSeparator />
                                       <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
                                       <DropdownMenuItem onClick={() => updateStatus.mutate({ id: event.id, status: 'inquiry' })}>
@@ -1001,12 +1096,12 @@ export default function Banquet() {
               </motion.div>
             </TabsContent>
 
-            <TabsContent key="calendar" value="calendar" className="focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="calendar" value="calendar" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
               >
                 <DraggableBanquetCalendar
                   events={events.map(e => ({
@@ -1034,12 +1129,12 @@ export default function Banquet() {
               </motion.div>
             </TabsContent>
 
-            <TabsContent key="catering" value="catering" className="focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="catering" value="catering" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
               >
                 <CateringManagementPanel
                   events={events.map(e => ({
@@ -1059,12 +1154,12 @@ export default function Banquet() {
               </motion.div>
             </TabsContent>
 
-            <TabsContent key="venue" value="venue" className="focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="venue" value="venue" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
               >
                 <VenueSetupPanel
                   events={events.map(e => ({
@@ -1082,12 +1177,12 @@ export default function Banquet() {
               </motion.div>
             </TabsContent>
 
-            <TabsContent key="staffing" value="staffing" className="focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="staffing" value="staffing" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
               >
                 <StaffingManagementPanel
                   events={events.map(e => ({
@@ -1102,12 +1197,12 @@ export default function Banquet() {
               </motion.div>
             </TabsContent>
 
-            <TabsContent key="reports" value="reports" className="focus-visible:outline-none focus-visible:ring-0">
+            <TabsContent key="reports" value="reports" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
               >
                 <EventReportsPanel
                   events={events.map(e => ({
@@ -1117,11 +1212,23 @@ export default function Banquet() {
                     client_name: e.client_name,
                     event_date: e.event_date,
                     venue: e.venue,
-                    guest_count: e.guest_count,
+                    guest_count: e.guest_count || 0,
                     status: e.status,
                     total_amount: e.total_amount,
+                    deposit_amount: e.deposit_amount,
                   }))}
                 />
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent key="settings" value="settings" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <BanquetSettingsPanel />
               </motion.div>
             </TabsContent>
           </AnimatePresence>
@@ -1181,25 +1288,71 @@ export default function Banquet() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="md:col-span-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  Client Information
+                  Assigned Staff
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Name</p>
-                  <p className="font-medium">{selectedEventForDetails?.client_name}</p>
+              <CardContent className="space-y-2">
+                {selectedEventForDetails && allAssignments.filter(a => a.event_id === selectedEventForDetails.id).length > 0 ? (
+                  allAssignments.filter(a => a.event_id === selectedEventForDetails.id).map(a => (
+                    <div key={a.id} className="flex justify-between items-center text-xs border-b pb-1 last:border-0 last:pb-0">
+                      <div>
+                        <p className="font-medium">{a.staff_member?.first_name} {a.staff_member?.last_name}</p>
+                        <p className="text-muted-foreground">{a.role}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] h-4">
+                        {a.start_time.slice(0, 5)}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No staff assigned yet.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  Client Info & History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-2 border-b pb-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Name</p>
+                    <p className="text-sm font-medium">{selectedEventForDetails?.client_name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p className="text-sm font-medium">{selectedEventForDetails?.client_phone || "N/A"}</p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="font-medium">{selectedEventForDetails?.client_phone || "N/A"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="font-medium truncate">{selectedEventForDetails?.client_email || "N/A"}</p>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Booking History</p>
+                  {selectedEventForDetails && (
+                    <div className="space-y-2">
+                      {events
+                        .filter(e => e.client_name === selectedEventForDetails.client_name && e.id !== selectedEventForDetails.id)
+                        .slice(0, 3)
+                        .map(e => (
+                          <div key={e.id} className="flex justify-between items-center text-[11px] bg-muted/40 p-1.5 rounded">
+                            <span className="truncate max-w-[80px] font-medium">{e.event_name}</span>
+                            <span className="text-muted-foreground">{e.event_date}</span>
+                            <Badge variant="outline" className="text-[8px] h-3.5 px-1 uppercase">{e.status}</Badge>
+                          </div>
+                        ))
+                      }
+                      {events.filter(e => e.client_name === selectedEventForDetails.client_name && e.id !== selectedEventForDetails.id).length === 0 && (
+                        <p className="text-[11px] text-muted-foreground italic">First-time booking.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1289,7 +1442,31 @@ export default function Banquet() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Select Existing Guest (Optional)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Select Existing Guest (Optional)</Label>
+                {newEvent.client_name && (
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const prevDue = events
+                        .filter(e =>
+                          e.client_name === newEvent.client_name &&
+                          (!editingEvent || e.id !== editingEvent.id) &&
+                          (e.status === 'completed' || e.status === 'confirmed')
+                        )
+                        .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
+                      if (prevDue > 0) {
+                        return (
+                          <Badge variant="destructive" className="text-[10px] animate-pulse">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Client has {formatCurrency(prevDue)} Previous Due
+                          </Badge>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+              </div>
               <Select
                 onValueChange={(guestId) => {
                   const guest = guests.find(g => g.id === guestId);
