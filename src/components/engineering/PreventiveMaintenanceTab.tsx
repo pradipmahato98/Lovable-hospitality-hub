@@ -242,7 +242,7 @@ export function PreventiveMaintenanceTab() {
                       <Select value={newSchedule.assigned_to} onValueChange={(v) => setNewSchedule({ ...newSchedule, assigned_to: v })}>
                         <SelectTrigger><SelectValue placeholder="Select staff (optional)" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Unassigned</SelectItem>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
                           {engineeringStaff.map((s) => (
                             <SelectItem key={s.id} value={s.first_name + " " + s.last_name}>
                               {s.first_name} {s.last_name}
