@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload, Layout } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
