@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   BarChart3, TrendingDown, TrendingUp, AlertCircle, Download,
   FileText, Truck, Activity, Timer, Boxes, RefreshCw, ShoppingCart,
-  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles, Star, LineChart as LineChartIcon
+  UtensilsCrossed, PieChart, FileSpreadsheet, Sparkles, Star, LineChart as LineChartIcon,
+  Loader2, Package
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -16,9 +17,9 @@ import {
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
   useSuppliers, usePurchaseOrders, useInventoryWastage,
-  useInventoryRequisitions, useInventoryRecipes
+  useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts
 } from "@/hooks/useInventory";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
