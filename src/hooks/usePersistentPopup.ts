@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useUIPreferences } from "./useSettings";
 
 /**
  * Hook to manage persistent behavior for Radix UI popups (Dialog, Sheet, Popover, Dropdown).
@@ -6,6 +7,7 @@ import { useState, useCallback } from "react";
  * state that can be used to trigger a visual "shake" animation.
  */
 export function usePersistentPopup() {
+  const { data: prefs } = useUIPreferences();
   const [isBlocking, setIsBlocking] = useState(false);
 
   const triggerBlock = useCallback(() => {
@@ -14,15 +16,21 @@ export function usePersistentPopup() {
     setTimeout(() => setIsBlocking(false), 400);
   }, []);
 
-  const handlePointerDownOutside = useCallback((event: CustomEvent) => {
-    event.preventDefault();
-    triggerBlock();
-  }, [triggerBlock]);
+  const handlePointerDownOutside = useCallback((event: CustomEvent, originalHandler?: (event: CustomEvent) => void) => {
+    if (prefs?.persistent_popups) {
+      event.preventDefault();
+      triggerBlock();
+    }
+    originalHandler?.(event);
+  }, [triggerBlock, prefs?.persistent_popups]);
 
-  const handleEscapeKeyDown = useCallback((event: KeyboardEvent) => {
-    event.preventDefault();
-    triggerBlock();
-  }, [triggerBlock]);
+  const handleEscapeKeyDown = useCallback((event: KeyboardEvent, originalHandler?: (event: KeyboardEvent) => void) => {
+    if (prefs?.persistent_popups) {
+      event.preventDefault();
+      triggerBlock();
+    }
+    originalHandler?.(event);
+  }, [triggerBlock, prefs?.persistent_popups]);
 
   return {
     isBlocking,

@@ -53,7 +53,7 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => {
+  ({ side = "right", className, children, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => {
     const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
 
     return (
@@ -61,8 +61,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetOverlay />
         <SheetPrimitive.Content
           ref={ref}
-          onPointerDownOutside={handlePointerDownOutside}
-          onEscapeKeyDown={handleEscapeKeyDown}
+          onPointerDownOutside={(e) => handlePointerDownOutside(e, onPointerDownOutside)}
+          onEscapeKeyDown={(e) => handleEscapeKeyDown(e, onEscapeKeyDown)}
           className={cn(
             sheetVariants({ side }),
             "flex flex-col h-full overflow-hidden p-0", // Remove padding from Content, handle in scroll area

@@ -3,16 +3,40 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Layout, MessageSquare, List } from "lucide-react";
+import { Layout, MessageSquare, List, ShieldCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useUIPreferences, useUpdateUIPreferences } from "@/hooks/useSettings";
 
 export const UIStandardizationCard = () => {
+  const { data: prefs } = useUIPreferences();
+  const updatePrefs = useUpdateUIPreferences();
+
   return (
     <Card variant="elevated">
       <CardHeader>
-        <CardTitle>UI Standardization & Persistence</CardTitle>
-        <CardDescription>
-          Verify and test the system-wide persistent popup behavior.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle>UI Standardization & Persistence</CardTitle>
+            <CardDescription>
+              Verify and test the system-wide persistent popup behavior.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-3 bg-muted/30 p-3 rounded-xl border border-border/50">
+            <div className="flex flex-col items-end mr-2">
+              <Label htmlFor="persistent-popups" className="text-sm font-bold flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Persistent Mode
+              </Label>
+              <span className="text-[10px] text-muted-foreground font-medium">Global Toggle</span>
+            </div>
+            <Switch
+              id="persistent-popups"
+              checked={prefs?.persistent_popups ?? true}
+              onCheckedChange={(checked) => updatePrefs.mutate({ ...(prefs || {} as any), persistent_popups: checked })}
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
