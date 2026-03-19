@@ -94,7 +94,10 @@ export function ItemsTab() {
       toast.success("Adjustment request submitted");
       setAdjustStockOpen(false);
       refetchAdj();
-    } catch { toast.error("Failed"); }
+    } catch (error: any) {
+      console.error("Adjustment request error:", error);
+      toast.error(error.message || "Failed to submit adjustment");
+    }
   };
 
   const approveAdjustment = async (adj: { id: string; item_id: string; quantity: number; movement_type: string; notes: string | null }) => {
@@ -111,7 +114,10 @@ export function ItemsTab() {
         await supabase.from('stock_movements').delete().eq('id', adj.id);
         toast.success("Adjustment approved");
         refetchAdj();
-     } catch { toast.error("Approval failed"); }
+     } catch (error: any) {
+        console.error("Adjustment approval error:", error);
+        toast.error(error.message || "Approval failed");
+     }
   };
 
   const toggleTax = (taxCode: string) => {
@@ -144,7 +150,10 @@ export function ItemsTab() {
 
       setForm({ ...form, image_url: publicUrl });
       toast.success("Image uploaded");
-    } catch { toast.error("Upload failed"); }
+    } catch (error: any) {
+      console.error("Image upload error:", error);
+      toast.error(error.message || "Upload failed");
+    }
     finally { setIsUploading(false); }
   };
 
@@ -167,7 +176,10 @@ export function ItemsTab() {
       toast.success("Item registered");
       setAddItemOpen(false);
       setForm(emptyForm);
-    } catch { toast.error("Failed"); }
+    } catch (error: any) {
+      console.error("Create item error:", error);
+      toast.error(error.message || "Failed to register item");
+    }
   };
 
   return (

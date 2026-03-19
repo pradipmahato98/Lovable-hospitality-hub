@@ -24,7 +24,10 @@ export function UoMTab() {
       toast.success("Unit of measurement created");
       setIsAddOpen(false);
       setForm({ name: "", abbreviation: "" });
-    } catch { toast.error("Failed to create UoM"); }
+    } catch (error: any) {
+      console.error("Create UoM error:", error);
+      toast.error(error.message || "Failed to create UoM");
+    }
   };
 
   const handleCreateConv = async () => {
@@ -37,14 +40,20 @@ export function UoMTab() {
       toast.success("Conversion rule added");
       setIsConvOpen(false);
       setConvForm({ from_uom_id: "", to_uom_id: "", conversion_factor: 1 });
-    } catch { toast.error("Failed to add conversion"); }
+    } catch (error: any) {
+      console.error("Create conversion error:", error);
+      toast.error(error.message || "Failed to add conversion");
+    }
   };
 
   const handleDeleteConv = async (id: string) => {
     try {
       await deleteConversion.mutateAsync(id);
       toast.success("Conversion rule removed");
-    } catch { toast.error("Failed to remove conversion"); }
+    } catch (error: any) {
+      console.error("Delete conversion error:", error);
+      toast.error(error.message || "Failed to remove conversion");
+    }
   };
 
   return (

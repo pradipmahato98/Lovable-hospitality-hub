@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Loader2, FolderTree, Barcode } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryCategories, useInventoryItems, InventoryCategory } from "@/hooks/useInventory";
@@ -38,7 +39,10 @@ export function CategoriesTab() {
       setOpen(false);
       setEditId(null);
       setForm({ name: "", description: "", parent_id: "", sku_prefix: "" });
-    } catch { toast.error("Failed to save category"); }
+    } catch (error: any) {
+      console.error("Save category error:", error);
+      toast.error(error.message || "Failed to save category");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -46,7 +50,10 @@ export function CategoriesTab() {
     try {
       await deleteCategory.mutateAsync(id);
       toast.success("Category deleted");
-    } catch { toast.error("Failed to delete category"); }
+    } catch (error: any) {
+      console.error("Delete category error:", error);
+      toast.error(error.message || "Failed to delete category");
+    }
   };
 
   const openEdit = (cat: InventoryCategory) => {
