@@ -49,10 +49,11 @@ export function ItemsTab() {
   const emptyForm = {
     name: "", sku: "", category_id: "", supplier_id: "", uom_id: "",
     cost_price: 0, selling_price: 0, item_type: "consumable",
-    min_stock: 0, max_stock: 0, reorder_point: 0,
+    min_stock: 0, max_stock: 0, reorder_point: 0, safety_stock: 0,
     shelf_life: "", storage_instructions: "", temperature_classification: "Ambient",
     image_url: "",
-    tax_applicability: [] as string[]
+    tax_applicability: [] as string[],
+    attributes: {} as Record<string, string>
   };
   const [form, setForm] = useState(emptyForm);
   const [stockAdj, setStockAdj] = useState<{ quantity: number, type: "in" | "out" | "adjustment", notes: string, storeId: string, reason: string }>({
@@ -307,6 +308,7 @@ export function ItemsTab() {
 
                <div className="space-y-1"><Label className="text-xs">Min Stock</Label><Input type="number" value={form.min_stock} onChange={(e) => setForm({...form, min_stock: Number(e.target.value)})} /></div>
                <div className="space-y-1"><Label className="text-xs">Max Stock</Label><Input type="number" value={form.max_stock} onChange={(e) => setForm({...form, max_stock: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Safety Stock</Label><Input type="number" value={form.safety_stock} onChange={(e) => setForm({...form, safety_stock: Number(e.target.value)})} /></div>
                <div className="space-y-1"><Label className="text-xs">Reorder Point</Label><Input type="number" value={form.reorder_point} onChange={(e) => setForm({...form, reorder_point: Number(e.target.value)})} /></div>
                <div className="space-y-1"><Label className="text-xs">Temp. Classification</Label>
                   <Select value={form.temperature_classification} onValueChange={(v) => setForm({...form, temperature_classification: v})}>
@@ -335,12 +337,44 @@ export function ItemsTab() {
                   </div>
                </div>
 
-               <div className="col-span-2 p-3 bg-muted/50 rounded-xl space-y-2 border">
-                  <Label className="text-[10px] font-bold uppercase text-primary flex items-center gap-1"><Percent className="h-3 w-3" /> Tax Applicability</Label>
-                  <div className="flex flex-wrap gap-2">
-                     {["VAT 13%", "Service Tax 10%", "Tourism Levy 2%", "Excise Duty"].map(t => (
-                        <Button key={t} variant={form.tax_applicability.includes(t) ? "blue" : "outline"} size="xs" className="h-7 text-[10px]" onClick={() => toggleTax(t)}>{t}</Button>
-                     ))}
+               <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-muted/50 rounded-xl space-y-2 border">
+                     <Label className="text-[10px] font-bold uppercase text-primary flex items-center gap-1"><Percent className="h-3 w-3" /> Tax Applicability</Label>
+                     <div className="flex flex-wrap gap-2">
+                        {["VAT 13%", "Service Tax 10%", "Tourism Levy 2%", "Excise Duty"].map(t => (
+                           <Button key={t} variant={form.tax_applicability.includes(t) ? "blue" : "outline"} size="xs" className="h-7 text-[10px]" onClick={() => toggleTax(t)}>{t}</Button>
+                        ))}
+                     </div>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-xl space-y-2 border">
+                     <Label className="text-[10px] font-bold uppercase text-primary flex items-center gap-1"><Settings className="h-3 w-3" /> Custom Attributes</Label>
+                     <div className="space-y-2">
+                        <div className="flex gap-2">
+                           <Input placeholder="Key" className="h-7 text-[10px] w-20" id="attr-key" />
+                           <Input placeholder="Value" className="h-7 text-[10px] flex-1" id="attr-val" />
+                           <Button size="xs" variant="blue" className="h-7" onClick={() => {
+                              const k = (document.getElementById('attr-key') as HTMLInputElement).value;
+                              const v = (document.getElementById('attr-val') as HTMLInputElement).value;
+                              if (k && v) {
+                                 setForm({...form, attributes: {...form.attributes, [k]: v}});
+                                 (document.getElementById('attr-key') as HTMLInputElement).value = '';
+                                 (document.getElementById('attr-val') as HTMLInputElement).value = '';
+                              }
+                           }}>+</Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                           {Object.entries(form.attributes).map(([k, v]) => (
+                              <Badge key={k} variant="secondary" className="text-[8px] h-4 gap-1">
+                                 {k}: {v}
+                                 <XCircle className="h-2 w-2 cursor-pointer" onClick={() => {
+                                    const next = {...form.attributes};
+                                    delete next[k];
+                                    setForm({...form, attributes: next});
+                                 }} />
+                              </Badge>
+                           ))}
+                        </div>
+                     </div>
                   </div>
                </div>
             </div>

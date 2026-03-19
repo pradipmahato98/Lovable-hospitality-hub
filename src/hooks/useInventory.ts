@@ -77,6 +77,7 @@ export interface InventoryItem {
   min_stock: number;
   max_stock: number | null;
   reorder_point: number;
+  safety_stock: number;
   cost_price: number;
   avg_cost: number;
   last_purchase_cost: number;
@@ -88,6 +89,7 @@ export interface InventoryItem {
   storage_instructions: string | null;
   tax_applicability: string[];
   image_url: string | null;
+  attributes: Record<string, string>;
   is_active: boolean;
   last_restocked_at: string | null;
   created_at: string;
