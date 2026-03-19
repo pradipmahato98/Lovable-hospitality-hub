@@ -18,3 +18,5 @@ export { ExpiryReport } from "./ExpiryReport";
 export { FoodCostReport } from "./FoodCostReport";
 export { ApprovalsQueueTab } from "./ApprovalsQueueTab";
 export { ReturnsTab } from "./ReturnsTab";
+export * from "./ReplenishmentTab";
+export * from "./InventoryDashboard";

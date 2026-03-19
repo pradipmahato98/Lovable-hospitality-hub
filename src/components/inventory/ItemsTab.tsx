@@ -26,6 +26,7 @@ export function ItemsTab() {
   const [storeStockOpen, setStoreStockOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLabelOpen, setIsLabelOpen] = useState(false);
 
   const { data: items = [], isLoading, createItem, updateItem, adjustStock } = useInventoryItems({
     category: categoryFilter !== "all" ? categoryFilter : undefined,
@@ -251,8 +252,9 @@ export function ItemsTab() {
                     </TableCell>
                     <TableCell className="text-right">
                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" onClick={() => { setSelectedItem(item); setAdjustStockOpen(true); }}><ArrowUpDown className="h-3 w-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" onClick={() => { setSelectedItem(item); setStoreStockOpen(true); }}><Warehouse className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" title="Adjust Stock" onClick={() => { setSelectedItem(item); setAdjustStockOpen(true); }}><ArrowUpDown className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" title="Store View" onClick={() => { setSelectedItem(item); setStoreStockOpen(true); }}><Warehouse className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-600" title="Generate Barcode" onClick={() => { setSelectedItem(item); setIsLabelOpen(true); }}><Barcode className="h-3 w-3" /></Button>
                        </div>
                     </TableCell>
                   </TableRow>
@@ -382,6 +384,37 @@ export function ItemsTab() {
       </Dialog>
       <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.id} className="flex justify-between p-2 border-b text-xs"><span>{s.name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
       <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a) => <div key={a.id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
+
+      <Dialog open={isLabelOpen} onOpenChange={setIsLabelOpen}>
+         <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle>Barcode Label Generator</DialogTitle></DialogHeader>
+            <div className="py-8 flex flex-col items-center justify-center bg-white rounded-xl border-2 border-dashed border-slate-200">
+               <div className="text-center space-y-1 mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Inventory Asset</p>
+                  <p className="text-sm font-bold">{selectedItem?.name}</p>
+               </div>
+
+               <div className="bg-slate-50 p-4 rounded border flex flex-col items-center">
+                  <Barcode className="h-12 w-48 text-slate-900" />
+                  <p className="mt-2 font-mono text-sm font-bold tracking-[0.2em]">{selectedItem?.sku || 'NO-SKU'}</p>
+               </div>
+
+               <div className="mt-4 flex gap-4 text-[10px] font-bold uppercase text-slate-500">
+                  <span>Price: {formatCurrency(selectedItem?.cost_price || 0)}</span>
+                  <span>•</span>
+                  <span>Unit: {selectedItem?.unit}</span>
+               </div>
+            </div>
+            <DialogFooter>
+               <Button variant="outline" className="w-full" onClick={() => window.print()}>
+                  <RefreshCw className="h-4 w-4 mr-2" /> Print Labels (Batch)
+               </Button>
+               <Button variant="blue" className="w-full" onClick={() => setIsLabelOpen(false)}>
+                  <Download className="h-4 w-4 mr-2" /> Download SVG
+               </Button>
+            </DialogFooter>
+         </DialogContent>
+      </Dialog>
     </div>
   );
 }

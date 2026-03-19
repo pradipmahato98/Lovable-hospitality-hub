@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Store, Loader2, Edit, Trash2, MapPin, Thermometer, Wind } from "lucide-react";
+import { Plus, Store, Loader2, Edit, Trash2, MapPin, Thermometer, Wind, User } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryStores } from "@/hooks/useInventory";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 export function StoresTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const { data: stores = [], isLoading, createStore } = useInventoryStores();
+  const { data: stores = [], isLoading, createStore, updateStore } = useInventoryStores();
+  const { data: staff = [] } = useStaffMembers();
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -34,7 +36,7 @@ export function StoresTab() {
         temperature_classification: form.temperature_classification,
         storage_conditions: form.storage_conditions,
         is_active: true,
-        store_manager_id: null
+        store_manager_id: (form as any).store_manager_id || null
       });
       toast.success("Store created");
       setIsAddOpen(false);
@@ -97,6 +99,15 @@ export function StoresTab() {
               </div>
               <div className="space-y-2"><Label>Storage Conditions</Label><Input value={form.storage_conditions} onChange={(e) => setForm({ ...form, storage_conditions: e.target.value })} placeholder="e.g. Dry, No Sunlight" /></div>
               <div className="col-span-2 space-y-2"><Label>Location</Label><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
+              <div className="col-span-2 space-y-2">
+                 <Label>Store Manager</Label>
+                 <Select value={(form as any).store_manager_id} onValueChange={(v) => setForm({...form, store_manager_id: v} as any)}>
+                    <SelectTrigger><SelectValue placeholder="Assign manager..." /></SelectTrigger>
+                    <SelectContent>
+                       {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                    </SelectContent>
+                 </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
@@ -138,8 +149,16 @@ export function StoresTab() {
                    <div className="flex items-center gap-1 text-muted-foreground"><Wind className="h-3 w-3" /> {store.storage_conditions || 'Standard'}</div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
-                    <MapPin className="h-3 w-3" /> {store.location || "Internal"}
+                <div className="flex flex-col gap-2 text-xs text-muted-foreground border-t pt-3">
+                    <div className="flex items-center gap-2">
+                       <MapPin className="h-3 w-3" /> {store.location || "Internal"}
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <User className="h-3 w-3" />
+                       {store.store_manager_id ?
+                          staff.find(s => s.id === store.store_manager_id)?.first_name + " " + staff.find(s => s.id === store.store_manager_id)?.last_name :
+                          "No Manager Assigned"}
+                    </div>
                 </div>
 
                 <div className="flex justify-end gap-2 mt-4">

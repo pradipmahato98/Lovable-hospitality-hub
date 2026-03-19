@@ -14,7 +14,7 @@ import {
   UoMTab, StoresTab, RequisitionsTab, RecipesTab,
   WastageTab, StockCountTab, InventorySettingsTab, StockIssueTab,
   InventoryValuationReport, ExpiryReport, FoodCostReport,
-  ApprovalsQueueTab, ReturnsTab
+  ApprovalsQueueTab, ReturnsTab, ReplenishmentTab, InventoryDashboard
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
 
@@ -22,12 +22,16 @@ const Inventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const navGroups = [
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "setup", label: "Setup", icon: Settings2 },
     { id: "transactions", label: "Transactions", icon: ArrowRightLeft },
     { id: "reports", label: "Reports", icon: BarChart3 },
   ];
 
   const subTabs = {
+    dashboard: [
+      { id: "overview", label: "Overview", icon: BarChart3 },
+    ],
     setup: [
       { id: "items", label: "Item Master", icon: Package },
       { id: "categories", label: "Categories", icon: FolderTree },
@@ -39,6 +43,7 @@ const Inventory = () => {
     ],
     transactions: [
       { id: "approvals", label: "Approvals", icon: ShieldCheck },
+      { id: "replenish", label: "Replenishment", icon: ShoppingCart },
       { id: "requisitions", label: "Requisitions", icon: ClipboardList },
       { id: "orders", label: "Purchase Orders / GRN", icon: Warehouse },
       { id: "issue", label: "Stock Issue", icon: ArrowUpRight },
@@ -57,11 +62,11 @@ const Inventory = () => {
     ]
   };
 
-  const activeSubTab = searchParams.get("tab") || "items";
+  const activeSubTab = searchParams.get("tab") || (searchParams.get("group") === "dashboard" ? "overview" : "items");
 
   // Derive mainTab from activeSubTab if not explicitly set
   const derivedGroup = Object.entries(subTabs).find(([_, tabs]) =>
-    tabs.some(t => t.id === activeSubTab)
+    tabs.some(t => (t as any).id === activeSubTab)
   )?.[0] || "transactions";
 
   const mainTab = searchParams.get("group") || derivedGroup;
@@ -70,7 +75,8 @@ const Inventory = () => {
     setSearchParams(prev => {
       prev.set("group", value);
       // Set default sub-tab for the group
-      if (value === "setup") prev.set("tab", "items");
+      if (value === "dashboard") prev.set("tab", "overview");
+      else if (value === "setup") prev.set("tab", "items");
       else if (value === "transactions") prev.set("tab", "orders");
       else if (value === "reports") prev.set("tab", "stock-on-hand");
       return prev;
@@ -109,18 +115,21 @@ const Inventory = () => {
 
         <ErrorBoundary>
           <Tabs value={activeSubTab} onValueChange={handleTabChange} className="space-y-6">
-            <div className="overflow-x-auto pb-1">
-              <TabsList className="inline-flex w-auto">
-                {(subTabs[mainTab as keyof typeof subTabs] || []).map((tab) => (
-                  <TabsTrigger key={tab.id} value={tab.id} className="gap-2 shrink-0">
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+            {mainTab !== "dashboard" && (
+              <div className="overflow-x-auto pb-1">
+                <TabsList className="inline-flex w-auto">
+                  {(subTabs[mainTab as keyof typeof subTabs] || []).map((tab) => (
+                    <TabsTrigger key={tab.id} value={tab.id} className="gap-2 shrink-0">
+                      <tab.icon className="h-4 w-4" />
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            )}
 
             {/* Setup Content */}
+            <TabsContent value="overview" className="mt-0 focus-visible:outline-none"><InventoryDashboard /></TabsContent>
             <TabsContent value="items" className="mt-0 focus-visible:outline-none"><ItemsTab /></TabsContent>
             <TabsContent value="categories" className="mt-0 focus-visible:outline-none"><CategoriesTab /></TabsContent>
             <TabsContent value="uoms" className="mt-0 focus-visible:outline-none"><UoMTab /></TabsContent>
@@ -140,6 +149,7 @@ const Inventory = () => {
             <TabsContent value="stock-count" className="mt-0 focus-visible:outline-none"><StockCountTab /></TabsContent>
             <TabsContent value="wastage" className="mt-0 focus-visible:outline-none"><WastageTab /></TabsContent>
             <TabsContent value="returns" className="mt-0 focus-visible:outline-none"><ReturnsTab /></TabsContent>
+            <TabsContent value="replenish" className="mt-0 focus-visible:outline-none"><ReplenishmentTab /></TabsContent>
 
             {/* Reports Content */}
             <TabsContent value="stock-on-hand" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>

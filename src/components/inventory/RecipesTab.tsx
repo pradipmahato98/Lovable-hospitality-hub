@@ -25,9 +25,12 @@ export function RecipesTab() {
   const [produceQty, setProduceQty] = useState(1);
 
   const calculateRecipeCost = (recipe: InventoryRecipe) => {
-     return recipe.items?.reduce((sum: number, rItem: InventoryRecipeItem) => {
+     const rawCost = recipe.items?.reduce((sum: number, rItem: InventoryRecipeItem) => {
         return sum + (rItem.quantity * (rItem.item?.cost_price || 0));
      }, 0) || 0;
+     // Account for yield loss (e.g. 90% yield means cost increases by 1/0.9)
+     const yieldFactor = (recipe.yield_percentage || 100) / 100;
+     return rawCost / (yieldFactor || 1);
   };
 
   const handleProduce = async () => {
@@ -79,7 +82,10 @@ export function RecipesTab() {
                     </div>
                     <div className="text-right">
                        <Badge variant="outline" className="flex items-center gap-1 mb-1"><UtensilsCrossed className="h-3 w-3" /> {recipe.portion_size}</Badge>
-                       <p className="text-[10px] font-bold text-primary">{formatCurrency(recipeCost)} / portion</p>
+                       <div className="flex flex-col items-end">
+                          <p className="text-[10px] font-bold text-primary">{formatCurrency(recipeCost)} / portion</p>
+                          <p className="text-[8px] text-muted-foreground">Yield: {recipe.yield_percentage}%</p>
+                       </div>
                     </div>
                   </div>
 
@@ -89,12 +95,21 @@ export function RecipesTab() {
                        <Badge variant="secondary" className="text-[9px] h-4">Automated Deduction</Badge>
                     </div>
                     <div className="bg-muted/30 rounded-lg p-3 space-y-1">
-                      {recipe.items?.map((item) => (
-                        <div key={item.id} className="flex justify-between text-xs">
-                          <span>{item.item?.name}</span>
-                          <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
-                        </div>
-                      ))}
+                      {recipe.items?.map((item) => {
+                        const itemCost = item.quantity * (item.item?.cost_price || 0);
+                        const weight = (itemCost / recipeCost) * 100;
+                        return (
+                          <div key={item.id} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="font-medium">{item.item?.name}</span>
+                              <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
+                            </div>
+                            <div className="w-full h-0.5 bg-muted rounded-full overflow-hidden">
+                               <div className="h-full bg-primary/40" style={{ width: `${weight}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
