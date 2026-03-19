@@ -69,6 +69,7 @@ export interface UIPreferences {
   ios_materials: boolean;
   glass_intensity: "low" | "medium" | "high";
   animations_enabled: boolean;
+  persistent_popups: boolean;
   disable_on_mobile: boolean;
   // Typography
   font_family_sans: string;
@@ -196,6 +197,7 @@ const defaultUIPreferences: UIPreferences = {
   ios_materials: true,
   glass_intensity: "medium",
   animations_enabled: true,
+  persistent_popups: true,
   disable_on_mobile: false,
   font_family_sans: "Inter",
   font_family_display: "Playfair Display",

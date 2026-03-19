@@ -61,8 +61,6 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetOverlay />
         <SheetPrimitive.Content
           ref={ref}
-          onPointerDownOutside={handlePointerDownOutside}
-          onEscapeKeyDown={handleEscapeKeyDown}
           className={cn(
             sheetVariants({ side }),
             "flex flex-col h-full overflow-hidden p-0", // Remove padding from Content, handle in scroll area
@@ -70,6 +68,14 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
             className,
           )}
           {...props}
+          onPointerDownOutside={(e) => {
+            handlePointerDownOutside(e);
+            props.onPointerDownOutside?.(e);
+          }}
+          onEscapeKeyDown={(e) => {
+            handleEscapeKeyDown(e as any);
+            props.onEscapeKeyDown?.(e);
+          }}
         >
           <div className="relative flex flex-col h-full w-full overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
