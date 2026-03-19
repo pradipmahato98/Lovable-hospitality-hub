@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Loader2, Truck, Star, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSuppliers, useInventoryItems } from "@/hooks/useInventory";
+import { useSuppliers, useInventoryItems, Supplier } from "@/hooks/useInventory";
 import { cn } from "@/lib/utils";
 
 export function SuppliersTab() {
@@ -27,7 +27,7 @@ export function SuppliersTab() {
 
   const handleSave = async () => {
     try {
-      const payload: any = { ...form };
+      const payload: Record<string, unknown> = { ...form };
       Object.keys(payload).forEach((k) => { if (payload[k] === "") payload[k] = null; });
 
       if (editId) {
@@ -43,7 +43,7 @@ export function SuppliersTab() {
     } catch { toast.error("Failed to save supplier"); }
   };
 
-  const openEdit = (s: any) => {
+  const openEdit = (s: Supplier) => {
     setEditId(s.id);
     setForm({
       name: s.name, supplier_code: s.supplier_code || "",
@@ -115,7 +115,7 @@ export function SuppliersTab() {
             {suppliers.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No suppliers registered</TableCell></TableRow>
             ) : (
-              suppliers.map((s: any) => (
+              suppliers.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">

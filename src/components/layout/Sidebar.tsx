@@ -119,13 +119,13 @@ const navItems: NavItemConfig[] = [
     path: "/inventory",
     defaultTab: "items",
     subItems: [
-      { label: "Items", tab: "items" },
-      { label: "Categories", tab: "categories" },
+      { label: "Item Master", tab: "items" },
       { label: "Suppliers", tab: "suppliers" },
-      { label: "Orders", tab: "orders" },
+      { label: "Purchase Orders", tab: "orders" },
+      { label: "Stock Issues", tab: "issue" },
       { label: "Movements", tab: "movements" },
-      { label: "Transfers", tab: "transfers" },
-      { label: "Reports", tab: "reports" },
+      { label: "Stock Count", tab: "stock-count" },
+      { label: "Reports", tab: "stock-on-hand" },
     ]
   },
   {

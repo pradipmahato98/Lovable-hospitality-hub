@@ -9,15 +9,20 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, ClipboardList, Loader2, CheckCircle, XCircle, ShoppingCart, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryRequisitions, useInventoryItems, usePurchaseOrders } from "@/hooks/useInventory";
+import { useInventoryRequisitions, useInventoryItems, usePurchaseOrders, useSuppliers, InventoryRequisition, PurchaseOrderItem } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
 export function RequisitionsTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isPOConvertOpen, setIsPOConvertOpen] = useState(false);
+  const [selectedReqForPO, setSelectedReqForPO] = useState<InventoryRequisition | null>(null);
+  const [poSupplierId, setPoSupplierId] = useState("");
+
   const { data: requisitions = [], isLoading, createRequisition, updateRequisitionStatus } = useInventoryRequisitions();
   const { data: items = [] } = useInventoryItems();
+  const { data: suppliers = [] } = useSuppliers();
   const { createPurchaseOrder } = usePurchaseOrders();
 
   const [form, setForm] = useState({
@@ -44,9 +49,13 @@ export function RequisitionsTab() {
     setForm({ ...form, items: [...form.items, { item_id: "", quantity: 1 }] });
   };
 
-  const updateItemInReq = (index: number, field: string, value: any) => {
+  const updateItemInReq = (index: number, field: "item_id" | "quantity", value: string | number) => {
     const newItems = [...form.items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    if (field === "item_id") {
+      newItems[index].item_id = value as string;
+    } else {
+      newItems[index].quantity = value as number;
+    }
     setForm({ ...form, items: newItems });
   };
 
@@ -84,28 +93,42 @@ export function RequisitionsTab() {
     }
   };
 
-  const convertToPO = async (req: any) => {
+  const handleOpenPOConvert = (req: InventoryRequisition) => {
+     setSelectedReqForPO(req);
+     // Try to guess supplier from first item
+     const guessedSupplier = req.items?.[0]?.item?.supplier_id || "";
+     setPoSupplierId(guessedSupplier);
+     setIsPOConvertOpen(true);
+  };
+
+  const handleConvertToPO = async () => {
+     if (!selectedReqForPO || !poSupplierId) {
+        toast.error("Please select a supplier");
+        return;
+     }
+
      try {
-        const poItems = req.items?.map((i: any) => ({
+        const poItems: Partial<PurchaseOrderItem>[] = (selectedReqForPO.items || []).map((i) => ({
            item_id: i.item_id,
            quantity: i.quantity,
            unit_price: i.item?.cost_price || 0
         }));
 
         await createPurchaseOrder.mutateAsync({
-           supplier_id: req.items?.[0]?.item?.supplier_id || null, // Best guess
+           supplier_id: poSupplierId,
            status: "draft",
            order_date: new Date().toISOString().split('T')[0],
-           expected_delivery: req.required_date,
-           subtotal: poItems.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0),
+           subtotal: poItems.reduce((s: number, i) => s + (i.quantity * i.unit_price), 0),
            tax_amount: 0,
-           total: poItems.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0),
-           notes: `Generated from Requisition ${req.requisition_number}`,
+           total: poItems.reduce((s: number, i) => s + (i.quantity * i.unit_price), 0),
+           notes: `Generated from Requisition ${selectedReqForPO.requisition_number}`,
            items: poItems
         });
 
-        await updateRequisitionStatus.mutateAsync({ id: req.id, status: "partially_ordered" });
+        await updateRequisitionStatus.mutateAsync({ id: selectedReqForPO.id, status: "partially_ordered" });
         toast.success("Purchase Order draft created from requisition");
+        setIsPOConvertOpen(false);
+        setSelectedReqForPO(null);
      } catch {
         toast.error("Failed to convert to PO");
      }
@@ -162,7 +185,7 @@ export function RequisitionsTab() {
                             </>
                           )}
                           {req.status === 'approved' && (
-                             <Button variant="outline" size="sm" className="gap-1 h-8" onClick={() => convertToPO(req)}>
+                             <Button variant="outline" size="sm" className="gap-1 h-8" onClick={() => handleOpenPOConvert(req)}>
                                 <ShoppingCart className="h-3 w-3" /> Create PO
                              </Button>
                           )}
@@ -176,6 +199,30 @@ export function RequisitionsTab() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isPOConvertOpen} onOpenChange={setIsPOConvertOpen}>
+         <DialogContent>
+            <DialogHeader>
+               <DialogTitle>Convert Requisition to PO</DialogTitle>
+               <DialogDescription>Select a supplier to generate a draft Purchase Order for Requisition {selectedReqForPO?.requisition_number}</DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+               <div className="space-y-2">
+                  <Label>Supplier *</Label>
+                  <Select value={poSupplierId} onValueChange={setPoSupplierId}>
+                     <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                     <SelectContent>
+                        {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                     </SelectContent>
+                  </Select>
+               </div>
+            </div>
+            <DialogFooter>
+               <Button variant="outline" onClick={() => setIsPOConvertOpen(false)}>Cancel</Button>
+               <Button variant="blue" onClick={handleConvertToPO}>Create Draft PO</Button>
+            </DialogFooter>
+         </DialogContent>
+      </Dialog>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="max-w-2xl">

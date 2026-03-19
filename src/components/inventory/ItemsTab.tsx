@@ -25,8 +25,9 @@ export function ItemsTab() {
   const [pendingAdjOpen, setPendingAdjOpen] = useState(false);
   const [storeStockOpen, setStoreStockOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const { data: items = [], isLoading, createItem, adjustStock } = useInventoryItems({
+  const { data: items = [], isLoading, createItem, updateItem, adjustStock } = useInventoryItems({
     category: categoryFilter !== "all" ? categoryFilter : undefined,
     lowStock: showLowStock,
   });
@@ -40,7 +41,7 @@ export function ItemsTab() {
      queryKey: ["pending-inventory-adjustments"],
      queryFn: async () => {
         const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
-        return data || [];
+        return (data || []) as unknown as { id: string, item_id: string, quantity: number, movement_type: string, notes: string | null, item?: { name: string } }[];
      }
   });
 
@@ -49,10 +50,17 @@ export function ItemsTab() {
     cost_price: 0, selling_price: 0, item_type: "consumable",
     min_stock: 0, max_stock: 0, reorder_point: 0,
     shelf_life: "", storage_instructions: "", temperature_classification: "Ambient",
+    image_url: "",
     tax_applicability: [] as string[]
   };
   const [form, setForm] = useState(emptyForm);
-  const [stockAdj, setStockAdj] = useState({ quantity: 0, type: "adjustment" as any, notes: "", storeId: "", reason: "Physical Count" });
+  const [stockAdj, setStockAdj] = useState<{ quantity: number, type: "in" | "out" | "adjustment", notes: string, storeId: string, reason: string }>({
+     quantity: 0,
+     type: "adjustment",
+     notes: "",
+     storeId: "",
+     reason: "Physical Count"
+  });
 
   const filteredItems = items.filter((item) => {
     const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.sku?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -66,7 +74,7 @@ export function ItemsTab() {
         return;
      }
      const cat = categories.find(c => c.id === form.category_id);
-     const prefix = (cat as any)?.sku_prefix || cat?.name?.substring(0, 3).toUpperCase() || "ITEM";
+     const prefix = cat?.sku_prefix || cat?.name?.substring(0, 3).toUpperCase() || "ITEM";
      const random = Math.floor(1000 + Math.random() * 9000);
      setForm({ ...form, sku: `${prefix}-${random}` });
      toast.success("SKU Generated");
@@ -89,14 +97,14 @@ export function ItemsTab() {
     } catch { toast.error("Failed"); }
   };
 
-  const approveAdjustment = async (adj: any) => {
+  const approveAdjustment = async (adj: { id: string; item_id: string; quantity: number; movement_type: string; notes: string | null }) => {
      try {
-        const [status, reason, notes] = adj.notes?.split('|') || [];
+        const [, reason, notes] = adj.notes?.split('|') || [];
         const type = adj.movement_type === 'out' ? 'out' : 'in';
         await adjustStock.mutateAsync({
            itemId: adj.item_id,
            quantity: adj.quantity,
-           type: type,
+           type: type as "in" | "out" | "adjustment",
            reason: reason || 'Adjustment',
            notes: notes || ''
         });
@@ -114,8 +122,34 @@ export function ItemsTab() {
      setForm({ ...form, tax_applicability: current });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `inventory/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars') // Reusing avatars bucket or would create 'inventory'
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setForm({ ...form, image_url: publicUrl });
+      toast.success("Image uploaded");
+    } catch { toast.error("Upload failed"); }
+    finally { setIsUploading(false); }
+  };
+
   const handleCreate = async () => {
-    if (form.min_stock > form.max_stock && form.max_stock > 0) {
+    if (form.min_stock > (form.max_stock || 0) && (form.max_stock || 0) > 0) {
        toast.error("Min stock cannot be greater than max stock");
        return;
     }
@@ -125,7 +159,7 @@ export function ItemsTab() {
     }
 
     try {
-      const payload: any = { ...form };
+      const payload: Partial<InventoryItem> = { ...form };
       if (!payload.category_id) delete payload.category_id;
       if (!payload.supplier_id) delete payload.supplier_id;
       if (!payload.uom_id) delete payload.uom_id;
@@ -274,6 +308,19 @@ export function ItemsTab() {
                <div className="space-y-1"><Label className="text-xs">Shelf Life (Days)</Label><Input type="number" value={form.shelf_life} onChange={(e) => setForm({...form, shelf_life: e.target.value})} /></div>
                <div className="space-y-1"><Label className="text-xs">Storage Instructions</Label><Input value={form.storage_instructions} onChange={(e) => setForm({...form, storage_instructions: e.target.value})} placeholder="e.g. Keep away from light" /></div>
 
+               <div className="col-span-2 space-y-1">
+                  <Label className="text-xs">Item Image</Label>
+                  <div className="flex items-center gap-4">
+                     <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center border overflow-hidden">
+                        {form.image_url ? <img src={form.image_url} className="h-full w-full object-cover" /> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                     </div>
+                     <div className="flex-1 space-y-2">
+                        <Input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs" />
+                        <p className="text-[10px] text-muted-foreground">JPG, PNG or WEBP. Max 2MB.</p>
+                     </div>
+                  </div>
+               </div>
+
                <div className="col-span-2 p-3 bg-muted/50 rounded-xl space-y-2 border">
                   <Label className="text-[10px] font-bold uppercase text-primary flex items-center gap-1"><Percent className="h-3 w-3" /> Tax Applicability</Label>
                   <div className="flex flex-wrap gap-2">
@@ -322,7 +369,7 @@ export function ItemsTab() {
          </DialogContent>
       </Dialog>
       <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.id} className="flex justify-between p-2 border-b text-xs"><span>{s.name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
-      <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a: any) => <div key={a.id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
+      <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a) => <div key={a.id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
     </div>
   );
 }

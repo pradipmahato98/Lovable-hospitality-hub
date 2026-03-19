@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, Warehouse, PackageCheck, Eye, X, CheckCircle, ShieldAlert, Calendar, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
-import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs } from "@/hooks/useInventory";
+import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs, PurchaseOrderItem } from "@/hooks/useInventory";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,18 +34,22 @@ export function PurchaseOrdersTab() {
   const [returnQtys, setReturnQtys] = useState<Record<string, number>>({});
   const [returnReason, setReturnReason] = useState("");
 
-  const subtotal = lineItems.reduce((s, li) => s + li.quantity * li.unit_price, 0);
+  const subtotal = (lineItems || []).reduce((s, li) => s + li.quantity * li.unit_price, 0);
   const taxAmount = subtotal * 0.13;
   const total = subtotal + taxAmount;
 
   const addLine = () => setLineItems([...lineItems, { item_id: "", quantity: 1, unit_price: 0 }]);
   const removeLine = (i: number) => setLineItems(lineItems.filter((_, idx) => idx !== i));
-  const updateLine = (i: number, field: string, value: any) => {
+  const updateLine = (i: number, field: keyof POLineItem, value: string | number) => {
     const updated = [...lineItems];
-    (updated[i] as any)[field] = value;
     if (field === "item_id") {
+      updated[i].item_id = value as string;
       const item = items.find((it) => it.id === value);
       if (item) updated[i].unit_price = item.cost_price;
+    } else if (field === "quantity") {
+      updated[i].quantity = value as number;
+    } else if (field === "unit_price") {
+      updated[i].unit_price = value as number;
     }
     setLineItems(updated);
   };
@@ -56,12 +60,14 @@ export function PurchaseOrdersTab() {
       if (!form.supplier_id || validLines.length === 0) { toast.error("Select supplier and add items"); return; }
       await createPurchaseOrder.mutateAsync({
         supplier_id: form.supplier_id,
-        expected_delivery: form.expected_delivery || null,
-        notes: form.notes || null,
-        subtotal, tax_amount: taxAmount, total,
         status: "draft",
+        order_date: new Date().toISOString().split('T')[0],
+        subtotal,
+        tax_amount: taxAmount,
+        total,
+        notes: form.notes || undefined,
         items: validLines,
-      } as any);
+      });
       toast.success("Purchase order created");
       setCreateOpen(false);
       setForm({ supplier_id: "", expected_delivery: "", notes: "" });
@@ -71,7 +77,7 @@ export function PurchaseOrdersTab() {
 
   const openReceive = (po: PurchaseOrder) => {
     setSelectedPO(po);
-    const initialData: any = {};
+    const initialData: Record<string, { qty: number, uom_id: string, batch: string, expiry: string, damaged: number, quality: string }> = {};
     po.items?.forEach((pi) => {
       initialData[pi.id] = {
         qty: pi.quantity - (pi.received_quantity || 0),
@@ -125,7 +131,7 @@ export function PurchaseOrdersTab() {
 
   const openReturn = (po: PurchaseOrder) => {
     setSelectedPO(po);
-    const initial: any = {};
+    const initial: Record<string, number> = {};
     po.items?.forEach(pi => initial[pi.id] = 0);
     setReturnQtys(initial);
     setReturnOpen(true);
@@ -138,7 +144,7 @@ export function PurchaseOrdersTab() {
         const returnNo = `RET-${Date.now().toString(36).toUpperCase()}`;
 
         let totalVal = 0;
-        const returnItems = [];
+        const returnItems: { item_id: string, quantity: number, unit_price: number }[] = [];
 
         for (const pi of (selectedPO.items || [])) {
            const qty = returnQtys[pi.id] || 0;
@@ -168,11 +174,14 @@ export function PurchaseOrdersTab() {
               supplier_id: selectedPO.supplier_id,
               reason: returnReason,
               status: 'completed',
-              total_return_value: totalVal,
+              total_amount: totalVal,
               created_by: user?.id
-           }).select().single();
+           } as Database["public"]["Tables"]["inventory_supplier_returns"]["Insert"]).select().single();
 
-           await supabase.from('inventory_supplier_return_items').insert(returnItems.map(i => ({ ...i, return_id: retHeader.id })));
+           if (retHeader) {
+             const header = retHeader as { id: string };
+             await supabase.from('inventory_supplier_return_items').insert(returnItems.map(i => ({ ...i, supplier_return_id: header.id })));
+           }
            toast.success("Supplier return processed successfully");
            setReturnOpen(false);
         }
