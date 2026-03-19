@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure Randomness for Sensitive Identifiers
+**Vulnerability:** Use of `Math.random()` for generating API keys and reservation codes. `Math.random()` is not cryptographically secure and its output can be predictable, posing a risk for sensitive identifiers.
+**Learning:** Developers often use `Math.random()` for quick ID generation, but this pattern is dangerous when applied to secrets or unique identifiers that must resist prediction.
+**Prevention:** Enforce the use of `window.crypto.getRandomValues()` for all security-sensitive random generation in the frontend to ensure high entropy and cryptographic strength.
