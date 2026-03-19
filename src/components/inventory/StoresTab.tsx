@@ -42,7 +42,10 @@ export function StoresTab() {
         name: "", code: "", location: "", property: "Main Hotel", store_type: "general",
         temperature_classification: "Ambient", storage_conditions: "Standard Shelf"
       });
-    } catch { toast.error("Failed to create store"); }
+    } catch (error: any) {
+      console.error("Create store error:", error);
+      toast.error(error.message || "Failed to create store");
+    }
   };
 
   return (

@@ -356,6 +356,16 @@ export function useInventorySettings() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-settings-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_settings" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-settings"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const updateSettings = useMutation({
     mutationFn: async (updates: Record<string, string>) => {
       for (const [key, value] of Object.entries(updates)) {
@@ -380,6 +390,16 @@ export function useInventoryCategories() {
       return data as InventoryCategory[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-categories-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_categories" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-categories"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createCategory = useMutation({
     mutationFn: async (cat: { name: string; description?: string; parent_id?: string; sku_prefix?: string }) => {
@@ -467,6 +487,19 @@ export function useInventoryUoMs() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-uoms-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_uoms" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-uoms"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_uom_conversions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const conversionsQuery = useQuery({
     queryKey: ["inventory-uom-conversions"],
     queryFn: async () => {
@@ -519,6 +552,16 @@ export function useInventoryStores() {
       return data as InventoryStore[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-stores-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_stores" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-stores"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createStore = useMutation({
     mutationFn: async (store: Omit<InventoryStore, "id" | "created_at" | "updated_at">) => {
@@ -827,6 +870,16 @@ export function useInventoryRequisitions() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-requisitions-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_requisitions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-requisitions"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createRequisition = useMutation({
     mutationFn: async ({ items, ...req }: { items: Partial<InventoryRequisitionItem>[], department: string, priority: string, notes?: string, requested_by?: string }) => {
       const reqNumber = `REQ-${Date.now().toString(36).toUpperCase()}`;
@@ -868,6 +921,16 @@ export function useInventoryIssues() {
       return data as unknown as InventoryStockIssue[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-issues-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_stock_issues" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-issues"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createIssue = useMutation({
     mutationFn: async ({ items, requisition_id, storeId, ...issue }: { items: Partial<InventoryStockIssueItem>[], requisition_id?: string, storeId?: string, department: string, issued_to?: string, issued_by?: string, notes?: string }) => {
@@ -965,6 +1028,16 @@ export function useInventoryRecipes() {
       return data as unknown as InventoryRecipe[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-recipes-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_recipes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-recipes"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createRecipe = useMutation({
     mutationFn: async ({ items, ...recipe }: { items: Partial<InventoryRecipeItem>[], name: string, description?: string, portion_size?: string, yield_percentage?: number }) => {
@@ -1098,6 +1171,16 @@ export function useInventoryTransfers() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-transfers-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_transfers" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-transfers"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createTransfer = useMutation({
     mutationFn: async (transfer: Partial<InventoryTransfer>) => {
       const transferNumber = `TRF-${Date.now().toString(36).toUpperCase()}`;
@@ -1160,6 +1243,16 @@ export function useInventoryWastage() {
     },
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-wastage-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_wastage" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-wastage"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const reportWastage = useMutation({
     mutationFn: async (wastage: Partial<InventoryWastage>) => {
       const { data, error } = await db.from("inventory_wastage").insert(wastage as Database["public"]["Tables"]["inventory_wastage"]["Insert"]).select().single();
@@ -1212,6 +1305,16 @@ export function useInventoryStockCounts() {
       return data as InventoryStockCount[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-stock-counts-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_stock_counts" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-stock-counts"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const reconcileCount = useMutation({
     mutationFn: async (id: string) => {
@@ -1277,6 +1380,16 @@ export function useInventoryReturns() {
       return data as unknown as InventorySupplierReturn[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("inventory-returns-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_supplier_returns" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["inventory-supplier-returns"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createReturn = useMutation({
     mutationFn: async ({ items, ...ret }: { items: Partial<InventorySupplierReturnItem>[], supplier_id?: string, purchase_order_id?: string, reason?: string, total_amount: number, resolution?: string }) => {
