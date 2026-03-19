@@ -20,26 +20,6 @@ import { cn } from "@/lib/utils";
 
 const Inventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const mainTab = searchParams.get("group") || "transactions";
-  const activeSubTab = searchParams.get("tab") || (mainTab === "setup" ? "items" : mainTab === "transactions" ? "orders" : "stock-on-hand");
-
-  const handleGroupChange = (value: string) => {
-    setSearchParams(prev => {
-      prev.set("group", value);
-      // Set default sub-tab for the group
-      if (value === "setup") prev.set("tab", "items");
-      else if (value === "transactions") prev.set("tab", "orders");
-      else if (value === "reports") prev.set("tab", "stock-on-hand");
-      return prev;
-    });
-  };
-
-  const handleTabChange = (value: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", value);
-      return prev;
-    });
-  };
 
   const navGroups = [
     { id: "setup", label: "Setup", icon: Settings2 },
@@ -77,6 +57,34 @@ const Inventory = () => {
     ]
   };
 
+  const activeSubTab = searchParams.get("tab") || "items";
+
+  // Derive mainTab from activeSubTab if not explicitly set
+  const derivedGroup = Object.entries(subTabs).find(([_, tabs]) =>
+    tabs.some(t => t.id === activeSubTab)
+  )?.[0] || "transactions";
+
+  const mainTab = searchParams.get("group") || derivedGroup;
+
+  const handleGroupChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("group", value);
+      // Set default sub-tab for the group
+      if (value === "setup") prev.set("tab", "items");
+      else if (value === "transactions") prev.set("tab", "orders");
+      else if (value === "reports") prev.set("tab", "stock-on-hand");
+      return prev;
+    });
+  };
+
+  const handleTabChange = (value: string) => {
+    setSearchParams(prev => {
+      prev.set("tab", value);
+      return prev;
+    });
+  };
+
+
   return (
     <MainLayout title="Inventory Management" subtitle="Comprehensive stock control for all departments">
       <div className="flex flex-col space-y-6">
@@ -113,31 +121,32 @@ const Inventory = () => {
             </div>
 
             {/* Setup Content */}
-            <TabsContent value="items"><ItemsTab /></TabsContent>
-            <TabsContent value="categories"><CategoriesTab /></TabsContent>
-            <TabsContent value="uoms"><UoMTab /></TabsContent>
-            <TabsContent value="stores"><StoresTab /></TabsContent>
-            <TabsContent value="suppliers"><SuppliersTab /></TabsContent>
-            <TabsContent value="recipes"><RecipesTab /></TabsContent>
-            <TabsContent value="settings"><InventorySettingsTab /></TabsContent>
+            <TabsContent value="items" className="mt-0 focus-visible:outline-none"><ItemsTab /></TabsContent>
+            <TabsContent value="categories" className="mt-0 focus-visible:outline-none"><CategoriesTab /></TabsContent>
+            <TabsContent value="uoms" className="mt-0 focus-visible:outline-none"><UoMTab /></TabsContent>
+            <TabsContent value="stores" className="mt-0 focus-visible:outline-none"><StoresTab /></TabsContent>
+            <TabsContent value="suppliers" className="mt-0 focus-visible:outline-none"><SuppliersTab /></TabsContent>
+            <TabsContent value="recipes" className="mt-0 focus-visible:outline-none"><RecipesTab /></TabsContent>
+            <TabsContent value="settings" className="mt-0 focus-visible:outline-none"><InventorySettingsTab /></TabsContent>
 
             {/* Transactions Content */}
-            <TabsContent value="approvals"><ApprovalsQueueTab /></TabsContent>
-            <TabsContent value="requisitions"><RequisitionsTab /></TabsContent>
-            <TabsContent value="orders"><PurchaseOrdersTab /></TabsContent>
-            <TabsContent value="issue"><StockIssueTab /></TabsContent>
-            <TabsContent value="movements"><StockMovementsTab /></TabsContent>
-            <TabsContent value="transfers"><TransfersTab /></TabsContent>
-            <TabsContent value="stock-count"><StockCountTab /></TabsContent>
-            <TabsContent value="wastage"><WastageTab /></TabsContent>
-            <TabsContent value="returns"><ReturnsTab /></TabsContent>
+            {/* Transactions Content */}
+            <TabsContent value="approvals" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
+            <TabsContent value="requisitions" className="mt-0 focus-visible:outline-none"><RequisitionsTab /></TabsContent>
+            <TabsContent value="orders" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
+            <TabsContent value="issue" className="mt-0 focus-visible:outline-none"><StockIssueTab /></TabsContent>
+            <TabsContent value="movements" className="mt-0 focus-visible:outline-none"><StockMovementsTab /></TabsContent>
+            <TabsContent value="transfers" className="mt-0 focus-visible:outline-none"><TransfersTab /></TabsContent>
+            <TabsContent value="stock-count" className="mt-0 focus-visible:outline-none"><StockCountTab /></TabsContent>
+            <TabsContent value="wastage" className="mt-0 focus-visible:outline-none"><WastageTab /></TabsContent>
+            <TabsContent value="returns" className="mt-0 focus-visible:outline-none"><ReturnsTab /></TabsContent>
 
             {/* Reports Content */}
-            <TabsContent value="stock-on-hand"><ReportsTab /></TabsContent>
-            <TabsContent value="valuation"><InventoryValuationReport /></TabsContent>
-            <TabsContent value="food-cost"><FoodCostReport /></TabsContent>
-            <TabsContent value="movement-rpt"><StockMovementsTab /></TabsContent>
-            <TabsContent value="expiry"><ExpiryReport /></TabsContent>
+            <TabsContent value="stock-on-hand" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
+            <TabsContent value="valuation" className="mt-0 focus-visible:outline-none"><InventoryValuationReport /></TabsContent>
+            <TabsContent value="food-cost" className="mt-0 focus-visible:outline-none"><FoodCostReport /></TabsContent>
+            <TabsContent value="movement-rpt" className="mt-0 focus-visible:outline-none"><StockMovementsTab /></TabsContent>
+            <TabsContent value="expiry" className="mt-0 focus-visible:outline-none"><ExpiryReport /></TabsContent>
           </Tabs>
         </ErrorBoundary>
       </div>

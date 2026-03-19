@@ -17,8 +17,9 @@ export function StockMovementsTab() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [storeFilter, setStoreFilter] = useState("all");
 
-  const filtered = movements.filter((m) => {
-    const matchesSearch = !search || (m.item as any)?.name?.toLowerCase().includes(search.toLowerCase());
+  const filtered = (movements || []).filter((m) => {
+    const item = m.item as Record<string, unknown> | undefined;
+    const matchesSearch = !search || (item?.name as string)?.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === "all" || m.movement_type === typeFilter;
     const matchesStore = storeFilter === "all" || m.store_id === storeFilter;
     return matchesSearch && matchesType && matchesStore;
@@ -28,16 +29,23 @@ export function StockMovementsTab() {
     const data = {
       title: "Stock Movements Audit Ledger",
       headers: ["Date", "Item", "Store", "Type", "Quantity", "Ref"],
-      rows: filtered.map((m) => [
-        formatAD(new Date(m.created_at), "time"),
-        (m.item as any)?.name || "-",
-        stores.find(s => s.id === m.store_id)?.name || "Main",
-        m.movement_type,
-        m.quantity,
-        m.reference_type || "Manual",
-      ]),
+      rows: filtered.map((m) => {
+        const item = m.item as Record<string, unknown> | undefined;
+        return [
+          formatAD(new Date(m.created_at), "time"),
+          (item?.name as string) || "-",
+          stores.find(s => s.id === m.store_id)?.name || "Main",
+          m.movement_type,
+          m.quantity,
+          m.reference_type || "Manual",
+        ];
+      }),
     };
-    format === "pdf" ? exportToPDF(data) : exportToExcel(data);
+    if (format === "pdf") {
+      exportToPDF(data);
+    } else {
+      exportToExcel(data);
+    }
   };
 
   return (
@@ -94,7 +102,7 @@ export function StockMovementsTab() {
                 filtered.map((m) => (
                   <TableRow key={m.id} className="hover:bg-muted/5 transition-colors">
                     <TableCell className="text-[10px] font-mono">{formatAD(new Date(m.created_at), "time")}</TableCell>
-                    <TableCell className="text-xs font-semibold">{(m.item as any)?.name || "-"}</TableCell>
+                    <TableCell className="text-xs font-semibold">{(m.item as Record<string, unknown>)?.name as string || "-"}</TableCell>
                     <TableCell className="text-[10px]"><Badge variant="outline" className="h-4 font-normal">{stores.find(s => s.id === m.store_id)?.name || "Main"}</Badge></TableCell>
                     <TableCell>
                       <Badge className={cn("text-[9px] h-4", m.movement_type === "in" ? "bg-success/10 text-success border-success/20" : m.movement_type === "out" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-muted text-muted-foreground")}>

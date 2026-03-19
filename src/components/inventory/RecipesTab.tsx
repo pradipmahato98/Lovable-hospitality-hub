@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, ChefHat, Loader2, Edit, Trash2, UtensilsCrossed, Play, Calculator, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryRecipes, useInventoryItems, useInventoryUoMs, useInventoryProduction } from "@/hooks/useInventory";
+import { useInventoryRecipes, useInventoryItems, useInventoryUoMs, useInventoryProduction, InventoryRecipe, InventoryRecipeItem } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 
@@ -21,11 +21,11 @@ export function RecipesTab() {
   const { data: uoms = [] } = useInventoryUoMs();
   const { produceBatch } = useInventoryProduction();
 
-  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<InventoryRecipe | null>(null);
   const [produceQty, setProduceQty] = useState(1);
 
-  const calculateRecipeCost = (recipe: any) => {
-     return recipe.items?.reduce((sum: number, rItem: any) => {
+  const calculateRecipeCost = (recipe: InventoryRecipe) => {
+     return recipe.items?.reduce((sum: number, rItem: InventoryRecipeItem) => {
         return sum + (rItem.quantity * (rItem.item?.cost_price || 0));
      }, 0) || 0;
   };
@@ -89,7 +89,7 @@ export function RecipesTab() {
                        <Badge variant="secondary" className="text-[9px] h-4">Automated Deduction</Badge>
                     </div>
                     <div className="bg-muted/30 rounded-lg p-3 space-y-1">
-                      {recipe.items?.map((item: any) => (
+                      {recipe.items?.map((item) => (
                         <div key={item.id} className="flex justify-between text-xs">
                           <span>{item.item?.name}</span>
                           <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
@@ -126,13 +126,13 @@ export function RecipesTab() {
               <div className="flex items-center gap-4">
                  <Input type="number" value={produceQty} onChange={(e) => setProduceQty(Number(e.target.value))} className="w-32" />
                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                 <p className="text-sm font-bold text-primary">Total Est. Cost: {formatCurrency(calculateRecipeCost(selectedRecipe || {}) * produceQty)}</p>
+                 <p className="text-sm font-bold text-primary">Total Est. Cost: {formatCurrency(calculateRecipeCost(selectedRecipe || ({} as InventoryRecipe)) * produceQty)}</p>
               </div>
               <p className="text-xs text-muted-foreground italic">Target: {selectedRecipe?.portion_size} per portion</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg border">
                <p className="text-xs font-bold uppercase mb-2 text-muted-foreground">Inventory Consumption:</p>
-               {selectedRecipe?.items?.map((item: any) => (
+               {selectedRecipe?.items?.map((item) => (
                  <div key={item.id} className="flex justify-between text-xs py-1 border-b border-muted last:border-0">
                    <span>{item.item?.name}</span>
                    <div className="flex items-center gap-2">

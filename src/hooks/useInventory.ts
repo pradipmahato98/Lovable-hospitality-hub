@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { toast } from "sonner";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/integrations/supabase/types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase as unknown as SupabaseClient<Database>;
 
 // ============= Types =============
 export interface InventoryCategory {
@@ -84,7 +86,7 @@ export interface InventoryItem {
   item_type: string;
   shelf_life: string | null;
   storage_instructions: string | null;
-  tax_applicability: any[];
+  tax_applicability: string[];
   image_url: string | null;
   is_active: boolean;
   last_restocked_at: string | null;
@@ -170,6 +172,14 @@ export interface InventoryWastage {
   item?: { name: string; sku: string | null; unit: string; cost_price: number };
 }
 
+export interface InventoryRequisitionItem {
+  id: string;
+  requisition_id: string;
+  item_id: string;
+  quantity: number;
+  item?: InventoryItem;
+}
+
 export interface InventoryRequisition {
   id: string;
   requisition_number: string;
@@ -180,7 +190,17 @@ export interface InventoryRequisition {
   status: string;
   notes: string | null;
   created_at: string;
-  items?: any[];
+  items?: InventoryRequisitionItem[];
+}
+
+export interface InventoryRecipeItem {
+  id: string;
+  recipe_id: string;
+  item_id: string;
+  quantity: number;
+  uom_id: string | null;
+  item?: InventoryItem;
+  uom?: InventoryUoM;
 }
 
 export interface InventoryRecipe {
@@ -192,7 +212,16 @@ export interface InventoryRecipe {
   yield_percentage: number;
   is_active: boolean;
   created_at: string;
-  items?: any[];
+  items?: InventoryRecipeItem[];
+}
+
+export interface InventoryStockIssueItem {
+  id: string;
+  stock_issue_id: string;
+  item_id: string;
+  quantity: number;
+  batch_number?: string;
+  item?: InventoryItem;
 }
 
 export interface InventoryStockIssue {
@@ -205,7 +234,7 @@ export interface InventoryStockIssue {
   status: string;
   notes: string | null;
   created_at: string;
-  items?: any[];
+  items?: InventoryStockIssueItem[];
 }
 
 export interface InventoryStockCount {
@@ -322,7 +351,7 @@ export function useInventorySettings() {
       const { data, error } = await db.from("inventory_settings").select("*");
       if (error) throw error;
       const settingsMap: Record<string, string> = {};
-      data.forEach((s: any) => settingsMap[s.setting_key] = s.setting_value);
+      data?.forEach((s) => settingsMap[s.setting_key] = s.setting_value);
       return settingsMap;
     },
   });
@@ -548,8 +577,8 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
 
   const createItem = useMutation({
     mutationFn: async (item: Partial<InventoryItem>) => {
-      const { category, supplier, uom, ...clean } = item as any;
-      const { data, error } = await db.from("inventory_items").insert(clean).select().single();
+      const { category: _c, supplier: _s, uom: _u, ...clean } = item as Record<string, unknown>;
+      const { data, error } = await db.from("inventory_items").insert(clean as Database["public"]["Tables"]["inventory_items"]["Insert"]).select().single();
       if (error) throw error;
       return data;
     },
@@ -558,8 +587,8 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
 
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<InventoryItem> & { id: string }) => {
-      const { category, supplier, uom, ...clean } = updates as any;
-      const { data, error } = await db.from("inventory_items").update(clean).eq("id", id).select().single();
+      const { category: _c, supplier: _s, uom: _u, ...clean } = updates as Record<string, unknown>;
+      const { data, error } = await db.from("inventory_items").update(clean as Database["public"]["Tables"]["inventory_items"]["Update"]).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -654,13 +683,13 @@ export function usePurchaseOrders(status?: string) {
   }, [queryClient]);
 
   const createPurchaseOrder = useMutation({
-    mutationFn: async ({ items, ...order }: any) => {
+    mutationFn: async ({ items, ...order }: { items: Partial<PurchaseOrderItem>[], supplier_id: string | null, status: string, order_date: string, subtotal: number, tax_amount: number, total: number, notes?: string, expected_delivery?: string | null }) => {
       const orderNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
-      const { data: po, error: poError } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber }).select().single();
+      const { data: po, error: poError } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber } as Database["public"]["Tables"]["purchase_orders"]["Insert"]).select().single();
       if (poError) throw poError;
 
-      const poItems = items.map((i: any) => ({ ...i, purchase_order_id: po.id }));
-      const { error: itemsError } = await db.from("purchase_order_items").insert(poItems);
+      const poItems = items.map((i) => ({ ...i, purchase_order_id: po.id }));
+      const { error: itemsError } = await db.from("purchase_order_items").insert(poItems as Database["public"]["Tables"]["purchase_order_items"]["Insert"][]);
       if (itemsError) throw itemsError;
       return po;
     },
@@ -679,7 +708,7 @@ export function usePurchaseOrders(status?: string) {
   });
 
   const receivePurchaseOrder = useMutation({
-    mutationFn: async ({ poId, receivedItems, storeId }: { poId: string; receivedItems: any[]; storeId?: string }) => {
+    mutationFn: async ({ poId, receivedItems, storeId }: { poId: string; receivedItems: { poItemId: string, itemId: string, receivedQty: number, batchNumber?: string, expiryDate?: string, damagedQty?: number, qualityStatus?: string }[]; storeId?: string }) => {
       let totalValueReceived = 0;
       for (const ri of receivedItems) {
         const { error: poItemErr } = await db.from("purchase_order_items").update({
@@ -693,11 +722,11 @@ export function usePurchaseOrders(status?: string) {
         if (poItemErr) throw poItemErr;
 
         if (ri.receivedQty > 0) {
-          const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", ri.itemId).single();
+          const { data: item, error: fetchErr } = await db.from("inventory_items").select("name, current_stock, cost_price, avg_cost, reorder_point").eq("id", ri.itemId).single();
           if (fetchErr) throw fetchErr;
 
           const { data: poItem } = await db.from("purchase_order_items").select("unit_price").eq("id", ri.poItemId).single();
-          const unitPrice = poItem?.unit_price || item.cost_price;
+          const unitPrice = (poItem as Record<string, unknown>)?.unit_price as number || item.cost_price;
           totalValueReceived += (ri.receivedQty * unitPrice);
 
           const currentTotalValue = (item.current_stock || 0) * (item.avg_cost || item.cost_price);
@@ -745,14 +774,14 @@ export function usePurchaseOrders(status?: string) {
       ]);
 
       const { data: poItems } = await db.from("purchase_order_items").select("quantity, received_quantity").eq("purchase_order_id", poId);
-      const allReceived = poItems?.every((pi: any) => (pi.received_quantity || 0) >= pi.quantity);
-      const anyReceived = poItems?.some((pi: any) => (pi.received_quantity || 0) > 0);
+      const allReceived = poItems?.every((pi) => (pi.received_quantity || 0) >= pi.quantity);
+      const anyReceived = poItems?.some((pi) => (pi.received_quantity || 0) > 0);
 
       const newStatus = allReceived ? "received" : anyReceived ? "partially_received" : "sent";
       const updates: Record<string, unknown> = { status: newStatus };
       if (allReceived) updates.received_date = new Date().toISOString().split("T")[0];
 
-      await db.from("purchase_orders").update(updates).eq("id", poId);
+      await db.from("purchase_orders").update(updates as Database["public"]["Tables"]["purchase_orders"]["Update"]).eq("id", poId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
@@ -794,18 +823,18 @@ export function useInventoryRequisitions() {
         .select(`*, items:inventory_requisition_items(*, item:inventory_items(*))`)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as InventoryRequisition[];
+      return data as unknown as InventoryRequisition[];
     },
   });
 
   const createRequisition = useMutation({
-    mutationFn: async ({ items, ...req }: any) => {
+    mutationFn: async ({ items, ...req }: { items: Partial<InventoryRequisitionItem>[], department: string, priority: string, notes?: string, requested_by?: string }) => {
       const reqNumber = `REQ-${Date.now().toString(36).toUpperCase()}`;
-      const { data: requisition, error: reqError } = await db.from("inventory_requisitions").insert({ ...req, requisition_number: reqNumber }).select().single();
+      const { data: requisition, error: reqError } = await db.from("inventory_requisitions").insert({ ...req, requisition_number: reqNumber } as Database["public"]["Tables"]["inventory_requisitions"]["Insert"]).select().single();
       if (reqError) throw reqError;
 
-      const reqItems = items.map((i: any) => ({ ...i, requisition_id: requisition.id }));
-      const { error: itemsError } = await db.from("inventory_requisition_items").insert(reqItems);
+      const reqItems = items.map((i) => ({ ...i, requisition_id: requisition.id }));
+      const { error: itemsError } = await db.from("inventory_requisition_items").insert(reqItems as Database["public"]["Tables"]["inventory_requisition_items"]["Insert"][]);
       if (itemsError) throw itemsError;
       return requisition;
     },
@@ -836,12 +865,12 @@ export function useInventoryIssues() {
         .select(`*, items:inventory_stock_issue_items(*, item:inventory_items(*))`)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as InventoryStockIssue[];
+      return data as unknown as InventoryStockIssue[];
     },
   });
 
   const createIssue = useMutation({
-    mutationFn: async ({ items, requisition_id, storeId, ...issue }: any) => {
+    mutationFn: async ({ items, requisition_id, storeId, ...issue }: { items: Partial<InventoryStockIssueItem>[], requisition_id?: string, storeId?: string, department: string, issued_to?: string, issued_by?: string, notes?: string }) => {
       const issueNumber = `SIV-${Date.now().toString(36).toUpperCase()}`;
       let totalIssueValue = 0;
 
@@ -849,36 +878,36 @@ export function useInventoryIssues() {
         ...issue,
         requisition_id,
         issue_number: issueNumber
-      }).select().single();
+      } as Database["public"]["Tables"]["inventory_stock_issues"]["Insert"]).select().single();
       if (issueErr) throw issueErr;
 
       for (const item of items) {
-        const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id, cost_price, avg_cost").eq("id", item.item_id).single();
+        const { data: invItem } = await db.from("inventory_items").select("name, current_stock, uom_id, cost_price, avg_cost, reorder_point").eq("id", item.item_id as string).single();
 
-        let finalDeduction = item.quantity;
-        if (item.uom_id && invItem?.uom_id && item.uom_id !== invItem.uom_id) {
-           finalDeduction = await convertUoM(item.uom_id, invItem.uom_id, item.quantity);
+        let finalDeduction = item.quantity || 0;
+        if ((item as Record<string, unknown>).uom_id && invItem?.uom_id && (item as Record<string, unknown>).uom_id !== invItem.uom_id) {
+           finalDeduction = await convertUoM((item as Record<string, unknown>).uom_id as string, invItem.uom_id, item.quantity || 0);
         }
 
         totalIssueValue += (finalDeduction * (invItem?.avg_cost || invItem?.cost_price || 0));
 
         await db.from("inventory_stock_issue_items").insert({
           stock_issue_id: sIssue.id,
-          item_id: item.item_id,
-          quantity: item.quantity,
+          item_id: item.item_id as string,
+          quantity: item.quantity || 0,
           batch_number: item.batch_number
-        });
+        } as Database["public"]["Tables"]["inventory_stock_issue_items"]["Insert"]);
 
         await db.from("inventory_items").update({
           current_stock: Math.max(0, (invItem?.current_stock || 0) - finalDeduction)
-        }).eq("id", item.item_id);
+        }).eq("id", item.item_id as string);
 
         if (storeId) {
-           await updateStoreStock(item.item_id, storeId, finalDeduction, 'decrement');
+           await updateStoreStock(item.item_id as string, storeId, finalDeduction, 'decrement');
         }
 
         await db.from("stock_movements").insert({
-          item_id: item.item_id,
+          item_id: item.item_id as string,
           movement_type: "out",
           quantity: finalDeduction,
           reference_type: "stock_issue",
@@ -933,17 +962,17 @@ export function useInventoryRecipes() {
         .select(`*, items:inventory_recipe_items(*, item:inventory_items(*), uom:inventory_uoms(*))`)
         .order("name");
       if (error) throw error;
-      return data as InventoryRecipe[];
+      return data as unknown as InventoryRecipe[];
     },
   });
 
   const createRecipe = useMutation({
-    mutationFn: async ({ items, ...recipe }: any) => {
-      const { data: rec, error: recError } = await db.from("inventory_recipes").insert(recipe).select().single();
+    mutationFn: async ({ items, ...recipe }: { items: Partial<InventoryRecipeItem>[], name: string, description?: string, portion_size?: string, yield_percentage?: number }) => {
+      const { data: rec, error: recError } = await db.from("inventory_recipes").insert(recipe as Database["public"]["Tables"]["inventory_recipes"]["Insert"]).select().single();
       if (recError) throw recError;
 
-      const recItems = items.map((i: any) => ({ ...i, recipe_id: rec.id }));
-      const { error: itemsError } = await db.from("inventory_recipe_items").insert(recItems);
+      const recItems = items.map((i) => ({ ...i, recipe_id: rec.id }));
+      const { error: itemsError } = await db.from("inventory_recipe_items").insert(recItems as Database["public"]["Tables"]["inventory_recipe_items"]["Insert"][]);
       if (itemsError) throw itemsError;
       return rec;
     },
@@ -964,7 +993,7 @@ export function useInventoryProduction() {
         quantity_produced: quantity,
         produced_by: producedBy,
         notes
-      }).select().single();
+      } as Database["public"]["Tables"]["inventory_production_logs"]["Insert"]).select().single();
       if (logErr) throw logErr;
 
       const { data: recipeItems } = await db.from("inventory_recipe_items").select("*").eq("recipe_id", recipeId);
@@ -991,9 +1020,9 @@ export function useInventoryProduction() {
             movement_type: "out",
             quantity: deductionQty,
             reference_type: "production",
-            reference_id: log.id,
+            reference_id: (log as Record<string, unknown>).id as string,
             notes: `Production consumption for Recipe ID ${recipeId}`,
-          });
+          } as Database["public"]["Tables"]["stock_movements"]["Insert"]);
         }
       }
 
@@ -1070,9 +1099,9 @@ export function useInventoryTransfers() {
   });
 
   const createTransfer = useMutation({
-    mutationFn: async (transfer: any) => {
+    mutationFn: async (transfer: Partial<InventoryTransfer>) => {
       const transferNumber = `TRF-${Date.now().toString(36).toUpperCase()}`;
-      const { data, error } = await db.from("inventory_transfers").insert({ ...transfer, transfer_number: transferNumber, status: "pending" }).select().single();
+      const { data, error } = await db.from("inventory_transfers").insert({ ...transfer, transfer_number: transferNumber, status: "pending" } as Database["public"]["Tables"]["inventory_transfers"]["Insert"]).select().single();
       if (error) throw error;
       return data;
     },
@@ -1104,7 +1133,15 @@ export function useInventoryTransfers() {
     },
   });
 
-  return { ...query, createTransfer, completeTransfer };
+  const cancelTransfer = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_transfers").update({ status: "cancelled" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-transfers"] }),
+  });
+
+  return { ...query, createTransfer, completeTransfer, cancelTransfer };
 }
 
 // ============= Wastage =============
@@ -1124,11 +1161,11 @@ export function useInventoryWastage() {
   });
 
   const reportWastage = useMutation({
-    mutationFn: async (wastage: any) => {
-      const { data, error } = await db.from("inventory_wastage").insert(wastage).select().single();
+    mutationFn: async (wastage: Partial<InventoryWastage>) => {
+      const { data, error } = await db.from("inventory_wastage").insert(wastage as Database["public"]["Tables"]["inventory_wastage"]["Insert"]).select().single();
       if (error) throw error;
 
-      const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", wastage.item_id).single();
+      const { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", wastage.item_id as string).single();
       if (fetchErr) throw fetchErr;
 
       await db.from("inventory_items").update({ current_stock: Math.max(0, item.current_stock - wastage.quantity) }).eq("id", wastage.item_id);
@@ -1237,42 +1274,42 @@ export function useInventoryReturns() {
         .select(`*, supplier:suppliers(*), items:inventory_supplier_return_items(*, item:inventory_items(*))`)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as InventorySupplierReturn[];
+      return data as unknown as InventorySupplierReturn[];
     },
   });
 
   const createReturn = useMutation({
-    mutationFn: async ({ items, ...ret }: any) => {
+    mutationFn: async ({ items, ...ret }: { items: Partial<InventorySupplierReturnItem>[], supplier_id?: string, purchase_order_id?: string, reason?: string, total_amount: number, resolution?: string }) => {
       const returnNumber = `RTN-${Date.now().toString(36).toUpperCase()}`;
       const { data: sRet, error: retErr } = await db.from("inventory_supplier_returns").insert({
         ...ret,
         return_number: returnNumber,
         status: 'completed'
-      }).select().single();
+      } as Database["public"]["Tables"]["inventory_supplier_returns"]["Insert"]).select().single();
       if (retErr) throw retErr;
 
       let totalReturnValue = 0;
       for (const item of items) {
-        const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", item.item_id).single();
+        const { data: invItem } = await db.from("inventory_items").select("current_stock").eq("id", item.item_id as string).single();
 
         await db.from("inventory_supplier_return_items").insert({
           supplier_return_id: sRet.id,
-          item_id: item.item_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.quantity * item.unit_price
+          item_id: item.item_id as string,
+          quantity: item.quantity || 0,
+          unit_price: item.unit_price || 0,
+          total_price: (item.quantity || 0) * (item.unit_price || 0)
         });
 
-        totalReturnValue += (item.quantity * item.unit_price);
+        totalReturnValue += ((item.quantity || 0) * (item.unit_price || 0));
 
         await db.from("inventory_items").update({
-          current_stock: Math.max(0, (invItem?.current_stock || 0) - item.quantity)
-        }).eq("id", item.item_id);
+          current_stock: Math.max(0, (invItem?.current_stock || 0) - (item.quantity || 0))
+        }).eq("id", item.item_id as string);
 
         await db.from("stock_movements").insert({
-          item_id: item.item_id,
+          item_id: item.item_id as string,
           movement_type: "out",
-          quantity: item.quantity,
+          quantity: item.quantity || 0,
           reference_type: "supplier_return",
           reference_id: sRet.id,
           notes: `Return to supplier: ${ret.reason || 'Damaged/Expired'}`,
@@ -1282,10 +1319,12 @@ export function useInventoryReturns() {
       const assetAcc = await getInventoryAccount('inventory_gl_account');
       const purchaseAcc = await getInventoryAccount('purchase_gl_account');
 
-      await createFinanceEntry(`Supplier Return (Debit Note): ${returnNumber}`, [
-         { account_id: purchaseAcc, debit: totalReturnValue, credit: 0 },
-         { account_id: assetAcc, debit: 0, credit: totalReturnValue }
-      ]);
+      if (ret.reason?.toUpperCase().includes('(REFUND)')) {
+         await createFinanceEntry(`Supplier Return (Debit Note): ${returnNumber}`, [
+            { account_id: purchaseAcc, debit: totalReturnValue, credit: 0 },
+            { account_id: assetAcc, debit: 0, credit: totalReturnValue }
+         ]);
+      }
 
       return sRet;
     },
@@ -1298,8 +1337,55 @@ export function useInventoryReturns() {
   return { ...query, createReturn };
 }
 
+export function useInventoryAutomation() {
+  const queryClient = useQueryClient();
+  const { data: items = [] } = useInventoryItems();
+  const { createPurchaseOrder } = usePurchaseOrders();
+
+  const generateLowStockPOs = useMutation({
+    mutationFn: async () => {
+      const lowStock = items.filter(i => i.current_stock <= i.reorder_point);
+      if (lowStock.length === 0) return null;
+
+      // Group by supplier
+      const bySupplier: Record<string, InventoryItem[]> = {};
+      lowStock.forEach(i => {
+        const sid = i.supplier_id || "unknown";
+        if (!bySupplier[sid]) bySupplier[sid] = [];
+        bySupplier[sid].push(i);
+      });
+
+      for (const [sid, sItems] of Object.entries(bySupplier)) {
+        const poItems = sItems.map(i => ({
+          item_id: i.id,
+          quantity: Math.max(10, (i.reorder_point * 2) - i.current_stock),
+          unit_price: i.cost_price
+        }));
+
+        await createPurchaseOrder.mutateAsync({
+          supplier_id: sid === "unknown" ? null : sid,
+          status: "draft",
+          order_date: new Date().toISOString().split('T')[0],
+          subtotal: poItems.reduce((s, pi) => s + (pi.quantity * pi.unit_price), 0),
+          tax_amount: 0,
+          total: poItems.reduce((s, pi) => s + (pi.quantity * pi.unit_price), 0),
+          notes: "Automated low-stock replenishment PO",
+          items: poItems
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast.success("Draft POs generated for all low-stock items");
+    }
+  });
+
+  return { generateLowStockPOs };
+}
+
 // ============= Stats =============
 export function useInventoryStats() {
+  const notifiedRefs = useRef<Set<string>>(new Set());
   const { data: items } = useInventoryItems();
   const { data: movements } = useStockMovements();
   const { data: settings } = useInventorySettings();
@@ -1307,8 +1393,8 @@ export function useInventoryStats() {
   const { data: purchaseItems } = useQuery({
     queryKey: ["all-purchase-items"],
     queryFn: async () => {
-      const { data } = await db.from("purchase_order_items").select("*, purchase_order:purchase_orders(status, order_date)").eq("purchase_orders.status", "received").order("purchase_orders.order_date", { ascending: false });
-      return data || [];
+      const { data } = await db.from("purchase_order_items").select("*, purchase_order:purchase_orders!inner(status, order_date)").eq("purchase_orders.status", "received");
+      return (data || []) as unknown as (PurchaseOrderItem & { purchase_order: PurchaseOrder })[];
     }
   });
 
@@ -1318,15 +1404,22 @@ export function useInventoryStats() {
       const today = new Date();
       const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      const expiringSoon = purchaseItems.filter((pi: any) => {
+      const expiringSoon = (purchaseItems || []).filter((pi) => {
         if (!pi.expiry_date) return false;
         const expiry = new Date(pi.expiry_date);
         return expiry > today && expiry <= thirtyDaysFromNow;
       });
 
-      expiringSoon.forEach(async (pi: any) => {
-        // Check if notification already exists to avoid spamming (simple check)
-        const { data: existing } = await db.from('notifications').select('id').eq('title', 'Expiry Warning').eq('message', `Batch ${pi.batch_number} of item ID ${pi.item_id} expires on ${pi.expiry_date}`).maybeSingle();
+      expiringSoon.forEach(async (pi) => {
+        const notifKey = `${pi.item_id}-${pi.batch_number}-${pi.expiry_date}`;
+        if (notifiedRefs.current.has(notifKey)) return;
+
+        // Check if notification already exists in DB to avoid duplicates across sessions
+        const { data: existing } = await db.from('notifications')
+           .select('id')
+           .eq('title', 'Expiry Warning')
+           .eq('message', `Batch ${pi.batch_number} of item ID ${pi.item_id} expires on ${pi.expiry_date}`)
+           .maybeSingle();
 
         if (!existing) {
           await db.from('notifications').insert({
@@ -1334,8 +1427,9 @@ export function useInventoryStats() {
             message: `Batch ${pi.batch_number} of item ID ${pi.item_id} expires on ${pi.expiry_date}`,
             type: 'warning',
             category: 'inventory'
-          });
+          } as Database["public"]["Tables"]["notifications"]["Insert"]);
         }
+        notifiedRefs.current.add(notifKey);
       });
     }
   }, [purchaseItems]);
@@ -1383,8 +1477,8 @@ export function useInventoryStats() {
       if (remainingQty <= 0) return;
 
       const itemPurchases = (purchaseItems || [])
-        .filter((pi: any) => pi.item_id === item.id)
-        .sort((a: any, b: any) => {
+        .filter((pi) => pi.item_id === item.id)
+        .sort((a, b) => {
            const dateA = new Date(a.purchase_order.order_date).getTime();
            const dateB = new Date(b.purchase_order.order_date).getTime();
            return method === 'fifo' ? dateB - dateA : dateA - dateB; // FIFO: Latest first to value current stock, LIFO: Oldest first

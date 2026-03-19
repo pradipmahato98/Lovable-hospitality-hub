@@ -9,14 +9,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, ListChecks, Loader2, Search, CheckCircle2, AlertCircle, Eye, History, Smartphone, ScanBarcode } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryItems, useInventoryStores, useInventoryStockCounts } from "@/hooks/useInventory";
+import { useInventoryItems, useInventoryStores, useInventoryStockCounts, InventoryStockCount, InventoryStockCountItem } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 export function StockCountTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isMobileMode, setIsMobileMode] = useState(false);
-  const [selectedCount, setSelectedCount] = useState<any>(null);
+  const [selectedCount, setSelectedCount] = useState<InventoryStockCount | null>(null);
 
   const { data: items = [] } = useInventoryItems();
   const { data: stores = [] } = useInventoryStores();
@@ -257,7 +258,7 @@ export function StockCountTab() {
               <Table>
                  <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>System</TableHead><TableHead>Physical</TableHead><TableHead>Variance</TableHead></TableRow></TableHeader>
                  <TableBody>
-                    {selectedCount?.items?.map((item: any) => {
+                    {selectedCount?.items?.map((item) => {
                        const v = item.counted_quantity - item.system_quantity;
                        return (
                          <TableRow key={item.id}>

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Loader2, FolderTree, Barcode } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryCategories, useInventoryItems } from "@/hooks/useInventory";
+import { useInventoryCategories, useInventoryItems, InventoryCategory } from "@/hooks/useInventory";
 
 export function CategoriesTab() {
   const { data: categories = [], createCategory, updateCategory, deleteCategory } = useInventoryCategories();
@@ -22,7 +22,7 @@ export function CategoriesTab() {
 
   const handleSave = async () => {
     try {
-      const payload: any = {
+      const payload = {
         name: form.name,
         description: form.description || null,
         parent_id: form.parent_id || null,
@@ -49,7 +49,7 @@ export function CategoriesTab() {
     } catch { toast.error("Failed to delete category"); }
   };
 
-  const openEdit = (cat: any) => {
+  const openEdit = (cat: InventoryCategory) => {
     setEditId(cat.id);
     setForm({
       name: cat.name,
@@ -112,7 +112,7 @@ export function CategoriesTab() {
             {categories.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No categories yet</TableCell></TableRow>
             ) : (
-              categories.map((cat: any) => (
+              categories.map((cat) => (
                 <TableRow key={cat.id}>
                   <TableCell>
                      <div className="font-medium">{cat.name}</div>

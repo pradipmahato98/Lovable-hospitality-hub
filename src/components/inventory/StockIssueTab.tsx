@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, CheckCircle2, Loader2, ArrowUpRight, Search, Printer, RotateCcw, Package, History, ArrowDownLeft, XCircle, User, Building } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryRequisitions, useInventoryItems, useInventoryStores, useInventoryIssues } from "@/hooks/useInventory";
+import { useInventoryRequisitions, useInventoryItems, useInventoryStores, useInventoryIssues, InventoryRequisition, InventoryStockIssue } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 
 export function StockIssueTab() {
@@ -17,7 +17,7 @@ export function StockIssueTab() {
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isDirectIssueOpen, setIsDirectIssueOpen] = useState(false);
 
-  const { data: requisitions = [], isLoading: loadingReqs } = useInventoryRequisitions();
+  const { data: requisitions = [] } = useInventoryRequisitions();
   const { data: stores = [] } = useInventoryStores();
   const { data: items = [] } = useInventoryItems();
   const { data: issueHistory = [], createIssue } = useInventoryIssues();
@@ -37,10 +37,10 @@ export function StockIssueTab() {
 
   const pendingReqs = requisitions.filter(r => r.status === 'approved' || r.status === 'pending');
 
-  const handleIssue = (req: any) => {
+  const handleIssue = (req: InventoryRequisition) => {
     setSelectedReqId(req.id);
-    const initialQtys: any = {};
-    req.items?.forEach((i: any) => {
+    const initialQtys: Record<string, { qty: number, batch: string }> = {};
+    req.items?.forEach((i) => {
       initialQtys[i.id] = { qty: i.quantity, batch: "" };
     });
     setIssueQtys(initialQtys);
@@ -52,11 +52,11 @@ export function StockIssueTab() {
     if (!req) return;
 
     try {
-      const itemsToIssue = req.items?.map((i: any) => ({
+      const itemsToIssue = (req.items || []).map((i) => ({
         item_id: i.item_id,
         quantity: issueQtys[i.id]?.qty || 0,
         batch_number: issueQtys[i.id]?.batch
-      })).filter((i: any) => i.quantity > 0);
+      })).filter((i) => i.quantity > 0);
 
       if (!itemsToIssue || itemsToIssue.length === 0) {
         toast.error("No items to issue");
@@ -90,7 +90,7 @@ export function StockIssueTab() {
            storeId: directIssueForm.store_id,
            notes: `Direct Issue to ${directIssueForm.issued_to_name}`,
            issued_by: user?.id,
-           items: directIssueForm.items
+        items: directIssueForm.items
         });
         toast.success("Direct stock issue complete");
         setIsDirectIssueOpen(false);
@@ -102,10 +102,10 @@ export function StockIssueTab() {
      setDirectIssueForm({ ...directIssueForm, items: [...directIssueForm.items, { item_id: "", quantity: 1 }] });
   };
 
-  const handleReturn = (issue: any) => {
+  const handleReturn = (issue: InventoryStockIssue) => {
     setSelectedIssueId(issue.id);
-    const initialQtys: any = {};
-    issue.items?.forEach((i: any) => {
+    const initialQtys: Record<string, number> = {};
+    issue.items?.forEach((i) => {
       initialQtys[i.id] = 0;
     });
     setReturnQtys(initialQtys);
@@ -264,7 +264,7 @@ export function StockIssueTab() {
              <Table>
                 <TableHeader><TableRow><TableHead className="text-[10px]">Item</TableHead><TableHead className="text-[10px]">Issued</TableHead><TableHead className="text-[10px]">Return Qty</TableHead></TableRow></TableHeader>
                 <TableBody>
-                   {issueHistory.find(i => i.id === selectedIssueId)?.items?.map((item: any) => (
+                   {issueHistory.find(i => i.id === selectedIssueId)?.items?.map((item) => (
                       <TableRow key={item.id}>
                          <TableCell className="text-xs font-medium">{item.item?.name}</TableCell>
                          <TableCell className="text-xs font-bold">{item.quantity}</TableCell>

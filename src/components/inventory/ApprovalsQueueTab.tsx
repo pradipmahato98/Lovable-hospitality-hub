@@ -8,6 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 
+interface PendingAdjustment {
+  id: string;
+  item_id: string;
+  quantity: number;
+  movement_type: string;
+  notes: string | null;
+  item?: { name: string };
+}
+
 export function ApprovalsQueueTab() {
   const { data: requisitions = [], updateRequisitionStatus, refetch: refetchReq } = useInventoryRequisitions();
   const { data: transfers = [], completeTransfer, refetch: refetchTrf } = useInventoryTransfers();
@@ -17,20 +26,20 @@ export function ApprovalsQueueTab() {
      queryKey: ["pending-inventory-adjustments-queue"],
      queryFn: async () => {
         const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
-        return data || [];
+        return (data || []) as unknown as PendingAdjustment[];
      }
   });
 
   const pendingReqs = requisitions.filter(r => r.status === 'pending');
   const pendingTrfs = transfers.filter(t => t.status === 'pending');
 
-  const handleApproveAdj = async (adj: any) => {
+  const handleApproveAdj = async (adj: PendingAdjustment) => {
      try {
-        const [status, reason, notes] = adj.notes?.split('|') || [];
+        const [, reason, notes] = adj.notes?.split('|') || [];
         await adjustStock.mutateAsync({
            itemId: adj.item_id,
            quantity: adj.quantity,
-           type: adj.movement_type === 'out' ? 'out' : 'in',
+           type: (adj.movement_type === 'out' ? 'out' : 'in') as "in" | "out",
            reason: reason || 'Adjustment',
            notes: notes || ''
         });
@@ -113,7 +122,7 @@ export function ApprovalsQueueTab() {
             <CardContent className="p-0">
                <Table>
                   <TableBody>
-                     {pendingAdjustments.map((a: any) => (
+                     {pendingAdjustments.map((a) => (
                         <TableRow key={a.id}>
                            <TableCell className="py-3">
                               <div className="flex justify-between items-start">

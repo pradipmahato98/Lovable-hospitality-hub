@@ -13,11 +13,12 @@ import { useInventoryStores } from "@/hooks/useInventory";
 
 export function StoresTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const { data: stores = [], isLoading, createStore, updateStore } = useInventoryStores();
+  const { data: stores = [], isLoading, createStore } = useInventoryStores();
   const [form, setForm] = useState({
     name: "",
     code: "",
     location: "",
+    property: "Main Hotel",
     store_type: "general",
     temperature_classification: "Ambient",
     storage_conditions: "Standard Shelf"
@@ -25,11 +26,20 @@ export function StoresTab() {
 
   const handleCreate = async () => {
     try {
-      await createStore.mutateAsync(form as any);
+      await createStore.mutateAsync({
+        name: form.name,
+        code: form.code,
+        location: form.location,
+        store_type: form.store_type,
+        temperature_classification: form.temperature_classification,
+        storage_conditions: form.storage_conditions,
+        is_active: true,
+        store_manager_id: null
+      });
       toast.success("Store created");
       setIsAddOpen(false);
       setForm({
-        name: "", code: "", location: "", store_type: "general",
+        name: "", code: "", location: "", property: "Main Hotel", store_type: "general",
         temperature_classification: "Ambient", storage_conditions: "Standard Shelf"
       });
     } catch { toast.error("Failed to create store"); }
@@ -48,6 +58,16 @@ export function StoresTab() {
             <DialogHeader><DialogTitle>Add Store</DialogTitle><DialogDescription>Create a new storage location</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="col-span-2 space-y-2"><Label>Store Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Property / Branch</Label>
+                 <Select value={form.property} onValueChange={(v) => setForm({...form, property: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                       <SelectItem value="Main Hotel">Main Hotel</SelectItem>
+                       <SelectItem value="City Branch">City Branch</SelectItem>
+                       <SelectItem value="Resort Wing">Resort Wing</SelectItem>
+                    </SelectContent>
+                 </Select>
+              </div>
               <div className="space-y-2"><Label>Store Code *</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. MAIN-01" /></div>
               <div className="space-y-2"><Label>Store Type</Label>
                 <Select value={form.store_type} onValueChange={(v) => setForm({ ...form, store_type: v })}>
@@ -101,7 +121,10 @@ export function StoresTab() {
                     </div>
                     <div>
                       <p className="font-bold text-lg">{store.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{store.code}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground font-mono">{store.code}</p>
+                        <Badge variant="outline" className="text-[8px] h-3 px-1">Main</Badge>
+                      </div>
                     </div>
                   </div>
                   <Badge variant="secondary" className="capitalize text-[10px]">{store.store_type}</Badge>

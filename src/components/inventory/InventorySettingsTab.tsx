@@ -5,12 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Settings2, Database, Calculator, Wallet, ShieldCheck, Loader2 } from "lucide-react";
+import { Settings2, Database, Calculator, Wallet, ShieldCheck, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { useInventorySettings } from "@/hooks/useInventory";
+import { useInventorySettings, useInventoryAutomation } from "@/hooks/useInventory";
 
 export function InventorySettingsTab() {
   const { data: dbSettings, updateSettings, isLoading } = useInventorySettings();
+  const { generateLowStockPOs } = useInventoryAutomation();
   const [localSettings, setLocalSettings] = useState({
     costing_method: "weighted_average",
     inventory_gl_account: "",
@@ -19,6 +20,7 @@ export function InventorySettingsTab() {
     adjustment_gl_account: "",
     purchase_gl_account: "",
     auto_replenish: "false",
+    auto_po_generation: "false",
     require_approval: "true",
     batch_tracking: "false"
   });
@@ -93,6 +95,10 @@ export function InventorySettingsTab() {
                 <Label className="text-[10px] uppercase">Adjustment</Label>
                 <Input size={30} className="h-8 text-[10px] font-mono" value={localSettings.adjustment_gl_account} onChange={(e) => setLocalSettings({...localSettings, adjustment_gl_account: e.target.value})} />
               </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase">Purchase</Label>
+                <Input size={30} className="h-8 text-[10px] font-mono" value={localSettings.purchase_gl_account} onChange={(e) => setLocalSettings({...localSettings, purchase_gl_account: e.target.value})} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -125,12 +131,29 @@ export function InventorySettingsTab() {
                 </div>
                 <Switch checked={localSettings.batch_tracking === "true"} onCheckedChange={(v) => setLocalSettings({...localSettings, batch_tracking: String(v)})} />
               </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Auto-PO Generation</Label>
+                  <p className="text-xs text-muted-foreground">Create draft POs for low stock</p>
+                </div>
+                <Switch checked={localSettings.auto_po_generation === "true"} onCheckedChange={(v) => setLocalSettings({...localSettings, auto_po_generation: String(v)})} />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex justify-end pt-4">
+      <div className="flex justify-between items-center pt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 border-amber-500 text-amber-600"
+          onClick={() => generateLowStockPOs.mutate()}
+          disabled={generateLowStockPOs.isPending}
+        >
+           {generateLowStockPOs.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
+           Trigger Auto-PO Generation
+        </Button>
         <Button onClick={handleSave} disabled={updateSettings.isPending || isLoading} variant="blue" className="w-full md:w-auto">
           {updateSettings.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
           Save Configuration
