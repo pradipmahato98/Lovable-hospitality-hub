@@ -185,17 +185,41 @@ export function NewReservationDialog({
     // Generate reservation code
     const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
 
-    const { data, error } = await supabase.rpc('allocate_room_atomically', {
-      p_guest_id: formData.guestId,
-      p_room_id: formData.roomId,
-      p_check_in: format(formData.checkInDate, "yyyy-MM-dd"),
-      p_check_out: format(formData.checkOutDate, "yyyy-MM-dd"),
-      p_adults: formData.adults,
-      p_children: formData.children,
-      p_total_amount: calculateTotal(),
-      p_special_requests: formData.specialRequests || null,
-      p_source: formData.source,
-      p_reservation_code: reservationCode,
+    const checkInStr = format(formData.checkInDate, "yyyy-MM-dd");
+    const checkOutStr = format(formData.checkOutDate, "yyyy-MM-dd");
+
+    // Pre-insertion availability check (Best effort concurrency control)
+    const { data: existing, error: checkError } = await supabase
+      .from("reservations")
+      .select("id")
+      .eq("room_id", formData.roomId)
+      .not("status", "in", '("cancelled","checked-out")')
+      .or(`and(check_in_date.lte.${checkInStr},check_out_date.gt.${checkInStr}),and(check_in_date.lt.${checkOutStr},check_out_date.gte.${checkOutStr}),and(check_in_date.gte.${checkInStr},check_out_date.lt.${checkOutStr})`);
+
+    if (checkError) {
+      toast({ variant: "destructive", title: "Validation Error", description: checkError.message });
+      setIsLoading(false);
+      return;
+    }
+
+    if (existing && existing.length > 0) {
+      toast({ variant: "destructive", title: "Room Unavailable", description: "The room has been booked by another agent for these dates." });
+      setIsLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.from("reservations").insert({
+      guest_id: formData.guestId,
+      room_id: formData.roomId,
+      check_in_date: checkInStr,
+      check_out_date: checkOutStr,
+      status: "confirmed" as const,
+      adults: formData.adults,
+      children: formData.children,
+      total_amount: calculateTotal(),
+      special_requests: formData.specialRequests || null,
+      source: formData.source,
+      reservation_code: reservationCode,
     });
 
     if (error) {

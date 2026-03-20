@@ -30,7 +30,7 @@ export const ConsolidatedCashierReport = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pos_transactions")
-        .select("id, total, payment_method, created_at, transaction_number, created_by_id:id"); // Mocking user id for now if column doesn't exist
+        .select("id, total, payment_method, created_at, transaction_number, created_by");
       if (error) throw error;
       return data || [];
     },
@@ -58,7 +58,7 @@ export const ConsolidatedCashierReport = () => {
 
   const consolidatedData = useMemo(() => {
     const pos = posTransactions.map(t => {
-      const profile = profiles.find(p => p.user_id === (t as any).created_by_id);
+      const profile = profiles.find(p => p.user_id === (t as any).created_by);
       return {
         id: t.id,
         staff_name: profile ? `${profile.first_name} ${profile.last_name}` : "POS System",
