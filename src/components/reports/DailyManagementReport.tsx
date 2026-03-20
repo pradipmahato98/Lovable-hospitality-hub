@@ -4,7 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Hotel, Bed, Coffee, Users, Wrench, Shield, TrendingUp, Sparkles, Building2, UserCheck, AlertCircle } from "lucide-react";
+import { Hotel, Bed, Coffee, Users, Wrench, Shield, TrendingUp, Sparkles, Building2, UserCheck, AlertCircle, FileText, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { exportToPDF, exportToExcel } from "@/lib/reportExport";
 
 interface DMRProps {
   data: any; // Ideally typed to ManagementKPIs + extra operational data
@@ -67,8 +69,46 @@ export const DailyManagementReport = ({ data, isLoading }: DMRProps) => {
     ? (data.totalRevenue / data.comparisons.budget.totalRevenue) * 100
     : 100;
 
+  const handleExportPDF = () => {
+    exportToPDF({
+      title: "Daily Management Report",
+      headers: ["KPI", "Value", "Notes"],
+      rows: [
+        ["Occupancy", `${data?.occupancy}%`, "Rooms Division"],
+        ["ADR", formatCurrency(data?.adr || 0), "Average Daily Rate"],
+        ["RevPAR", formatCurrency(data?.revpar || 0), "Revenue Per Available Room"],
+        ["Total Revenue", formatCurrency(data?.totalRevenue || 0), "All Outlets"],
+        ["F&B Revenue", formatCurrency(data?.fbRevenue || 0), "Outlets & Room Service"],
+        ["Rooms Sold", data?.roomsSold || 0, "Inventory"],
+      ],
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      title: "Daily_Management_Report",
+      headers: ["Metric", "Value", "Department"],
+      rows: [
+        ["House Occupancy %", data?.occupancy, "Rooms"],
+        ["Average Daily Rate", data?.adr, "Rooms"],
+        ["Total Revenue", data?.totalRevenue, "Finance"],
+        ["F&B Revenue", data?.fbRevenue, "F&B"],
+        ["Rooms Sold", data?.roomsSold, "Rooms"],
+        ["OOO Rooms", data?.oooRooms, "Maintenance"],
+      ],
+    });
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" className="gap-2" onClick={handleExportPDF}>
+          <FileText className="h-4 w-4" /> PDF
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" onClick={handleExportExcel}>
+          <Download className="h-4 w-4" /> Excel
+        </Button>
+      </div>
       {/* 1. EXECUTIVE SUMMARY */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 text-primary">

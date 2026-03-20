@@ -58,7 +58,7 @@ export interface HousekeepingInspection {
 const db = supabase as any;
 
 // ============= Housekeeping Tasks =============
-export function useHousekeepingTasks(filters?: { date?: string; status?: string; priority?: string }) {
+export function useHousekeepingTasks(filters?: { date?: string; status?: string; priority?: string; property_id?: string }) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -66,10 +66,11 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
     queryFn: async () => {
       let q = db
         .from("housekeeping_tasks")
-        .select(`*, room:rooms(room_number, room_type, floor)`)
+        .select(`*, room:rooms!inner(room_number, room_type, floor, property_id)`)
         .order("scheduled_date", { ascending: true })
         .order("priority", { ascending: false });
 
+      if (filters?.property_id) q = q.eq("room.property_id", filters.property_id);
       if (filters?.date) q = q.eq("scheduled_date", filters.date);
       if (filters?.status) q = q.eq("status", filters.status);
       if (filters?.priority) q = q.eq("priority", filters.priority);

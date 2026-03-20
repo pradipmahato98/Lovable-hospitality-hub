@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { 
-  Package, Search, Loader2, AlertTriangle, Plus
+  Package, Search, Loader2, AlertTriangle, Plus, ShoppingCart, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -124,13 +124,20 @@ export function SuppliesTab() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Cleaning Supplies
+                Linen & Cleaning Supplies
               </CardTitle>
-              <CardDescription>Track and manage housekeeping inventory</CardDescription>
+              <CardDescription>Real-time inventory tracking for high-turnover items</CardDescription>
             </div>
-            <Button variant="outline" onClick={() => window.location.href = "/inventory"}>
-              Go to Inventory
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => queryClient.invalidateQueries({ queryKey: ["housekeeping-supplies"] })}>
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+              <Button variant="blue" size="sm" className="gap-2" onClick={() => window.location.href = "/inventory"}>
+                <ShoppingCart className="h-4 w-4" />
+                Procurement
+              </Button>
+            </div>
           </div>
           
           <div className="mt-4">
@@ -162,6 +169,7 @@ export function SuppliesTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead className="text-center">Current Stock</TableHead>
                     <TableHead className="text-center">Reorder Point</TableHead>
@@ -178,7 +186,12 @@ export function SuppliesTab() {
                     return (
                       <TableRow key={item.id} className={isEmpty ? "bg-destructive/5" : isLow ? "bg-amber-500/5" : ""}>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{item.sku || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tight">
+                            {item.category_name || "General"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{item.item_code || "-"}</TableCell>
                         <TableCell className={`text-center font-medium ${isEmpty ? "text-destructive" : isLow ? "text-amber-500" : ""}`}>
                           {item.current_stock}
                         </TableCell>

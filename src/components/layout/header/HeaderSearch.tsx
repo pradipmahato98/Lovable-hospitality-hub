@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
+import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command, Wrench, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ export function HeaderSearch() {
 
     setSearching(true);
     try {
-      const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }] = await Promise.all([
+      const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }, { data: maintenance }, { data: invoices }] = await Promise.all([
         supabase
           .from("guests")
           .select("id, first_name, last_name, email, phone")
@@ -53,6 +53,16 @@ export function HeaderSearch() {
           .select("id, reservation_code, status")
           .ilike("reservation_code", `%${query}%`)
           .limit(10),
+        supabase
+          .from("maintenance_requests")
+          .select("id, request_number, issue")
+          .or(`request_number.ilike.%${query}%,issue.ilike.%${query}%`)
+          .limit(10),
+        supabase
+          .from("invoices")
+          .select("id, invoice_number, status")
+          .ilike("invoice_number", `%${query}%`)
+          .limit(10),
       ]);
 
       const rawResults = [
@@ -60,6 +70,8 @@ export function HeaderSearch() {
         ...(profiles || []).map(p => ({ type: "staff", ...p })),
         ...(rooms || []).map(r => ({ type: "room", ...r })),
         ...(reservations || []).map(r => ({ type: "reservation", ...r })),
+        ...(maintenance || []).map(m => ({ type: "maintenance", ...m })),
+        ...(invoices || []).map(i => ({ type: "invoice", ...i })),
       ];
 
       // De-duplicate results to avoid "repleted" showing
@@ -100,6 +112,8 @@ export function HeaderSearch() {
     else if (result.type === "staff") navigate("/staff");
     else if (result.type === "room") navigate("/rooms");
     else if (result.type === "reservation") navigate("/reservations");
+    else if (result.type === "maintenance") navigate("/engineering?tab=requests");
+    else if (result.type === "invoice") navigate("/finance?tab=transactions");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -238,6 +252,8 @@ export function HeaderSearch() {
                         {result.type === "staff" && <Users className="h-4 w-4" />}
                         {result.type === "room" && <Home className="h-4 w-4" />}
                         {result.type === "reservation" && <ClipboardList className="h-4 w-4" />}
+                        {result.type === "maintenance" && <Wrench className="h-4 w-4" />}
+                        {result.type === "invoice" && <Receipt className="h-4 w-4" />}
                       </div>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
@@ -246,6 +262,8 @@ export function HeaderSearch() {
                             {result.type === "staff" && `${result.first_name} ${result.last_name}`}
                             {result.type === "room" && `Room ${result.room_number}`}
                             {result.type === "reservation" && result.reservation_code}
+                            {result.type === "maintenance" && result.request_number}
+                            {result.type === "invoice" && result.invoice_number}
                           </span>
                           <Badge
                             variant={selectedIndex === index ? "secondary" : "outline"}
@@ -265,6 +283,8 @@ export function HeaderSearch() {
                           {result.type === "staff" && result.email}
                           {result.type === "room" && result.room_type}
                           {result.type === "reservation" && `Status: ${result.status}`}
+                          {result.type === "maintenance" && result.issue}
+                          {result.type === "invoice" && `Status: ${result.status}`}
                         </p>
                       </div>
                     </div>
