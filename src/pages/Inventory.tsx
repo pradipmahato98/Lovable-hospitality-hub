@@ -14,7 +14,9 @@ import {
   UoMTab, StoresTab, RequisitionsTab, RecipesTab,
   WastageTab, StockCountTab, InventorySettingsTab, StockIssueTab,
   InventoryValuationReport, ExpiryReport, FoodCostReport,
-  ApprovalsQueueTab, ReturnsTab, ReplenishmentTab, InventoryDashboard
+  ApprovalsQueueTab, ReturnsTab, ReplenishmentTab, InventoryDashboard,
+  ItemLedgerReport, PriceComparisonReport, ProductionOrdersTab,
+  InventoryAuditLogs
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +28,7 @@ const Inventory = () => {
     { id: "setup", label: "Setup", icon: Settings2 },
     { id: "transactions", label: "Transactions", icon: ArrowRightLeft },
     { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "admin", label: "Administration", icon: ShieldCheck },
   ];
 
   const subTabs = {
@@ -35,30 +38,36 @@ const Inventory = () => {
     setup: [
       { id: "items", label: "Item Master", icon: Package },
       { id: "categories", label: "Categories", icon: FolderTree },
-      { id: "uoms", label: "Units (UoM)", icon: Ruler },
-      { id: "stores", label: "Stores", icon: Store },
-      { id: "suppliers", label: "Suppliers", icon: Truck },
-      { id: "recipes", label: "Recipes / BOM", icon: ChefHat },
-      { id: "settings", label: "Settings", icon: Settings },
+      { id: "uoms", label: "Units & Conversions", icon: Ruler },
+      { id: "stores", label: "Store Management", icon: Store },
+      { id: "suppliers", label: "Supplier Management", icon: Truck },
+      { id: "recipes", label: "Recipe / BOM", icon: ChefHat },
+      { id: "settings", label: "Configuration", icon: Settings },
     ],
     transactions: [
       { id: "approvals", label: "Approvals", icon: ShieldCheck },
-      { id: "replenish", label: "Replenishment", icon: ShoppingCart },
       { id: "requisitions", label: "Requisitions", icon: ClipboardList },
-      { id: "orders", label: "Purchase Orders / GRN", icon: Warehouse },
+      { id: "orders", label: "Purchase Orders", icon: ShoppingCart },
+      { id: "grn", label: "Goods Receiving (GRN)", icon: Warehouse },
       { id: "issue", label: "Stock Issue", icon: ArrowUpRight },
-      { id: "movements", label: "Movements", icon: ArrowUpDown },
-      { id: "transfers", label: "Transfers", icon: ArrowRightLeft },
-      { id: "stock-count", label: "Stock Count", icon: ListChecks },
-      { id: "wastage", label: "Wastage", icon: Trash2 },
-      { id: "returns", label: "Returns", icon: Undo2 },
+      { id: "transfers", label: "Stock Transfer", icon: ArrowRightLeft },
+      { id: "returns", label: "Stock Returns", icon: Undo2 },
+      { id: "adjustments", label: "Adjustments", icon: ArrowUpDown },
+      { id: "stock-count", label: "Stock Counting", icon: ListChecks },
+      { id: "production", label: "Production Logs", icon: ChefHat },
     ],
     reports: [
-      { id: "stock-on-hand", label: "Stock on Hand", icon: Package },
-      { id: "valuation", label: "Valuation Report", icon: BarChart3 },
-      { id: "food-cost", label: "Food Costing", icon: Utensils },
-      { id: "movement-rpt", label: "Movement History", icon: ArrowUpDown },
-      { id: "expiry", label: "Expiry Report", icon: ScanLine },
+      { id: "stock-rpt", label: "Stock Reports", icon: Package },
+      { id: "item-ledger", label: "Item Ledger", icon: ClipboardList },
+      { id: "movement-rpt", label: "Movement Reports", icon: ArrowUpDown },
+      { id: "consumption-rpt", label: "Consumption", icon: Activity },
+      { id: "purchase-rpt", label: "Purchasing Reports", icon: ShoppingCart },
+      { id: "price-comparison", label: "Price Analysis", icon: DollarSign },
+      { id: "valuation", label: "Financial Reports", icon: DollarSign },
+    ],
+    admin: [
+      { id: "audit-logs", label: "Audit Logs", icon: ClipboardList },
+      { id: "workflows", label: "Approval Workflows", icon: ShieldCheck },
     ]
   };
 
@@ -77,8 +86,9 @@ const Inventory = () => {
       // Set default sub-tab for the group
       if (value === "dashboard") prev.set("tab", "overview");
       else if (value === "setup") prev.set("tab", "items");
-      else if (value === "transactions") prev.set("tab", "orders");
-      else if (value === "reports") prev.set("tab", "stock-on-hand");
+      else if (value === "transactions") prev.set("tab", "requisitions");
+      else if (value === "reports") prev.set("tab", "stock-rpt");
+      else if (value === "admin") prev.set("tab", "audit-logs");
       return prev;
     });
   };
@@ -128,8 +138,10 @@ const Inventory = () => {
               </div>
             )}
 
-            {/* Setup Content */}
+            {/* Dashboard */}
             <TabsContent value="overview" className="mt-0 focus-visible:outline-none"><InventoryDashboard /></TabsContent>
+
+            {/* Setup */}
             <TabsContent value="items" className="mt-0 focus-visible:outline-none"><ItemsTab /></TabsContent>
             <TabsContent value="categories" className="mt-0 focus-visible:outline-none"><CategoriesTab /></TabsContent>
             <TabsContent value="uoms" className="mt-0 focus-visible:outline-none"><UoMTab /></TabsContent>
@@ -138,25 +150,30 @@ const Inventory = () => {
             <TabsContent value="recipes" className="mt-0 focus-visible:outline-none"><RecipesTab /></TabsContent>
             <TabsContent value="settings" className="mt-0 focus-visible:outline-none"><InventorySettingsTab /></TabsContent>
 
-            {/* Transactions Content */}
-            {/* Transactions Content */}
+            {/* Transactions */}
             <TabsContent value="approvals" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
             <TabsContent value="requisitions" className="mt-0 focus-visible:outline-none"><RequisitionsTab /></TabsContent>
             <TabsContent value="orders" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
+            <TabsContent value="grn" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
             <TabsContent value="issue" className="mt-0 focus-visible:outline-none"><StockIssueTab /></TabsContent>
-            <TabsContent value="movements" className="mt-0 focus-visible:outline-none"><StockMovementsTab /></TabsContent>
             <TabsContent value="transfers" className="mt-0 focus-visible:outline-none"><TransfersTab /></TabsContent>
-            <TabsContent value="stock-count" className="mt-0 focus-visible:outline-none"><StockCountTab /></TabsContent>
-            <TabsContent value="wastage" className="mt-0 focus-visible:outline-none"><WastageTab /></TabsContent>
             <TabsContent value="returns" className="mt-0 focus-visible:outline-none"><ReturnsTab /></TabsContent>
-            <TabsContent value="replenish" className="mt-0 focus-visible:outline-none"><ReplenishmentTab /></TabsContent>
+            <TabsContent value="adjustments" className="mt-0 focus-visible:outline-none"><WastageTab /></TabsContent>
+            <TabsContent value="stock-count" className="mt-0 focus-visible:outline-none"><StockCountTab /></TabsContent>
+            <TabsContent value="production" className="mt-0 focus-visible:outline-none"><ProductionOrdersTab /></TabsContent>
 
-            {/* Reports Content */}
-            <TabsContent value="stock-on-hand" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
-            <TabsContent value="valuation" className="mt-0 focus-visible:outline-none"><InventoryValuationReport /></TabsContent>
-            <TabsContent value="food-cost" className="mt-0 focus-visible:outline-none"><FoodCostReport /></TabsContent>
+            {/* Reports */}
+            <TabsContent value="stock-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
             <TabsContent value="movement-rpt" className="mt-0 focus-visible:outline-none"><StockMovementsTab /></TabsContent>
-            <TabsContent value="expiry" className="mt-0 focus-visible:outline-none"><ExpiryReport /></TabsContent>
+            <TabsContent value="consumption-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
+            <TabsContent value="purchase-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
+            <TabsContent value="valuation" className="mt-0 focus-visible:outline-none"><InventoryValuationReport /></TabsContent>
+            <TabsContent value="item-ledger" className="mt-0 focus-visible:outline-none"><ItemLedgerReport /></TabsContent>
+            <TabsContent value="price-comparison" className="mt-0 focus-visible:outline-none"><PriceComparisonReport /></TabsContent>
+
+            {/* Admin */}
+            <TabsContent value="audit-logs" className="mt-0 focus-visible:outline-none"><InventoryAuditLogs /></TabsContent>
+            <TabsContent value="workflows" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
           </Tabs>
         </ErrorBoundary>
       </div>

@@ -20,3 +20,7 @@ export { ApprovalsQueueTab } from "./ApprovalsQueueTab";
 export { ReturnsTab } from "./ReturnsTab";
 export * from "./ReplenishmentTab";
 export * from "./InventoryDashboard";
+export * from "./ItemLedgerReport";
+export * from "./PriceComparisonReport";
+export * from "./ProductionOrdersTab";
+export * from "./InventoryAuditLogs";
