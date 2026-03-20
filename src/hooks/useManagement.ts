@@ -34,6 +34,8 @@ export const useManagement = (date: Date = new Date()) => {
 
   return useQuery({
     queryKey: ["management_kpis", dateStr],
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
     queryFn: async () => {
       // 1. Fetch Reservations (Filtered to avoid loading entire table)
       const { data: reservations, error: resError } = await (supabase as any)
@@ -93,13 +95,18 @@ export const useManagement = (date: Date = new Date()) => {
           .filter((t: any) => t.created_at.startsWith(targetDateStr))
           .reduce((sum: number, t: any) => sum + (t.total || 0), 0);
 
+        const banquetRevenue = banquetEvents
+          .filter((e: any) => e.event_date === targetDateStr && e.status !== 'cancelled')
+          .reduce((sum: number, e: any) => sum + (e.total_amount || 0), 0);
+
         return {
           occupancy: Math.round(houseOccupancy * 10) / 10,
           adr: Math.round(adr * 100) / 100,
           revpar: Math.round(revpar * 100) / 100,
-          totalRevenue: roomRevenue + fbRevenue,
+          totalRevenue: roomRevenue + fbRevenue + banquetRevenue,
           roomRevenue,
           fbRevenue,
+          banquetRevenue,
           oooRooms,
           totalRooms,
           roomsSold,
@@ -129,16 +136,12 @@ export const useManagement = (date: Date = new Date()) => {
         walkIns: confirmedToday.filter((r: any) => r.is_walk_in).length,
       };
 
-      const todayBanquetRevenue = banquetEvents
-        .filter((e: any) => e.status !== 'cancelled')
-        .reduce((sum, e) => sum + (e.total_amount || 0), 0);
-
       const todayPosTransactions = posTrans.filter((t: any) => t.created_at.startsWith(dateStr)).length;
 
       return {
         ...todayStats,
-        otherRevenue: todayBanquetRevenue,
-        banquetEventsCount: banquetEvents.length,
+        otherRevenue: todayStats.banquetRevenue, // Keep otherRevenue for compatibility
+        banquetEventsCount: banquetEvents.filter(e => e.event_date === dateStr).length,
         posTransactionsCount: todayPosTransactions,
         marketSegmentation: Object.entries(segments).map(([name, value]) => ({ name, value })),
         guestMovement: Object.entries(movement).map(([label, count]) => ({ label, count })),

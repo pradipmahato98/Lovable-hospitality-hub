@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useInvoices } from "@/hooks/useBillingData";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,9 +53,32 @@ const invoiceStatusColors = {
 };
 
 const FrontDesk = () => {
+  const queryClient = useQueryClient();
   const { data: rooms = [], isLoading } = useRooms();
   const { data: invoices = [] } = useInvoices();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Real-time room status sync
+  useEffect(() => {
+    const channel = supabase
+      .channel('room-status-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['rooms'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   const activeTab = searchParams.get("tab") || "rooms";
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
