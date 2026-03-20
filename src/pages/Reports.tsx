@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { DailyManagementReport } from "@/components/reports/DailyManagementReport";
+import { ConsolidatedCashierReport } from "@/components/reports/ConsolidatedCashierReport";
 import { useManagement } from "@/hooks/useManagement";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +56,7 @@ const Reports = () => {
           <TabsList className="bg-secondary/50 p-1 flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
+            <TabsTrigger value="cashier">Cashier Audit</TabsTrigger>
             <TabsTrigger value="daily">Daily Stats</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
             <TabsTrigger value="financial">Financial Summary</TabsTrigger>
@@ -143,6 +145,11 @@ const Reports = () => {
         {/* DMR Executive Report */}
         <TabsContent value="dmr" className="space-y-6">
           <DailyManagementReport data={managementData} isLoading={isManagementLoading} />
+        </TabsContent>
+
+        {/* Cashier Audit Report */}
+        <TabsContent value="cashier" className="space-y-6">
+          <ConsolidatedCashierReport />
         </TabsContent>
 
         {/* Daily Report */}

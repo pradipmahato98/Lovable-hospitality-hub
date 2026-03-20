@@ -17,6 +17,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  currentShift: string | null;
+  setCurrentShift: (shiftId: string | null) => void;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: Error | null }>;
@@ -34,7 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [currentShift, setCurrentShiftState] = useState<string | null>(() => {
+    return localStorage.getItem("luxestay_current_shift");
+  });
   const [loading, setLoading] = useState(true);
+
+  const setCurrentShift = (shiftId: string | null) => {
+    setCurrentShiftState(shiftId);
+    if (shiftId) {
+      localStorage.setItem("luxestay_current_shift", shiftId);
+    } else {
+      localStorage.removeItem("luxestay_current_shift");
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -192,6 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         profile,
+        currentShift,
+        setCurrentShift,
         loading,
         signIn,
         signUp,
