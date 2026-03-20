@@ -161,8 +161,10 @@ export function CheckInOutDialog({
       return;
     }
 
-    // Generate reservation code
-    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    // Generate a cryptographically secure 6-digit reservation code
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    const reservationCode = 'RES-' + (array[0] % 1000000).toString().padStart(6, '0');
     
     // Create reservation with checked-in status
     const { error: resError } = await supabase
