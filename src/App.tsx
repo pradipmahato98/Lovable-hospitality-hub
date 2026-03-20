@@ -39,7 +39,7 @@ const POSTerminal = lazy(() => import("./pages/POSTerminal"));
 const POSHistory = lazy(() => import("./pages/POSHistory"));
 const POSReports = lazy(() => import("./pages/POSReports"));
 const KitchenDisplay = lazy(() => import("./pages/KitchenDisplay"));
-const HRM = lazy(() => import("./pages/HRM"));
+const HR = lazy(() => import("./pages/HR"));
 const ChannelManager = lazy(() => import("./pages/ChannelManager"));
 const NightAudit = lazy(() => import("./pages/NightAudit"));
 const DayClose = lazy(() => import("./pages/DayClose"));
@@ -114,7 +114,7 @@ const App = () => (
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
                   <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-                  <Route path="/hrm" element={<ProtectedRoute><HRM /></ProtectedRoute>} />
+                  <Route path="/hr" element={<ProtectedRoute><HR /></ProtectedRoute>} />
                   <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
                   <Route path="/finance/journal/new" element={<ProtectedRoute><NewJournalEntry /></ProtectedRoute>} />
                   <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
