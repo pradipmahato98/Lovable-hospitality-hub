@@ -6,7 +6,8 @@ import {
   Package, Truck, Warehouse, ArrowUpDown, FolderTree,
   ArrowRightLeft, BarChart3, Settings2, ClipboardList,
   ChefHat, Trash2, Ruler, Store, ScanLine, ListChecks,
-  Boxes, Settings, ArrowUpRight, Utensils, ShieldCheck, Undo2
+  Boxes, Settings, ArrowUpRight, Utensils, ShieldCheck, Undo2,
+  ShoppingCart, Activity, DollarSign
 } from "lucide-react";
 import {
   ItemsTab, CategoriesTab, SuppliersTab, PurchaseOrdersTab,

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent, Timer, Activity } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent, Timer, Activity, Settings, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, useInventoryStores, InventoryItem } from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";

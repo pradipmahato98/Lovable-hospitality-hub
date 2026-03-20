@@ -287,6 +287,26 @@ export interface InventorySupplierReturnItem {
   item?: InventoryItem;
 }
 
+export interface SupplierContract {
+  id: string;
+  supplier_id: string;
+  contract_number: string;
+  valid_from: string;
+  valid_to: string;
+  terms: string | null;
+  status: string;
+}
+
+export interface SupplierPricing {
+  id: string;
+  supplier_id: string;
+  item_id: string;
+  contract_id: string | null;
+  unit_price: number;
+  currency: string;
+  is_preferred: boolean;
+}
+
 // ============= Helper Functions =============
 async function convertUoM(fromId: string, toId: string, quantity: number) {
   if (!fromId || !toId || fromId === toId) return quantity;
@@ -1450,6 +1470,59 @@ export function useInventoryReturns() {
   });
 
   return { ...query, createReturn };
+}
+
+export function useSupplierContracts(supplierId?: string) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["supplier-contracts", supplierId],
+    queryFn: async () => {
+      let q = db.from("inventory_supplier_contracts").select("*");
+      if (supplierId) q = q.eq("supplier_id", supplierId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as SupplierContract[];
+    },
+  });
+
+  const createContract = useMutation({
+    mutationFn: async (contract: Partial<SupplierContract>) => {
+      const { data, error } = await db.from("inventory_supplier_contracts").insert(contract).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["supplier-contracts"] }),
+  });
+
+  return { ...query, createContract };
+}
+
+export function useSupplierPricing(itemId?: string, supplierId?: string) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["supplier-pricing", itemId, supplierId],
+    queryFn: async () => {
+      let q = db.from("inventory_supplier_pricing").select("*, supplier:suppliers(name), item:inventory_items(name, sku)");
+      if (itemId) q = q.eq("item_id", itemId);
+      if (supplierId) q = q.eq("supplier_id", supplierId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as (SupplierPricing & { supplier: { name: string }, item: { name: string, sku: string } })[];
+    },
+  });
+
+  const updatePrice = useMutation({
+    mutationFn: async (pricing: Partial<SupplierPricing>) => {
+      const { data, error } = await db.from("inventory_supplier_pricing").upsert(pricing, { onConflict: 'supplier_id,item_id' }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["supplier-pricing"] }),
+  });
+
+  return { ...query, updatePrice };
 }
 
 export function useInventoryAutomation() {
