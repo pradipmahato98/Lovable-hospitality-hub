@@ -246,8 +246,8 @@ const adminNavItems: NavItemConfig[] = [
   },
   {
     icon: UserCheck,
-    label: "HR",
-    path: "/hr",
+    label: "HRM",
+    path: "/hrm",
     defaultTab: "employees",
     subItems: [
       { label: "Employees", tab: "employees" },
