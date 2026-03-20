@@ -185,18 +185,17 @@ export function NewReservationDialog({
     // Generate reservation code
     const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
 
-    const { error } = await supabase.from("reservations").insert({
-      guest_id: formData.guestId,
-      room_id: formData.roomId,
-      check_in_date: format(formData.checkInDate, "yyyy-MM-dd"),
-      check_out_date: format(formData.checkOutDate, "yyyy-MM-dd"),
-      status: "pending" as const,
-      adults: formData.adults,
-      children: formData.children,
-      total_amount: calculateTotal(),
-      special_requests: formData.specialRequests || null,
-      source: formData.source,
-      reservation_code: reservationCode,
+    const { data, error } = await supabase.rpc('allocate_room_atomically', {
+      p_guest_id: formData.guestId,
+      p_room_id: formData.roomId,
+      p_check_in: format(formData.checkInDate, "yyyy-MM-dd"),
+      p_check_out: format(formData.checkOutDate, "yyyy-MM-dd"),
+      p_adults: formData.adults,
+      p_children: formData.children,
+      p_total_amount: calculateTotal(),
+      p_special_requests: formData.specialRequests || null,
+      p_source: formData.source,
+      p_reservation_code: reservationCode,
     });
 
     if (error) {
