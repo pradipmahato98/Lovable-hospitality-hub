@@ -106,12 +106,22 @@ export function RequestsTab({ onStatsChange }: RequestsTabProps) {
     setAssignDialogOpen(true);
   };
 
-  const handleAssign = () => {
-    if (!selectedRequest) return;
-    // Use updateStatus with current status to update assigned_to
-    // Note: We'd need to update the hook to support this - for now just toast
-    toast.success(`Assigned to ${selectedStaff}`);
-    setAssignDialogOpen(false);
+  const handleAssign = async () => {
+    if (!selectedRequest || !selectedStaff) return;
+
+    try {
+      await updateStatus.mutateAsync({
+        id: selectedRequest.id,
+        status: selectedRequest.status === "pending" ? "in_progress" : selectedRequest.status,
+        assigned_to: selectedStaff
+      });
+      toast.success(`Assigned to ${selectedStaff}`);
+      setAssignDialogOpen(false);
+      setSelectedRequest(null);
+      setSelectedStaff("");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   return (

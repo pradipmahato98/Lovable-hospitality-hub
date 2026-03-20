@@ -4,3 +4,4 @@ export { InspectionsTab } from "./InspectionsTab";
 export { LostFoundTab } from "./LostFoundTab";
 export { SuppliesTab } from "./SuppliesTab";
 export { HousekeepingReportsTab } from "./ReportsTab";
+export { AttendantMode } from "./AttendantMode";
