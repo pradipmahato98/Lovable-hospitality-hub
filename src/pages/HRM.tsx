@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const HR = () => {
+const HRM = () => {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "payroll_finance";
@@ -88,7 +88,7 @@ const HR = () => {
 
   if (roleLoading) {
     return (
-      <MainLayout title="HR Management" subtitle="Loading...">
+      <MainLayout title="HRM Management" subtitle="Loading...">
         <div className="flex items-center justify-center py-20">
           <Clock3 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -113,7 +113,7 @@ const HR = () => {
   ];
 
   return (
-    <MainLayout title="HR Management" subtitle="Employee management and HR operations">
+    <MainLayout title="HRM Management" subtitle="Employee management and HR operations">
       <div className="bg-[#F8FAFC] min-h-screen -m-4 lg:-m-8 p-4 lg:p-8 space-y-6">
         <div className="max-w-[1400px] mx-auto space-y-6">
 
@@ -656,10 +656,10 @@ const HR = () => {
   );
 };
 
-const HRPage = () => (
+const HRMPage = () => (
   <ErrorBoundary>
-    <HR />
+    <HRM />
   </ErrorBoundary>
 );
 
-export default HRPage;
+export default HRMPage;
