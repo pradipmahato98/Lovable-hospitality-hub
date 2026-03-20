@@ -2,30 +2,17 @@ export const HRM_COLORS = {
   mint: {
     bg: "#E8F5E9",
     accent: "#4CAF50",
-    light: "#F1F8F1",
   },
   lavender: {
     bg: "#F3E5F5",
     accent: "#9C27B0",
-    light: "#F9F5FA",
   },
   blue: {
     bg: "#E3F2FD",
     accent: "#2196F3",
-    light: "#F0F7FF",
-  },
-  pink: {
-    bg: "#FCE4EC",
-    accent: "#E91E63",
-    light: "#FFF1F5",
-  },
-  gray: {
-    text: "#64748B",
-    title: "#1E293B",
-    border: "#F1F5F9",
-    bg: "#F8FAFC",
   },
   white: "#FFFFFF",
+  border: "rgba(0,0,0,0.05)",
 };
 
 export const employeeData = {
@@ -51,12 +38,12 @@ export const employeeData = {
       { label: "Transport allowance", value: 1500.00 },
     ],
     additions: [
-      { label: "Overtime", value: 1500.00, percentage: 2, subLabel: "of Day" },
-      { label: "Bonuses", value: 1000.00, percentage: 50, subLabel: "of Gross" },
+      { label: "Overtime", value: 15000.00, percentage: 2, subLabel: "of Day" },
+      { label: "Bonuses", value: 10000.00, percentage: 50, subLabel: "of Gross" },
     ],
     deductions: [
-      { label: "Tax", value: 500.00, percentage: 2, subLabel: "of Gross" },
-      { label: "PF", value: 1000.00, percentage: 50, subLabel: "of PF" },
+      { label: "Tax @ 10%", value: 15000.00, percentage: 2, subLabel: "of Gross" },
+      { label: "PF @ 8%", value: 7500.00, percentage: 50, subLabel: "of Gross" },
     ],
     benefit: {
       company: "8% of Gross",
