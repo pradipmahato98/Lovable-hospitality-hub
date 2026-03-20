@@ -36,6 +36,7 @@ import {
   Grid3X3,
   ClipboardList,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -45,8 +46,9 @@ import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSearchParams } from "react-router-dom";
-import { useInvoices } from "@/hooks/useFinanceExtended";
+import { useInvoices } from "@/hooks/useBillingData";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useInventoryPOS } from "@/hooks/useInventory";
 
 interface CartItem {
@@ -88,6 +90,8 @@ const POSTerminal = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [selectedGateway, setSelectedGateway] = useState<string>("");
   const [splitPayment, setSplitPayment] = useState(false);
+  const [settlePreviousDue, setSettlePreviousDue] = useState(false);
+  const [dueSettlementAmount, setDueSettlementAmount] = useState<string>("0");
   const [splitAmounts, setSplitAmounts] = useState<{ method: string; amount: string }[]>([
     { method: "cash", amount: "" },
     { method: "card", amount: "" },
@@ -166,7 +170,8 @@ const POSTerminal = () => {
   const afterDiscount = subtotal - discountAmount;
   const tipAmount = afterDiscount * (tipPercent / 100);
   const tax = afterDiscount * 0.1;
-  const total = afterDiscount + tax + tipAmount;
+  const billTotal = afterDiscount + tax + tipAmount;
+  const total = billTotal + (settlePreviousDue ? parseFloat(dueSettlementAmount) || 0 : 0);
 
   const handleOpenCheckout = () => {
     if (cart.length === 0) {
@@ -225,7 +230,7 @@ const POSTerminal = () => {
       // Automatically post to active guest folio if Room Charge
       if (paymentMethod === "room" && roomChargeRoom) {
          const room: any = rooms.find((r: any) => r.room_number === roomChargeRoom);
-         const { data: folios } = await supabase.from('guest_folios').select('id').eq('room_id', room?.id).eq('status', 'open').maybeSingle();
+         const { data: folios } = await supabase.from('guest_folios').select('id', 'guest_id').eq('room_id', room?.id).eq('status', 'open').maybeSingle();
 
          if (folios) {
            await addFolioItem.mutateAsync({
@@ -233,9 +238,21 @@ const POSTerminal = () => {
              item_type: 'charge',
              source: 'restaurant',
              description: `POS Bill #${data.transaction_number}`,
-             amount: total,
+             amount: billTotal,
              reference_id: data.id
            });
+
+           // If settling previous due as part of this payment
+           if (settlePreviousDue && parseFloat(dueSettlementAmount) > 0) {
+              await addFolioItem.mutateAsync({
+                folio_id: folios.id,
+                item_type: 'payment',
+                source: 'restaurant',
+                description: `Settlement for Previous Due (POS #${data.transaction_number})`,
+                amount: parseFloat(dueSettlementAmount),
+                reference_id: data.id
+              });
+           }
          }
       }
 
@@ -256,6 +273,8 @@ const POSTerminal = () => {
       setPaymentMethod("");
       setSelectedGateway("");
       setSplitPayment(false);
+      setSettlePreviousDue(false);
+      setDueSettlementAmount("0");
       setRoomChargeRoom("");
       handleTabChange("tables");
     } catch (error: any) {
@@ -478,6 +497,12 @@ const POSTerminal = () => {
                           <span>${tipAmount.toFixed(2)}</span>
                         </div>
                       )}
+                      {settlePreviousDue && (
+                        <div className="flex justify-between text-sm text-blue-600 font-bold">
+                          <span>Due Settlement</span>
+                          <span>+${parseFloat(dueSettlementAmount).toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between font-semibold text-lg border-t border-border pt-2">
                         <span>Total</span>
                         <span className="text-primary">${total.toFixed(2)}</span>
@@ -634,9 +659,37 @@ const POSTerminal = () => {
 
                               if (previousDue > 0) {
                                 return (
-                                  <div className="p-2 bg-destructive/10 border border-destructive/20 rounded flex justify-between items-center animate-pulse">
-                                    <span className="text-[10px] font-bold text-destructive uppercase">Guest Previous Due</span>
-                                    <span className="text-xs font-mono font-bold text-destructive">{formatCurrency(previousDue)}</span>
+                                  <div className="space-y-2">
+                                    <div className="p-2 bg-destructive/10 border border-destructive/20 rounded flex justify-between items-center animate-pulse">
+                                      <div className="flex items-center gap-2">
+                                         <AlertTriangle className="h-3 w-3 text-destructive" />
+                                         <span className="text-[10px] font-bold text-destructive uppercase">Previous Due Detected</span>
+                                      </div>
+                                      <span className="text-xs font-mono font-bold text-destructive">{formatCurrency(previousDue)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-1">
+                                       <Checkbox
+                                          id="settleDue"
+                                          checked={settlePreviousDue}
+                                          onCheckedChange={(c) => {
+                                             setSettlePreviousDue(!!c);
+                                             if (c) setDueSettlementAmount(previousDue.toString());
+                                             else setDueSettlementAmount("0");
+                                          }}
+                                       />
+                                       <Label htmlFor="settleDue" className="text-xs cursor-pointer">Settle outstanding balance now</Label>
+                                    </div>
+                                    {settlePreviousDue && (
+                                       <div className="flex gap-2 items-center pl-6">
+                                          <Label className="text-[10px] whitespace-nowrap">Amount to Settle:</Label>
+                                          <Input
+                                             type="number"
+                                             className="h-7 text-xs w-24"
+                                             value={dueSettlementAmount}
+                                             onChange={(e) => setDueSettlementAmount(e.target.value)}
+                                          />
+                                       </div>
+                                    )}
                                   </div>
                                 );
                               }
