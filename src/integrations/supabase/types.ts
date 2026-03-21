@@ -58,78 +58,6 @@ export type Database = {
           },
         ]
       }
-      housekeeping_logs: {
-        Row: {
-          deep_cleaning_count: number | null
-          id: string
-          laundry_volume_kg: number | null
-          linen_usage_count: number | null
-          log_date: string
-          notes: string | null
-          staff_on_duty: number | null
-        }
-        Insert: {
-          deep_cleaning_count?: number | null
-          id?: string
-          laundry_volume_kg?: number | null
-          linen_usage_count?: number | null
-          log_date?: string
-          notes?: string | null
-          staff_on_duty?: number | null
-        }
-        Update: {
-          deep_cleaning_count?: number | null
-          id?: string
-          laundry_volume_kg?: number | null
-          linen_usage_count?: number | null
-          log_date?: string
-          notes?: string | null
-          staff_on_duty?: number | null
-        }
-        Relationships: []
-      }
-      sales_activities: {
-        Row: {
-          account_name: string
-          activity_date: string
-          activity_type: string
-          contact_person: string | null
-          created_at: string | null
-          id: string
-          next_follow_up: string | null
-          notes: string | null
-          outcome: string | null
-          performed_by: string | null
-          purpose: string | null
-        }
-        Insert: {
-          account_name: string
-          activity_date?: string
-          activity_type: string
-          contact_person?: string | null
-          created_at?: string | null
-          id?: string
-          next_follow_up?: string | null
-          notes?: string | null
-          outcome?: string | null
-          performed_by?: string | null
-          purpose?: string | null
-        }
-        Update: {
-          account_name?: string
-          activity_date?: string
-          activity_type?: string
-          contact_person?: string | null
-          created_at?: string | null
-          id?: string
-          next_follow_up?: string | null
-          notes?: string | null
-          outcome?: string | null
-          performed_by?: string | null
-          purpose?: string | null
-        }
-        Relationships: []
-      }
       approval_queue: {
         Row: {
           action: string
@@ -178,33 +106,6 @@ export type Database = {
           requested_at?: string
           requested_by?: string | null
           status?: string
-        }
-        Relationships: []
-      }
-      daily_revenue_targets: {
-        Row: {
-          fb_revenue_target: number | null
-          id: string
-          occupancy_target_pct: number | null
-          other_revenue_target: number | null
-          room_revenue_target: number | null
-          target_date: string
-        }
-        Insert: {
-          fb_revenue_target?: number | null
-          id?: string
-          occupancy_target_pct?: number | null
-          other_revenue_target?: number | null
-          room_revenue_target?: number | null
-          target_date: string
-        }
-        Update: {
-          fb_revenue_target?: number | null
-          id?: string
-          occupancy_target_pct?: number | null
-          other_revenue_target?: number | null
-          room_revenue_target?: number | null
-          target_date?: string
         }
         Relationships: []
       }
@@ -1481,102 +1382,63 @@ export type Database = {
       }
       inventory_items: {
         Row: {
-          attributes: Json | null
-          avg_cost: number | null
           category_id: string | null
           cost_price: number
           created_at: string
           current_stock: number
           department: string | null
           id: string
-          image_url: string | null
           is_active: boolean
-          item_code: string | null
-          item_type: string | null
-          last_purchase_cost: number | null
           last_restocked_at: string | null
           location: string | null
           max_stock: number | null
           min_stock: number
           name: string
           reorder_point: number
-          safety_stock: number | null
           selling_price: number | null
-          shelf_life: string | null
-          shelf_life_days: number | null
           sku: string | null
-          storage_instructions: string | null
           supplier_id: string | null
-          tax_applicability: Json | null
-          temperature_classification: string | null
           unit: string
-          uom_id: string | null
           updated_at: string
         }
         Insert: {
-          attributes?: Json | null
-          avg_cost?: number | null
           category_id?: string | null
           cost_price?: number
           created_at?: string
           current_stock?: number
           department?: string | null
           id?: string
-          image_url?: string | null
           is_active?: boolean
-          item_code?: string | null
-          item_type?: string | null
-          last_purchase_cost?: number | null
           last_restocked_at?: string | null
           location?: string | null
           max_stock?: number | null
           min_stock?: number
           name: string
           reorder_point?: number
-          safety_stock?: number | null
           selling_price?: number | null
-          shelf_life?: string | null
-          shelf_life_days?: number | null
           sku?: string | null
-          storage_instructions?: string | null
           supplier_id?: string | null
-          tax_applicability?: Json | null
-          temperature_classification?: string | null
           unit?: string
-          uom_id?: string | null
           updated_at?: string
         }
         Update: {
-          attributes?: Json | null
-          avg_cost?: number | null
           category_id?: string | null
           cost_price?: number
           created_at?: string
           current_stock?: number
           department?: string | null
           id?: string
-          image_url?: string | null
           is_active?: boolean
-          item_code?: string | null
-          item_type?: string | null
-          last_purchase_cost?: number | null
           last_restocked_at?: string | null
           location?: string | null
           max_stock?: number | null
           min_stock?: number
           name?: string
           reorder_point?: number
-          safety_stock?: number | null
           selling_price?: number | null
-          shelf_life?: string | null
-          shelf_life_days?: number | null
           sku?: string | null
-          storage_instructions?: string | null
           supplier_id?: string | null
-          tax_applicability?: Json | null
-          temperature_classification?: string | null
           unit?: string
-          uom_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1594,850 +1456,47 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_items_uom_id_fkey"
-            columns: ["uom_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_uoms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_goods_receipt_items: {
-        Row: {
-          batch_number: string | null
-          damaged_quantity: number | null
-          expiry_date: string | null
-          grn_id: string
-          id: string
-          item_id: string | null
-          ordered_quantity: number | null
-          quality_status: string | null
-          received_quantity: number
-          unit_price: number
-        }
-        Insert: {
-          batch_number?: string | null
-          damaged_quantity?: number | null
-          expiry_date?: string | null
-          grn_id: string
-          id?: string
-          item_id?: string | null
-          ordered_quantity?: number | null
-          quality_status?: string | null
-          received_quantity: number
-          unit_price: number
-        }
-        Update: {
-          batch_number?: string | null
-          damaged_quantity?: number | null
-          expiry_date?: string | null
-          grn_id?: string
-          id?: string
-          item_id?: string | null
-          ordered_quantity?: number | null
-          quality_status?: string | null
-          received_quantity?: number
-          unit_price?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_goods_receipt_items_grn_id_fkey"
-            columns: ["grn_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_goods_receipts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_goods_receipt_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_goods_receipts: {
-        Row: {
-          grn_number: string
-          id: string
-          invoice_number: string | null
-          notes: string | null
-          po_id: string | null
-          received_by: string | null
-          received_date: string | null
-          status: string | null
-          store_id: string | null
-          supplier_id: string
-          total_amount: number | null
-        }
-        Insert: {
-          grn_number: string
-          id?: string
-          invoice_number?: string | null
-          notes?: string | null
-          po_id?: string | null
-          received_by?: string | null
-          received_date?: string | null
-          status?: string | null
-          store_id?: string | null
-          supplier_id: string
-          total_amount?: number | null
-        }
-        Update: {
-          grn_number?: string
-          id?: string
-          invoice_number?: string | null
-          notes?: string | null
-          po_id?: string | null
-          received_by?: string | null
-          received_date?: string | null
-          status?: string | null
-          store_id?: string | null
-          supplier_id?: string
-          total_amount?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_goods_receipts_po_id_fkey"
-            columns: ["po_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_goods_receipts_received_by_fkey"
-            columns: ["received_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "inventory_goods_receipts_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_goods_receipts_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_item_stores: {
-        Row: {
-          current_stock: number
-          id: string
-          item_id: string
-          location_within_store: string | null
-          max_stock: number | null
-          min_stock: number
-          reorder_point: number
-          store_id: string
-        }
-        Insert: {
-          current_stock?: number
-          id?: string
-          item_id: string
-          location_within_store?: string | null
-          max_stock?: number | null
-          min_stock?: number
-          reorder_point?: number
-          store_id: string
-        }
-        Update: {
-          current_stock?: number
-          id?: string
-          item_id?: string
-          location_within_store?: string | null
-          max_stock?: number | null
-          min_stock?: number
-          reorder_point?: number
-          store_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_item_stores_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_item_stores_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_logs: {
-        Row: {
-          action: string
-          details: Json | null
-          id: string
-          ip_address: string | null
-          module: string
-          timestamp: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          details?: Json | null
-          id?: string
-          ip_address?: string | null
-          module: string
-          timestamp?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          details?: Json | null
-          id?: string
-          ip_address?: string | null
-          module?: string
-          timestamp?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      inventory_recipe_items: {
-        Row: {
-          id: string
-          item_id: string | null
-          quantity: number
-          recipe_id: string
-          uom_id: string | null
-          waste_percentage: number | null
-        }
-        Insert: {
-          id?: string
-          item_id?: string | null
-          quantity: number
-          recipe_id: string
-          uom_id?: string | null
-          waste_percentage?: number | null
-        }
-        Update: {
-          id?: string
-          item_id?: string | null
-          quantity?: number
-          recipe_id?: string
-          uom_id?: string | null
-          waste_percentage?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_recipe_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_recipe_items_recipe_id_fkey"
-            columns: ["recipe_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_recipes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_recipe_items_uom_id_fkey"
-            columns: ["uom_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_uoms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_recipes: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_active: boolean
-          menu_item_id: string | null
-          name: string
-          portion_size: string | null
-          updated_at: string
-          yield_percentage: number | null
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          menu_item_id?: string | null
-          name: string
-          portion_size?: string | null
-          updated_at?: string
-          yield_percentage?: number | null
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          menu_item_id?: string | null
-          name?: string
-          portion_size?: string | null
-          updated_at?: string
-          yield_percentage?: number | null
-        }
-        Relationships: []
-      }
-      inventory_requisition_items: {
-        Row: {
-          id: string
-          item_id: string | null
-          notes: string | null
-          quantity: number
-          requisition_id: string
-        }
-        Insert: {
-          id?: string
-          item_id?: string | null
-          notes?: string | null
-          quantity: number
-          requisition_id: string
-        }
-        Update: {
-          id?: string
-          item_id?: string | null
-          notes?: string | null
-          quantity?: number
-          requisition_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_requisition_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_requisition_items_requisition_id_fkey"
-            columns: ["requisition_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_requisitions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_requisitions: {
-        Row: {
-          created_at: string
-          department: string
-          id: string
-          notes: string | null
-          priority: string
-          requisition_number: string
-          request_by: string
-          required_date: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          department: string
-          id?: string
-          notes?: string | null
-          priority?: string
-          requisition_number: string
-          request_by: string
-          required_date?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          department?: string
-          id?: string
-          notes?: string | null
-          priority?: string
-          requisition_number?: string
-          request_by?: string
-          required_date?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_requisitions_requested_by_fkey"
-            columns: ["request_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      inventory_stock_adjustment_items: {
-        Row: {
-          adjustment_id: string
-          id: string
-          item_id: string | null
-          quantity_change: number
-        }
-        Insert: {
-          adjustment_id: string
-          id?: string
-          item_id?: string | null
-          quantity_change: number
-        }
-        Update: {
-          adjustment_id?: string
-          id?: string
-          item_id?: string | null
-          quantity_change?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_adjustment_items_adjustment_id_fkey"
-            columns: ["adjustment_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock_adjustments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_adjustment_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_stock_adjustments: {
-        Row: {
-          adjustment_date: string | null
-          adjustment_number: string
-          adjustment_type: string
-          approved_by: string | null
-          id: string
-          reason: string | null
-          status: string | null
-          store_id: string
-        }
-        Insert: {
-          adjustment_date?: string | null
-          adjustment_number: string
-          adjustment_type: string
-          approved_by?: string | null
-          id?: string
-          reason?: string | null
-          status?: string | null
-          store_id: string
-        }
-        Update: {
-          adjustment_date?: string | null
-          adjustment_number?: string
-          adjustment_type?: string
-          approved_by?: string | null
-          id?: string
-          reason?: string | null
-          status?: string | null
-          store_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_adjustments_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_adjustments_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_stock_count_items: {
-        Row: {
-          counted_quantity: number
-          id: string
-          item_id: string | null
-          notes: string | null
-          stock_count_id: string
-          system_quantity: number
-          variance: number | null
-        }
-        Insert: {
-          counted_quantity: number
-          id?: string
-          item_id?: string | null
-          notes?: string | null
-          stock_count_id: string
-          system_quantity: number
-          variance?: number | null
-        }
-        Update: {
-          counted_quantity?: number
-          id?: string
-          item_id?: string | null
-          notes?: string | null
-          stock_count_id?: string
-          system_quantity?: number
-          variance?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_count_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_count_items_stock_count_id_fkey"
-            columns: ["stock_count_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock_counts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_stock_counts: {
-        Row: {
-          count_date: string
-          count_number: string
-          counted_by: string | null
-          created_at: string
-          id: string
-          notes: string | null
-          status: string
-          store_id: string | null
-        }
-        Insert: {
-          count_date?: string
-          count_number: string
-          counted_by?: string | null
-          created_at?: string
-          id?: string
-          notes?: string | null
-          status?: string
-          store_id?: string | null
-        }
-        Update: {
-          count_date?: string
-          count_number?: string
-          counted_by?: string | null
-          created_at?: string
-          id?: string
-          notes?: string | null
-          status?: string
-          store_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_counts_counted_by_fkey"
-            columns: ["counted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_counts_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_stores: {
-        Row: {
-          code: string
-          created_at: string
-          id: string
-          is_active: boolean
-          location: string | null
-          store_name: string
-          store_manager_id: string | null
-          store_type: string
-          updated_at: string
-          temperature_classification: string | null
-          storage_conditions: string | null
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          location?: string | null
-          store_name: string
-          store_manager_id?: string | null
-          store_type?: string
-          updated_at?: string
-          temperature_classification?: string | null
-          storage_conditions?: string | null
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          location?: string | null
-          store_name?: string
-          store_manager_id?: string | null
-          store_type?: string
-          updated_at?: string
-          temperature_classification?: string | null
-          storage_conditions?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stores_store_manager_id_fkey"
-            columns: ["store_manager_id"]
-            isOneToOne: false
-            referencedRelation: "staff_members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_supplier_contracts: {
-        Row: {
-          contract_number: string
-          created_at: string | null
-          id: string
-          status: string | null
-          supplier_id: string
-          terms: string | null
-          valid_from: string
-          valid_to: string
-        }
-        Insert: {
-          contract_number: string
-          created_at?: string | null
-          id?: string
-          status?: string | null
-          supplier_id: string
-          terms?: string | null
-          valid_from: string
-          valid_to: string
-        }
-        Update: {
-          contract_number?: string
-          created_at?: string | null
-          id?: string
-          status?: string | null
-          supplier_id?: string
-          terms?: string | null
-          valid_from?: string
-          valid_to?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_supplier_contracts_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_supplier_pricing: {
-        Row: {
-          contract_id: string | null
-          currency: string | null
-          id: string
-          is_preferred: boolean | null
-          item_id: string
-          supplier_id: string
-          unit_price: number
-          valid_from: string | null
-          valid_to: string | null
-        }
-        Insert: {
-          contract_id?: string | null
-          currency?: string | null
-          id?: string
-          is_preferred?: boolean | null
-          item_id: string
-          supplier_id: string
-          unit_price: number
-          valid_from?: string | null
-          valid_to?: string | null
-        }
-        Update: {
-          contract_id?: string | null
-          currency?: string | null
-          id?: string
-          is_preferred?: boolean | null
-          item_id?: string
-          supplier_id?: string
-          unit_price?: number
-          valid_from?: string | null
-          valid_to?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_supplier_pricing_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_supplier_contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_supplier_pricing_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_supplier_pricing_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_stock_transfer_items: {
-        Row: {
-          id: string
-          item_id: string | null
-          quantity: number
-          transfer_id: string
-        }
-        Insert: {
-          id?: string
-          item_id?: string | null
-          quantity: number
-          transfer_id: string
-        }
-        Update: {
-          id?: string
-          item_id?: string | null
-          quantity?: number
-          transfer_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_transfer_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_transfer_items_transfer_id_fkey"
-            columns: ["transfer_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock_transfers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_stock_transfers: {
-        Row: {
-          from_store_id: string
-          id: string
-          notes: string | null
-          status: string | null
-          to_store_id: string
-          transfer_date: string | null
-          transfer_number: string
-          transferred_by: string | null
-        }
-        Insert: {
-          from_store_id: string
-          id?: string
-          notes?: string | null
-          status?: string | null
-          to_store_id: string
-          transfer_date?: string | null
-          transfer_number: string
-          transferred_by?: string | null
-        }
-        Update: {
-          from_store_id?: string
-          id?: string
-          notes?: string | null
-          status?: string | null
-          to_store_id?: string
-          transfer_date?: string | null
-          transfer_number?: string
-          transferred_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_transfers_from_store_id_fkey"
-            columns: ["from_store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_transfers_to_store_id_fkey"
-            columns: ["to_store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_stock_transfers_transferred_by_fkey"
-            columns: ["transferred_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       inventory_transfers: {
         Row: {
           created_at: string
-          from_store_id: string | null
+          from_location: string
           id: string
           item_id: string
           notes: string | null
           quantity: number
           status: string
-          to_store_id: string | null
+          to_location: string
           transfer_number: string
           transferred_by: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          from_store_id?: string | null
+          from_location: string
           id?: string
           item_id: string
           notes?: string | null
           quantity: number
           status?: string
-          to_store_id?: string | null
+          to_location: string
           transfer_number: string
           transferred_by?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          from_store_id?: string | null
+          from_location?: string
           id?: string
           item_id?: string
           notes?: string | null
           quantity?: number
           status?: string
-          to_store_id?: string | null
+          to_location?: string
           transfer_number?: string
           transferred_by?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2447,84 +1506,7 @@ export type Database = {
             referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_transfers_from_store_id_fkey"
-            columns: ["from_store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_transfers_to_store_id_fkey"
-            columns: ["to_store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      inventory_uom_conversions: {
-        Row: {
-          conversion_factor: number
-          created_at: string
-          from_uom_id: string
-          id: string
-          notes: string | null
-          to_uom_id: string
-        }
-        Insert: {
-          conversion_factor: number
-          created_at?: string
-          from_uom_id: string
-          id?: string
-          notes?: string | null
-          to_uom_id: string
-        }
-        Update: {
-          conversion_factor?: number
-          created_at?: string
-          from_uom_id?: string
-          id?: string
-          notes?: string | null
-          to_uom_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_uom_conversions_from_uom_id_fkey"
-            columns: ["from_uom_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_uoms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_uom_conversions_to_uom_id_fkey"
-            columns: ["to_uom_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_uoms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_uoms: {
-        Row: {
-          created_at: string
-          id: string
-          unit_name: string
-          unit_symbol: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          unit_name: string
-          unit_symbol?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          unit_name?: string
-          unit_symbol?: string | null
-        }
-        Relationships: []
       }
       inventory_wastage: {
         Row: {
@@ -3154,57 +2136,6 @@ export type Database = {
           room?: string
           status?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      marketing_inquiries: {
-        Row: {
-          assigned_to: string | null
-          client_name: string
-          company_name: string | null
-          contact_email: string | null
-          contact_phone: string | null
-          created_at: string | null
-          estimated_guests: number | null
-          id: string
-          inquiry_source: string | null
-          inquiry_type: string | null
-          notes: string | null
-          preferred_dates: Json | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_to?: string | null
-          client_name: string
-          company_name?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          created_at?: string | null
-          estimated_guests?: number | null
-          id?: string
-          inquiry_source?: string | null
-          inquiry_type?: string | null
-          notes?: string | null
-          preferred_dates?: Json | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_to?: string | null
-          client_name?: string
-          company_name?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          created_at?: string | null
-          estimated_guests?: number | null
-          id?: string
-          inquiry_source?: string | null
-          inquiry_type?: string | null
-          notes?: string | null
-          preferred_dates?: Json | null
-          status?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3912,40 +2843,28 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
-          batch_number: string | null
           created_at: string
-          damaged_quantity: number | null
-          expiry_date: string | null
           id: string
           item_id: string
           purchase_order_id: string
-          quality_status: string | null
           quantity: number
           received_quantity: number | null
           unit_price: number
         }
         Insert: {
-          batch_number?: string | null
           created_at?: string
-          damaged_quantity?: number | null
-          expiry_date?: string | null
           id?: string
           item_id: string
           purchase_order_id: string
-          quality_status?: string | null
           quantity: number
           received_quantity?: number | null
           unit_price: number
         }
         Update: {
-          batch_number?: string | null
           created_at?: string
-          damaged_quantity?: number | null
-          expiry_date?: string | null
           id?: string
           item_id?: string
           purchase_order_id?: string
-          quality_status?: string | null
           quantity?: number
           received_quantity?: number | null
           unit_price?: number
@@ -3981,7 +2900,7 @@ export type Database = {
           subtotal: number
           supplier_id: string | null
           tax_amount: number
-          total_amount: number
+          total: number
           updated_at: string
         }
         Insert: {
@@ -3997,7 +2916,7 @@ export type Database = {
           subtotal?: number
           supplier_id?: string | null
           tax_amount?: number
-          total_amount?: number
+          total?: number
           updated_at?: string
         }
         Update: {
@@ -4013,7 +2932,7 @@ export type Database = {
           subtotal?: number
           supplier_id?: string | null
           tax_amount?: number
-          total_amount?: number
+          total?: number
           updated_at?: string
         }
         Relationships: [
@@ -4521,8 +3440,6 @@ export type Database = {
           quantity: number
           reference_id: string | null
           reference_type: string | null
-          requisition_id: string | null
-          store_id: string | null
           to_location: string | null
         }
         Insert: {
@@ -4536,8 +3453,6 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           reference_type?: string | null
-          requisition_id?: string | null
-          store_id?: string | null
           to_location?: string | null
         }
         Update: {
@@ -4551,8 +3466,6 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
-          requisition_id?: string | null
-          store_id?: string | null
           to_location?: string | null
         }
         Relationships: [
@@ -4561,20 +3474,6 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_requisition_id_fkey"
-            columns: ["requisition_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_requisitions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stores"
             referencedColumns: ["id"]
           },
         ]
@@ -4672,39 +3571,6 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-        }
-        Relationships: []
-      }
-      utility_usage: {
-        Row: {
-          consumption_value: number
-          cost: number | null
-          id: string
-          notes: string | null
-          recorded_at: string | null
-          unit: string
-          usage_date: string
-          utility_type: string
-        }
-        Insert: {
-          consumption_value: number
-          cost?: number | null
-          id?: string
-          notes?: string | null
-          recorded_at?: string | null
-          unit: string
-          usage_date?: string
-          utility_type: string
-        }
-        Update: {
-          consumption_value?: number
-          cost?: number | null
-          id?: string
-          notes?: string | null
-          recorded_at?: string | null
-          unit?: string
-          usage_date?: string
-          utility_type?: string
         }
         Relationships: []
       }

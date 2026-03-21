@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
+import { useGuestCRUD } from "@/hooks/useGuestCRUD";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
 import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
@@ -231,7 +232,7 @@ const Guests = () => {
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="guests" className="gap-2"><Users className="h-4 w-4" />Guests</TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2">
               <MessageSquare className="h-4 w-4" />Feedback

@@ -1,16 +1,133 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import {
+  LayoutDashboard, CalendarDays, Users, BedDouble, Sparkles, Wrench,
+  ShoppingCart, Package, Globe, DollarSign, PartyPopper, Target, Briefcase,
+  BarChart3, Moon, Lock, UserCog, UserCheck, Settings, ShieldCheck, Code2,
+  ChevronDown, LucideIcon
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
-import { navItems, operationsNavItems, adminNavItems, NavItemConfig } from "@/config/navigation";
 import { useIsAdmin } from "@/hooks/useUserRole";
+import { useTranslation } from "react-i18next";
+
+interface NavSubItem {
+  label: string;
+  tab?: string;
+  path?: string;
+}
+
+interface NavItemConfig {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  subItems?: NavSubItem[];
+  defaultTab?: string;
+}
+
+const navItems: NavItemConfig[] = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  {
+    icon: CalendarDays,
+    label: "Reservations",
+    path: "/reservations",
+    defaultTab: "list",
+    subItems: [
+      { label: "List View", tab: "list" },
+      { label: "Calendar", tab: "calendar" },
+    ]
+  },
+  {
+    icon: Users,
+    label: "Guests",
+    path: "/guests",
+    defaultTab: "guests",
+    subItems: [
+      { label: "Guests", tab: "guests" },
+      { label: "Feedback", tab: "feedback" },
+      { label: "Loyalty", tab: "loyalty" },
+      { label: "Preferences", tab: "preferences" },
+    ]
+  },
+  {
+    icon: BedDouble,
+    label: "Front Desk",
+    path: "/front-desk",
+    defaultTab: "rooms",
+    subItems: [
+      { label: "Rooms", tab: "rooms" },
+      { label: "Billing", tab: "billing" },
+      { label: "Guest Folios", tab: "folios" },
+    ]
+  },
+  {
+    icon: ShoppingCart,
+    label: "POS",
+    path: "/pos",
+    subItems: [
+      { label: "Dashboard", path: "/pos" },
+      { label: "Terminal", path: "/pos/terminal" },
+      { label: "History", path: "/pos/history" },
+    ]
+  },
+  {
+    icon: Package,
+    label: "Inventory",
+    path: "/inventory",
+    defaultTab: "items",
+    subItems: [
+      { label: "Item Master", tab: "items" },
+      { label: "Suppliers", tab: "suppliers" },
+      { label: "Purchase Orders", tab: "orders" },
+    ]
+  },
+  {
+    icon: DollarSign,
+    label: "Finance",
+    path: "/finance",
+    defaultTab: "dashboard",
+    subItems: [
+      { label: "Dashboard", tab: "dashboard" },
+      { label: "Setup", tab: "setup" },
+      { label: "Transactions", tab: "transactions" },
+    ]
+  },
+  {
+    icon: PartyPopper,
+    label: "Banquet",
+    path: "/banquet",
+    defaultTab: "events",
+    subItems: [
+      { label: "Events", tab: "events" },
+      { label: "Calendar", tab: "calendar" },
+    ]
+  },
+  {
+    icon: BarChart3,
+    label: "Reports",
+    path: "/reports",
+    defaultTab: "overview",
+    subItems: [
+      { label: "Overview", tab: "overview" },
+      { label: "Daily Stats", tab: "daily" },
+    ]
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    path: "/settings",
+    defaultTab: "checkin",
+    subItems: [
+      { label: "Check-in", tab: "checkin" },
+      { label: "UI", tab: "ui" },
+      { label: "Payment", tab: "payment" },
+    ]
+  },
+];
 
 export function HorizontalNav() {
   const location = useLocation();
@@ -22,112 +139,69 @@ export function HorizontalNav() {
     return location.pathname.startsWith(path);
   };
 
-  const renderNavItem = (item: NavItemConfig) => {
-    const isActive = isItemActive(item.path);
-    const translationKey = `nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-    const translatedLabel = t(translationKey, item.label);
-
-    if (item.subItems && item.subItems.length > 0) {
-      return (
-        <div key={item.path} className="flex items-center group relative">
-          {isActive && (
-            <motion.div
-              layoutId="activeNav"
-              className="absolute inset-0 bg-primary/10 rounded-md border border-primary/10 shadow-sm"
-              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-            />
-          )}
-          <Link
-            to={item.path}
-            className={cn(
-              "relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold transition-all whitespace-nowrap rounded-l-md",
-              isActive
-                ? "text-primary"
-                : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-            )}
-          >
-            <item.icon className={cn("h-4 w-4 transition-transform group-hover:scale-110", isActive && "text-primary")} />
-            {translatedLabel}
-          </Link>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "relative z-10 h-[32px] flex items-center px-1.5 transition-all border-l border-transparent rounded-r-md hover:bg-accent/40 hover:text-foreground",
-                  isActive
-                    ? "text-primary border-l-primary/20"
-                    : "text-muted-foreground"
-                )}
-              >
-                <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:translate-y-0.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[180px] p-1.5 animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-2 py-1.5 mb-1 border-b border-border/40">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  {translatedLabel} Options
-                </p>
-              </div>
-              {item.subItems.map((sub) => (
-                <DropdownMenuItem key={sub.tab || sub.path} asChild>
-                  <Link
-                    to={sub.path || `${item.path}?tab=${sub.tab}`}
-                    className="w-full cursor-pointer flex items-center gap-2 py-2 px-2.5 rounded-md text-sm font-medium transition-colors hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
-                    {sub.label}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    }
-
-    return (
-      <Link
-        key={item.path}
-        to={item.path}
-        className={cn(
-          "relative flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold rounded-md transition-all whitespace-nowrap",
-          isActive
-            ? "text-primary"
-            : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-        )}
-      >
-        {isActive && (
-          <motion.div
-            layoutId="activeNav"
-            className="absolute inset-0 bg-primary/10 rounded-md border border-primary/10 shadow-sm"
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-          />
-        )}
-        <item.icon className={cn("relative z-10 h-4 w-4 transition-transform hover:scale-110", isActive && "text-primary")} />
-        <span className="relative z-10">{translatedLabel}</span>
-      </Link>
-    );
-  };
-
   return (
-    <motion.div
-      initial={{ y: -10, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -10, opacity: 0 }}
-      className="sticky top-14 z-20 w-full bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 border-b border-border/40 shadow-sm overflow-hidden"
-    >
-      <div className="px-4 h-12 flex items-center gap-1.5 overflow-x-auto scrollbar-hide no-scrollbar">
-        {navItems.map(renderNavItem)}
-        <div className="h-4 w-[1px] bg-border mx-2" />
-        {operationsNavItems.map(renderNavItem)}
-        {isAdmin && (
-          <>
-            <div className="h-4 w-[1px] bg-border mx-2" />
-            {adminNavItems.map(renderNavItem)}
-          </>
-        )}
+    <div className="sticky top-14 z-20 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40">
+      <div className="px-4 h-11 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+        {navItems.map((item) => {
+          const isActive = isItemActive(item.path);
+          const translationKey = `nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+          const translatedLabel = t(translationKey, item.label);
+
+          if (item.subItems && item.subItems.length > 0) {
+            return (
+              <DropdownMenu key={item.path}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {translatedLabel}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[160px]">
+                  <DropdownMenuItem asChild>
+                    <Link to={item.path} className="w-full cursor-pointer">
+                      Main {translatedLabel}
+                    </Link>
+                  </DropdownMenuItem>
+                  {item.subItems.map((sub) => (
+                    <DropdownMenuItem key={sub.tab || sub.path} asChild>
+                      <Link
+                        to={sub.path || `${item.path}?tab=${sub.tab}`}
+                        className="w-full cursor-pointer"
+                      >
+                        {sub.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          }
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {translatedLabel}
+            </Link>
+          );
+        })}
       </div>
-    </motion.div>
+    </div>
   );
 }
