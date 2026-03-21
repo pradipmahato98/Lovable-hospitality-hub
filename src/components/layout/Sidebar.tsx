@@ -1,10 +1,7 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, CalendarDays, Users, BedDouble, Receipt, Package, BarChart3, Settings,
-  ChevronLeft, ChevronRight, Hotel, LogOut, UserCog, Code2, ShoppingCart, UserCheck,
-  Globe, Sparkles, Wrench, DollarSign, PartyPopper, ShieldCheck, Moon, Lock, ChevronDown, LucideIcon,
-  Target, Briefcase
+  ChevronLeft, ChevronRight, Hotel, LogOut, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,297 +12,14 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-
-interface NavSubItem {
-  label: string;
-  tab?: string;
-  path?: string;
-}
-
-interface NavItemConfig {
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  subItems?: NavSubItem[];
-  defaultTab?: string;
-}
-
-const navItems: NavItemConfig[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  {
-    icon: CalendarDays,
-    label: "Reservations",
-    path: "/reservations",
-    defaultTab: "list",
-    subItems: [
-      { label: "List View", tab: "list" },
-      { label: "Calendar", tab: "calendar" },
-    ]
-  },
-  {
-    icon: Users,
-    label: "Guests",
-    path: "/guests",
-    defaultTab: "guests",
-    subItems: [
-      { label: "Guests", tab: "guests" },
-      { label: "Feedback", tab: "feedback" },
-      { label: "Loyalty", tab: "loyalty" },
-      { label: "Preferences", tab: "preferences" },
-      { label: "Communications", tab: "communications" },
-      { label: "Documents", tab: "documents" },
-      { label: "History", tab: "history" },
-      { label: "Messaging", tab: "messaging" },
-      { label: "De-dup", tab: "dedup" },
-    ]
-  },
-  {
-    icon: BedDouble,
-    label: "Front Desk",
-    path: "/front-desk",
-    defaultTab: "rooms",
-    subItems: [
-      { label: "Rooms", tab: "rooms" },
-      { label: "Billing", tab: "billing" },
-      { label: "Guest Folios", tab: "folios" },
-      { label: "Queue", tab: "queue" },
-      { label: "Messages", tab: "messages" },
-      { label: "Upgrades", tab: "upgrades" },
-      { label: "Wake-Up", tab: "wakeup" },
-      { label: "Group", tab: "group" },
-      { label: "Key Cards", tab: "keycards" },
-    ]
-  },
-  {
-    icon: Sparkles,
-    label: "Housekeeping",
-    path: "/housekeeping",
-    defaultTab: "rooms",
-    subItems: [
-      { label: "Rooms", tab: "rooms" },
-      { label: "Tasks", tab: "tasks" },
-      { label: "Inspections", tab: "inspections" },
-      { label: "Lost & Found", tab: "lost-found" },
-      { label: "Supplies", tab: "supplies" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: Wrench,
-    label: "Engineering",
-    path: "/engineering",
-    defaultTab: "requests",
-    subItems: [
-      { label: "Requests", tab: "requests" },
-      { label: "Preventive", tab: "preventive" },
-      { label: "Assets", tab: "assets" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: ShoppingCart,
-    label: "POS",
-    path: "/pos",
-    subItems: [
-      { label: "Dashboard", path: "/pos" },
-      { label: "Terminal", path: "/pos/terminal" },
-      { label: "History", path: "/pos/history" },
-      { label: "Reports", path: "/pos/reports" },
-    ]
-  },
-  {
-    icon: Package,
-    label: "Inventory",
-    path: "/inventory",
-    defaultTab: "items",
-    subItems: [
-      { label: "Item Master", tab: "items" },
-      { label: "Suppliers", tab: "suppliers" },
-      { label: "Purchase Orders", tab: "orders" },
-      { label: "Stock Issues", tab: "issue" },
-      { label: "Movements", tab: "movements" },
-      { label: "Stock Count", tab: "stock-count" },
-      { label: "Reports", tab: "stock-on-hand" },
-    ]
-  },
-  {
-    icon: Globe,
-    label: "Channel Manager",
-    path: "/channel-manager",
-    defaultTab: "channels",
-    subItems: [
-      { label: "Channels", tab: "channels" },
-      { label: "Rate Calendar", tab: "rates" },
-      { label: "Sync Logs", tab: "logs" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: DollarSign,
-    label: "Finance/Account",
-    path: "/finance",
-    defaultTab: "dashboard",
-    subItems: [
-      { label: "Dashboard", tab: "dashboard" },
-      { label: "Setup", tab: "setup" },
-      { label: "Transactions", tab: "transactions" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: PartyPopper,
-    label: "Banquet",
-    path: "/banquet",
-    defaultTab: "events",
-    subItems: [
-      { label: "Events", tab: "events" },
-      { label: "Calendar", tab: "calendar" },
-      { label: "Catering", tab: "catering" },
-      { label: "Venue Setup", tab: "venue" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: Target,
-    label: "Sales & Marketing",
-    path: "/marketing",
-    defaultTab: "inquiries",
-    subItems: [
-      { label: "Inquiries", tab: "inquiries" },
-      { label: "Activities", tab: "activities" },
-      { label: "Accounts", tab: "accounts" },
-    ]
-  },
-  {
-    icon: Briefcase,
-    label: "Management",
-    path: "/management",
-    defaultTab: "performance",
-    subItems: [
-      { label: "Performance", tab: "performance" },
-      { label: "Forecasting", tab: "forecasting" },
-      { label: "Analysis", tab: "segmentation" },
-    ]
-  },
-  {
-    icon: BarChart3,
-    label: "Reports",
-    path: "/reports",
-    defaultTab: "overview",
-    subItems: [
-      { label: "Overview", tab: "overview" },
-      { label: "DMR Executive", tab: "dmr" },
-      { label: "Daily Stats", tab: "daily" },
-      { label: "Monthly Summary", tab: "monthly" },
-    ]
-  },
-];
-
-const operationsNavItems: NavItemConfig[] = [
-  {
-    icon: Moon,
-    label: "Night Audit",
-    path: "/night-audit",
-    defaultTab: "audit",
-    subItems: [
-      { label: "Run Audit", tab: "audit" },
-      { label: "Audit History", tab: "history" },
-    ]
-  },
-  { icon: Lock, label: "Day Close", path: "/day-close" },
-];
-
-const adminNavItems: NavItemConfig[] = [
-  {
-    icon: UserCog,
-    label: "User Management",
-    path: "/users",
-    defaultTab: "users",
-    subItems: [
-      { label: "Users", tab: "users" },
-      { label: "Activity", tab: "activity" },
-      { label: "Bulk Actions", tab: "bulk" },
-      { label: "Audit Log", tab: "audit" },
-    ]
-  },
-  {
-    icon: Users,
-    label: "Staff Management",
-    path: "/staff",
-    defaultTab: "directory",
-    subItems: [
-      { label: "Directory", tab: "directory" },
-      { label: "My Profile", tab: "details" },
-      { label: "Preferences", tab: "preferences" },
-      { label: "Attendance", tab: "attendance" },
-      { label: "Schedules", tab: "schedules" },
-      { label: "Alerts", tab: "alerts" },
-      { label: "Security", tab: "security" },
-      { label: "Logs", tab: "logs" },
-    ]
-  },
-  {
-    icon: UserCheck,
-    label: "HR",
-    path: "/hr",
-    defaultTab: "employees",
-    subItems: [
-      { label: "Employees", tab: "employees" },
-      { label: "Payroll", tab: "payroll" },
-      { label: "Leave", tab: "leave" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: Settings,
-    label: "Settings",
-    path: "/settings",
-    defaultTab: "checkin",
-    subItems: [
-      { label: "Check-in", tab: "checkin" },
-      { label: "Payment", tab: "payment" },
-      { label: "Sources", tab: "sources" },
-      { label: "Rates", tab: "rates" },
-      { label: "Quick Menu", tab: "quickmenu" },
-      { label: "Property", tab: "property" },
-      { label: "Notifications", tab: "notifications" },
-      { label: "Broadcast", tab: "broadcast" },
-      { label: "Configure", tab: "configure" },
-      { label: "Security", tab: "security" },
-    ]
-  },
-  {
-    icon: ShieldCheck,
-    label: "Admin Console",
-    path: "/admin-console",
-    defaultTab: "overview",
-    subItems: [
-      { label: "Overview", tab: "overview" },
-      { label: "Users", tab: "users" },
-      { label: "Security", tab: "security" },
-      { label: "Permissions", tab: "permissions" },
-      { label: "Audit", tab: "audit" },
-      { label: "Integrations", tab: "integrations" },
-      { label: "Design System", tab: "design_system" },
-      { label: "Security Breach", tab: "security_breach" },
-    ]
-  },
-  {
-    icon: Code2,
-    label: "Dev Panel",
-    path: "/dev",
-    defaultTab: "status",
-    subItems: [
-      { label: "Status", tab: "status" },
-      { label: "Seeder", tab: "seeder" },
-      { label: "Cleanup", tab: "cleanup" },
-      { label: "Email", tab: "email" },
-      { label: "Logs", tab: "logs" },
-      { label: "MCP", tab: "mcp" },
-      { label: "Security", tab: "security" },
-    ]
-  },
-];
+import { useState } from "react";
+import {
+  navItems,
+  operationsNavItems,
+  adminNavItems,
+  NavItemConfig,
+  NavSubItem
+} from "@/config/navigation";
 
 function NavItem({
   item,
@@ -461,6 +175,9 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { isAdmin } = useIsAdmin();
   const { data: uiPrefs } = useUIPreferences();
   const dropdownsEnabled = uiPrefs?.sidebar_dropdowns_enabled ?? true;
+  const navStyle = uiPrefs?.navigation_style || "default";
+  const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;
+  const effectiveCollapsed = collapsed || isVerticalIcon;
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -483,13 +200,13 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blue flex-shrink-0">
             <Hotel className="h-4 w-4 text-primary-foreground" />
           </div>
-          {(!collapsed || isMobile) && (
+          {(!effectiveCollapsed || isMobile) && (
             <span className="font-display text-lg font-semibold text-gradient-blue">
               LuxeStay
             </span>
           )}
         </Link>
-        {!isMobile && (
+        {!isMobile && !isVerticalIcon && (
           <Button
             variant="ghost"
             size="icon"
@@ -508,7 +225,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             key={item.path}
             item={item}
             isActive={isItemActive(item.path)}
-            collapsed={collapsed}
+            collapsed={effectiveCollapsed}
             isMobile={isMobile}
             onNavClick={onNavClick}
             dropdownsEnabled={dropdownsEnabled}
@@ -516,20 +233,20 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         ))}
 
         {/* Operations Section */}
-        {(!collapsed || isMobile) && (
+        {(!effectiveCollapsed || isMobile) && (
           <div className="mt-4 mb-1 px-3">
             <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
               {t('common.operations', 'Operations')}
             </p>
           </div>
         )}
-        {collapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+        {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
         {operationsNavItems.map((item) => (
           <NavItem
             key={item.path}
             item={item}
             isActive={isItemActive(item.path)}
-            collapsed={collapsed}
+            collapsed={effectiveCollapsed}
             isMobile={isMobile}
             onNavClick={onNavClick}
             dropdownsEnabled={dropdownsEnabled}
@@ -539,20 +256,20 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {/* Admin Section */}
         {isAdmin && (
           <>
-            {(!collapsed || isMobile) && (
+            {(!effectiveCollapsed || isMobile) && (
               <div className="mt-4 mb-1 px-3">
                 <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
                   {t('common.admin', 'Admin')}
                 </p>
               </div>
             )}
-            {collapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+            {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
             {adminNavItems.map((item) => (
               <NavItem
                 key={item.path}
                 item={item}
                 isActive={isItemActive(item.path)}
-                collapsed={collapsed}
+                collapsed={effectiveCollapsed}
                 isMobile={isMobile}
                 onNavClick={onNavClick}
                 dropdownsEnabled={dropdownsEnabled}
@@ -563,7 +280,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </nav>
 
       {/* User Section */}
-      {(!collapsed || isMobile) && (
+      {(!effectiveCollapsed || isMobile) && (
         <div className="p-3 border-t border-sidebar-border/60 mt-auto">
           <Link to="/profile" onClick={onNavClick} className="flex items-center gap-2.5 mb-2 hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center flex-shrink-0 ring-2 ring-primary/10">
@@ -584,7 +301,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       )}
 
       {/* Collapsed User Avatar */}
-      {collapsed && !isMobile && (
+      {effectiveCollapsed && !isMobile && (
         <div className="p-2 border-t border-sidebar-border/60 mt-auto flex flex-col items-center gap-1.5">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
@@ -610,6 +327,11 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
 export function Sidebar() {
   const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
+  const { data: uiPrefs } = useUIPreferences();
+  const navStyle = uiPrefs?.navigation_style || "default";
+  const [isHovered, setIsHovered] = useState(false);
+
+  const isHorizontal = navStyle === "horizontal-subheader" && !isMobile;
 
   if (isMobile) {
     return (
@@ -621,14 +343,29 @@ export function Sidebar() {
     );
   }
 
+  if (isHorizontal) return null;
+
+  const isHiddenHover = navStyle === "hidden-hover" && !isMobile;
+  const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;
+
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300",
-        collapsed ? "w-20" : "w-64"
+    <>
+      {isHiddenHover && (
+        <div
+          className="fixed left-0 top-0 z-50 w-2 h-screen cursor-pointer"
+          onMouseEnter={() => setIsHovered(true)}
+        />
       )}
-    >
-      <SidebarContent />
-    </aside>
+      <aside
+        onMouseLeave={() => isHiddenHover && setIsHovered(false)}
+        className={cn(
+          "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300 overflow-hidden shadow-xl",
+          isVerticalIcon ? "w-[70px]" : collapsed ? "w-20" : "w-64",
+          isHiddenHover && (isHovered ? "w-64 translate-x-0" : "w-64 -translate-x-full")
+        )}
+      >
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

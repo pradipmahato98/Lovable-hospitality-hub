@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload, LayoutDashboard } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
@@ -22,10 +22,10 @@ import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
-  LocalizationSettingsCard,
+  LocalizationSettingsCard, UIStandardizationCard,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
+type SettingsTab = "checkin" | "ui" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,12 +67,15 @@ const Settings = () => {
     );
   }
 
-  if (!isAdmin && !import.meta.env.DEV) {
+  // In development, allow access. In production, only if isAdmin is confirmed.
+  // Handle null state explicitly if useIsAdmin is still loading or user isn't authenticated yet.
+  if (isAdmin === false && !import.meta.env.DEV) {
     return <Navigate to="/" replace />;
   }
 
   const tabs = [
     { id: "checkin" as const, icon: ClipboardCheck, label: "Check-in Settings" },
+    { id: "ui" as const, icon: LayoutDashboard, label: "UI Standardization" },
     { id: "localization" as const, icon: Globe, label: "Localization" },
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },
@@ -173,12 +176,19 @@ const Settings = () => {
                 onSettingChange={(key, value) => checkInSettings && updateCheckIn.mutate({ ...checkInSettings, [key]: value })}
               />
             )}
+            { activeTab === "ui" && (
+              <UIStandardizationCard />
+            )}
             {activeTab === "localization" && (
               <LocalizationSettingsCard
                 settings={localizationSettings}
                 isLoading={isLoadingLocalization}
                 isPending={updateLocalization.isPending}
                 onSettingChange={(key, value) => {
+                  if (key === "full_settings") {
+                    updateLocalization.mutate(value);
+                    return;
+                  }
                   const current = localizationSettings || {
                     calendar_mode: "AD",
                     language: "en",

@@ -4,6 +4,9 @@ import { Header } from "./GlobalHeader";
 import { PageTransition } from "./PageTransition";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
+import { HorizontalNav } from "./header/HorizontalNav";
+import { AnimatePresence } from "framer-motion";
 
 export interface MainLayoutProps {
   children: ReactNode;
@@ -14,17 +17,32 @@ export interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
+  const { data: uiPrefs } = useUIPreferences();
+  const navStyle = uiPrefs?.navigation_style || "default";
+
+  const isHorizontal = navStyle === "horizontal-subheader" && !isMobile;
+  const isHiddenHover = navStyle === "hidden-hover" && !isMobile;
+  const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;
+
+  const getMarginLeft = () => {
+    if (isMobile || isHorizontal || isHiddenHover) return "ml-0";
+    if (isVerticalIcon) return "ml-[70px]";
+    return collapsed ? "ml-20" : "ml-64";
+  };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Sidebar />
       <div 
         className={cn(
-          "transition-[margin] duration-300 ease-in-out min-h-screen flex flex-col",
-          isMobile ? "ml-0" : collapsed ? "ml-20" : "ml-64"
+          "transition-[margin] duration-300 ease-in-out min-h-screen flex flex-col flex-1",
+          getMarginLeft()
         )}
       >
         <Header title={title} subtitle={subtitle} />
+        <AnimatePresence mode="wait">
+          {isHorizontal && <HorizontalNav />}
+        </AnimatePresence>
         <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
           <PageTransition>{children}</PageTransition>
         </main>

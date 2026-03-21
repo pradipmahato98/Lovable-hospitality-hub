@@ -89,7 +89,7 @@ const HR = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+        <TabsList>
           <TabsTrigger value="employees" className="gap-2"><Users className="h-4 w-4" />Employees</TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2"><DollarSign className="h-4 w-4" />Payroll</TabsTrigger>
           <TabsTrigger value="leave" className="gap-2"><CalendarDays className="h-4 w-4" />Leave</TabsTrigger>

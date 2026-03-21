@@ -13,7 +13,7 @@ interface LocalizationSettingsCardProps {
   settings: LocalizationSettings | undefined;
   isLoading: boolean;
   isPending: boolean;
-  onSettingChange: (key: keyof LocalizationSettings, value: any) => void;
+  onSettingChange: (key: keyof LocalizationSettings | "full_settings", value: any) => void;
 }
 
 export function LocalizationSettingsCard({
@@ -64,10 +64,7 @@ export function LocalizationSettingsCard({
       date_format_ad: "dd/MM/yyyy",
       timezone: "Asia/Kathmandu",
     };
-    // Update each setting
-    Object.entries(nepalPreset).forEach(([key, value]) => {
-      onSettingChange(key as keyof LocalizationSettings, value);
-    });
+    onSettingChange("full_settings", nepalPreset);
   };
 
   useEffect(() => {
@@ -82,6 +79,15 @@ export function LocalizationSettingsCard({
     language: "en",
     number_standard: "international",
     currency: "NPR",
+    time_format: "24h",
+    first_day_of_week: 1,
+    measurement_system: "metric",
+    currency_display: "symbol",
+    fiscal_year_start_month: 1,
+    digit_standard: "latin",
+    date_format_bs: "short",
+    date_format_ad: "yyyy-MM-dd",
+    timezone: "UTC",
   };
 
   return (
