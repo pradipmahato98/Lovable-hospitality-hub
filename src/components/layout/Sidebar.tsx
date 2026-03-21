@@ -125,7 +125,7 @@ const navItems: NavItemConfig[] = [
       { label: "Stock Issues", tab: "issue" },
       { label: "Movements", tab: "movements" },
       { label: "Stock Count", tab: "stock-count" },
-      { label: "Reports", tab: "stock-on-hand" },
+      { label: "Reports", tab: "stock-rpt" },
     ]
   },
   {

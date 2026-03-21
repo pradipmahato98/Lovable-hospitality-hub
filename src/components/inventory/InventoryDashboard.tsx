@@ -94,7 +94,10 @@ export function InventoryDashboard() {
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">MTD Consumption</p>
                 <p className="text-3xl font-black mt-1 text-emerald-600 font-mono">
-                  {formatCurrency(movements.filter(m => m.movement_type === 'out').reduce((s, m) => s + (m.quantity * ((m.item as any)?.avg_cost || 0)), 0))}
+                  {formatCurrency(movements.filter(m => m.movement_type === 'out').reduce((s, m) => {
+                     const item = m.item as any;
+                     return s + (m.quantity * (item?.avg_cost || item?.cost_price || 0));
+                  }, 0))}
                 </p>
                 <div className="flex items-center gap-1 mt-2 text-xs font-medium text-muted-foreground">
                   <Activity className="h-3 w-3" />

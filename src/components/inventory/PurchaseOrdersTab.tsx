@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs, PurchaseOrderItem } from "@/hooks/useInventory";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
 interface POLineItem { item_id: string; quantity: number; unit_price: number; }
 

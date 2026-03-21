@@ -331,36 +331,60 @@ async function convertUoM(fromId: string, toId: string, quantity: number) {
 }
 
 async function createFinanceEntry(description: string, lines: { account_id: string, debit: number, credit: number }[]) {
-  const entryNo = `INV-JE-${Date.now()}`;
-  const { data: je, error: jeErr } = await db.from('journal_entries').insert({
-    entry_number: entryNo,
-    date: new Date().toISOString().split('T')[0],
-    description,
-    is_posted: true
-  }).select().single();
+  try {
+    const entryNo = `INV-JE-${Date.now()}`;
+    const { data: je, error: jeErr } = await db.from('journal_entries').insert({
+      entry_number: entryNo,
+      date: new Date().toISOString().split('T')[0],
+      description,
+      is_posted: true
+    }).select().single();
 
-  if (je && !jeErr) {
-    await db.from('journal_lines').insert(lines.map(l => ({ ...l, journal_entry_id: je.id })));
+    if (je && !jeErr) {
+      await db.from('journal_lines').insert(lines.map(l => ({ ...l, journal_entry_id: je.id })));
+    }
+  } catch (e) {
+    console.warn("Failed to create finance entry, continuing inventory transaction:", e);
   }
 }
 
 async function getInventoryAccount(key: string) {
-  const { data } = await db.from('inventory_settings').select('setting_value').eq('setting_key', key).single();
-  return data?.setting_value || 'f2345678-1234-5678-1234-567812345678';
+  try {
+    const { data, error } = await db.from('inventory_settings').select('setting_value').eq('setting_key', key).single();
+    if (error) throw error;
+    return data?.setting_value || '00000000-0000-0000-0000-000000000000';
+  } catch (e) {
+    return '00000000-0000-0000-0000-000000000000';
+  }
 }
+
+// Cache for table columns to avoid repeated RPC calls
+const tableColumnsCache: Record<string, Set<string>> = {};
 
 // Helper to clean payloads of columns that might be missing in older schemas
 async function cleanPayload(table: string, payload: Record<string, any>) {
-  const { data: cols } = await db.rpc('get_table_columns', { tname: table });
-  // Fallback if the RPC doesn't exist yet (standard for this project until migration 20260320)
-  if (!cols) {
+  if (!tableColumnsCache[table]) {
+    try {
+      const { data: cols } = await db.rpc('get_table_columns', { tname: table });
+      if (cols) {
+        tableColumnsCache[table] = new Set(cols.map((c: any) => c.column_name));
+      }
+    } catch (e) {
+      console.warn(`Could not fetch columns for ${table}, using legacy fallback`);
+    }
+  }
+
+  const validCols = tableColumnsCache[table];
+
+  if (!validCols) {
     const missingInLegacy: Record<string, string[]> = {
       inventory_items: ['attributes', 'item_code', 'item_type', 'shelf_life', 'safety_stock', 'temperature_classification', 'shelf_life_days', 'avg_cost', 'last_purchase_cost', 'tax_applicability', 'image_url', 'uom_id'],
       stock_movements: ['store_id', 'requisition_id'],
       inventory_categories: ['category_name', 'parent_category', 'sku_prefix'],
       inventory_stores: ['store_name', 'temperature_classification', 'storage_conditions'],
       purchase_orders: ['total_amount'],
-      purchase_order_items: ['batch_number', 'expiry_date', 'damaged_quantity', 'quality_status']
+      purchase_order_items: ['batch_number', 'expiry_date', 'damaged_quantity', 'quality_status'],
+      inventory_requisitions: ['request_by', 'requisition_number']
     };
 
     const cleaned = { ...payload };
@@ -371,13 +395,13 @@ async function cleanPayload(table: string, payload: Record<string, any>) {
       if (col === 'parent_category' && payload.parent_category) cleaned.parent_id = payload.parent_category;
       if (col === 'store_name' && payload.store_name) cleaned.name = payload.store_name;
       if (col === 'total_amount' && payload.total_amount) cleaned.total = payload.total_amount;
+      if (col === 'request_by' && payload.request_by) cleaned.user_id = payload.request_by;
 
       delete cleaned[col];
     });
     return cleaned;
   }
 
-  const validCols = new Set(cols.map((c: any) => c.column_name));
   return Object.fromEntries(Object.entries(payload).filter(([k]) => validCols.has(k)));
 }
 
@@ -443,13 +467,21 @@ export function useInventoryCategories() {
   const query = useQuery({
     queryKey: ["inventory-categories"],
     queryFn: async () => {
-      const { data, error } = await db.from("inventory_categories").select("*");
-      if (error) throw error;
-      return (data || []).map((c: any) => ({
-        ...c,
-        category_name: c.category_name || c.name || c.legacy_name,
-        parent_category: c.parent_category || c.parent_id || c.legacy_parent_id
-      })).sort((a, b) => (a.category_name || '').localeCompare(b.category_name || '')) as InventoryCategory[];
+      try {
+        const { data, error } = await db.from("inventory_categories").select("*");
+        if (error) {
+          console.warn("Error fetching categories, might be missing table:", error.message);
+          return [] as InventoryCategory[];
+        }
+        return (data || []).map((c: any) => ({
+          ...c,
+          category_name: c.category_name || c.name || c.legacy_name || "Uncategorized",
+          parent_category: c.parent_category || c.parent_id || c.legacy_parent_id
+        })).sort((a, b) => (a.category_name || '').localeCompare(b.category_name || '')) as InventoryCategory[];
+      } catch (e) {
+        console.error("Critical error in useInventoryCategories:", e);
+        return [] as InventoryCategory[];
+      }
     },
   });
 
@@ -625,13 +657,16 @@ export function useInventoryStores() {
     queryFn: async () => {
       try {
         const { data, error } = await db.from("inventory_stores").select("*");
-        if (error) throw error;
+        if (error) {
+          console.warn("Error fetching stores:", error.message);
+          return [] as InventoryStore[];
+        }
         return (data || []).map((s: any) => ({
           ...s,
-          store_name: s.store_name || s.name
-        })).sort((a, b) => a.store_name.localeCompare(b.store_name)) as InventoryStore[];
+          store_name: s.store_name || s.name || "Main Store"
+        })).sort((a, b) => (a.store_name || '').localeCompare(b.store_name || '')) as InventoryStore[];
       } catch (e) {
-        console.warn("inventory_stores table not found");
+        console.error("Critical error in useInventoryStores:", e);
         return [] as InventoryStore[];
       }
     },
@@ -876,11 +911,17 @@ export function usePurchaseOrders(status?: string) {
   const createPurchaseOrder = useMutation({
     mutationFn: async ({ items, ...order }: { items: Partial<PurchaseOrderItem>[], supplier_id: string | null, status: string, order_date: string, subtotal: number, tax_amount: number, total: number, notes?: string, expected_delivery?: string | null }) => {
       const orderNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
-      const { data: po, error: poError } = await db.from("purchase_orders").insert({ ...order, order_number: orderNumber } as Database["public"]["Tables"]["purchase_orders"]["Insert"]).select().single();
+      const cleanedPO = await cleanPayload("purchase_orders", { ...order, order_number: orderNumber });
+      const { data: po, error: poError } = await db.from("purchase_orders").insert(cleanedPO as any).select().single();
       if (poError) throw poError;
 
-      const poItems = items.map((i) => ({ ...i, purchase_order_id: po.id }));
-      const { error: itemsError } = await db.from("purchase_order_items").insert(poItems as Database["public"]["Tables"]["purchase_order_items"]["Insert"][]);
+      const poItems = [];
+      for (const item of items) {
+         const cleanedItem = await cleanPayload("purchase_order_items", { ...item, purchase_order_id: po.id });
+         poItems.push(cleanedItem);
+      }
+
+      const { error: itemsError } = await db.from("purchase_order_items").insert(poItems as any);
       if (itemsError) throw itemsError;
       return po;
     },
@@ -1042,7 +1083,7 @@ export function useInventoryRequisitions() {
       try {
         const { data, error } = await db
           .from("inventory_requisitions")
-          .select(`*, items:inventory_requisition_items(*, item:inventory_items(*))`)
+          .select(`*, items:inventory_requisition_items(*, item:inventory_items(id, name, item_code, sku, cost_price, avg_cost))`)
           .order("created_at", { ascending: false });
 
         if (error && (error.message.includes("inventory_requisition") || error.message.includes("request_by"))) {
@@ -1111,7 +1152,7 @@ export function useInventoryIssues() {
       try {
         const { data, error } = await db
           .from("inventory_stock_issues")
-          .select(`*, items:inventory_stock_issue_items(*, item:inventory_items(*))`)
+          .select(`*, items:inventory_stock_issue_items(*, item:inventory_items(id, name, item_code, sku, cost_price, avg_cost))`)
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data as unknown as InventoryStockIssue[];
@@ -1136,11 +1177,13 @@ export function useInventoryIssues() {
       const issueNumber = `SIV-${Date.now().toString(36).toUpperCase()}`;
       let totalIssueValue = 0;
 
-      const { data: sIssue, error: issueErr } = await db.from("inventory_stock_issues").insert({
+      const issuePayload = await cleanPayload("inventory_stock_issues", {
         ...issue,
         requisition_id,
         issue_number: issueNumber
-      } as Database["public"]["Tables"]["inventory_stock_issues"]["Insert"]).select().single();
+      });
+
+      const { data: sIssue, error: issueErr } = await db.from("inventory_stock_issues").insert(issuePayload as any).select().single();
       if (issueErr) throw issueErr;
 
       for (const item of items) {
@@ -1153,16 +1196,19 @@ export function useInventoryIssues() {
 
         totalIssueValue += (finalDeduction * (invItem?.avg_cost || invItem?.cost_price || 0));
 
-        await db.from("inventory_stock_issue_items").insert({
+        const issueItemPayload = await cleanPayload("inventory_stock_issue_items", {
           stock_issue_id: sIssue.id,
           item_id: item.item_id as string,
           quantity: item.quantity || 0,
           batch_number: item.batch_number
-        } as Database["public"]["Tables"]["inventory_stock_issue_items"]["Insert"]);
+        });
 
-        await db.from("inventory_items").update({
+        await db.from("inventory_stock_issue_items").insert(issueItemPayload as any);
+
+        const invUpdates = await cleanPayload("inventory_items", {
           current_stock: Math.max(0, (invItem?.current_stock || 0) - finalDeduction)
-        }).eq("id", item.item_id as string);
+        });
+        await db.from("inventory_items").update(invUpdates).eq("id", item.item_id as string);
 
         if (storeId) {
            await updateStoreStock(item.item_id as string, storeId, finalDeduction, 'decrement');
@@ -1246,11 +1292,17 @@ export function useInventoryRecipes() {
 
   const createRecipe = useMutation({
     mutationFn: async ({ items, ...recipe }: { items: Partial<InventoryRecipeItem>[], name: string, description?: string, portion_size?: string, yield_percentage?: number }) => {
-      const { data: rec, error: recError } = await db.from("inventory_recipes").insert(recipe as Database["public"]["Tables"]["inventory_recipes"]["Insert"]).select().single();
+      const cleanedRecipe = await cleanPayload("inventory_recipes", recipe);
+      const { data: rec, error: recError } = await db.from("inventory_recipes").insert(cleanedRecipe as any).select().single();
       if (recError) throw recError;
 
-      const recItems = items.map((i) => ({ ...i, recipe_id: rec.id }));
-      const { error: itemsError } = await db.from("inventory_recipe_items").insert(recItems as Database["public"]["Tables"]["inventory_recipe_items"]["Insert"][]);
+      const recItems = [];
+      for (const item of items) {
+         const cleanedItem = await cleanPayload("inventory_recipe_items", { ...item, recipe_id: rec.id });
+         recItems.push(cleanedItem);
+      }
+
+      const { error: itemsError } = await db.from("inventory_recipe_items").insert(recItems as any);
       if (itemsError) throw itemsError;
       return rec;
     },
@@ -1266,19 +1318,21 @@ export function useInventoryProduction() {
 
   const produceBatch = useMutation({
     mutationFn: async ({ recipeId, quantity, producedBy, notes, storeId }: { recipeId: string, quantity: number, producedBy: string, notes?: string, storeId?: string }) => {
-      const { data: log, error: logErr } = await db.from("inventory_production_logs").insert({
+      const logPayload = await cleanPayload("inventory_production_logs", {
         recipe_id: recipeId,
         quantity_produced: quantity,
         produced_by: producedBy,
         notes
-      } as Database["public"]["Tables"]["inventory_production_logs"]["Insert"]).select().single();
+      });
+
+      const { data: log, error: logErr } = await db.from("inventory_production_logs").insert(logPayload as any).select().single();
       if (logErr) throw logErr;
 
-      const { data: recipeItems } = await db.from("inventory_recipe_items").select("*").eq("recipe_id", recipeId);
+      const { data: recipeItems } = await db.from("inventory_recipe_items").select("*, item:inventory_items(current_stock, uom_id, cost_price, avg_cost)").eq("recipe_id", recipeId);
 
       if (recipeItems) {
         for (const rItem of recipeItems) {
-          const { data: invItem } = await db.from("inventory_items").select("current_stock, uom_id, cost_price, avg_cost").eq("id", rItem.item_id).single();
+          const invItem = rItem.item;
 
           let deductionQty = rItem.quantity * quantity;
           if (rItem.uom_id && invItem?.uom_id && rItem.uom_id !== invItem.uom_id) {
@@ -1495,7 +1549,8 @@ export function useInventoryWastage() {
 
   const reportWastage = useMutation({
     mutationFn: async (wastage: Partial<InventoryWastage>) => {
-      const { data, error } = await db.from("inventory_wastage").insert(wastage as Database["public"]["Tables"]["inventory_wastage"]["Insert"]).select().single();
+      const cleanedWastage = await cleanPayload("inventory_wastage", wastage);
+      const { data, error } = await db.from("inventory_wastage").insert(cleanedWastage as any).select().single();
       if (error) throw error;
 
       let { data: item, error: fetchErr } = await db.from("inventory_items").select("current_stock, cost_price, avg_cost").eq("id", wastage.item_id as string).maybeSingle();
@@ -1826,8 +1881,17 @@ export function useInventoryStats() {
   const { data: purchaseItems } = useQuery({
     queryKey: ["all-purchase-items"],
     queryFn: async () => {
-      const { data } = await db.from("purchase_order_items").select("*, purchase_order:purchase_orders!inner(status, order_date)").eq("purchase_orders.status", "received");
-      return (data || []) as unknown as (PurchaseOrderItem & { purchase_order: PurchaseOrder })[];
+      try {
+        const { data, error } = await db.from("purchase_order_items").select("*, purchase_order:purchase_orders!inner(status, order_date)").eq("purchase_orders.status", "received");
+        if (error) {
+           // Fallback if joined filter fails
+           const fallback = await db.from("purchase_order_items").select("*");
+           return (fallback.data || []) as any[];
+        }
+        return (data || []) as unknown as (PurchaseOrderItem & { purchase_order: PurchaseOrder })[];
+      } catch (e) {
+        return [];
+      }
     }
   });
 

@@ -154,10 +154,34 @@ export function InventorySettingsTab() {
            {generateLowStockPOs.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
            Trigger Auto-PO Generation
         </Button>
-        <Button onClick={handleSave} disabled={updateSettings.isPending || isLoading} variant="blue" className="w-full md:w-auto">
-          {updateSettings.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
-          Save Configuration
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+           <Button
+             variant="ghost"
+             size="sm"
+             className="text-[10px] uppercase font-bold"
+             onClick={async () => {
+                const keys = ['inventory_gl_account', 'consumption_gl_account', 'wastage_gl_account', 'adjustment_gl_account', 'purchase_gl_account', 'costing_method'];
+                const updates: Record<string, string> = {};
+                keys.forEach(k => {
+                   if (!localSettings[k as keyof typeof localSettings]) {
+                      updates[k] = k === 'costing_method' ? 'weighted_average' : '00000000-0000-0000-0000-000000000000';
+                   }
+                });
+                if (Object.keys(updates).length > 0) {
+                   await updateSettings.mutateAsync(updates);
+                   toast.success("Missing settings initialized with defaults");
+                } else {
+                   toast.info("All configuration keys present");
+                }
+             }}
+           >
+              Initialize Missing Keys
+           </Button>
+           <Button onClick={handleSave} disabled={updateSettings.isPending || isLoading} variant="blue" className="flex-1 md:flex-none">
+             {updateSettings.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+             Save Configuration
+           </Button>
+        </div>
       </div>
     </div>
   );

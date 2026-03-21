@@ -1,6 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Search, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
 import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
