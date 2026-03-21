@@ -10,4 +10,3 @@ export { QuickMenuSettingsCard } from "./QuickMenuSettingsCard";
 export { BroadcastSettings } from "./BroadcastSettings";
 export { PaymentGatewayConfigPanel } from "./PaymentGatewayConfig";
 export { ConfigureModuleCard } from "./ConfigureModuleCard";
-export { UIStandardizationCard } from "./UIStandardizationCard";

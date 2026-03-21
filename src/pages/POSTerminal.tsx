@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn, formatCurrency, roundFinance } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -48,7 +48,6 @@ import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSearchParams } from "react-router-dom";
 import { useInvoices } from "@/hooks/useBillingData";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
-import { useChargeToRoom } from "@/hooks/useChargeToRoom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useInventoryPOS } from "@/hooks/useInventory";
 
@@ -116,7 +115,6 @@ const POSTerminal = () => {
   const { data: allInvoices = [] } = useInvoices();
   const { data: gatewaysData } = usePaymentGateways();
   const { addFolioItem } = useGuestFolios();
-  const postToRoom = useChargeToRoom();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
   const { deductBulkInventoryForSale } = useInventoryPOS();
 
@@ -163,17 +161,17 @@ const POSTerminal = () => {
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   // Calculate discount
-  const discountAmount = roundFinance(discountValue
+  const discountAmount = discountValue
     ? discountType === "percent"
       ? subtotal * (parseFloat(discountValue) / 100)
       : parseFloat(discountValue)
-    : 0);
+    : 0;
 
-  const afterDiscount = roundFinance(subtotal - discountAmount);
-  const tipAmount = roundFinance(afterDiscount * (tipPercent / 100));
-  const tax = roundFinance(afterDiscount * 0.1);
-  const billTotal = roundFinance(afterDiscount + tax + tipAmount);
-  const total = roundFinance(billTotal + (settlePreviousDue ? parseFloat(dueSettlementAmount) || 0 : 0));
+  const afterDiscount = subtotal - discountAmount;
+  const tipAmount = afterDiscount * (tipPercent / 100);
+  const tax = afterDiscount * 0.1;
+  const billTotal = afterDiscount + tax + tipAmount;
+  const total = billTotal + (settlePreviousDue ? parseFloat(dueSettlementAmount) || 0 : 0);
 
   const handleOpenCheckout = () => {
     if (cart.length === 0) {
@@ -182,8 +180,6 @@ const POSTerminal = () => {
     }
     setCheckoutOpen(true);
   };
-
-  const { user } = useAuth();
 
   const handleCheckout = async () => {
     if (splitPayment) {
@@ -225,7 +221,6 @@ const POSTerminal = () => {
           items_count: cart.reduce((sum, i) => sum + i.quantity, 0),
           items: cart,
           room_number: paymentMethod === "room" ? roomChargeRoom : null,
-          created_by: user?.id,
         })
         .select()
         .single();
@@ -234,28 +229,30 @@ const POSTerminal = () => {
 
       // Automatically post to active guest folio if Room Charge
       if (paymentMethod === "room" && roomChargeRoom) {
-         await postToRoom.mutateAsync({
-           roomNumber: roomChargeRoom,
-           amount: billTotal,
-           description: `POS Bill #${data.transaction_number}`,
-           referenceId: data.id
-         });
+         const room: any = rooms.find((r: any) => r.room_number === roomChargeRoom);
+         const { data: folios } = await supabase.from('guest_folios').select('id', 'guest_id').eq('room_id', room?.id).eq('status', 'open').maybeSingle();
 
-         // If settling previous due as part of this payment
-         if (settlePreviousDue && parseFloat(dueSettlementAmount) > 0) {
-            const room: any = rooms.find((r: any) => r.room_number === roomChargeRoom);
-            const { data: folio } = await supabase.from('guest_folios').select('id').eq('room_id', room?.id).eq('status', 'open').maybeSingle();
+         if (folios) {
+           await addFolioItem.mutateAsync({
+             folio_id: folios.id,
+             item_type: 'charge',
+             source: 'restaurant',
+             description: `POS Bill #${data.transaction_number}`,
+             amount: billTotal,
+             reference_id: data.id
+           });
 
-            if (folio) {
+           // If settling previous due as part of this payment
+           if (settlePreviousDue && parseFloat(dueSettlementAmount) > 0) {
               await addFolioItem.mutateAsync({
-                folio_id: folio.id,
+                folio_id: folios.id,
                 item_type: 'payment',
                 source: 'restaurant',
                 description: `Settlement for Previous Due (POS #${data.transaction_number})`,
                 amount: parseFloat(dueSettlementAmount),
                 reference_id: data.id
               });
-            }
+           }
          }
       }
 

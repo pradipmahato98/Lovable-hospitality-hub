@@ -29,14 +29,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   UtensilsCrossed,
   Plus,
   Search,
@@ -44,22 +36,8 @@ import {
   AlertTriangle,
   Package,
   Users,
-  Eye,
-  MoreVertical,
-  ArrowUpDown,
-  Filter,
-  FileText,
-  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  useCateringOrders,
-  useCreateCateringOrder,
-  useUpdateCateringOrder,
-  CateringOrder
-} from "@/hooks/useBanquetData";
-import { useInventoryRecipes } from "@/hooks/useInventory";
-import { useBanquetSettings } from "@/hooks/useSettings";
 
 interface BanquetEvent {
   id: string;
@@ -74,11 +52,30 @@ interface BanquetEvent {
   special_requests: string | null;
 }
 
-interface CateringManagementPanelProps {
-  events: BanquetEvent[];
-  onViewDetails?: (event: BanquetEvent) => void;
+interface CateringOrder {
+  id: string;
+  eventId: string;
+  menuPackage: string;
+  courses: string[];
+  dietaryRequirements: string[];
+  servingStyle: string;
+  beverages: string[];
+  specialNotes: string;
+  estimatedCost: number;
+  status: "pending" | "confirmed" | "preparing" | "ready" | "served";
 }
 
+interface CateringManagementPanelProps {
+  events: BanquetEvent[];
+}
+
+const menuPackages = [
+  { id: "standard", name: "Standard Buffet", pricePerHead: 45 },
+  { id: "premium", name: "Premium Buffet", pricePerHead: 75 },
+  { id: "deluxe", name: "Deluxe Plated", pricePerHead: 95 },
+  { id: "gourmet", name: "Gourmet Experience", pricePerHead: 125 },
+  { id: "custom", name: "Custom Menu", pricePerHead: 0 },
+];
 
 const dietaryOptions = [
   "Vegetarian",
@@ -103,94 +100,37 @@ const beverageOptions = [
   "Signature Cocktails",
 ];
 
-export function CateringManagementPanel({ events, onViewDetails }: CateringManagementPanelProps) {
+export function CateringManagementPanel({ events }: CateringManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: banquetSettings } = useBanquetSettings();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // Database persistence for catering orders
-  const { data: cateringOrders = [], isLoading } = useCateringOrders();
-  const { data: recipes = [] } = useInventoryRecipes();
-  const createOrderMutation = useCreateCateringOrder();
-  const updateOrderMutation = useUpdateCateringOrder();
+  // Local state for catering orders (would be DB in production)
+  const [cateringOrders, setCateringOrders] = useState<CateringOrder[]>([]);
 
   const [newOrder, setNewOrder] = useState({
-    menu_package: "",
-    dietary_requirements: [] as string[],
-    serving_style: "Buffet",
-    beverage_selections: [] as string[],
-    special_instructions: "",
+    menuPackage: "standard",
+    courses: [] as string[],
+    dietaryRequirements: [] as string[],
+    servingStyle: "Buffet",
+    beverages: [] as string[],
+    specialNotes: "",
   });
 
-  // Calculate stock availability for a package
-  const stockCheck = useMemo(() => {
-    if (!selectedEvent || !newOrder.menu_package) return null;
-
-    const pkgName = banquetSettings?.menu_packages.find(p => p.name === newOrder.menu_package)?.name;
-    const recipe = recipes.find(r => r.name.toLowerCase().includes(pkgName?.toLowerCase() || ""));
-
-    if (!recipe || !recipe.recipe_items) return null;
-
-    const shortages = recipe.recipe_items.map((ri: any) => {
-      const required = ri.quantity * selectedEvent.guest_count;
-      const available = ri.item?.current_stock || 0;
-      return {
-        name: ri.item?.name || "Unknown Item",
-        required,
-        available,
-        shortage: Math.max(0, required - available)
-      };
-    }).filter(s => s.shortage > 0);
-
-    return {
-      recipeName: recipe.name,
-      shortages,
-      isAvailable: shortages.length === 0
-    };
-  }, [selectedEvent, newOrder.menu_package, recipes]);
+  // Filter active events
+  const activeEvents = useMemo(() => {
+    return events.filter(
+      (e) =>
+        e.status !== "completed" &&
+        e.status !== "cancelled" &&
+        (e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [events, searchQuery]);
 
   // Get catering order for an event
   const getOrderForEvent = (eventId: string) => {
-    return cateringOrders.find((o) => o.event_id === eventId);
-  };
-
-  // Filter and sort active events
-  const activeEvents = useMemo(() => {
-    return events
-      .filter((e) => {
-        const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
-        const order = getOrderForEvent(e.id);
-        const matchesStatus = statusFilter === "all" || (order?.status === statusFilter) || (statusFilter === "none" && !order);
-
-        return e.status !== "cancelled" && matchesSearch && matchesStatus;
-      })
-      .sort((a, b) => {
-        if (!sortConfig) return 0;
-        let aValue: any = a[sortConfig.key as keyof BanquetEvent];
-        let bValue: any = b[sortConfig.key as keyof BanquetEvent];
-
-        if (sortConfig.key === "total_cost") {
-          aValue = getOrderForEvent(a.id)?.total_cost || 0;
-          bValue = getOrderForEvent(b.id)?.total_cost || 0;
-        }
-
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-      });
-  }, [events, searchQuery, statusFilter, cateringOrders, sortConfig]);
-
-  const handleSort = (key: string) => {
-    setSortConfig((prev) => {
-      if (prev?.key === key) {
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
-      }
-      return { key, direction: "asc" };
-    });
+    return cateringOrders.find((o) => o.eventId === eventId);
   };
 
   const handleOpenOrderDialog = (event: BanquetEvent) => {
@@ -198,79 +138,83 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
     const existingOrder = getOrderForEvent(event.id);
     if (existingOrder) {
       setNewOrder({
-        menu_package: existingOrder.menu_package,
-        dietary_requirements: existingOrder.dietary_requirements,
-        serving_style: existingOrder.serving_style,
-        beverage_selections: existingOrder.beverage_selections,
-        special_instructions: existingOrder.special_instructions || "",
+        menuPackage: existingOrder.menuPackage,
+        courses: existingOrder.courses,
+        dietaryRequirements: existingOrder.dietaryRequirements,
+        servingStyle: existingOrder.servingStyle,
+        beverages: existingOrder.beverages,
+        specialNotes: existingOrder.specialNotes,
       });
     } else {
       setNewOrder({
-        menu_package: banquetSettings?.menu_packages[0]?.name || "standard",
-        dietary_requirements: [],
-        serving_style: "Buffet",
-        beverage_selections: ["Soft Drinks", "Coffee & Tea"],
-        special_instructions: event.special_requests || "",
+        menuPackage: "standard",
+        courses: [],
+        dietaryRequirements: [],
+        servingStyle: "Buffet",
+        beverages: ["Soft Drinks", "Coffee & Tea"],
+        specialNotes: event.special_requests || "",
       });
     }
     setOrderDialogOpen(true);
   };
 
-  const handleSaveOrder = async () => {
+  const handleSaveOrder = () => {
     if (!selectedEvent) return;
 
-    const pkg = banquetSettings?.menu_packages.find((p) => p.name === newOrder.menu_package);
-    const totalCost = (pkg?.price_per_head || 0) * selectedEvent.guest_count;
+    const pkg = menuPackages.find((p) => p.id === newOrder.menuPackage);
+    const estimatedCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
 
-    const existingOrder = getOrderForEvent(selectedEvent.id);
-
-    const orderData = {
-      event_id: selectedEvent.id,
-      menu_package: newOrder.menu_package,
-      serving_style: newOrder.serving_style,
-      dietary_requirements: newOrder.dietary_requirements,
-      beverage_selections: newOrder.beverage_selections,
-      special_instructions: newOrder.special_instructions || null,
-      total_cost: totalCost,
-      status: existingOrder?.status || "pending" as const,
+    const order: CateringOrder = {
+      id: getOrderForEvent(selectedEvent.id)?.id || crypto.randomUUID(),
+      eventId: selectedEvent.id,
+      menuPackage: newOrder.menuPackage,
+      courses: newOrder.courses,
+      dietaryRequirements: newOrder.dietaryRequirements,
+      servingStyle: newOrder.servingStyle,
+      beverages: newOrder.beverages,
+      specialNotes: newOrder.specialNotes,
+      estimatedCost,
+      status: "pending",
     };
 
-    try {
-      if (existingOrder) {
-        await updateOrderMutation.mutateAsync({
-          id: existingOrder.id,
-          updates: orderData
-        });
-      } else {
-        await createOrderMutation.mutateAsync(orderData);
+    setCateringOrders((prev) => {
+      const existing = prev.findIndex((o) => o.eventId === selectedEvent.id);
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = order;
+        return updated;
       }
-      setOrderDialogOpen(false);
-      setSelectedEvent(null);
-    } catch (error) {
-      console.error("Error saving catering order:", error);
-    }
+      return [...prev, order];
+    });
+
+    toast.success("Catering order saved");
+    setOrderDialogOpen(false);
+    setSelectedEvent(null);
   };
 
   const handleToggleDietary = (diet: string) => {
     setNewOrder((prev) => ({
       ...prev,
-      dietary_requirements: prev.dietary_requirements.includes(diet)
-        ? prev.dietary_requirements.filter((d) => d !== diet)
-        : [...prev.dietary_requirements, diet],
+      dietaryRequirements: prev.dietaryRequirements.includes(diet)
+        ? prev.dietaryRequirements.filter((d) => d !== diet)
+        : [...prev.dietaryRequirements, diet],
     }));
   };
 
   const handleToggleBeverage = (bev: string) => {
     setNewOrder((prev) => ({
       ...prev,
-      beverage_selections: prev.beverage_selections.includes(bev)
-        ? prev.beverage_selections.filter((b) => b !== bev)
-        : [...prev.beverage_selections, bev],
+      beverages: prev.beverages.includes(bev)
+        ? prev.beverages.filter((b) => b !== bev)
+        : [...prev.beverages, bev],
     }));
   };
 
   const updateOrderStatus = (orderId: string, status: CateringOrder["status"]) => {
-    updateOrderMutation.mutate({ id: orderId, updates: { status } });
+    setCateringOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
+    );
+    toast.success(`Order status updated to ${status}`);
   };
 
   const statusColors: Record<string, string> = {
@@ -337,7 +281,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
               <div>
                 <p className="text-sm text-muted-foreground">Dietary Requests</p>
                 <p className="text-2xl font-bold">
-                  {cateringOrders.reduce((s, o) => s + (o.dietary_requirements?.length || 0), 0)}
+                  {cateringOrders.reduce((s, o) => s + o.dietaryRequirements.length, 0)}
                 </p>
               </div>
             </div>
@@ -345,8 +289,8 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
         </Card>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
+      {/* Search */}
+      <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -356,23 +300,6 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Filter by status" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="none">No Order Yet</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
-            <SelectItem value="preparing">Preparing</SelectItem>
-            <SelectItem value="ready">Ready</SelectItem>
-            <SelectItem value="served">Served</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Events with Catering */}
@@ -390,43 +317,24 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("event_name")}>
-                    <div className="flex items-center gap-1">Event <ArrowUpDown className="h-3 w-3" /></div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("event_date")}>
-                    <div className="flex items-center gap-1">Date <ArrowUpDown className="h-3 w-3" /></div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("guest_count")}>
-                    <div className="flex items-center gap-1">Guests <ArrowUpDown className="h-3 w-3" /></div>
-                  </TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Guests</TableHead>
                   <TableHead>Menu Package</TableHead>
                   <TableHead>Dietary</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("total_cost")}>
-                    <div className="flex items-center gap-1">Est. Cost <ArrowUpDown className="h-3 w-3" /></div>
-                  </TableHead>
+                  <TableHead>Est. Cost</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activeEvents.map((event) => {
                   const order = getOrderForEvent(event.id);
                   const pkg = order
-                    ? menuPackages.find((p) => p.id === order.menu_package)
+                    ? menuPackages.find((p) => p.id === order.menuPackage)
                     : null;
                   return (
                     <TableRow key={event.id}>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          onClick={() => onViewDetails?.(event)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{event.event_name}</p>
@@ -442,22 +350,22 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                       </TableCell>
                       <TableCell>
                         {order ? (
-                          <Badge variant="outline">{pkg?.name || order.menu_package}</Badge>
+                          <Badge variant="outline">{pkg?.name || order.menuPackage}</Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {order && order.dietary_requirements.length > 0 ? (
+                        {order && order.dietaryRequirements.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {order.dietary_requirements.slice(0, 2).map((d) => (
+                            {order.dietaryRequirements.slice(0, 2).map((d) => (
                               <Badge key={d} variant="secondary" className="text-xs">
                                 {d}
                               </Badge>
                             ))}
-                            {order.dietary_requirements.length > 2 && (
+                            {order.dietaryRequirements.length > 2 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{order.dietary_requirements.length - 2}
+                                +{order.dietaryRequirements.length - 2}
                               </Badge>
                             )}
                           </div>
@@ -466,7 +374,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                         )}
                       </TableCell>
                       <TableCell className="font-mono">
-                        {order ? `$${order.total_cost.toLocaleString()}` : "-"}
+                        {order ? `$${order.estimatedCost.toLocaleString()}` : "-"}
                       </TableCell>
                       <TableCell>
                         {order ? (
@@ -476,8 +384,8 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                               updateOrderStatus(order.id, v)
                             }
                           >
-                            <SelectTrigger className="w-28 h-8">
-                              <Badge variant="outline" className={`${statusColors[order.status]} border-none h-5`}>
+                            <SelectTrigger className="w-28">
+                              <Badge variant="outline" className={statusColors[order.status]}>
                                 {order.status}
                               </Badge>
                             </SelectTrigger>
@@ -495,42 +403,14 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="w-52"
-                            >
-                              <div className="flex items-center justify-between px-2 py-1.5">
-                                <DropdownMenuLabel className="p-0">Catering Actions</DropdownMenuLabel>
-                                <DropdownMenuItem className="p-0 h-6 w-6 flex items-center justify-center rounded-full focus:bg-accent focus:text-accent-foreground">
-                                  <XCircle className="h-4 w-4 text-muted-foreground" />
-                                </DropdownMenuItem>
-                              </div>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleOpenOrderDialog(event)}>
-                                <FileText className="mr-2 h-4 w-4" /> {order ? "Edit Order" : "Create Order"}
-                              </DropdownMenuItem>
-                              {order && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Update Status</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "pending")}>Pending</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "confirmed")}>Confirmed</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "preparing")}>Preparing</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "ready")}>Ready</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "served")}>Served</DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenOrderDialog(event)}
+                        >
+                          {order ? "Edit" : "Add"}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
@@ -562,28 +442,25 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
             <div className="space-y-2">
               <Label>Menu Package</Label>
               <Select
-                value={newOrder.menu_package}
-                onValueChange={(v) => setNewOrder((p) => ({ ...p, menu_package: v }))}
+                value={newOrder.menuPackage}
+                onValueChange={(v) => setNewOrder((p) => ({ ...p, menuPackage: v }))}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {banquetSettings?.menu_packages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.name}>
+                  {menuPackages.map((pkg) => (
+                    <SelectItem key={pkg.id} value={pkg.id}>
                       <div className="flex justify-between items-center gap-4">
                         <span>{pkg.name}</span>
-                        {pkg.price_per_head > 0 && (
+                        {pkg.pricePerHead > 0 && (
                           <span className="text-muted-foreground">
-                            ${pkg.price_per_head}/head
+                            ${pkg.pricePerHead}/head
                           </span>
                         )}
                       </div>
                     </SelectItem>
                   ))}
-                  {(!banquetSettings?.menu_packages || banquetSettings.menu_packages.length === 0) && (
-                    <SelectItem value="none" disabled>No packages configured</SelectItem>
-                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -592,8 +469,8 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
             <div className="space-y-2">
               <Label>Serving Style</Label>
               <Select
-                value={newOrder.serving_style}
-                onValueChange={(v) => setNewOrder((p) => ({ ...p, serving_style: v }))}
+                value={newOrder.servingStyle}
+                onValueChange={(v) => setNewOrder((p) => ({ ...p, servingStyle: v }))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -618,7 +495,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                     className="flex items-center space-x-2 p-2 rounded-lg border cursor-pointer hover:bg-secondary/50"
                     onClick={() => handleToggleDietary(diet)}
                   >
-                    <Checkbox checked={newOrder.dietary_requirements.includes(diet)} />
+                    <Checkbox checked={newOrder.dietaryRequirements.includes(diet)} />
                     <span className="text-sm">{diet}</span>
                   </div>
                 ))}
@@ -635,7 +512,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                     className="flex items-center space-x-2 p-2 rounded-lg border cursor-pointer hover:bg-secondary/50"
                     onClick={() => handleToggleBeverage(bev)}
                   >
-                    <Checkbox checked={newOrder.beverage_selections.includes(bev)} />
+                    <Checkbox checked={newOrder.beverages.includes(bev)} />
                     <span className="text-sm">{bev}</span>
                   </div>
                 ))}
@@ -647,48 +524,11 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
               <Label>Special Notes</Label>
               <Textarea
                 placeholder="Any special requirements, allergies, or preferences..."
-                value={newOrder.special_instructions}
-                onChange={(e) => setNewOrder((p) => ({ ...p, special_instructions: e.target.value }))}
+                value={newOrder.specialNotes}
+                onChange={(e) => setNewOrder((p) => ({ ...p, specialNotes: e.target.value }))}
                 rows={3}
               />
             </div>
-
-            {/* Inventory Stock Check */}
-            {stockCheck && (
-              <Card className={`border-l-4 ${stockCheck.isAvailable ? "border-l-success bg-success/5" : "border-l-destructive bg-destructive/5"}`}>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Package className={`h-4 w-4 ${stockCheck.isAvailable ? "text-success" : "text-destructive"}`} />
-                    Inventory Stock Check: {stockCheck.recipeName}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="py-0 pb-3">
-                  {stockCheck.isAvailable ? (
-                    <p className="text-xs text-success font-medium flex items-center gap-1">
-                      <Leaf className="h-3 w-3" />
-                      All ingredients are available in stock for {selectedEvent?.guest_count} guests.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-xs text-destructive font-medium flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        Insufficient stock for {stockCheck.shortages.length} ingredients:
-                      </p>
-                      <div className="space-y-1">
-                        {stockCheck.shortages.map((s, i) => (
-                          <div key={i} className="flex justify-between text-[10px]">
-                            <span>{s.name}</span>
-                            <span className="font-mono text-destructive">
-                              Need {s.required.toFixed(1)}, Have {s.available.toFixed(1)} (Short: {s.shortage.toFixed(1)})
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Estimated Cost */}
             {selectedEvent && (
@@ -698,14 +538,14 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
                   <span className="text-2xl font-bold">
                     $
                     {(
-                      (banquetSettings?.menu_packages.find((p) => p.name === newOrder.menu_package)?.price_per_head ||
+                      (menuPackages.find((p) => p.id === newOrder.menuPackage)?.pricePerHead ||
                         0) * selectedEvent.guest_count
                     ).toLocaleString()}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Based on {selectedEvent.guest_count} guests × $
-                  {banquetSettings?.menu_packages.find((p) => p.name === newOrder.menu_package)?.price_per_head || 0}/head
+                  {menuPackages.find((p) => p.id === newOrder.menuPackage)?.pricePerHead || 0}/head
                 </p>
               </div>
             )}
@@ -714,12 +554,7 @@ export function CateringManagementPanel({ events, onViewDetails }: CateringManag
               <Button variant="outline" onClick={() => setOrderDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSaveOrder}
-                disabled={createOrderMutation.isPending || updateOrderMutation.isPending}
-              >
-                {createOrderMutation.isPending || updateOrderMutation.isPending ? "Saving..." : "Save Order"}
-              </Button>
+              <Button onClick={handleSaveOrder}>Save Order</Button>
             </div>
           </div>
         </DialogContent>

@@ -17,13 +17,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp, MoreVertical, Eye, Trash2, MapPin } from "lucide-react";
+import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
 import { useGuestCRUD } from "@/hooks/useGuestCRUD";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
@@ -124,61 +118,37 @@ const Guests = () => {
     );
   }, [guests, gridSearch]);
 
-  const { deleteGuest } = useGuestCRUD();
-
   const columns: Column<Guest>[] = [
     {
       key: "first_name",
-      header: "Guest/Company",
+      header: "Guest",
       render: (guest) => (
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedGuest(guest)}>
-          <Avatar className="h-9 w-9">
-            <AvatarFallback className="bg-gradient-blue text-primary-foreground text-sm font-bold">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-gradient-blue text-primary-foreground text-xs">
               {guest.first_name[0]}{guest.last_name[0]}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <span className="font-semibold flex items-center gap-1.5 text-sm">
+          <div>
+            <span className="font-medium flex items-center gap-2">
               {guest.first_name} {guest.last_name}
               {guest.is_vip && <Star className="h-3 w-3 text-primary fill-primary" />}
-            </span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
-              {(guest as any).company_name || "Personal Guest"}
             </span>
           </div>
         </div>
       ),
     },
-    {
-      key: "id_number",
-      header: "VAT/TAX",
-      render: (guest) => (
-        <span className="font-mono text-xs text-muted-foreground">
-          {(guest as any).vat_number || (guest as any).id_number || "-"}
-        </span>
-      )
-    },
-    {
-      key: "address",
-      header: "Address",
-      render: (guest) => (
-        <div className="flex items-center gap-1.5 max-w-[150px]">
-          <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-          <span className="text-xs truncate">{guest.address || "-"}</span>
-        </div>
-      )
-    },
-    { key: "phone", header: "Phone", render: (guest) => <span className="text-xs font-medium">{guest.phone || "-"}</span> },
-    { key: "email", header: "Email", render: (guest) => <span className="text-xs text-muted-foreground">{guest.email || "-"}</span> },
-    { key: "total_visits", header: "Visits", render: (guest) => <Badge variant="secondary" className="font-bold text-[10px] h-5">{guest.total_visits || 0}</Badge> },
-    { key: "total_spending", header: "Total Spent", render: (guest) => <span className="font-bold text-sm text-primary">{formatCurrency(guest.total_spending || 0)}</span> },
+    { key: "email", header: "Email", render: (guest) => <span className="text-muted-foreground">{guest.email || "-"}</span> },
+    { key: "phone", header: "Phone", render: (guest) => <span className="text-muted-foreground">{guest.phone || "-"}</span> },
+    { key: "total_visits", header: "Visits", render: (guest) => <span className="font-semibold">{guest.total_visits || 0}</span> },
+    { key: "total_spending", header: "Total Spent", render: (guest) => <span className="font-semibold text-primary">{formatCurrency(guest.total_spending || 0)}</span> },
     {
       key: "is_vip",
       header: "Status",
       sortable: false,
       render: (guest) => {
         const status = getGuestStatus(guest);
-        return <Badge variant="outline" className={cn("text-[10px] font-bold h-5 px-1.5", statusColors[status])}>{status.toUpperCase()}</Badge>;
+        return <Badge variant="outline" className={statusColors[status]}>{status.toUpperCase()}</Badge>;
       },
     },
     {
@@ -186,34 +156,14 @@ const Guests = () => {
       header: "Actions",
       sortable: false,
       render: (guest) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setSelectedGuest(guest)}>
-              <Eye className="h-4 w-4 text-muted-foreground" /> View Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => { setSelectedGuest(guest); setEditDialogOpen(true); }}>
-              <Edit className="h-4 w-4 text-muted-foreground" /> Edit Guest
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
-              <Receipt className="h-4 w-4 text-muted-foreground" /> View Folio
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => {
-                if (window.confirm("Are you sure you want to delete this guest?")) {
-                  deleteGuest.mutate(guest.id);
-                }
-              }}
-            >
-              <Trash2 className="h-4 w-4" /> Delete Guest
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedGuest(guest); setEditDialogOpen(true); }}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/front-desk?guestId=${guest.id}`)}>
+            <Receipt className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];

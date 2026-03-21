@@ -25,13 +25,9 @@ export function MetricCard({
 }: MetricCardProps) {
   const content = (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.3,
-        delay: Math.min(delay / 1000, 0.3),
-        ease: "easeOut"
-      }}
+      transition={{ duration: 0.3, delay: Math.min(delay / 1000, 0.3), ease: "easeOut" }}
     >
       <Card
         className={cn(

@@ -6,16 +6,16 @@
  // eslint-disable-next-line @typescript-eslint/no-explicit-any
  const db = supabase as any;
  
- // Types aligned with DB schema
+ // Types
  export interface CateringOrder {
    id: string;
    event_id: string;
    menu_package: string;
    serving_style: string;
    dietary_requirements: string[];
-   beverage_selections: string[];
-   special_instructions: string | null;
-   total_cost: number;
+   beverages: string[];
+   special_notes: string | null;
+   estimated_cost: number;
    status: "pending" | "confirmed" | "preparing" | "ready" | "served";
    created_at: string;
    updated_at: string;
@@ -25,11 +25,15 @@
    id: string;
    event_id: string;
    layout_type: string;
-   capacity: number;
-   equipment_needed: string[];
-   decoration_checklist: Record<string, boolean>;
-   status: "pending" | "in_progress" | "completed";
-   notes: string | null;
+   table_count: number;
+   chair_count: number;
+   stage_required: boolean;
+   dance_floor: boolean;
+   equipment: string[];
+   decorations: string[];
+   setup_status: "not_started" | "in_progress" | "completed";
+   setup_notes: string | null;
+   checklist: Record<string, boolean>;
    created_at: string;
    updated_at: string;
  }
@@ -37,14 +41,12 @@
  export interface EventStaffAssignment {
    id: string;
    event_id: string;
-   staff_id: string | null;
-   staff_name: string | null;
+   staff_member_id: string;
    role: string;
    start_time: string;
    end_time: string;
    notes: string | null;
    created_at: string;
-   staff_member?: any; // For joined data
  }
  
  // ============= Catering Orders =============
@@ -65,6 +67,7 @@
        if (error) throw error;
        return (data || []) as CateringOrder[];
      },
+     enabled: true,
    });
  }
  
@@ -135,6 +138,7 @@
        if (error) throw error;
        return (data || []) as VenueSetup[];
      },
+     enabled: true,
    });
  }
  
@@ -208,6 +212,7 @@
        if (error) throw error;
        return data || [];
      },
+     enabled: true,
    });
  }
  

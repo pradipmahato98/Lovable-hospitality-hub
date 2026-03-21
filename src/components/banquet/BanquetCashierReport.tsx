@@ -29,45 +29,27 @@ export function BanquetCashierReport({ events }: BanquetCashierReportProps) {
     return { totalDeposits, totalAmount, outstanding, confirmedCount: confirmed.length, completedCount: completed.length };
   }, [events]);
 
-  const getPreviousDue = (event: any) => {
-    return events
-      .filter(e =>
-        e.client_name === event.client_name &&
-        e.id !== event.id &&
-        new Date(e.event_date) < new Date(event.event_date) &&
-        (e.status === 'completed' || e.status === 'confirmed')
-      )
-      .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
-  };
-
   const handleExportPDF = () => {
     exportToPDF({
       title: "Banquet Cashier Report",
-      headers: ["Event", "Client", "Date", "Total", "Prev. Due", "Deposit", "Balance", "Status"],
-      rows: events.map(e => {
-        const prevDue = getPreviousDue(e);
-        return [
-          e.event_name, e.client_name, e.event_date,
-          formatCurrency(e.total_amount), formatCurrency(prevDue),
-          formatCurrency(e.deposit_amount || 0),
-          formatCurrency(e.total_amount + prevDue - (e.deposit_amount || 0)), e.status,
-        ];
-      }),
+      headers: ["Event", "Client", "Date", "Total", "Deposit", "Balance", "Status"],
+      rows: events.map(e => [
+        e.event_name, e.client_name, e.event_date,
+        formatCurrency(e.total_amount), formatCurrency(e.deposit_amount || 0),
+        formatCurrency(e.total_amount - (e.deposit_amount || 0)), e.status,
+      ]),
     });
   };
 
   const handleExportExcel = () => {
     exportToExcel({
       title: "Banquet_Cashier",
-      headers: ["Event", "Client", "Date", "Total", "Prev. Due", "Deposit", "Balance", "Status"],
-      rows: events.map(e => {
-        const prevDue = getPreviousDue(e);
-        return [
-          e.event_name, e.client_name, e.event_date,
-          e.total_amount, prevDue, e.deposit_amount || 0,
-          e.total_amount + prevDue - (e.deposit_amount || 0), e.status,
-        ];
-      }),
+      headers: ["Event", "Client", "Date", "Total", "Deposit", "Balance", "Status"],
+      rows: events.map(e => [
+        e.event_name, e.client_name, e.event_date,
+        e.total_amount, e.deposit_amount || 0,
+        e.total_amount - (e.deposit_amount || 0), e.status,
+      ]),
     });
   };
 
@@ -115,32 +97,27 @@ export function BanquetCashierReport({ events }: BanquetCashierReportProps) {
                   <TableHead>Client</TableHead>
                   <TableHead className="hidden sm:table-cell">Date</TableHead>
                   <TableHead>Total</TableHead>
-                  <TableHead>Prev. Due</TableHead>
                   <TableHead>Deposit</TableHead>
                   <TableHead className="hidden sm:table-cell">Balance</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {events.map((e) => {
-                  const prevDue = getPreviousDue(e);
-                  return (
-                    <TableRow key={e.id}>
-                      <TableCell className="font-medium">{e.event_name}</TableCell>
-                      <TableCell>{e.client_name}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{e.event_date}</TableCell>
-                      <TableCell className="font-semibold">{formatCurrency(e.total_amount)}</TableCell>
-                      <TableCell className="text-destructive">{formatCurrency(prevDue)}</TableCell>
-                      <TableCell className="text-success">{formatCurrency(e.deposit_amount || 0)}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-destructive font-bold">
-                        {formatCurrency(e.total_amount + prevDue - (e.deposit_amount || 0))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">{e.status}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {events.map(e => (
+                  <TableRow key={e.id}>
+                    <TableCell className="font-medium">{e.event_name}</TableCell>
+                    <TableCell>{e.client_name}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{e.event_date}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(e.total_amount)}</TableCell>
+                    <TableCell className="text-success">{formatCurrency(e.deposit_amount || 0)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-destructive">
+                      {formatCurrency(e.total_amount - (e.deposit_amount || 0))}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{e.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

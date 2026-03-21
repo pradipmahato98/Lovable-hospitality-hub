@@ -21,8 +21,6 @@ export function EditGuestDialog({ guest, open, onOpenChange }: EditGuestDialogPr
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
-    company_name: "",
-    vat_number: "",
     email: "",
     phone: "",
     address: "",
@@ -39,8 +37,6 @@ export function EditGuestDialog({ guest, open, onOpenChange }: EditGuestDialogPr
       setForm({
         first_name: guest.first_name || "",
         last_name: guest.last_name || "",
-        company_name: (guest as any).company_name || "",
-        vat_number: (guest as any).vat_number || "",
         email: guest.email || "",
         phone: guest.phone || "",
         address: (guest as any).address || "",
@@ -91,16 +87,6 @@ export function EditGuestDialog({ guest, open, onOpenChange }: EditGuestDialogPr
             <div className="space-y-2">
               <Label>Last Name *</Label>
               <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Company Name</Label>
-              <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>VAT/TAX Number</Label>
-              <Input value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

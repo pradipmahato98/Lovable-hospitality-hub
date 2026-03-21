@@ -7,7 +7,6 @@ import { format, addDays, startOfWeek, eachDayOfInterval, isSameDay, isWithinInt
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { cn, formatAD } from "@/lib/utils";
 import { CheckInOutDialog } from "./CheckInOutDialog";
-import { ReservationDetailPanel } from "./ReservationDetailPanel";
 
 interface Reservation {
   id: string;
@@ -54,7 +53,6 @@ export function ReservationCalendar() {
   const [selectedReservation, setSelectedReservation] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<"walk-in" | "check-in" | "check-out">("check-in");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [draggedReservation, setDraggedReservation] = useState<string | null>(null);
 
   // Performance optimization: Pre-group and pre-parse reservations to avoid O(N) lookups in every cell
@@ -190,11 +188,6 @@ export function ReservationCalendar() {
 
   const handleReservationClick = (reservation: Reservation) => {
     setSelectedReservation(reservation.id);
-    setDetailOpen(true);
-  };
-
-  const handleActionClick = (reservation: Reservation) => {
-    setSelectedReservation(reservation.id);
     if (reservation.status === "confirmed" || reservation.status === "pending") {
       setDialogMode("check-in");
     } else if (reservation.status === "checked-in") {
@@ -297,13 +290,13 @@ export function ReservationCalendar() {
                                 "absolute inset-x-0.5 inset-y-1 rounded-md px-1.5 py-0.5 cursor-pointer transition-all",
                                 "hover:ring-2 hover:ring-primary/50 hover:z-20",
                                 statusColors[res.status] || "bg-secondary",
-                                isCheckInDate(res, day) && "rounded-l-lg ml-0.5 border-l-4 border-l-white/40",
-                                isCheckOutDate(res, day) && "rounded-r-lg mr-0.5 border-r-4 border-r-black/20",
+                                isCheckInDate(res, day) && "rounded-l-lg ml-0.5",
+                                isCheckOutDate(res, day) && "rounded-r-lg mr-0.5",
                                 draggedReservation === res.id && "opacity-50"
                               )}
                             >
                               {isCheckInDate(res, day) && (
-                                <div className="truncate text-[10px] leading-tight font-bold text-white uppercase tracking-tighter">
+                                <div className="truncate text-xs font-medium text-white">
                                   {res.guest?.first_name} {res.guest?.last_name?.charAt(0)}.
                                 </div>
                               )}
@@ -340,32 +333,6 @@ export function ReservationCalendar() {
         reservationId={selectedReservation || undefined}
         onSuccess={fetchData}
       />
-
-      {detailOpen && selectedReservation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md animate-in zoom-in-95 duration-200">
-            {(() => {
-              const res = reservations.find(r => r.id === selectedReservation);
-              if (!res) return null;
-              return (
-                <ReservationDetailPanel
-                  reservation={res as any}
-                  onClose={() => setDetailOpen(false)}
-                  onCheckIn={() => {
-                    handleActionClick(res);
-                    setDetailOpen(false);
-                  }}
-                  onCancel={() => {
-                    if (window.confirm("Are you sure you want to cancel this reservation?")) {
-                      setDetailOpen(false);
-                    }
-                  }}
-                />
-              );
-            })()}
-          </div>
-        </div>
-      )}
     </>
   );
 }

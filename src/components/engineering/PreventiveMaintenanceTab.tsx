@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
-import { useMaintenanceRequests } from "@/hooks/useMaintenanceRequests";
 import { format, addDays, addWeeks, addMonths, isPast, isToday } from "date-fns";
 import { formatAD } from "@/lib/utils";
 
@@ -63,7 +62,6 @@ export function PreventiveMaintenanceTab() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const { data: staffMembers = [] } = useStaffMembers();
-  const { createRequest } = useMaintenanceRequests();
   const engineeringStaff = staffMembers.filter(
     s => s.department?.toLowerCase() === "engineering" && s.status === "active"
   );
@@ -136,24 +134,10 @@ export function PreventiveMaintenanceTab() {
     setNewSchedule({ asset_name: "", location: "", maintenance_type: "", frequency: "monthly", assigned_to: "", notes: "" });
   };
 
-  const handleMarkComplete = async (schedule: PreventiveMaintenance) => {
+  const handleMarkComplete = (schedule: PreventiveMaintenance) => {
     // In production, update last_completed and calculate next_due based on frequency
     toast.success(`Maintenance completed for ${schedule.asset_name}`);
     queryClient.invalidateQueries({ queryKey: ["preventive-maintenance"] });
-  };
-
-  const handleGenerateTicket = async (schedule: PreventiveMaintenance) => {
-    try {
-      await createRequest.mutateAsync({
-        room: schedule.location,
-        issue: `PM: ${schedule.maintenance_type} for ${schedule.asset_name}`,
-        description: `Scheduled preventive maintenance (${schedule.frequency}). ${schedule.notes || ""}`,
-        priority: "medium",
-      });
-      toast.success("Maintenance ticket generated");
-    } catch (error: any) {
-      toast.error(error.message);
-    }
   };
 
   return (
@@ -258,7 +242,7 @@ export function PreventiveMaintenanceTab() {
                       <Select value={newSchedule.assigned_to} onValueChange={(v) => setNewSchedule({ ...newSchedule, assigned_to: v })}>
                         <SelectTrigger><SelectValue placeholder="Select staff (optional)" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          <SelectItem value="">Unassigned</SelectItem>
                           {engineeringStaff.map((s) => (
                             <SelectItem key={s.id} value={s.first_name + " " + s.last_name}>
                               {s.first_name} {s.last_name}
@@ -332,27 +316,15 @@ export function PreventiveMaintenanceTab() {
                         </TableCell>
                         <TableCell>{schedule.assigned_to || <span className="text-muted-foreground">-</span>}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
-                              onClick={() => handleGenerateTicket(schedule)}
-                              title="Generate Work Order"
-                            >
-                              <Wrench className="h-3 w-3" />
-                              Ticket
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
-                              onClick={() => handleMarkComplete(schedule)}
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Complete
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => handleMarkComplete(schedule)}
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            Complete
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

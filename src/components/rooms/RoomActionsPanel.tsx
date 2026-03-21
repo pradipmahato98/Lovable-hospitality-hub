@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import {
   Bed,
   Wrench,
@@ -48,7 +47,6 @@ interface RoomActionsPanelProps {
 export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActionsPanelProps) {
   const { createTask } = useHousekeepingTasks();
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
-  const [checkInOpen, setCheckInOpen] = useState(false);
   const [currentAction, setCurrentAction] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [priority, setPriority] = useState("normal");
@@ -76,10 +74,6 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
   }
 
   const handleAction = (action: string) => {
-    if (action === "walk-in") {
-      setCheckInOpen(true);
-      return;
-    }
     setCurrentAction(action);
     setActionDialogOpen(true);
   };
@@ -148,13 +142,6 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
   };
 
   const quickActions = [
-    {
-      id: "walk-in",
-      label: "Walk-in Check-in",
-      icon: Users,
-      color: "text-success",
-      show: room.status === "available",
-    },
     {
       id: "cleaning",
       label: "Request Cleaning",
@@ -438,15 +425,6 @@ export function RoomActionsPanel({ selectedRoom, onClearSelection }: RoomActions
           </div>
         </CardContent>
       </Card>
-
-      <CheckInOutDialog
-        open={checkInOpen}
-        onOpenChange={setCheckInOpen}
-        mode="walk-in"
-        onSuccess={() => {
-          onClearSelection();
-        }}
-      />
 
       <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
         <DialogContent>

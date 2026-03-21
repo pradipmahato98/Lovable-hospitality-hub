@@ -10,11 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   CheckCircle2, AlertCircle, Moon, ArrowRight, Loader2, Play,
-  Calendar, Users, History, FileText, Landmark, CreditCard, DollarSign
+  Calendar, Users, History, FileText
 } from "lucide-react";
 import { cn, formatCurrency, formatAD } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -32,7 +30,6 @@ function NightAudit() {
   const { businessDate, isDateLoading, usePendingArrivals, useStayOvers, postCharges, closeDay } = useNightAudit();
   const [currentStep, setCurrentStep] = useState<AuditStep>('validation');
   const [auditProgress, setAuditProgress] = useState(0);
-  const [reconData, setReconData] = useState({ bank_total: 0, cc_total: 0, cash_total: 0 });
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -113,13 +110,7 @@ function NightAudit() {
         total_charges_posted: postedStats.posted_count,
         total_room_revenue: postedStats.total_revenue,
         occupancy_rate: occupancyRate,
-        // Persist reconciliation data in the JSONB 'metadata' or 'notes' if specific fields don't exist
-        // Assuming database schema update includes these or using a generic 'metadata' field
-        metadata: {
-          settlement_reconciliation: reconData,
-          reconciled_total: reconData.cash_total + reconData.cc_total + reconData.bank_total
-        }
-      } as any
+      }
     });
     setAuditProgress(100);
     setCurrentStep('summary');
@@ -233,73 +224,14 @@ function NightAudit() {
                     </Table>
                     <div className="flex justify-end gap-3 pt-4 border-t">
                       <Button variant="outline" disabled>Back</Button>
-                      <Button className="gap-2" onClick={() => setAuditProgress(25)} disabled={arrivals.length > 0}>
-                        Proceed to Reconciliation <ArrowRight className="h-4 w-4" />
+                      <Button className="gap-2" onClick={handlePostCharges} disabled={arrivals.length > 0}>
+                        Proceed to Posting <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {/* Step 2: Reconciliation */}
-                {currentStep === 'validation' && auditProgress === 25 && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-emerald-500" /> Cash Settlement</Label>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={reconData.cash_total}
-                          onChange={(e) => setReconData({...reconData, cash_total: parseFloat(e.target.value) || 0})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Card Settlement</Label>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={reconData.cc_total}
-                          onChange={(e) => setReconData({...reconData, cc_total: parseFloat(e.target.value) || 0})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Landmark className="h-4 w-4 text-purple-500" /> Bank Transfers</Label>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={reconData.bank_total}
-                          onChange={(e) => setReconData({...reconData, bank_total: parseFloat(e.target.value) || 0})}
-                        />
-                      </div>
-                    </div>
-
-                    <Card className="bg-slate-50 border-dashed">
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Total Reconciled</p>
-                            <p className="text-3xl font-bold font-mono text-primary">
-                              {formatCurrency(reconData.cash_total + reconData.cc_total + reconData.bank_total)}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Expected Revenue</p>
-                            <p className="text-xl font-bold font-mono">$1,250.00</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                      <Button variant="outline" onClick={() => setAuditProgress(0)}>Back</Button>
-                      <Button className="gap-2" onClick={handlePostCharges}>
-                        Confirm & Post Charges <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Posting */}
+                {/* Step 2: Posting */}
                 {currentStep === 'posting' && (
                   <div className="space-y-6 py-8 text-center animate-in fade-in zoom-in-95">
                     {postCharges.isPending ? (

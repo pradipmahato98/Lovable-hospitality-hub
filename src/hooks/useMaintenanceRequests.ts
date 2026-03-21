@@ -11,31 +11,22 @@ export interface MaintenanceRequest {
   priority: "low" | "medium" | "high" | "urgent";
   status: "pending" | "in_progress" | "completed" | "cancelled";
   assigned_to: string | null;
-  assigned_to_id: string | null;
   created_by: string | null;
   completed_at: string | null;
-  started_at: string | null;
   created_at: string;
   updated_at: string;
-  category: string | null;
 }
 
-export const useMaintenanceRequests = (propertyId?: string) => {
+export const useMaintenanceRequests = () => {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["maintenance-requests", propertyId],
+    queryKey: ["maintenance-requests"],
     queryFn: async () => {
-      let q = (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("maintenance_requests")
         .select("*")
         .order("created_at", { ascending: false });
-
-      if (propertyId) {
-        q = q.eq("property_id", propertyId);
-      }
-
-      const { data, error } = await q;
       if (error) throw error;
       return data as MaintenanceRequest[];
     },
@@ -60,12 +51,9 @@ export const useMaintenanceRequests = (propertyId?: string) => {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, assigned_to }: { id: string; status: string; assigned_to?: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const update: any = { status };
       if (status === "completed") update.completed_at = new Date().toISOString();
-      if (status === "in_progress") update.started_at = new Date().toISOString();
-      if (assigned_to) update.assigned_to = assigned_to;
-
       const { error } = await (supabase as any)
         .from("maintenance_requests")
         .update(update)
