@@ -449,7 +449,7 @@ export default function POSReports() {
 
         {/* Charts Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex-wrap h-auto">
+          <TabsList>
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Revenue Trends

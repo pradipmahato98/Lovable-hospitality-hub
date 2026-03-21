@@ -128,7 +128,7 @@ const Inventory = () => {
           <Tabs value={activeSubTab} onValueChange={handleTabChange} className="space-y-6">
             {mainTab !== "dashboard" && (
               <div className="overflow-x-auto pb-1">
-                <TabsList className="inline-flex w-auto">
+                <TabsList>
                   {(subTabs[mainTab as keyof typeof subTabs] || []).map((tab) => (
                     <TabsTrigger key={tab.id} value={tab.id} className="gap-2 shrink-0">
                       <tab.icon className="h-4 w-4" />

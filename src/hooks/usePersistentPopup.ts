@@ -1,27 +1,60 @@
 import { useState, useCallback } from "react";
+import { useUIPreferences } from "./useSettings";
 
 /**
- * Custom hook to handle persistent behavior for popups (Dialog, Sheet, etc.)
- * Prevents closure on outside click/Escape and triggers a shake animation.
+ * Hook to manage persistent popup state and animations.
+ * Prevents closure on outside clicks or Escape key if enabled in UI preferences.
  */
 export function usePersistentPopup() {
+  const { data: uiPrefs } = useUIPreferences();
   const [isBlocking, setIsBlocking] = useState(false);
 
-  const handlePointerDownOutside = useCallback((e: Event) => {
-    e.preventDefault();
+  const persistentEnabled = uiPrefs?.persistent_popups ?? true;
+
+  const triggerBlockAnimation = useCallback(() => {
+    if (!persistentEnabled) return;
     setIsBlocking(true);
-    setTimeout(() => setIsBlocking(false), 400);
-  }, []);
+    setTimeout(() => setIsBlocking(false), 400); // Duration matches animate-shake
+  }, [persistentEnabled]);
+
+  const handlePointerDownOutside = useCallback((e: Event) => {
+    if (persistentEnabled) {
+      // Don't prevent default if it's already being handled or if we want to allow some interop
+      // but for pure persistence, preventDefault is key for Radix
+      e.preventDefault();
+      triggerBlockAnimation();
+    }
+  }, [persistentEnabled, triggerBlockAnimation]);
 
   const handleEscapeKeyDown = useCallback((e: KeyboardEvent) => {
-    e.preventDefault();
-    setIsBlocking(true);
-    setTimeout(() => setIsBlocking(false), 400);
-  }, []);
+    if (persistentEnabled) {
+      e.preventDefault();
+      triggerBlockAnimation();
+    }
+  }, [persistentEnabled, triggerBlockAnimation]);
+
+  const mergeHandlers = useCallback((customHandlers?: {
+    onPointerDownOutside?: (e: any) => void;
+    onEscapeKeyDown?: (e: any) => void;
+  }) => {
+    return {
+      onPointerDownOutside: (e: any) => {
+        handlePointerDownOutside(e);
+        customHandlers?.onPointerDownOutside?.(e);
+      },
+      onEscapeKeyDown: (e: any) => {
+        handleEscapeKeyDown(e);
+        customHandlers?.onEscapeKeyDown?.(e);
+      }
+    };
+  }, [handlePointerDownOutside, handleEscapeKeyDown]);
 
   return {
     isBlocking,
-    onPointerDownOutside: handlePointerDownOutside,
-    onEscapeKeyDown: handleEscapeKeyDown,
+    handlePointerDownOutside,
+    handleEscapeKeyDown,
+    triggerBlockAnimation,
+    mergeHandlers,
+    persistentEnabled
   };
 }

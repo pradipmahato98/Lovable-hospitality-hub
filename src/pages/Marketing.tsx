@@ -21,7 +21,7 @@ const Marketing = () => {
     <MainLayout title="Sales & Marketing" subtitle="Campaigns, inquiries, and corporate accounts">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <TabsList className="bg-secondary/50 p-1">
+          <TabsList>
             <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
             <TabsTrigger value="activities">Sales Activities</TabsTrigger>
             <TabsTrigger value="accounts">Corporate Accounts</TabsTrigger>

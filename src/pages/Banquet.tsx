@@ -452,7 +452,7 @@ export default function Banquet() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex-wrap h-auto">
+          <TabsList>
             <TabsTrigger value="events" className="gap-2">
               <CalendarDays className="h-4 w-4" />
               Events

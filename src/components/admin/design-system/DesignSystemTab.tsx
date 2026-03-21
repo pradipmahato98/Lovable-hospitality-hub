@@ -166,7 +166,7 @@ export const DesignSystemTab = () => {
 
         <div className="lg:col-span-3">
           <Tabs defaultValue="materials" className="space-y-6">
-            <TabsList className="bg-muted/50 p-1 h-auto flex-wrap justify-start">
+            <TabsList>
               <TabsTrigger value="theme" className="gap-2">
                 <Palette className="h-4 w-4" />
                 Theme & Colors

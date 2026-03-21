@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { useUIPreferences, useUpdateUIPreferences, UIPreferences } from "@/hooks/useSettings";
-import { Loader2, LayoutDashboard, PanelLeft, Maximize, Monitor } from "lucide-react";
+import { Loader2, LayoutDashboard, PanelLeft, Maximize, Monitor, MousePointer2, ChevronDown } from "lucide-react";
 
 export function UIStandardizationCard() {
   const { data: uiPrefs, isLoading } = useUIPreferences();
@@ -27,6 +28,15 @@ export function UIStandardizationCard() {
       updateUI.mutate({
         ...uiPrefs,
         navigation_style: value as UIPreferences["navigation_style"]
+      });
+    }
+  };
+
+  const handleTogglePreference = (key: keyof UIPreferences, value: boolean) => {
+    if (uiPrefs) {
+      updateUI.mutate({
+        ...uiPrefs,
+        [key]: value
       });
     }
   };
@@ -119,6 +129,38 @@ export function UIStandardizationCard() {
               </Label>
             </div>
           </RadioGroup>
+        </div>
+
+        <div className="pt-6 border-t space-y-4">
+          <Label className="text-base">Behavioral Settings</Label>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-card/50">
+            <div className="flex items-center gap-3">
+              <ChevronDown className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Enable Dropdowns</p>
+                <p className="text-xs text-muted-foreground">Toggle nested menu items in sidebar and horizontal nav</p>
+              </div>
+            </div>
+            <Switch
+              checked={uiPrefs?.sidebar_dropdowns_enabled ?? true}
+              onCheckedChange={(v) => handleTogglePreference("sidebar_dropdowns_enabled", v)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-card/50">
+            <div className="flex items-center gap-3">
+              <MousePointer2 className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Persistent Popups</p>
+                <p className="text-xs text-muted-foreground">Prevent closing dialogs/menus on outside click</p>
+              </div>
+            </div>
+            <Switch
+              checked={uiPrefs?.persistent_popups ?? true}
+              onCheckedChange={(v) => handleTogglePreference("persistent_popups", v)}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
