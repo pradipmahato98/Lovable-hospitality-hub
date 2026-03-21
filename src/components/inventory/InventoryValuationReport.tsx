@@ -24,7 +24,7 @@ export function InventoryValuationReport() {
       title: `Inventory Valuation Report - ${storeFilter === 'all' ? 'All Locations' : storeFilter}`,
       headers: ["Item", "Category", "Stock", "Unit", "Valuation"],
       rows: filteredItems.map(i => [
-        i.name, i.category?.name || "-", i.current_stock, i.uom?.abbreviation || i.unit,
+        i.name, i.category?.category_name || "-", i.current_stock, i.uom?.unit_symbol || i.unit,
         formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))
       ])
     };
@@ -45,7 +45,7 @@ export function InventoryValuationReport() {
                   <SelectTrigger className="w-40 h-8 text-xs bg-background"><SelectValue placeholder="All Stores" /></SelectTrigger>
                   <SelectContent>
                      <SelectItem value="all">All Stores (Master)</SelectItem>
-                     {stores.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                  {stores.map(s => <SelectItem key={s.id} value={s.store_name}>{s.store_name}</SelectItem>)}
                   </SelectContent>
                </Select>
             </div>
@@ -76,8 +76,8 @@ export function InventoryValuationReport() {
               {filteredItems.map((item) => (
                 <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium text-xs">{item.name}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{item.category?.name || "-"}</TableCell>
-                  <TableCell className="text-right text-xs font-bold">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.uom?.abbreviation || item.unit}</span></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{item.category?.category_name || "-"}</TableCell>
+                  <TableCell className="text-right text-xs font-bold">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.uom?.unit_symbol || item.unit}</span></TableCell>
                   <TableCell className="text-right font-mono text-[10px]">{formatCurrency(item.avg_cost || item.cost_price)}</TableCell>
                   <TableCell className="text-right font-bold text-xs text-primary">{formatCurrency(item.current_stock * (item.avg_cost || item.cost_price))}</TableCell>
                 </TableRow>

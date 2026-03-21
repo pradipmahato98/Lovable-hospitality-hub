@@ -218,7 +218,7 @@ export function StockIssueTab() {
                <div className="space-y-1"><Label>Source Store *</Label>
                   <Select value={directIssueForm.store_id} onValueChange={(v) => setDirectIssueForm({...directIssueForm, store_id: v})}>
                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                     <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                     <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.store_name}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
                <div className="col-span-2 space-y-1"><Label>Issued To (Person Name)</Label><Input value={directIssueForm.issued_to_name} onChange={(e) => setDirectIssueForm({...directIssueForm, issued_to_name: e.target.value})} /></div>
