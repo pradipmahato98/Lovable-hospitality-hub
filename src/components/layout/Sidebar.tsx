@@ -461,6 +461,9 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { isAdmin } = useIsAdmin();
   const { data: uiPrefs } = useUIPreferences();
   const dropdownsEnabled = uiPrefs?.sidebar_dropdowns_enabled ?? true;
+  const navStyle = uiPrefs?.navigation_style || "default";
+  const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;
+  const effectiveCollapsed = collapsed || isVerticalIcon;
 
   const getInitials = () => {
     const first = profile?.first_name || "";
@@ -483,13 +486,13 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blue flex-shrink-0">
             <Hotel className="h-4 w-4 text-primary-foreground" />
           </div>
-          {(!collapsed || isMobile) && (
+          {(!effectiveCollapsed || isMobile) && (
             <span className="font-display text-lg font-semibold text-gradient-blue">
               LuxeStay
             </span>
           )}
         </Link>
-        {!isMobile && (
+        {!isMobile && !isVerticalIcon && (
           <Button
             variant="ghost"
             size="icon"
@@ -508,7 +511,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             key={item.path}
             item={item}
             isActive={isItemActive(item.path)}
-            collapsed={collapsed}
+            collapsed={effectiveCollapsed}
             isMobile={isMobile}
             onNavClick={onNavClick}
             dropdownsEnabled={dropdownsEnabled}
@@ -516,20 +519,20 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         ))}
 
         {/* Operations Section */}
-        {(!collapsed || isMobile) && (
+        {(!effectiveCollapsed || isMobile) && (
           <div className="mt-4 mb-1 px-3">
             <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
               {t('common.operations', 'Operations')}
             </p>
           </div>
         )}
-        {collapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+        {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
         {operationsNavItems.map((item) => (
           <NavItem
             key={item.path}
             item={item}
             isActive={isItemActive(item.path)}
-            collapsed={collapsed}
+            collapsed={effectiveCollapsed}
             isMobile={isMobile}
             onNavClick={onNavClick}
             dropdownsEnabled={dropdownsEnabled}
@@ -539,20 +542,20 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         {/* Admin Section */}
         {isAdmin && (
           <>
-            {(!collapsed || isMobile) && (
+            {(!effectiveCollapsed || isMobile) && (
               <div className="mt-4 mb-1 px-3">
                 <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
                   {t('common.admin', 'Admin')}
                 </p>
               </div>
             )}
-            {collapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+            {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
             {adminNavItems.map((item) => (
               <NavItem
                 key={item.path}
                 item={item}
                 isActive={isItemActive(item.path)}
-                collapsed={collapsed}
+                collapsed={effectiveCollapsed}
                 isMobile={isMobile}
                 onNavClick={onNavClick}
                 dropdownsEnabled={dropdownsEnabled}
@@ -563,7 +566,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </nav>
 
       {/* User Section */}
-      {(!collapsed || isMobile) && (
+      {(!effectiveCollapsed || isMobile) && (
         <div className="p-3 border-t border-sidebar-border/60 mt-auto">
           <Link to="/profile" onClick={onNavClick} className="flex items-center gap-2.5 mb-2 hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 rounded-full bg-gradient-blue flex items-center justify-center flex-shrink-0 ring-2 ring-primary/10">
@@ -584,7 +587,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       )}
 
       {/* Collapsed User Avatar */}
-      {collapsed && !isMobile && (
+      {effectiveCollapsed && !isMobile && (
         <div className="p-2 border-t border-sidebar-border/60 mt-auto flex flex-col items-center gap-1.5">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
@@ -610,6 +613,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
 export function Sidebar() {
   const { collapsed, isMobile, mobileOpen, setMobileOpen } = useSidebar();
+  const { data: uiPrefs } = useUIPreferences();
+  const navStyle = uiPrefs?.navigation_style || "default";
 
   if (isMobile) {
     return (
@@ -621,14 +626,36 @@ export function Sidebar() {
     );
   }
 
+  const isHiddenHover = navStyle === "hidden-hover" && !isMobile;
+  const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;
+
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300",
-        collapsed ? "w-20" : "w-64"
+    <>
+      {isHiddenHover && (
+        <div
+          className="fixed left-0 top-0 z-50 w-2 h-screen cursor-pointer"
+          onMouseEnter={() => {
+            const sidebar = document.getElementById("main-sidebar");
+            if (sidebar) sidebar.style.transform = "translateX(0)";
+          }}
+        />
       )}
-    >
-      <SidebarContent />
-    </aside>
+      <aside
+        id="main-sidebar"
+        onMouseLeave={() => {
+          if (isHiddenHover) {
+            const sidebar = document.getElementById("main-sidebar");
+            if (sidebar) sidebar.style.transform = "translateX(-100%)";
+          }
+        }}
+        className={cn(
+          "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300 overflow-hidden shadow-xl",
+          isVerticalIcon ? "w-[70px]" : collapsed ? "w-20" : "w-64",
+          isHiddenHover && "w-64 -translate-x-full"
+        )}
+      >
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

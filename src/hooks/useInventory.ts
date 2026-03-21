@@ -651,17 +651,17 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
         .eq("is_active", true);
 
       // If it fails due to missing columns (attributes, item_code, item_type, etc.), fall back to a minimal set
+      let { data, error } = await (q as any);
+
       if (error && (error.message.includes("attributes") || error.message.includes("item_code") || error.message.includes("avg_cost") || error.message.includes("item_type"))) {
         console.warn("Detected missing columns in inventory_items, falling back to minimal select");
-        const fallback = await db
+        const fallback = await (db
           .from("inventory_items")
           .select(`id, name, sku, category_id, supplier_id, unit, current_stock, min_stock, max_stock, reorder_point, cost_price, selling_price, location, department, is_active, last_restocked_at, created_at, category:inventory_categories(id, name), supplier:suppliers(id, name)`)
-          .eq("is_active", true);
+          .eq("is_active", true) as any);
         data = fallback.data;
         error = fallback.error;
       }
-
-      const { data, error } = await q;
       if (error) throw error;
 
       let items = data as InventoryItem[];
@@ -771,7 +771,7 @@ export function usePurchaseOrders(status?: string) {
         .select(`*, supplier:suppliers(*), items:purchase_order_items(*, item:inventory_items(*, uom:inventory_uoms(*)))`)
         .order("created_at", { ascending: false });
       if (status) q = q.eq("status", status);
-      const { data, error } = await q;
+      const { data, error } = await (q as any);
       if (error) throw error;
       return data as PurchaseOrder[];
     },
@@ -909,7 +909,7 @@ export function useStockMovements(itemId?: string) {
         .order("created_at", { ascending: false })
         .limit(500);
       if (itemId) q = q.eq("item_id", itemId);
-      const { data, error } = await q;
+      const { data, error } = await (q as any);
       if (error) throw error;
       return data as StockMovement[];
     },
@@ -1551,7 +1551,7 @@ export function useSupplierContracts(supplierId?: string) {
     queryFn: async () => {
       let q = db.from("inventory_supplier_contracts").select("*");
       if (supplierId) q = q.eq("supplier_id", supplierId);
-      const { data, error } = await q;
+      const { data, error } = await (q as any);
       if (error) throw error;
       return data as SupplierContract[];
     },
@@ -1578,7 +1578,7 @@ export function useSupplierPricing(itemId?: string, supplierId?: string) {
       let q = db.from("inventory_supplier_pricing").select("*, supplier:suppliers(name), item:inventory_items(name, sku)");
       if (itemId) q = q.eq("item_id", itemId);
       if (supplierId) q = q.eq("supplier_id", supplierId);
-      const { data, error } = await q;
+      const { data, error } = await (q as any);
       if (error) throw error;
       return data as (SupplierPricing & { supplier: { name: string }, item: { name: string, sku: string } })[];
     },
