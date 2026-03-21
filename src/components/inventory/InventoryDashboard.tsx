@@ -27,7 +27,7 @@ export function InventoryDashboard() {
   const categoryDistribution = useMemo(() => {
     const dist: Record<string, number> = {};
     items.forEach(item => {
-      const catName = categories.find(c => c.id === item.category_id)?.name || "Uncategorized";
+      const catName = categories.find(c => c.id === item.category_id)?.category_name || "Uncategorized";
       dist[catName] = (dist[catName] || 0) + (item.current_stock * (item.avg_cost || item.cost_price));
     });
     return Object.entries(dist).map(([name, value]) => ({ name, value }))

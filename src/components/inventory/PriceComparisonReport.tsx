@@ -65,7 +65,7 @@ export function PriceComparisonReport() {
                </SelectTrigger>
                <SelectContent>
                   {items.map(i => (
-                     <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku})</SelectItem>
+                     <SelectItem key={i.id} value={i.id}>{i.name} ({i.item_code})</SelectItem>
                   ))}
                </SelectContent>
             </Select>

@@ -162,7 +162,7 @@ export function SuppliesTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead>SKU</TableHead>
+                    <TableHead>Item Code</TableHead>
                     <TableHead className="text-center">Current Stock</TableHead>
                     <TableHead className="text-center">Reorder Point</TableHead>
                     <TableHead>Unit</TableHead>
@@ -178,7 +178,7 @@ export function SuppliesTab() {
                     return (
                       <TableRow key={item.id} className={isEmpty ? "bg-destructive/5" : isLow ? "bg-amber-500/5" : ""}>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{item.sku || "-"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{item.item_code || "-"}</TableCell>
                         <TableCell className={`text-center font-medium ${isEmpty ? "text-destructive" : isLow ? "text-amber-500" : ""}`}>
                           {item.current_stock}
                         </TableCell>

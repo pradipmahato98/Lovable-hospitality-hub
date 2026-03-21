@@ -129,7 +129,7 @@ export function StockCountTab() {
                       auditHistory.map((audit) => (
                          <TableRow key={audit.id}>
                             <TableCell className="font-mono text-xs font-bold">{audit.count_number}</TableCell>
-                            <TableCell className="text-xs">{audit.store?.name}</TableCell>
+                            <TableCell className="text-xs">{audit.store?.store_name}</TableCell>
                             <TableCell><Badge variant="outline" className={cn("text-[10px]", audit.status === 'reconciled' ? "text-success border-success/20" : "")}>{audit.status}</Badge></TableCell>
                             <TableCell className="text-right">
                                <Button variant="ghost" size="sm" onClick={() => { setSelectedCount(audit); setIsDetailOpen(true); }}><Eye className="h-4 w-4" /></Button>
@@ -166,7 +166,7 @@ export function StockCountTab() {
                 <Label className="text-xs">Select Store</Label>
                 <Select value={form.store_id} onValueChange={(v) => setForm({ ...form, store_id: v })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Store" /></SelectTrigger>
-                  <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.store_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <Button variant="secondary" className="h-9" onClick={startNewCount} disabled={!form.store_id}>Load</Button>
@@ -252,7 +252,7 @@ export function StockCountTab() {
            <DialogHeader><DialogTitle>Audit Review: {selectedCount?.count_number}</DialogTitle></DialogHeader>
            <div className="py-4 space-y-4">
               <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg text-xs font-semibold">
-                 <span>Store: {selectedCount?.store?.name}</span>
+                 <span>Store: {selectedCount?.store?.store_name}</span>
                  <span>Date: {selectedCount?.count_date && new Date(selectedCount.count_date).toLocaleDateString()}</span>
               </div>
               <Table>

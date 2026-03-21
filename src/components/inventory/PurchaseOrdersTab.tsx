@@ -355,7 +355,7 @@ export function PurchaseOrdersTab() {
                 <div className="flex justify-between items-start border-b pb-2">
                   <div>
                     <h4 className="font-bold text-base flex items-center gap-2 text-primary"><PackageCheck className="h-4 w-4" /> {pi.item?.name}</h4>
-                    <p className="text-xs text-muted-foreground font-mono uppercase">{pi.item?.uom?.name || pi.item?.unit}</p>
+                    <p className="text-xs text-muted-foreground font-mono uppercase">{pi.item?.uom?.unit_name || pi.item?.unit}</p>
                   </div>
                   <div className="flex gap-4 items-end">
                     <div className="space-y-1 text-right">
