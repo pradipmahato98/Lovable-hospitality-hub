@@ -7,7 +7,9 @@ export function useAdminRealtime() {
 
   useEffect(() => {
     // Unique channel name for each component instance to avoid conflicts
-    const channelId = `admin-changes-${Math.random().toString(36).substr(2, 9)}`;
+    const channelId = `admin-changes-${Array.from(window.crypto.getRandomValues(new Uint8Array(5)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")}`;
     const channel = supabase
       .channel(channelId)
       .on(
