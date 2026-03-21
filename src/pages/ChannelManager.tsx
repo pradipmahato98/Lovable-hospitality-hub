@@ -146,7 +146,7 @@ function ChannelManager() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+        <TabsList>
           <TabsTrigger value="channels" className="gap-2"><Globe className="h-4 w-4" />Channels</TabsTrigger>
           <TabsTrigger value="rates" className="gap-2"><DollarSign className="h-4 w-4" />Rate Calendar</TabsTrigger>
           <TabsTrigger value="logs" className="gap-2"><History className="h-4 w-4" />Sync Logs</TabsTrigger>

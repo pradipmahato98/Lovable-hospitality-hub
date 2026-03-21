@@ -1,17 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard, CalendarDays, Users, BedDouble, Sparkles, Wrench,
-  ShoppingCart, Package, Globe, DollarSign, PartyPopper, Target, Briefcase,
-  BarChart3, Moon, Lock, UserCog, UserCheck, Settings, ShieldCheck, Code2,
-  ChevronDown, LucideIcon
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
+import { navItems, operationsNavItems, adminNavItems, NavItemConfig } from "@/config/navigation";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { MoreHorizontal } from "lucide-react";
@@ -56,43 +54,41 @@ export function HorizontalNav() {
             {translatedLabel}
           </Link>
 
-          if (item.subItems && item.subItems.length > 0) {
-            return (
-              <DropdownMenu key={item.path}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "relative z-10 h-[32px] flex items-center px-1.5 transition-all border-l border-transparent rounded-r-md hover:bg-accent/40 hover:text-foreground",
+                  isActive
+                    ? "text-primary border-l-primary/20"
+                    : "text-muted-foreground"
+                )}
+              >
+                <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:translate-y-0.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[180px] p-1.5 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2 py-1.5 mb-1 border-b border-border/40">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {translatedLabel} Options
+                </p>
+              </div>
+              {item.subItems.map((sub) => (
+                <DropdownMenuItem key={sub.tab || sub.path} asChild>
+                  <Link
+                    to={sub.path || `${item.path}?tab=${sub.tab}`}
+                    className="w-full cursor-pointer flex items-center gap-2 py-2 px-2.5 rounded-md text-sm font-medium transition-colors hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary"
                   >
-                    <item.icon className="h-4 w-4" />
-                    {translatedLabel}
-                    <ChevronDown className="h-3 w-3 opacity-50" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[160px]">
-                  <DropdownMenuItem asChild>
-                    <Link to={item.path} className="w-full cursor-pointer">
-                      Main {translatedLabel}
-                    </Link>
-                  </DropdownMenuItem>
-                  {item.subItems.map((sub) => (
-                    <DropdownMenuItem key={sub.tab || sub.path} asChild>
-                      <Link
-                        to={sub.path || `${item.path}?tab=${sub.tab}`}
-                        className="w-full cursor-pointer"
-                      >
-                        {sub.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            );
-          }
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                    {sub.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    }
 
     return (
       <Link
@@ -161,6 +157,6 @@ export function HorizontalNav() {
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

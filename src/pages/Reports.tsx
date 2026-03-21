@@ -52,7 +52,7 @@ const Reports = () => {
     <MainLayout title="Reports" subtitle="Analytics and business intelligence">
       <Tabs value={activeReportTab} onValueChange={handleTabChange} className="space-y-8">
         <div className="flex justify-between items-center">
-          <TabsList className="bg-secondary/50 p-1 flex-wrap h-auto">
+          <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
             <TabsTrigger value="daily">Daily Stats</TabsTrigger>
