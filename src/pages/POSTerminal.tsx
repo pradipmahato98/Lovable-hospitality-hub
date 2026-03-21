@@ -183,6 +183,8 @@ const POSTerminal = () => {
     setCheckoutOpen(true);
   };
 
+  const { user } = useAuth();
+
   const handleCheckout = async () => {
     if (splitPayment) {
       const splitTotal = splitAmounts.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
@@ -223,6 +225,7 @@ const POSTerminal = () => {
           items_count: cart.reduce((sum, i) => sum + i.quantity, 0),
           items: cart,
           room_number: paymentMethod === "room" ? roomChargeRoom : null,
+          created_by: user?.id,
         })
         .select()
         .single();

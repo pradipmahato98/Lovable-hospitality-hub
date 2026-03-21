@@ -44,7 +44,14 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Apply triggers to priority tables
+DROP TRIGGER IF EXISTS audit_banquet_events ON public.banquet_events;
 CREATE TRIGGER audit_banquet_events AFTER INSERT OR UPDATE OR DELETE ON public.banquet_events FOR EACH ROW EXECUTE FUNCTION public.log_activity();
+
+DROP TRIGGER IF EXISTS audit_rooms ON public.rooms;
 CREATE TRIGGER audit_rooms AFTER UPDATE ON public.rooms FOR EACH ROW EXECUTE FUNCTION public.log_activity();
+
+DROP TRIGGER IF EXISTS audit_pos_transactions ON public.pos_transactions;
 CREATE TRIGGER audit_pos_transactions AFTER INSERT OR UPDATE ON public.pos_transactions FOR EACH ROW EXECUTE FUNCTION public.log_activity();
+
+DROP TRIGGER IF EXISTS audit_invoices ON public.invoices;
 CREATE TRIGGER audit_invoices AFTER UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.log_activity();

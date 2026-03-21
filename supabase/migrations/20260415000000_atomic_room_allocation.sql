@@ -22,8 +22,6 @@ BEGIN
   FOR UPDATE;
 
   -- 2. Check if the room is still available for the requested dates
-  -- This is a simplified check; in a full PMS it would check rate_availability table
-  -- For now we check if any overlapping reservation exists
   IF EXISTS (
     SELECT 1 FROM public.reservations
     WHERE room_id = p_room_id
