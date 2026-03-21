@@ -16,6 +16,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         blue: "bg-gradient-blue text-primary-foreground font-semibold shadow-glow hover:shadow-elevated hover:scale-[1.02] active:scale-[0.98]",
+        gold: "bg-[#EAB308] text-white hover:bg-[#EAB308]/90 shadow-md",
         muted: "bg-muted text-muted-foreground hover:bg-muted/80",
       },
       size: {
