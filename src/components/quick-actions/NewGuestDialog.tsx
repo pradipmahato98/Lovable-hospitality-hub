@@ -57,7 +57,6 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
           email: data.email || null,
           phone: data.phone || null,
           is_vip: data.is_vip,
-          // @ts-ignore - Dynamic fields
           company_name: data.company_name || null,
           vat_number: data.vat_number || null,
           address: data.address || null,

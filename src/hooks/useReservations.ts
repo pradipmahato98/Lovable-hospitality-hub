@@ -26,6 +26,9 @@ export interface Reservation {
     last_name: string;
     email: string | null;
     phone: string | null;
+    company_name: string | null;
+    vat_number: string | null;
+    address: string | null;
   } | null;
   room: {
     room_number: string;
@@ -55,7 +58,7 @@ async function fetchReservations(propertyId?: string): Promise<Reservation[]> {
       created_at,
       guest_id,
       room_id,
-      guest:guests(first_name, last_name, email, phone),
+      guest:guests(first_name, last_name, email, phone, company_name, vat_number, address),
       room:rooms!inner(room_number, room_type, price_per_night, property_id)
     `);
 

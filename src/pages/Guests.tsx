@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp, MoreVertical, Eye, Trash2, MapPin } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
+import { useGuestCRUD } from "@/hooks/useGuestCRUD";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
 import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
@@ -142,7 +143,7 @@ const Guests = () => {
               {guest.is_vip && <Star className="h-3 w-3 text-primary fill-primary" />}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
-              {(guest as any).company_name || "Personal Guest"}
+              {guest.company_name || "Personal Guest"}
             </span>
           </div>
         </div>
@@ -153,7 +154,7 @@ const Guests = () => {
       header: "VAT/TAX",
       render: (guest) => (
         <span className="font-mono text-xs text-muted-foreground">
-          {(guest as any).vat_number || guest.id_number || "-"}
+          {guest.vat_number || (guest as any).id_number || "-"}
         </span>
       )
     },
@@ -163,7 +164,7 @@ const Guests = () => {
       render: (guest) => (
         <div className="flex items-center gap-1.5 max-w-[150px]">
           <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-          <span className="text-xs truncate">{(guest as any).address || "-"}</span>
+          <span className="text-xs truncate">{guest.address || "-"}</span>
         </div>
       )
     },
@@ -281,7 +282,7 @@ const Guests = () => {
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="w-full">
+          <TabsList className="flex-wrap">
             <TabsTrigger value="guests" className="gap-2"><Users className="h-4 w-4" />Guests</TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2">
               <MessageSquare className="h-4 w-4" />Feedback

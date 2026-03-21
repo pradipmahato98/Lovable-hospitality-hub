@@ -781,7 +781,7 @@ export default function Banquet() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <TabsList className="w-full mb-4">
+            <TabsList className="flex-wrap h-auto mb-4">
               <TabsTrigger value="events" className="gap-2">
                 <CalendarDays className="h-4 w-4" />
                 Events

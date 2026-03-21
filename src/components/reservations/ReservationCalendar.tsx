@@ -18,6 +18,11 @@ interface Reservation {
   guest: {
     first_name: string;
     last_name: string;
+    email?: string | null;
+    phone?: string | null;
+    company_name?: string | null;
+    vat_number?: string | null;
+    address?: string | null;
   };
   room: {
     room_number: string;
@@ -98,7 +103,7 @@ export function ReservationCalendar() {
           check_in_date,
           check_out_date,
           status,
-          guest:guests(first_name, last_name),
+          guest:guests(first_name, last_name, email, phone, company_name, vat_number, address),
           room:rooms(room_number, room_type)
         `)
         .gte("check_out_date", startDate)
@@ -346,25 +351,18 @@ export function ReservationCalendar() {
                 <ReservationDetailPanel
                   reservation={res as any}
                   onClose={() => setDetailOpen(false)}
+                  onCheckIn={() => {
+                    handleActionClick(res);
+                    setDetailOpen(false);
+                  }}
+                  onCancel={() => {
+                    if (window.confirm("Are you sure you want to cancel this reservation?")) {
+                      setDetailOpen(false);
+                    }
+                  }}
                 />
               );
             })()}
-            <div className="mt-2 flex gap-2">
-              <Button
-                className="flex-1"
-                variant="blue"
-                onClick={() => {
-                  const res = reservations.find(r => r.id === selectedReservation);
-                  if (res) handleActionClick(res);
-                  setDetailOpen(false);
-                }}
-              >
-                {(() => {
-                  const res = reservations.find(r => r.id === selectedReservation);
-                  return res?.status === "checked-in" ? "Check-out" : "Check-in";
-                })()}
-              </Button>
-            </div>
           </div>
         </div>
       )}
