@@ -26,7 +26,6 @@ export interface Reservation {
     last_name: string;
     email: string | null;
     phone: string | null;
-    address: string | null;
   } | null;
   room: {
     room_number: string;
