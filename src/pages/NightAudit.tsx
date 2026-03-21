@@ -136,7 +136,7 @@ function NightAudit() {
   return (
     <MainLayout title="Night Audit" subtitle="End-of-day processing and automated billing">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
+        <TabsList>
           <TabsTrigger value="audit" className="gap-2"><Moon className="h-4 w-4" />Run Audit</TabsTrigger>
           <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4" />Audit History</TabsTrigger>
         </TabsList>

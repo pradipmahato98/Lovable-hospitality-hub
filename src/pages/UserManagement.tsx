@@ -144,7 +144,7 @@ const UserManagement = () => {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <div className="overflow-x-auto pb-1 scrollbar-hide">
-            <TabsList className="flex-nowrap justify-start w-full bg-muted/50 p-1 h-auto inline-flex">
+            <TabsList>
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
                 <Users className="h-4 w-4" />
                 Users

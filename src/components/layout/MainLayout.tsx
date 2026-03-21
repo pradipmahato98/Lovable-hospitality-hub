@@ -6,6 +6,7 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { HorizontalNav } from "./header/HorizontalNav";
+import { AnimatePresence } from "framer-motion";
 
 export interface MainLayoutProps {
   children: ReactNode;
@@ -31,7 +32,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {!isHorizontal && <Sidebar />}
+      <Sidebar />
       <div 
         className={cn(
           "transition-[margin] duration-300 ease-in-out min-h-screen flex flex-col flex-1",
@@ -39,7 +40,9 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         )}
       >
         <Header title={title} subtitle={subtitle} />
-        {isHorizontal && <HorizontalNav />}
+        <AnimatePresence mode="wait">
+          {isHorizontal && <HorizontalNav />}
+        </AnimatePresence>
         <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
           <PageTransition>{children}</PageTransition>
         </main>
