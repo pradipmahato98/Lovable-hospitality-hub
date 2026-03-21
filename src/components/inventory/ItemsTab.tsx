@@ -47,10 +47,10 @@ export function ItemsTab() {
   });
 
   const emptyForm = {
-    name: "", item_code: "", category_id: "", supplier_id: "", uom_id: "",
+    name: "", sku: "", category_id: "", supplier_id: "", uom_id: "",
     cost_price: 0, selling_price: 0, item_type: "consumable",
     min_stock: 0, max_stock: 0, reorder_point: 0, safety_stock: 0,
-    shelf_life_days: 0, storage_instructions: "", temperature_classification: "Ambient",
+    shelf_life: "", storage_instructions: "", temperature_classification: "Ambient",
     image_url: "",
     tax_applicability: [] as string[],
     attributes: {} as Record<string, string>
@@ -65,8 +65,8 @@ export function ItemsTab() {
   });
 
   const filteredItems = items.filter((item) => {
-    const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.item_code?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBarcode = !barcodeSearch || item.item_code === barcodeSearch;
+    const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesBarcode = !barcodeSearch || item.sku === barcodeSearch;
     return matchesQuery && matchesBarcode;
   });
 
@@ -76,10 +76,10 @@ export function ItemsTab() {
         return;
      }
      const cat = categories.find(c => c.id === form.category_id);
-     const prefix = (cat as any)?.sku_prefix || (cat as any)?.category_name?.substring(0, 3).toUpperCase() || "ITEM";
+     const prefix = cat?.sku_prefix || cat?.name?.substring(0, 3).toUpperCase() || "ITEM";
      const random = Math.floor(1000 + Math.random() * 9000);
-     setForm({ ...form, item_code: `${prefix}-${random}` });
-     toast.success("Item Code Generated");
+     setForm({ ...form, sku: `${prefix}-${random}` });
+     toast.success("SKU Generated");
   };
 
   const handleAdjustRequest = async () => {
@@ -209,7 +209,7 @@ export function ItemsTab() {
             <SelectTrigger className="w-40 h-9 text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.category_name}</SelectItem>)}
+              {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -240,11 +240,11 @@ export function ItemsTab() {
                         <div className="h-8 w-8 rounded bg-muted flex items-center justify-center border">
                           {item.image_url ? <img src={item.image_url} alt="" className="h-full w-full object-cover rounded" /> : <Package className="h-4 w-4 text-muted-foreground" />}
                         </div>
-                        <div><p className="font-bold text-xs">{item.name}</p><p className="text-[9px] text-muted-foreground font-mono uppercase">{item.item_code || "No Code"}</p></div>
+                        <div><p className="font-bold text-xs">{item.name}</p><p className="text-[9px] text-muted-foreground font-mono uppercase">{item.sku || "No SKU"}</p></div>
                       </div>
                     </TableCell>
                     <TableCell><Badge variant="secondary" className="text-[9px] h-4 uppercase">{item.item_type}</Badge></TableCell>
-                    <TableCell><p className="font-bold text-xs">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.uom?.unit_symbol || item.unit}</span></p></TableCell>
+                    <TableCell><p className="font-bold text-xs">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.uom?.abbreviation || item.unit}</span></p></TableCell>
                     <TableCell>
                        <div className="flex gap-1">
                           {item.tax_applicability?.map(t => <Badge key={t} variant="outline" className="text-[8px] h-4 px-1">{t}</Badge>)}
@@ -282,9 +282,9 @@ export function ItemsTab() {
                </div>
 
                <div className="space-y-1">
-                  <Label className="text-xs">Item Code / Barcode</Label>
+                  <Label className="text-xs">SKU / Barcode</Label>
                   <div className="flex gap-1">
-                     <Input value={form.item_code} onChange={(e) => setForm({...form, item_code: e.target.value})} className="font-mono text-xs h-9" />
+                     <Input value={form.sku} onChange={(e) => setForm({...form, sku: e.target.value})} className="font-mono text-xs h-9" />
                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={generateSKU}><RefreshCw className="h-4 w-4" /></Button>
                   </div>
                </div>
@@ -292,7 +292,7 @@ export function ItemsTab() {
                <div className="space-y-1"><Label className="text-xs">UoM</Label>
                   <Select value={form.uom_id} onValueChange={(v) => setForm({...form, uom_id: v})}>
                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-                     <SelectContent>{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.unit_name}</SelectItem>)}</SelectContent>
+                     <SelectContent>{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
                <div className="space-y-1"><Label className="text-xs">Item Type</Label>
@@ -321,7 +321,7 @@ export function ItemsTab() {
                   </Select>
                </div>
 
-               <div className="space-y-1"><Label className="text-xs">Shelf Life (Days)</Label><Input type="number" value={form.shelf_life_days} onChange={(e) => setForm({...form, shelf_life_days: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Shelf Life (Days)</Label><Input type="number" value={form.shelf_life} onChange={(e) => setForm({...form, shelf_life: e.target.value})} /></div>
                <div className="space-y-1"><Label className="text-xs">Storage Instructions</Label><Input value={form.storage_instructions} onChange={(e) => setForm({...form, storage_instructions: e.target.value})} placeholder="e.g. Keep away from light" /></div>
 
                <div className="col-span-2 space-y-1">
@@ -356,18 +356,18 @@ export function ItemsTab() {
                               const k = (document.getElementById('attr-key') as HTMLInputElement).value;
                               const v = (document.getElementById('attr-val') as HTMLInputElement).value;
                               if (k && v) {
-                                 setForm({...form, attributes: {...(form.attributes || {}), [k]: v}});
+                                 setForm({...form, attributes: {...form.attributes, [k]: v}});
                                  (document.getElementById('attr-key') as HTMLInputElement).value = '';
                                  (document.getElementById('attr-val') as HTMLInputElement).value = '';
                               }
                            }}>+</Button>
                         </div>
                         <div className="flex flex-wrap gap-1">
-                           {Object.entries(form.attributes || {}).map(([k, v]) => (
+                           {Object.entries(form.attributes).map(([k, v]) => (
                               <Badge key={k} variant="secondary" className="text-[8px] h-4 gap-1">
                                  {k}: {v}
                                  <XCircle className="h-2 w-2 cursor-pointer" onClick={() => {
-                                    const next = {...(form.attributes || {})};
+                                    const next = {...form.attributes};
                                     delete next[k];
                                     setForm({...form, attributes: next});
                                  }} />
@@ -416,7 +416,7 @@ export function ItemsTab() {
             <DialogFooter><Button onClick={handleAdjustRequest}>Submit for Approval</Button></DialogFooter>
          </DialogContent>
       </Dialog>
-      <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.id} className="flex justify-between p-2 border-b text-xs"><span>{s.store_name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
+      <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.id} className="flex justify-between p-2 border-b text-xs"><span>{s.name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
       <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a) => <div key={a.id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
 
       <Dialog open={isLabelOpen} onOpenChange={setIsLabelOpen}>
@@ -430,7 +430,7 @@ export function ItemsTab() {
 
                <div className="bg-slate-50 p-4 rounded border flex flex-col items-center">
                   <Barcode className="h-12 w-48 text-slate-900" />
-                  <p className="mt-2 font-mono text-sm font-bold tracking-[0.2em]">{selectedItem?.item_code || 'NO-CODE'}</p>
+                  <p className="mt-2 font-mono text-sm font-bold tracking-[0.2em]">{selectedItem?.sku || 'NO-SKU'}</p>
                </div>
 
                <div className="mt-4 flex gap-4 text-[10px] font-bold uppercase text-slate-500">

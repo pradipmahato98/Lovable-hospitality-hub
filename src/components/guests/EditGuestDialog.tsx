@@ -69,8 +69,6 @@ export function EditGuestDialog({ guest, open, onOpenChange }: EditGuestDialogPr
       id_number: form.id_number || null,
       is_vip: form.is_vip,
       notes: form.notes || null,
-      company_name: form.company_name || null,
-      vat_number: form.vat_number || null,
     });
     onOpenChange(false);
   };

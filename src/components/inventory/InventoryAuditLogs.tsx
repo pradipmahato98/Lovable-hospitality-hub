@@ -13,7 +13,7 @@ export function InventoryAuditLogs() {
       // Fetching from stock_movements as it contains the most granular history
       const { data } = await supabase
         .from('stock_movements')
-        .select('*, item:inventory_items(name, item_code)')
+        .select('*, item:inventory_items(name, sku)')
         .order('created_at', { ascending: false })
         .limit(100);
       return data || [];
@@ -59,7 +59,7 @@ export function InventoryAuditLogs() {
                         </TableCell>
                         <TableCell>
                            <div className="font-bold text-[10px]">{log.item?.name}</div>
-                           <div className="text-[9px] text-muted-foreground">{log.item?.item_code}</div>
+                           <div className="text-[9px] text-muted-foreground">{log.item?.sku}</div>
                         </TableCell>
                         <TableCell className="font-mono text-xs font-bold">
                            {log.movement_type === 'out' ? '-' : '+'}{log.quantity}
