@@ -22,10 +22,10 @@ import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
-  LocalizationSettingsCard, UIStandardizationCard,
+  LocalizationSettingsCard, UIStandardizationCard, UserRolesSettings,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "ui" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
+type SettingsTab = "checkin" | "ui" | "user_roles" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -76,6 +76,7 @@ const Settings = () => {
   const tabs = [
     { id: "checkin" as const, icon: ClipboardCheck, label: "Check-in Settings" },
     { id: "ui" as const, icon: LayoutDashboard, label: "UI Standardization" },
+    { id: "user_roles" as const, icon: Shield, label: "User & Roles" },
     { id: "localization" as const, icon: Globe, label: "Localization" },
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },
@@ -178,6 +179,9 @@ const Settings = () => {
             )}
             { activeTab === "ui" && (
               <UIStandardizationCard />
+            )}
+            {activeTab === "user_roles" && (
+              <UserRolesSettings />
             )}
             {activeTab === "localization" && (
               <LocalizationSettingsCard

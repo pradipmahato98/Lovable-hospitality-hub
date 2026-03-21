@@ -9,7 +9,7 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
-import { useUIPreferences } from "@/hooks/useSettings";
+import { useUIPreferences, useUserRolesPermissions } from "@/hooks/useSettings";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -174,8 +174,17 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const { profile, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { data: uiPrefs } = useUIPreferences();
+  const { data: perms } = useUserRolesPermissions();
   const dropdownsEnabled = uiPrefs?.sidebar_dropdowns_enabled ?? true;
   const navStyle = uiPrefs?.navigation_style || "default";
+
+  const filterNavItems = (items: NavItemConfig[]) => {
+    if (!perms?.modules) return items;
+    return items.filter(item => {
+      const m = perms.modules[item.label];
+      return m?.enabled !== false && m?.view !== false;
+    });
+  };
   const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;
   const effectiveCollapsed = collapsed || isVerticalIcon;
 
@@ -220,7 +229,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto scrollbar-hide">
-        {navItems.map((item) => (
+        {filterNavItems(navItems).map((item) => (
           <NavItem
             key={item.path}
             item={item}
@@ -233,28 +242,32 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         ))}
 
         {/* Operations Section */}
-        {(!effectiveCollapsed || isMobile) && (
-          <div className="mt-4 mb-1 px-3">
-            <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
-              {t('common.operations', 'Operations')}
-            </p>
-          </div>
+        {filterNavItems(operationsNavItems).length > 0 && (
+          <>
+            {(!effectiveCollapsed || isMobile) && (
+              <div className="mt-4 mb-1 px-3">
+                <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                  {t('common.operations', 'Operations')}
+                </p>
+              </div>
+            )}
+            {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
+            {filterNavItems(operationsNavItems).map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                isActive={isItemActive(item.path)}
+                collapsed={effectiveCollapsed}
+                isMobile={isMobile}
+                onNavClick={onNavClick}
+                dropdownsEnabled={dropdownsEnabled}
+              />
+            ))}
+          </>
         )}
-        {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
-        {operationsNavItems.map((item) => (
-          <NavItem
-            key={item.path}
-            item={item}
-            isActive={isItemActive(item.path)}
-            collapsed={effectiveCollapsed}
-            isMobile={isMobile}
-            onNavClick={onNavClick}
-            dropdownsEnabled={dropdownsEnabled}
-          />
-        ))}
         
         {/* Admin Section */}
-        {isAdmin && (
+        {isAdmin && filterNavItems(adminNavItems).length > 0 && (
           <>
             {(!effectiveCollapsed || isMobile) && (
               <div className="mt-4 mb-1 px-3">
@@ -264,7 +277,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
               </div>
             )}
             {effectiveCollapsed && !isMobile && <div className="mt-3 mb-1 mx-2 border-t border-sidebar-border/40" />}
-            {adminNavItems.map((item) => (
+            {filterNavItems(adminNavItems).map((item) => (
               <NavItem
                 key={item.path}
                 item={item}

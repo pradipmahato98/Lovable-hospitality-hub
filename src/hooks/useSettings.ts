@@ -65,6 +65,19 @@ export interface QuickMenuSettings {
   enabled_items: string[];
 }
 
+export interface ModulePermission {
+  view: boolean;
+  write: boolean;
+  delete: boolean;
+  report: boolean;
+  enabled: boolean;
+}
+
+export interface UserRolesSettingsData {
+  modules: Record<string, ModulePermission>;
+  global_enabled: boolean;
+}
+
 export interface UIPreferences {
   ios_materials: boolean;
   glass_intensity: "low" | "medium" | "high";
@@ -401,6 +414,35 @@ export function useUpdateAPIKeysSettings() {
 
 export function useLocalizationSettings() {
   return useSettings<LocalizationSettings>("localization_settings", defaultLocalizationSettings);
+}
+
+export function useUserRolesPermissions() {
+  const { data: role } = useUserRole();
+  const isAdmin = role === "admin";
+
+  const { data: navItems = [] } = useQuery({
+    queryKey: ["nav-items-config"],
+    queryFn: async () => {
+      const { navItems, operationsNavItems, adminNavItems } = await import("@/config/navigation");
+      return [...navItems, ...operationsNavItems, ...adminNavItems];
+    }
+  });
+
+  const defaultPermissions: UserRolesSettingsData = {
+    global_enabled: true,
+    modules: navItems.reduce((acc, item) => {
+      acc[item.label] = {
+        view: true,
+        write: true,
+        delete: true,
+        report: true,
+        enabled: true,
+      };
+      return acc;
+    }, {} as Record<string, ModulePermission>),
+  };
+
+  return useSettings<UserRolesSettingsData>("user_roles_permissions", defaultPermissions);
 }
 
 export function useUpdateLocalizationSettings() {
