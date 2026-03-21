@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard, ArrowUpCircle, AlarmClock, LogIn, Key } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
+import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
 import { QueueManager } from "@/components/front-desk/QueueManager";
 import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
@@ -82,6 +83,8 @@ const FrontDesk = () => {
   const activeTab = searchParams.get("tab") || "rooms";
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkInMode, setCheckInMode] = useState<"walk-in" | "check-in">("walk-in");
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -184,9 +187,35 @@ const FrontDesk = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button variant="blue" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewRoomOpen(true)}>
-                    <Plus className="h-4 w-4" />Add Room
-                  </Button>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 flex-1 sm:flex-initial"
+                      onClick={() => {
+                        setCheckInMode("check-in");
+                        setCheckInOpen(true);
+                      }}
+                    >
+                      <LogIn className="h-4 w-4 text-primary" />
+                      Reservation
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 flex-1 sm:flex-initial"
+                      onClick={() => {
+                        setCheckInMode("walk-in");
+                        setCheckInOpen(true);
+                      }}
+                    >
+                      <UserPlus className="h-4 w-4 text-success" />
+                      Walk-in
+                    </Button>
+                    <Button variant="blue" size="sm" className="gap-2 flex-1 sm:flex-initial" onClick={() => setNewRoomOpen(true)}>
+                      <Plus className="h-4 w-4" />Add Room
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -325,6 +354,13 @@ const FrontDesk = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        <CheckInOutDialog
+          open={checkInOpen}
+          onOpenChange={setCheckInOpen}
+          mode={checkInMode}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["rooms"] })}
+        />
       </ErrorBoundary>
     </MainLayout>
   );
