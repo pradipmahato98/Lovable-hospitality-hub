@@ -23,7 +23,7 @@ const Management = () => {
       <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-            <TabsList className="bg-secondary/50 p-1">
+            <TabsList>
               <TabsTrigger value="performance">Performance</TabsTrigger>
               <TabsTrigger value="forecasting">Forecasting</TabsTrigger>
               <TabsTrigger value="segmentation">Market Analysis</TabsTrigger>

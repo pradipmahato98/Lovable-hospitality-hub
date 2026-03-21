@@ -125,7 +125,7 @@ const FrontDesk = () => {
     <MainLayout title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="flex-wrap h-auto">
+          <TabsList>
             <TabsTrigger value="rooms" className="gap-2"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
             <TabsTrigger value="billing" className="gap-2"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
             <TabsTrigger value="folios" className="gap-2"><FileText className="h-4 w-4" />Guest Folios</TabsTrigger>

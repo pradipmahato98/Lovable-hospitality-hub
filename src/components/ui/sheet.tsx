@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { usePersistentPopup } from "@/hooks/usePersistentPopup";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -52,7 +53,10 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
+  ({ side = "right", className, children, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => {
+    const { isBlocking, handlePointerDownOutside, handleEscapeKeyDown } = usePersistentPopup();
+
+    return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
@@ -60,8 +64,17 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         className={cn(
           sheetVariants({ side }),
           "flex flex-col h-full overflow-hidden p-0", // Remove padding from Content, handle in scroll area
+          isBlocking && "animate-shake",
           className
         )}
+        onPointerDownOutside={(e) => {
+          handlePointerDownOutside(e);
+          onPointerDownOutside?.(e);
+        }}
+        onEscapeKeyDown={(e) => {
+          handleEscapeKeyDown(e);
+          onEscapeKeyDown?.(e);
+        }}
         {...props}
       >
         <div className="relative flex flex-col h-full w-full overflow-hidden">
@@ -75,7 +88,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         </div>
       </SheetPrimitive.Content>
     </SheetPortal>
-  ),
+    );
+  },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 

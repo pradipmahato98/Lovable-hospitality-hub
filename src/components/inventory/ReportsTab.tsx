@@ -17,7 +17,8 @@ import {
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
   useSuppliers, usePurchaseOrders, useInventoryWastage,
-  useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts
+  useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts,
+  InventoryItem, StockMovement, InventoryWastage, Supplier
 } from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
@@ -50,16 +51,17 @@ export function ReportsTab() {
 
   const departmentValue = (items || []).reduce((acc: Record<string, number>, item: InventoryItem) => {
     const dept = item.department || "Unassigned";
-    acc[dept] = (acc[dept] || 0) + (item.current_stock * (item.avg_cost || item.cost_price));
+    const cost = (item.avg_cost || item.cost_price || 0);
+    acc[dept] = (acc[dept] || 0) + (item.current_stock * cost);
     return acc;
   }, {});
 
   const consumptionByDept = (movements || [])
     .filter(m => m.movement_type === 'out')
     .reduce((acc: Record<string, number>, m) => {
-      const item = m.item as Record<string, unknown> | undefined;
-      const dept = (item?.department as string) || "General";
-      const value = m.quantity * ((item?.avg_cost as number) || (item?.cost_price as number) || 0);
+      const item = m.item as InventoryItem | undefined;
+      const dept = item?.department || "General";
+      const value = m.quantity * (item?.avg_cost || item?.cost_price || 0);
       acc[dept] = (acc[dept] || 0) + value;
       return acc;
     }, {});
@@ -82,8 +84,8 @@ export function ReportsTab() {
   const wastePercentage = totalConsumption > 0 ? ((totalWastage / totalConsumption) * 100).toFixed(1) : "0.0";
 
   const avgAgingDays = (items || []).length > 0 ? Math.ceil((items || []).reduce((sum, i) => {
-     const lastAction = i.last_restocked_at ? new Date(i.last_restocked_at) : new Date(i.created_at);
-     const diff = Math.abs(new Date().getTime() - lastAction.getTime()) / (1000 * 60 * 60 * 24);
+     const lastActionDate = i.last_restocked_at ? new Date(i.last_restocked_at) : new Date(i.created_at);
+     const diff = Math.abs(Date.now() - lastActionDate.getTime()) / (1000 * 60 * 60 * 24);
      return sum + diff;
   }, 0) / (items || []).length) : 0;
 
@@ -94,11 +96,11 @@ export function ReportsTab() {
     (movements || [])
       .filter(m => m.movement_type === 'out')
       .forEach(m => {
-        const item = m.item as Record<string, unknown> | undefined;
+        const item = m.item as InventoryItem | undefined;
         if (!item) return;
-        const current = map.get(m.item_id) || { name: (item.name as string), qty: 0, value: 0 };
+        const current = map.get(m.item_id) || { name: item.name, qty: 0, value: 0 };
         current.qty += m.quantity;
-        current.value += m.quantity * ((item.avg_cost as number) || (item.cost_price as number) || 0);
+        current.value += m.quantity * (item.avg_cost || item.cost_price || 0);
         map.set(m.item_id, current);
       });
     return Array.from(map.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
@@ -200,12 +202,12 @@ export function ReportsTab() {
     } else if (reportName === "Consumption Analysis") {
        headers = ["Department", "Item", "Quantity", "Value"];
        rows = (movements || []).filter(m => m.movement_type === 'out').map(m => {
-          const item = m.item as Record<string, unknown>;
+          const item = m.item as InventoryItem | undefined;
           return [
-            (item?.department as string) || 'General',
-            (item?.name as string),
+            item?.department || 'General',
+            item?.name || 'Unknown',
             m.quantity,
-            formatCurrency(m.quantity * ((item?.avg_cost as number) || (item?.cost_price as number) || 0))
+            formatCurrency(m.quantity * (item?.avg_cost || item?.cost_price || 0))
           ];
        });
     } else {
@@ -608,13 +610,13 @@ export function ReportsTab() {
                         </TableRow>
                      ))}
                      {activeReport?.title === "Consumption Analysis" && activeReport.data.map((m: StockMovement) => {
-                        const item = m.item as Record<string, unknown>;
+                        const item = m.item as InventoryItem | undefined;
                         return (
                           <TableRow key={m.id}>
                              <TableCell className="text-xs">{new Date(m.created_at).toLocaleDateString()}</TableCell>
-                             <TableCell className="text-xs font-bold">{(item?.name as string)}</TableCell>
+                             <TableCell className="text-xs font-bold">{item?.name || 'Unknown'}</TableCell>
                              <TableCell className="text-xs">{m.quantity}</TableCell>
-                             <TableCell className="text-xs text-muted-foreground">{(item?.department as string) || 'General'}</TableCell>
+                             <TableCell className="text-xs text-muted-foreground">{item?.department || 'General'}</TableCell>
                           </TableRow>
                         );
                      })}
@@ -648,11 +650,11 @@ export function ReportsTab() {
                         );
                      })}
                      {activeReport?.title === "Audit Trail" && activeReport.data.map((m: StockMovement) => {
-                        const item = m.item as Record<string, unknown>;
+                        const item = m.item as InventoryItem | undefined;
                         return (
                           <TableRow key={m.id}>
                              <TableCell className="text-xs">{new Date(m.created_at).toLocaleString()}</TableCell>
-                             <TableCell className="text-xs font-bold">{(item?.name as string)}</TableCell>
+                             <TableCell className="text-xs font-bold">{item?.name || 'Unknown'}</TableCell>
                              <TableCell className="text-xs uppercase font-mono">{m.movement_type}</TableCell>
                              <TableCell className="text-xs">{m.quantity}</TableCell>
                              <TableCell className="text-xs text-muted-foreground italic">{m.notes || 'No comments'}</TableCell>

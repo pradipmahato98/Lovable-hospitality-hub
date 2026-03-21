@@ -11,11 +11,15 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { navItems, operationsNavItems, adminNavItems, NavItemConfig } from "@/config/navigation";
 import { useIsAdmin } from "@/hooks/useUserRole";
+import { useUIPreferences } from "@/hooks/useSettings";
+import { MoreHorizontal } from "lucide-react";
 
 export function HorizontalNav() {
   const location = useLocation();
   const { t } = useTranslation();
   const { isAdmin } = useIsAdmin();
+  const { data: uiPrefs } = useUIPreferences();
+  const dropdownsEnabled = uiPrefs?.sidebar_dropdowns_enabled ?? true;
 
   const isItemActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -27,7 +31,7 @@ export function HorizontalNav() {
     const translationKey = `nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
     const translatedLabel = t(translationKey, item.label);
 
-    if (item.subItems && item.subItems.length > 0) {
+    if (item.subItems && item.subItems.length > 0 && dropdownsEnabled) {
       return (
         <div key={item.path} className="flex items-center group relative">
           {isActive && (
@@ -110,6 +114,9 @@ export function HorizontalNav() {
     );
   };
 
+  const visibleItems = navItems.slice(0, 8);
+  const moreItems = navItems.slice(8);
+
   return (
     <motion.div
       initial={{ y: -10, opacity: 0 }}
@@ -118,7 +125,29 @@ export function HorizontalNav() {
       className="sticky top-14 z-20 w-full bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 border-b border-border/40 shadow-sm overflow-hidden"
     >
       <div className="px-4 h-12 flex items-center gap-1.5 overflow-x-auto scrollbar-hide no-scrollbar">
-        {navItems.map(renderNavItem)}
+        {visibleItems.map(renderNavItem)}
+
+        {moreItems.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold rounded-md transition-all whitespace-nowrap text-muted-foreground hover:bg-accent/40 hover:text-foreground">
+                <MoreHorizontal className="h-4 w-4" />
+                More
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[200px] p-1.5">
+              {moreItems.map((item) => (
+                <DropdownMenuItem key={item.path} asChild>
+                  <Link to={item.path} className="flex items-center gap-2.5 py-2 px-2.5 cursor-pointer">
+                    <item.icon className="h-4 w-4" />
+                    <span>{t(`nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, item.label)}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         <div className="h-4 w-[1px] bg-border mx-2" />
         {operationsNavItems.map(renderNavItem)}
         {isAdmin && (
