@@ -51,7 +51,7 @@ const Housekeeping = () => {
       }
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-1">
+        <TabsList className="w-full gap-1">
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />
             Rooms
