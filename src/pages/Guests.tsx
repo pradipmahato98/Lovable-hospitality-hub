@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/table";
 import { Plus, Mail, Phone, Star, Grid, List, Users, MessageSquare, Award, Trophy, Loader2, Receipt, FileText, Clock, GitMerge, Zap, Search, Edit, Download, Settings, PhoneCall, PlusCircle, MinusCircle, Reply, TrendingUp } from "lucide-react";
 import { useGuests, Guest } from "@/hooks/useGuests";
-import { useGuestCRUD } from "@/hooks/useGuestCRUD";
 import { GuestDocuments } from "@/components/guests/GuestDocuments";
 import { GuestHistoryTimeline } from "@/components/guests/GuestHistoryTimeline";
 import { AutomatedMessaging } from "@/components/guests/AutomatedMessaging";
