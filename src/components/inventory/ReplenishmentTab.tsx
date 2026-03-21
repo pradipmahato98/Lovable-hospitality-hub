@@ -119,7 +119,7 @@ export function ReplenishmentTab() {
                                     </TableCell>
                                     <TableCell>
                                        <div className="font-bold text-xs">{item.name}</div>
-                                       <div className="text-[10px] text-muted-foreground font-mono">{item.sku}</div>
+                                       <div className="text-[10px] text-muted-foreground font-mono">{item.item_code}</div>
                                     </TableCell>
                                     <TableCell>
                                        <Badge variant="destructive" className="text-[10px] font-bold">{item.current_stock}</Badge>

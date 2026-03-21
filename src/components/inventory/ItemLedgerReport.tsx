@@ -24,7 +24,7 @@ export function ItemLedgerReport() {
   const handleExport = () => {
     if (!selectedItem) return;
     const data = {
-      title: `Item Ledger: ${selectedItem.name} (${selectedItem.sku})`,
+      title: `Item Ledger: ${selectedItem.name} (${selectedItem.item_code})`,
       headers: ["Date", "Store", "Type", "Reference", "Qty Change", "Balance After"],
       rows: movements.map((m) => [
         formatAD(new Date(m.created_at), "time"),
@@ -49,7 +49,7 @@ export function ItemLedgerReport() {
                </SelectTrigger>
                <SelectContent>
                   {items.map(i => (
-                     <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku})</SelectItem>
+                     <SelectItem key={i.id} value={i.id}>{i.name} ({i.item_code})</SelectItem>
                   ))}
                </SelectContent>
             </Select>
@@ -73,7 +73,7 @@ export function ItemLedgerReport() {
                      <Package className="h-6 w-6 text-primary" />
                   </div>
                   <CardTitle className="text-lg font-bold">{selectedItem?.name}</CardTitle>
-                  <CardDescription className="font-mono text-xs uppercase">{selectedItem?.sku}</CardDescription>
+                  <CardDescription className="font-mono text-xs uppercase">{selectedItem?.item_code}</CardDescription>
                </CardHeader>
                <CardContent className="space-y-4 pt-4 border-t">
                   <div className="grid grid-cols-2 gap-4">
@@ -89,7 +89,7 @@ export function ItemLedgerReport() {
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2">
                      <div className="flex justify-between text-xs font-medium">
                         <span className="text-muted-foreground">Category</span>
-                        <span>{selectedItem?.category?.name || "General"}</span>
+                        <span>{selectedItem?.category?.category_name || "General"}</span>
                      </div>
                      <div className="flex justify-between text-xs font-medium">
                         <span className="text-muted-foreground">Status</span>
