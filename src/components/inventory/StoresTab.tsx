@@ -17,7 +17,7 @@ export function StoresTab() {
   const { data: stores = [], isLoading, createStore, updateStore } = useInventoryStores();
   const { data: staff = [] } = useStaffMembers();
   const [form, setForm] = useState({
-    name: "",
+    store_name: "",
     code: "",
     location: "",
     property: "Main Hotel",
@@ -29,7 +29,7 @@ export function StoresTab() {
   const handleCreate = async () => {
     try {
       await createStore.mutateAsync({
-        name: form.name,
+        store_name: form.store_name,
         code: form.code,
         location: form.location,
         store_type: form.store_type,
@@ -41,7 +41,7 @@ export function StoresTab() {
       toast.success("Store created");
       setIsAddOpen(false);
       setForm({
-        name: "", code: "", location: "", property: "Main Hotel", store_type: "general",
+        store_name: "", code: "", location: "", property: "Main Hotel", store_type: "general",
         temperature_classification: "Ambient", storage_conditions: "Standard Shelf"
       });
     } catch (error: any) {
@@ -62,7 +62,7 @@ export function StoresTab() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Add Store</DialogTitle><DialogDescription>Create a new storage location</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
-              <div className="col-span-2 space-y-2"><Label>Store Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+              <div className="col-span-2 space-y-2"><Label>Store Name *</Label><Input value={form.store_name} onChange={(e) => setForm({ ...form, store_name: e.target.value })} /></div>
               <div className="space-y-2"><Label>Property / Branch</Label>
                  <Select value={form.property} onValueChange={(v) => setForm({...form, property: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -111,7 +111,7 @@ export function StoresTab() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={!form.name || !form.code || createStore.isPending} variant="blue">
+              <Button onClick={handleCreate} disabled={!form.store_name || !form.code || createStore.isPending} variant="blue">
                 {createStore.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create
               </Button>
             </DialogFooter>
@@ -134,7 +134,7 @@ export function StoresTab() {
                       <Store className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-bold text-lg">{store.name}</p>
+                      <p className="font-bold text-lg">{store.store_name}</p>
                       <div className="flex items-center gap-2">
                         <p className="text-xs text-muted-foreground font-mono">{store.code}</p>
                         <Badge variant="outline" className="text-[8px] h-3 px-1">Main</Badge>
