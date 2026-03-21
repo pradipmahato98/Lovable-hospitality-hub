@@ -87,6 +87,7 @@ export interface UIPreferences {
   // Animations
   animation_preset: "linear" | "smooth" | "spring" | "none";
   sidebar_dropdowns_enabled: boolean;
+  navigation_style: "default" | "vertical-icon" | "hidden-hover" | "horizontal-subheader";
   // Release Management
   is_staged: boolean;
   last_published_at?: string;
@@ -204,6 +205,7 @@ const defaultUIPreferences: UIPreferences = {
   saturation: 1.2,
   animation_preset: "spring",
   sidebar_dropdowns_enabled: true,
+  navigation_style: "default",
   is_staged: false,
 };
 

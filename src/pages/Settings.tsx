@@ -22,10 +22,10 @@ import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
-  LocalizationSettingsCard,
+  LocalizationSettingsCard, UIStandardizationCard,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
+type SettingsTab = "checkin" | "ui" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,6 +73,7 @@ const Settings = () => {
 
   const tabs = [
     { id: "checkin" as const, icon: ClipboardCheck, label: "Check-in Settings" },
+    { id: "ui" as const, icon: Layout, label: "UI Standardization" },
     { id: "localization" as const, icon: Globe, label: "Localization" },
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },
@@ -172,6 +173,9 @@ const Settings = () => {
                 isPending={updateCheckIn.isPending}
                 onSettingChange={(key, value) => checkInSettings && updateCheckIn.mutate({ ...checkInSettings, [key]: value })}
               />
+            )}
+            { activeTab === "ui" && (
+              <UIStandardizationCard />
             )}
             {activeTab === "localization" && (
               <LocalizationSettingsCard
