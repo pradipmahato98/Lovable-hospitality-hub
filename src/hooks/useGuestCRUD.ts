@@ -17,8 +17,6 @@ export interface GuestUpdate {
   id_number?: string | null;
   is_vip?: boolean | null;
   notes?: string | null;
-  company_name?: string | null;
-  vat_number?: string | null;
 }
 
 export function useGuestCRUD() {

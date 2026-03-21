@@ -103,7 +103,7 @@ export function ReservationCalendar() {
           check_in_date,
           check_out_date,
           status,
-          guest:guests(first_name, last_name, email, phone, company_name, vat_number, address),
+          guest:guests(first_name, last_name, email, phone, address),
           room:rooms(room_number, room_type)
         `)
         .gte("check_out_date", startDate)

@@ -143,7 +143,7 @@ const Guests = () => {
               {guest.is_vip && <Star className="h-3 w-3 text-primary fill-primary" />}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
-              {guest.company_name || "Personal Guest"}
+              {(guest as any).company_name || "Personal Guest"}
             </span>
           </div>
         </div>
@@ -154,7 +154,7 @@ const Guests = () => {
       header: "VAT/TAX",
       render: (guest) => (
         <span className="font-mono text-xs text-muted-foreground">
-          {guest.vat_number || (guest as any).id_number || "-"}
+          {(guest as any).vat_number || (guest as any).id_number || "-"}
         </span>
       )
     },

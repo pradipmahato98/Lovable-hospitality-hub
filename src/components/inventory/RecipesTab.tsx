@@ -102,7 +102,7 @@ export function RecipesTab() {
                           <div key={item.id} className="space-y-1">
                             <div className="flex justify-between text-xs">
                               <span className="font-medium">{item.item?.name}</span>
-                              <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.unit_symbol || item.item?.unit}</span>
+                              <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
                             </div>
                             <div className="w-full h-0.5 bg-muted rounded-full overflow-hidden">
                                <div className="h-full bg-primary/40" style={{ width: `${weight}%` }} />
@@ -153,7 +153,7 @@ export function RecipesTab() {
                    <div className="flex items-center gap-2">
                       <span className="text-muted-foreground line-through">{item.item?.current_stock}</span>
                       <span className="text-destructive font-mono font-bold">-{item.quantity * produceQty}</span>
-                      <span className="text-[10px] font-bold uppercase">{item.uom?.unit_symbol || item.item?.unit}</span>
+                      <span className="text-[10px] font-bold uppercase">{item.uom?.abbreviation || item.item?.unit}</span>
                    </div>
                  </div>
                ))}

@@ -150,8 +150,6 @@ export function NewReservationDialog({
         last_name: newGuest.lastName,
         email: newGuest.email || null,
         phone: newGuest.phone || null,
-        company_name: newGuest.companyName || null,
-        vat_number: newGuest.vatNumber || null,
         address: newGuest.address || null,
       })
       .select()
