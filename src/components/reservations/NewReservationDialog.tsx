@@ -69,6 +69,9 @@ export function NewReservationDialog({
     lastName: "",
     email: "",
     phone: "",
+    companyName: "",
+    vatNumber: "",
+    address: "",
   });
 
   useEffect(() => {
@@ -147,6 +150,9 @@ export function NewReservationDialog({
         last_name: newGuest.lastName,
         email: newGuest.email || null,
         phone: newGuest.phone || null,
+        company_name: newGuest.companyName || null,
+        vat_number: newGuest.vatNumber || null,
+        address: newGuest.address || null,
       })
       .select()
       .single();
@@ -164,7 +170,7 @@ export function NewReservationDialog({
       });
       setFormData({ ...formData, guestId: data.id });
       setShowNewGuestForm(false);
-      setNewGuest({ firstName: "", lastName: "", email: "", phone: "" });
+      setNewGuest({ firstName: "", lastName: "", email: "", phone: "", companyName: "", vatNumber: "", address: "" });
       fetchGuests();
     }
     setIsLoading(false);
@@ -329,6 +335,36 @@ export function NewReservationDialog({
                       placeholder="+1 (555) 000-0000"
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newCompanyName">Company Name</Label>
+                    <Input
+                      id="newCompanyName"
+                      value={newGuest.companyName}
+                      onChange={(e) => setNewGuest({ ...newGuest, companyName: e.target.value })}
+                      placeholder="Acme Corp"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newVatNumber">VAT / TAX ID</Label>
+                    <Input
+                      id="newVatNumber"
+                      value={newGuest.vatNumber}
+                      onChange={(e) => setNewGuest({ ...newGuest, vatNumber: e.target.value })}
+                      placeholder="VAT123456"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newAddress">Address</Label>
+                  <Textarea
+                    id="newAddress"
+                    value={newGuest.address}
+                    onChange={(e) => setNewGuest({ ...newGuest, address: e.target.value })}
+                    placeholder="123 Street, City, Country"
+                    rows={2}
+                  />
                 </div>
                 <Button onClick={handleCreateNewGuest} disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
