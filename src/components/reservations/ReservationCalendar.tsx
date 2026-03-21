@@ -17,6 +17,11 @@ interface Reservation {
   guest: {
     first_name: string;
     last_name: string;
+    email?: string | null;
+    phone?: string | null;
+    company_name?: string | null;
+    vat_number?: string | null;
+    address?: string | null;
   };
   room: {
     room_number: string;
@@ -96,7 +101,7 @@ export function ReservationCalendar() {
           check_in_date,
           check_out_date,
           status,
-          guest:guests(first_name, last_name),
+          guest:guests(first_name, last_name, email, phone, address),
           room:rooms(room_number, room_type)
         `)
         .gte("check_out_date", startDate)

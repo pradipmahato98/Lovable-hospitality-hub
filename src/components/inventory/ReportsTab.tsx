@@ -210,7 +210,7 @@ export function ReportsTab() {
        });
     } else {
        headers = ["Item", "Category", "Stock", "Avg Cost", "Value"];
-       rows = (items || []).map(i => [i.name, i.category?.category_name || "-", i.current_stock, formatCurrency(i.avg_cost || i.cost_price), formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))]);
+       rows = (items || []).map(i => [i.name, i.category?.name || "-", i.current_stock, formatCurrency(i.avg_cost || i.cost_price), formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))]);
     }
 
     const data = { title: `${reportName} - Inventory`, headers, rows };
@@ -601,7 +601,7 @@ export function ReportsTab() {
                      {activeReport?.title === "Stock Valuation" && activeReport.data.map((i: InventoryItem) => (
                         <TableRow key={i.id}>
                            <TableCell className="text-xs">{i.name}</TableCell>
-                           <TableCell className="text-xs">{i.category?.category_name || "-"}</TableCell>
+                           <TableCell className="text-xs">{i.category?.name || "-"}</TableCell>
                            <TableCell className="text-xs font-bold">{i.current_stock}</TableCell>
                            <TableCell className="text-xs font-mono">{formatCurrency(i.avg_cost || i.cost_price)}</TableCell>
                            <TableCell className="text-xs font-bold font-mono">{formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))}</TableCell>

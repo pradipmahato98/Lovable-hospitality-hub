@@ -289,7 +289,7 @@ const POSTerminal = () => {
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="tables" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
               Tables

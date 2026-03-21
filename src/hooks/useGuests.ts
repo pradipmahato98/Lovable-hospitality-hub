@@ -7,6 +7,7 @@ export interface Guest {
   last_name: string;
   email: string | null;
   phone: string | null;
+  address: string | null;
   total_visits: number | null;
   total_spending: number | null;
   is_vip: boolean | null;

@@ -39,7 +39,7 @@ const Engineering = () => {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <div className="xl:col-span-3">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList>
+            <TabsList className="flex flex-wrap h-auto gap-1">
               <TabsTrigger value="requests" className="gap-2">
                 <Wrench className="h-4 w-4" />
                 Requests

@@ -29,7 +29,7 @@ const Housekeeping = () => {
   return (
     <MainLayout title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />
             Rooms
