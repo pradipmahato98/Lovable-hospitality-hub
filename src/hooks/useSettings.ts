@@ -3,6 +3,7 @@ import { supabase as _supabase } from "@/integrations/supabase/client";
 const supabase = _supabase as any;
 import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
+import { navItems, operationsNavItems, adminNavItems } from "@/config/navigation";
 
 // Type definitions for all settings
 export interface CheckInFieldSettings {
@@ -417,20 +418,11 @@ export function useLocalizationSettings() {
 }
 
 export function useUserRolesPermissions() {
-  const { data: role } = useUserRole();
-  const isAdmin = role === "admin";
-
-  const { data: navItems = [] } = useQuery({
-    queryKey: ["nav-items-config"],
-    queryFn: async () => {
-      const { navItems, operationsNavItems, adminNavItems } = await import("@/config/navigation");
-      return [...navItems, ...operationsNavItems, ...adminNavItems];
-    }
-  });
+  const allModules = [...navItems, ...operationsNavItems, ...adminNavItems];
 
   const defaultPermissions: UserRolesSettingsData = {
     global_enabled: true,
-    modules: navItems.reduce((acc, item) => {
+    modules: allModules.reduce((acc, item) => {
       acc[item.label] = {
         view: true,
         write: true,
