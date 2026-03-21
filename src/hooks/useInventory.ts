@@ -355,7 +355,7 @@ async function cleanPayload(table: string, payload: Record<string, any>) {
   // Fallback if the RPC doesn't exist yet (standard for this project until migration 20260320)
   if (!cols) {
     const missingInLegacy: Record<string, string[]> = {
-      inventory_items: ['attributes', 'item_code', 'safety_stock', 'temperature_classification', 'shelf_life_days', 'avg_cost', 'last_purchase_cost', 'tax_applicability', 'image_url', 'uom_id'],
+      inventory_items: ['attributes', 'item_code', 'item_type', 'shelf_life', 'safety_stock', 'temperature_classification', 'shelf_life_days', 'avg_cost', 'last_purchase_cost', 'tax_applicability', 'image_url', 'uom_id'],
       stock_movements: ['store_id', 'requisition_id'],
       inventory_categories: ['category_name', 'parent_category', 'sku_prefix'],
       inventory_stores: ['store_name', 'temperature_classification', 'storage_conditions'],
@@ -687,11 +687,11 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
       // Try to get new columns individually to detect existence without crashing the whole query
       let { data, error } = await db
         .from("inventory_items")
-        .select(`id, name, sku, item_code, attributes, avg_cost, safety_stock, category_id, supplier_id, unit, current_stock, min_stock, max_stock, reorder_point, cost_price, selling_price, location, department, is_active, last_restocked_at, created_at, category:inventory_categories(id, name, category_name, parent_id, parent_category), supplier:suppliers(*), uom:inventory_uoms(*)`)
+        .select(`id, name, sku, item_code, item_type, attributes, avg_cost, safety_stock, category_id, supplier_id, unit, current_stock, min_stock, max_stock, reorder_point, cost_price, selling_price, location, department, is_active, last_restocked_at, created_at, category:inventory_categories(id, name, category_name, parent_id, parent_category), supplier:suppliers(*), uom:inventory_uoms(*)`)
         .eq("is_active", true);
 
-      // If it fails due to missing columns (attributes, item_code, etc.), fall back to a minimal set
-      if (error && (error.message.includes("attributes") || error.message.includes("item_code") || error.message.includes("avg_cost"))) {
+      // If it fails due to missing columns (attributes, item_code, item_type, etc.), fall back to a minimal set
+      if (error && (error.message.includes("attributes") || error.message.includes("item_code") || error.message.includes("avg_cost") || error.message.includes("item_type"))) {
         console.warn("Detected missing columns in inventory_items, falling back to minimal select");
         const fallback = await db
           .from("inventory_items")
@@ -1377,18 +1377,18 @@ export function useInventoryTransfers() {
           .select(`*, item:inventory_items(name, item_code, unit), from_store:inventory_stores!from_store_id(store_name), to_store:inventory_stores!to_store_id(store_name)`)
           .order("created_at", { ascending: false });
 
-        if (error && (error.message.includes("item_code") || error.message.includes("store_name"))) {
-           const legacy = await db.from("inventory_transfers").select(`*, item:inventory_items(name, sku, unit)`).order("created_at", { ascending: false });
+        if (error && (error.message.includes("item_code") || error.message.includes("inventory_stores") || error.message.includes("store_name"))) {
+           const legacy = await db.from("inventory_transfers").select(`*, item:inventory_items(id, name, sku, unit)`).order("created_at", { ascending: false });
            return (legacy.data || []).map((t: any) => ({
              ...t,
-             item: { ...t.item, item_code: t.item?.sku }
+             item: t.item ? { ...t.item, item_code: t.item.item_code || t.item.sku } : undefined
            })) as any[];
         }
         if (error) throw error;
         return (data || []).map((t: any) => ({
            ...t,
-           from_store: { name: t.from_store?.store_name },
-           to_store: { name: t.to_store?.store_name }
+           from_store: t.from_store ? { name: t.from_store.store_name } : undefined,
+           to_store: t.to_store ? { name: t.to_store.store_name } : undefined
         })) as InventoryTransfer[];
       } catch (e) {
         return [];
@@ -1545,10 +1545,17 @@ export function useInventoryStockCounts() {
     queryKey: ["inventory-stock-counts"],
     queryFn: async () => {
       try {
-        const { data, error } = await db
+        let { data, error } = await db
           .from("inventory_stock_counts")
           .select(`*, store:inventory_stores(*), items:inventory_stock_count_items(*, item:inventory_items(*))`)
           .order("created_at", { ascending: false });
+
+        if (error && (error.message.includes("inventory_stores") || error.message.includes("inventory_stock_count_items"))) {
+           const legacy = await db.from("inventory_stock_counts").select("*").order("created_at", { ascending: false });
+           data = legacy.data;
+           error = legacy.error;
+        }
+
         if (error) throw error;
         return data as InventoryStockCount[];
       } catch (e) {
@@ -1641,7 +1648,11 @@ export function useInventoryReturns() {
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory_supplier_returns" }, () => {
         queryClient.invalidateQueries({ queryKey: ["inventory-supplier-returns"] });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          supabase.removeChannel(channel);
+        }
+      });
     return () => { supabase.removeChannel(channel); };
   }, [queryClient]);
 

@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command, Wrench, Receipt } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Search, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -20,87 +21,75 @@ export function HeaderSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
+  const performSearch = useCallback(async (query: string) => {
     setSearching(true);
     try {
-      const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }, { data: maintenance }, { data: invoices }] = await Promise.all([
+      const [{ data: guests }, { data: profiles }, { data: rooms }, { data: reservations }] = await Promise.all([
         supabase
           .from("guests")
           .select("id, first_name, last_name, email, phone")
           .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
-          .limit(10),
+          .limit(5),
         supabase
           .from("profiles")
           .select("user_id, first_name, last_name, email")
           .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)
-          .limit(10),
+          .limit(5),
         supabase
           .from("rooms")
           .select("id, room_number, room_type")
           .ilike("room_number", `%${query}%`)
-          .limit(10),
+          .limit(5),
         supabase
           .from("reservations")
           .select("id, reservation_code, status")
           .ilike("reservation_code", `%${query}%`)
-          .limit(10),
-        supabase
-          .from("maintenance_requests")
-          .select("id, request_number, issue")
-          .or(`request_number.ilike.%${query}%,issue.ilike.%${query}%`)
-          .limit(10),
-        supabase
-          .from("invoices")
-          .select("id, invoice_number, status")
-          .ilike("invoice_number", `%${query}%`)
-          .limit(10),
+          .limit(5),
       ]);
 
-      const rawResults = [
+      const results = [
         ...(guests || []).map(g => ({ type: "guest", ...g })),
         ...(profiles || []).map(p => ({ type: "staff", ...p })),
         ...(rooms || []).map(r => ({ type: "room", ...r })),
         ...(reservations || []).map(r => ({ type: "reservation", ...r })),
-        ...(maintenance || []).map(m => ({ type: "maintenance", ...m })),
-        ...(invoices || []).map(i => ({ type: "invoice", ...i })),
       ];
-
-      // De-duplicate results to avoid "repleted" showing
-      // We use a Map to keep unique results. If a person appears as both staff and guest,
-      // we'll prefer one or show both if they have different IDs, but here we try to be smarter.
-      const uniqueMap = new Map();
-      rawResults.forEach(res => {
-        // Create a identity key based on ID or email or identifiers
-        const id = res.id || res.user_id || res.reservation_code || res.room_number;
-        const email = res.email?.toLowerCase();
-
-        // If it's a person (guest/staff), try to de-duplicate by email if ID is different
-        let identityKey = `${res.type}-${id}`;
-        if ((res.type === "guest" || res.type === "staff") && email) {
-          identityKey = `person-${email}`;
-        }
-
-        if (!uniqueMap.has(identityKey)) {
-          uniqueMap.set(identityKey, res);
-        }
-      });
-
-      setSearchResults(Array.from(uniqueMap.values()));
+      setSearchResults(results);
       setSelectedIndex(0);
     } catch (error) {
       console.error("Search error:", error);
     } finally {
       setSearching(false);
     }
+  }, []);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      performSearch(query);
+    }, 400);
   };
 
   const handleResultClick = (result: any) => {
@@ -112,8 +101,6 @@ export function HeaderSearch() {
     else if (result.type === "staff") navigate("/staff");
     else if (result.type === "room") navigate("/rooms");
     else if (result.type === "reservation") navigate("/reservations");
-    else if (result.type === "maintenance") navigate("/engineering?tab=requests");
-    else if (result.type === "invoice") navigate("/finance?tab=transactions");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -153,23 +140,19 @@ export function HeaderSearch() {
   }, []);
 
   return (
-    <div className="w-full flex justify-center">
+    <>
       <Button
         variant="outline"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setSearchOpen(true);
-        }}
-        className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[800px] h-11 px-4 text-muted-foreground hover:text-foreground bg-secondary/40 border-border/60 hover:border-primary/40 hover:bg-secondary/60 transition-all rounded-xl group shadow-md"
+        onClick={() => setSearchOpen(true)}
+        className="hidden lg:flex items-center justify-start gap-3 w-full max-w-[450px] h-9 px-3 text-muted-foreground hover:text-foreground bg-secondary/30 border-border/40 hover:bg-secondary/50 transition-all rounded-full group"
       >
-        <div className="flex items-center gap-2.5">
-          <Search className="h-5 w-5 shrink-0 transition-colors group-hover:text-primary" />
-          <span className="text-sm font-medium tracking-tight">Search for anything...</span>
+        <div className="flex items-center gap-2">
+          <Search className="h-3.5 w-3.5 shrink-0 transition-colors group-hover:text-primary" />
+          <span className="text-xs font-normal">Global Search...</span>
         </div>
-        <div className="ml-auto flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+        <div className="ml-auto flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
           <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
-            <Command className="h-2.5 w-2.5" />
+            <Command className="h-2 w-2" />
           </kbd>
           <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
             K
@@ -181,9 +164,9 @@ export function HeaderSearch() {
         variant="ghost"
         size="icon"
         onClick={() => setSearchOpen(true)}
-        className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-10 h-10"
+        className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-secondary w-9 h-9 sm:w-10 sm:h-10"
       >
-        <Search className="h-5 w-5" />
+        <Search className="h-4 w-4" />
       </Button>
 
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
@@ -232,11 +215,9 @@ export function HeaderSearch() {
                 ref={scrollContainerRef}
                 className="flex-1 overflow-y-auto p-2 space-y-1"
               >
-                {searchResults.map((result, index) => {
-                  const itemKey = `${result.type}-${result.id || result.user_id || result.room_number || result.reservation_code}`;
-                  return (
+                {searchResults.map((result, index) => (
                   <div
-                    key={itemKey}
+                    key={index}
                     className={cn(
                       "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200",
                       selectedIndex === index ? "bg-primary text-primary-foreground shadow-md scale-[1.01]" : "hover:bg-secondary"
@@ -252,8 +233,6 @@ export function HeaderSearch() {
                         {result.type === "staff" && <Users className="h-4 w-4" />}
                         {result.type === "room" && <Home className="h-4 w-4" />}
                         {result.type === "reservation" && <ClipboardList className="h-4 w-4" />}
-                        {result.type === "maintenance" && <Wrench className="h-4 w-4" />}
-                        {result.type === "invoice" && <Receipt className="h-4 w-4" />}
                       </div>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
@@ -262,8 +241,6 @@ export function HeaderSearch() {
                             {result.type === "staff" && `${result.first_name} ${result.last_name}`}
                             {result.type === "room" && `Room ${result.room_number}`}
                             {result.type === "reservation" && result.reservation_code}
-                            {result.type === "maintenance" && result.request_number}
-                            {result.type === "invoice" && result.invoice_number}
                           </span>
                           <Badge
                             variant={selectedIndex === index ? "secondary" : "outline"}
@@ -283,8 +260,6 @@ export function HeaderSearch() {
                           {result.type === "staff" && result.email}
                           {result.type === "room" && result.room_type}
                           {result.type === "reservation" && `Status: ${result.status}`}
-                          {result.type === "maintenance" && result.issue}
-                          {result.type === "invoice" && `Status: ${result.status}`}
                         </p>
                       </div>
                     </div>
@@ -293,7 +268,7 @@ export function HeaderSearch() {
                       selectedIndex === index ? "opacity-100" : "opacity-0"
                     )} />
                   </div>
-                )})}
+                ))}
               </div>
             )}
 
@@ -334,6 +309,6 @@ export function HeaderSearch() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

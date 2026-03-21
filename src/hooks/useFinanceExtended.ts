@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 
 // ============= Types =============
 export interface Invoice {
@@ -256,16 +255,6 @@ export function useExpenses(filters?: { status?: string; category?: string; star
 // ============= Tax Rates =============
 export function useTaxRates() {
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("tax-rates-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tax_rates" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
 
   const query = useQuery({
     queryKey: ["tax-rates"],

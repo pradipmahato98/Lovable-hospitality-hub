@@ -24,22 +24,16 @@ interface NewGuestDialogProps {
 interface GuestFormData {
   first_name: string;
   last_name: string;
-  company_name: string;
-  vat_number: string;
   email: string;
   phone: string;
-  address: string;
   is_vip: boolean;
 }
 
 const initialFormData: GuestFormData = {
   first_name: "",
   last_name: "",
-  company_name: "",
-  vat_number: "",
   email: "",
   phone: "",
-  address: "",
   is_vip: false,
 };
 
@@ -57,10 +51,6 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
           email: data.email || null,
           phone: data.phone || null,
           is_vip: data.is_vip,
-          // @ts-ignore - Dynamic fields
-          company_name: data.company_name || null,
-          vat_number: data.vat_number || null,
-          address: data.address || null,
         })
         .select()
         .single();
@@ -130,41 +120,6 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
                   required
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="company_name">Company Name</Label>
-                <Input
-                  id="company_name"
-                  placeholder="Acme Corp"
-                  value={formData.company_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, company_name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vat_number">VAT/TAX Number</Label>
-                <Input
-                  id="vat_number"
-                  placeholder="VAT123456"
-                  value={formData.vat_number}
-                  onChange={(e) =>
-                    setFormData({ ...formData, vat_number: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                placeholder="123 Street, City, Country"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

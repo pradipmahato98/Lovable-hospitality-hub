@@ -7,11 +7,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { 
-  Package, Search, Loader2, Settings, AlertTriangle, History, ShieldCheck
+  Package, Search, Loader2, Settings, AlertTriangle
 } from "lucide-react";
 import { useFixedAssets } from "@/hooks/useFixedAssets";
 import { formatCurrency, formatAD } from "@/lib/utils";
-import { addMonths } from "date-fns";
 
 const categoryColors: Record<string, string> = {
   "HVAC": "bg-blue-500/20 text-blue-400",
@@ -136,8 +135,8 @@ export function AssetsTab() {
                     <TableHead>Category</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Acquired</TableHead>
-                    <TableHead>Warranty</TableHead>
-                    <TableHead>Service</TableHead>
+                    <TableHead>Useful Life</TableHead>
+                    <TableHead>Net Value</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -177,18 +176,13 @@ export function AssetsTab() {
                           <TableCell className="text-sm">{formatAD(new Date(asset.acquisition_date))}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <ShieldCheck className={`h-4 w-4 ${needsAttention ? "text-amber-500" : "text-success"}`} />
-                              <span className="text-xs">
-                                {asset.warranty_expiry ? formatAD(new Date(asset.warranty_expiry)) : "No record"}
+                              <span className={needsAttention ? "text-amber-500" : ""}>
+                                {lifeRemaining} mo remaining
                               </span>
+                              {needsAttention && <AlertTriangle className="h-4 w-4 text-amber-500" />}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <History className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-xs">3 Logs</span>
-                            </div>
-                          </TableCell>
+                          <TableCell className="font-medium">{formatCurrency(netValue)}</TableCell>
                           <TableCell>
                             <Badge className={
                               asset.status === "active" 

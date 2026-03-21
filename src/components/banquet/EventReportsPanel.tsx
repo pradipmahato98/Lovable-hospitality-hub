@@ -18,25 +18,7 @@ import {
   Calendar,
   Users,
   DollarSign,
-  TrendingDown,
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart as RePieChart,
-  Pie,
-  Cell,
-  Legend,
-  BarChart,
-  Bar,
-  Line,
-  ComposedChart
-} from "recharts";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 import { BanquetCashierReport } from "./BanquetCashierReport";
 import { useQuery } from "@tanstack/react-query";
@@ -53,7 +35,6 @@ interface BanquetEvent {
   guest_count: number;
   status: "inquiry" | "confirmed" | "in_progress" | "completed" | "cancelled";
   total_amount: number;
-  deposit_amount?: number | null;
 }
 
 interface EventReportsPanelProps {
@@ -97,11 +78,9 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
     });
     return Array.from(map.entries())
       .map(([month, data]) => ({ month, ...data }))
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .slice(-6); // Last 6 months for chart
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .slice(0, 12);
   }, [events]);
-
-  const CHART_COLORS = ['#0066ff', '#00cfde', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
   // Event type distribution
   const eventTypeDistribution = useMemo(() => {
@@ -142,10 +121,6 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
   // Totals
   const totals = useMemo(() => {
     const completed = events.filter((e) => e.status === "completed");
-    const forecast = events
-      .filter((e) => e.status === "confirmed" || e.status === "in_progress")
-      .reduce((s, e) => s + e.total_amount, 0);
-
     return {
       totalEvents: events.length,
       completedEvents: completed.length,
@@ -154,7 +129,6 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
       avgRevenuePerEvent: completed.length > 0 
         ? completed.reduce((s, e) => s + e.total_amount, 0) / completed.length 
         : 0,
-      forecastRevenue: forecast,
     };
   }, [events]);
 
@@ -188,9 +162,9 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
     const map = new Map<string, { count: number; totalHours: number; revenue: number }>();
     events.forEach((e) => {
       const current = map.get(e.venue) || { count: 0, totalHours: 0, revenue: 0 };
-      const startParts = (e as any).start_time?.split(":") || ["0", "0"];
-      const endParts = (e as any).end_time?.split(":") || ["0", "0"];
-      const hours = Math.max(0, (Number(endParts[0]) || 0) - (Number(startParts[0]) || 0) + ((Number(endParts[1]) || 0) - (Number(startParts[1]) || 0)) / 60);
+      const startParts = (e as any).start_time?.split(":") || [0, 0];
+      const endParts = (e as any).end_time?.split(":") || [0, 0];
+      const hours = Math.max(0, Number(endParts[0]) - Number(startParts[0]) + (Number(endParts[1]) - Number(startParts[1])) / 60);
       map.set(e.venue, {
         count: current.count + 1,
         totalHours: current.totalHours + hours,
@@ -232,12 +206,12 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10"><Calendar className="h-5 w-5 text-primary" /></div>
-              <div><p className="text-sm text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Total Events</p><p className="text-2xl font-bold">{totals.totalEvents}</p></div>
+              <div><p className="text-sm text-muted-foreground">Total Events</p><p className="text-2xl font-bold">{totals.totalEvents}</p></div>
             </div>
           </CardContent>
         </Card>
@@ -245,7 +219,7 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-success/10"><DollarSign className="h-5 w-5 text-success" /></div>
-              <div><p className="text-sm text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Total Revenue</p><p className="text-2xl font-bold">{formatCurrency(totals.totalRevenue)}</p></div>
+              <div><p className="text-sm text-muted-foreground">Total Revenue</p><p className="text-2xl font-bold">{formatCurrency(totals.totalRevenue)}</p></div>
             </div>
           </CardContent>
         </Card>
@@ -253,7 +227,7 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10"><Users className="h-5 w-5 text-blue-500" /></div>
-              <div><p className="text-sm text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Total Guests</p><p className="text-2xl font-bold">{totals.totalGuests.toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted-foreground">Total Guests</p><p className="text-2xl font-bold">{totals.totalGuests.toLocaleString()}</p></div>
             </div>
           </CardContent>
         </Card>
@@ -261,15 +235,7 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-amber-500/10"><TrendingUp className="h-5 w-5 text-amber-500" /></div>
-              <div><p className="text-sm text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Revenue Forecast</p><p className="text-2xl font-bold">{formatCurrency(totals.forecastRevenue)}</p></div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hidden lg:block">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10"><TrendingUp className="h-5 w-5 text-purple-500" /></div>
-              <div><p className="text-sm text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Avg Rev/Event</p><p className="text-2xl font-bold">{formatCurrency(totals.avgRevenuePerEvent)}</p></div>
+              <div><p className="text-sm text-muted-foreground">Avg Revenue/Event</p><p className="text-2xl font-bold">{formatCurrency(totals.avgRevenuePerEvent)}</p></div>
             </div>
           </CardContent>
         </Card>
@@ -292,81 +258,7 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revenue Trend Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Revenue & Guest Trends
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {monthlyTrends.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No trend data available</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyTrends}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0066ff" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#0066ff" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="left" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(val) => `$${val/1000}k`} />
-                  <YAxis yAxisId="right" orientation="right" fontSize={10} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend />
-                  <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue" stroke="#0066ff" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
-                  <Line yAxisId="right" type="monotone" dataKey="guests" name="Guests" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Revenue by Event Type Pie */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5 text-primary" />
-              Revenue Distribution by Type
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {revenueByType.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No data available</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <RePieChart>
-                  <Pie
-                    data={revenueByType}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="amount"
-                    nameKey="type"
-                  >
-                    {revenueByType.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Legend />
-                </RePieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revenue by Event Type Bar */}
+        {/* Revenue by Event Type */}
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Revenue by Event Type</CardTitle></CardHeader>
           <CardContent>
@@ -392,20 +284,22 @@ export function EventReportsPanel({ events }: EventReportsPanelProps) {
 
         {/* Event Type Distribution */}
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><PieChart className="h-5 w-5" /> Event Count by Type</CardTitle></CardHeader>
-          <CardContent className="h-[250px]">
+          <CardHeader><CardTitle className="flex items-center gap-2"><PieChart className="h-5 w-5" /> Event Type Distribution</CardTitle></CardHeader>
+          <CardContent>
             {eventTypeDistribution.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No events yet</p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={eventTypeDistribution} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                  <XAxis type="number" fontSize={10} hide />
-                  <YAxis dataKey="type" type="category" fontSize={10} axisLine={false} tickLine={false} width={80} />
-                  <Tooltip cursor={{fill: '#f8fafc'}} />
-                  <Bar dataKey="count" fill="#0066ff" radius={[0, 4, 4, 0]} barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-3">
+                {eventTypeDistribution.map(({ type, count, percentage }) => (
+                  <div key={type} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={eventTypeColors[type] || eventTypeColors.other}>{type}</Badge>
+                      <span className="text-sm text-muted-foreground">({count} events)</span>
+                    </div>
+                    <span className="font-mono text-sm">{percentage.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

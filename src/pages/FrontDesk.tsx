@@ -1,8 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useInvoices } from "@/hooks/useBillingData";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard, ArrowUpCircle, AlarmClock, LogIn, Key } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
-import { CheckInOutDialog } from "@/components/reservations/CheckInOutDialog";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
 import { QueueManager } from "@/components/front-desk/QueueManager";
 import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
@@ -54,37 +51,12 @@ const invoiceStatusColors = {
 };
 
 const FrontDesk = () => {
-  const queryClient = useQueryClient();
   const { data: rooms = [], isLoading } = useRooms();
   const { data: invoices = [] } = useInvoices();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Real-time room status sync
-  useEffect(() => {
-    const channel = supabase
-      .channel('room-status-sync')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'rooms'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['rooms'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
   const activeTab = searchParams.get("tab") || "rooms";
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [checkInOpen, setCheckInOpen] = useState(false);
-  const [checkInMode, setCheckInMode] = useState<"walk-in" | "check-in">("walk-in");
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -153,7 +125,7 @@ const FrontDesk = () => {
     <MainLayout title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="w-full">
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="rooms" className="gap-2"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
             <TabsTrigger value="billing" className="gap-2"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
             <TabsTrigger value="folios" className="gap-2"><FileText className="h-4 w-4" />Guest Folios</TabsTrigger>
@@ -187,35 +159,9 @@ const FrontDesk = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 flex-1 sm:flex-initial"
-                      onClick={() => {
-                        setCheckInMode("check-in");
-                        setCheckInOpen(true);
-                      }}
-                    >
-                      <LogIn className="h-4 w-4 text-primary" />
-                      Reservation
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 flex-1 sm:flex-initial"
-                      onClick={() => {
-                        setCheckInMode("walk-in");
-                        setCheckInOpen(true);
-                      }}
-                    >
-                      <UserPlus className="h-4 w-4 text-success" />
-                      Walk-in
-                    </Button>
-                    <Button variant="blue" size="sm" className="gap-2 flex-1 sm:flex-initial" onClick={() => setNewRoomOpen(true)}>
-                      <Plus className="h-4 w-4" />Add Room
-                    </Button>
-                  </div>
+                  <Button variant="blue" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewRoomOpen(true)}>
+                    <Plus className="h-4 w-4" />Add Room
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -354,13 +300,6 @@ const FrontDesk = () => {
             </div>
           </TabsContent>
         </Tabs>
-
-        <CheckInOutDialog
-          open={checkInOpen}
-          onOpenChange={setCheckInOpen}
-          mode={checkInMode}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["rooms"] })}
-        />
       </ErrorBoundary>
     </MainLayout>
   );

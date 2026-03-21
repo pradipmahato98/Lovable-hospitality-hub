@@ -340,7 +340,7 @@ const DevPanel = () => {
     <MainLayout title="Developer Panel" subtitle="System monitoring and diagnostics (Admin only)">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="w-full bg-muted/50 p-1 inline-flex">
+          <TabsList className="flex-nowrap justify-start min-w-max bg-muted/50 p-1 h-auto inline-flex">
             <TabsTrigger value="status" className="gap-2 whitespace-nowrap flex-shrink-0">
             <Activity className="h-4 w-4" />
             System Status

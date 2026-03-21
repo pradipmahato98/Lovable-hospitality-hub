@@ -1,5 +1,4 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
@@ -9,15 +8,12 @@ import {
 } from "lucide-react";
 import { useHousekeepingStats, useLostAndFound } from "@/hooks/useHousekeeping";
 import { 
-  RoomsTab, TasksTab, InspectionsTab, LostFoundTab, SuppliesTab, HousekeepingReportsTab, AttendantMode
+  RoomsTab, TasksTab, InspectionsTab, LostFoundTab, SuppliesTab, HousekeepingReportsTab
 } from "@/components/housekeeping";
-import { Button } from "@/components/ui/button";
-import { Smartphone } from "lucide-react";
 
 const Housekeeping = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "rooms";
-  const [isMobileMode, setIsMobileMode] = useState(false);
   const today = new Date().toISOString().split("T")[0];
   const stats = useHousekeepingStats(today);
   const { data: lostItems = [] } = useLostAndFound("stored");
@@ -30,28 +26,10 @@ const Housekeeping = () => {
     });
   };
 
-  if (isMobileMode) {
-    return <AttendantMode />;
-  }
-
   return (
-    <MainLayout
-      title="Housekeeping"
-      subtitle="Room cleaning, tasks, inspections, and lost & found management"
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsMobileMode(true)}
-          className="gap-2"
-        >
-          <Smartphone className="h-4 w-4" />
-          Attendant Mode
-        </Button>
-      }
-    >
+    <MainLayout title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="w-full gap-1">
+        <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />
             Rooms
