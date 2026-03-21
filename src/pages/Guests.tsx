@@ -232,7 +232,7 @@ const Guests = () => {
     <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="flex-wrap">
+          <TabsList>
             <TabsTrigger value="guests" className="gap-2"><Users className="h-4 w-4" />Guests</TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2">
               <MessageSquare className="h-4 w-4" />Feedback
