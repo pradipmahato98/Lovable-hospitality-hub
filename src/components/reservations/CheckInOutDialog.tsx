@@ -216,6 +216,23 @@ export function CheckInOutDialog({
 
   const handleCheckIn = async () => {
     if (!reservationId) return;
+
+    // Check if room is available
+    const { data: resData } = await supabase
+      .from("reservations")
+      .select("room:rooms(status, room_number)")
+      .eq("id", reservationId)
+      .single();
+
+    if (resData?.room && (resData.room as any).status !== "available") {
+      toast({
+        variant: "destructive",
+        title: "Room not ready",
+        description: `Room ${(resData.room as any).room_number} is currently ${(resData.room as any).status}. Please wait until it is available.`,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     const { error } = await supabase

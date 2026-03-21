@@ -126,6 +126,18 @@ export function RoomsTab() {
           completed_at: status === "clean" ? new Date().toISOString() : null,
         });
       }
+
+      // Sync with rooms table status
+      if (status === "clean") {
+        await supabase.from("rooms").update({ status: "available" }).eq("id", roomId);
+      } else if (status === "dirty" || status === "in_progress") {
+        const { data: room } = await supabase.from("rooms").select("status").eq("id", roomId).single();
+        if (room?.status === "available") {
+          await supabase.from("rooms").update({ status: "cleaning" }).eq("id", roomId);
+        }
+      } else if (status === "out_of_order") {
+        await supabase.from("rooms").update({ status: "maintenance" }).eq("id", roomId);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["housekeeping-rooms-status"] });
