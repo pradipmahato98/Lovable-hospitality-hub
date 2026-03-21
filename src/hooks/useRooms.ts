@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export interface Room {
   id: string;
@@ -15,14 +16,39 @@ export interface Room {
   updated_at: string;
 }
 
-export const useRooms = () => {
+export const useRooms = (propertyId?: string) => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("rooms-all-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "rooms" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["rooms", propertyId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, propertyId]);
+
   return useQuery({
-    queryKey: ["rooms"],
+    queryKey: ["rooms", propertyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("rooms")
         .select("*")
         .order("room_number", { ascending: true });
+
+      if (propertyId) {
+        q = q.eq("property_id", propertyId);
+      }
+
+      const { data, error } = await q;
 
       if (error) throw error;
       return data as Room[];

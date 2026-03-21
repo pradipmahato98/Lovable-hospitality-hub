@@ -34,8 +34,8 @@ export interface Reservation {
   } | null;
 }
 
-async function fetchReservations(): Promise<Reservation[]> {
-  const { data, error } = await supabase
+async function fetchReservations(propertyId?: string): Promise<Reservation[]> {
+  let q = supabase
     .from("reservations")
     .select(`
       id,
@@ -56,20 +56,25 @@ async function fetchReservations(): Promise<Reservation[]> {
       guest_id,
       room_id,
       guest:guests(first_name, last_name, email, phone),
-      room:rooms(room_number, room_type, price_per_night)
-    `)
-    .order("check_in_date", { ascending: false });
+      room:rooms!inner(room_number, room_type, price_per_night, property_id)
+    `);
+
+  if (propertyId) {
+    q = q.eq("room.property_id", propertyId);
+  }
+
+  const { data, error } = await q.order("check_in_date", { ascending: false });
 
   if (error) throw error;
   return data as unknown as Reservation[];
 }
 
-export const useReservations = () => {
+export const useReservations = (propertyId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: reservations = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["reservations"],
-    queryFn: fetchReservations,
+    queryKey: ["reservations", propertyId],
+    queryFn: () => fetchReservations(propertyId),
   });
 
   const filterReservations = useCallback(

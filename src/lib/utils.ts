@@ -15,6 +15,11 @@ export const AD_DATETIME_FORMAT = "dd/MM/yyyy HH:mm";
 /** Standard AD datetime with seconds: dd/MM/yyyy HH:mm:ss */
 export const AD_DATETIME_SEC_FORMAT = "dd/MM/yyyy HH:mm:ss";
 
+/** Round financial numbers to 2 decimal places precisely */
+export function roundFinance(num: number): number {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
 /** Format a number as currency (NPR by default) */
 export function formatCurrency(
   amount: number | null | undefined,

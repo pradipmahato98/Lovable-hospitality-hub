@@ -16,11 +16,11 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
   const { collapsed, isMobile } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background transition-all duration-300">
       <Sidebar />
       <div 
         className={cn(
-          "transition-[margin] duration-300 ease-in-out min-h-screen flex flex-col",
+          "transition-all duration-300 min-h-screen flex flex-col",
           isMobile ? "ml-0" : collapsed ? "ml-20" : "ml-64"
         )}
       >

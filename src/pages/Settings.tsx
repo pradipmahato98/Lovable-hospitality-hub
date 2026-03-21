@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload } from "lucide-react";
+import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload, Layout } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
   usePaymentSettings, useUpdatePaymentSettings,
@@ -22,10 +22,10 @@ import {
   CheckInSettingsCard, PaymentSettingsCard, NotificationSettingsCard,
   PropertySettingsCard, SecuritySettingsCard, BookingSourcesCard, RatePlansCard,
   QuickMenuSettingsCard, BroadcastSettings, PaymentGatewayConfigPanel, ConfigureModuleCard,
-  LocalizationSettingsCard,
+  LocalizationSettingsCard, UIStandardizationCard,
 } from "@/components/settings";
 
-type SettingsTab = "checkin" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure";
+type SettingsTab = "checkin" | "localization" | "payment" | "sources" | "rates" | "property" | "notifications" | "security" | "quickmenu" | "broadcast" | "configure" | "ui";
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,6 +82,7 @@ const Settings = () => {
     { id: "notifications" as const, icon: Bell, label: "Notifications" },
     { id: "broadcast" as const, icon: Megaphone, label: "Broadcasts" },
     { id: "configure" as const, icon: Settings2, label: "Configure" },
+    { id: "ui" as const, icon: Layout, label: "UI Standardization" },
     { id: "security" as const, icon: Shield, label: "Security" },
   ];
 
@@ -253,6 +254,7 @@ const Settings = () => {
             )}
             {activeTab === "broadcast" && <BroadcastSettings />}
             {activeTab === "configure" && <ConfigureModuleCard />}
+            {activeTab === "ui" && <UIStandardizationCard />}
             {activeTab === "security" && <SecuritySettingsCard />}
           </div>
         </div>

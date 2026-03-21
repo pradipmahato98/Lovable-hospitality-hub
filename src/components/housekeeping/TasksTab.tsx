@@ -88,6 +88,7 @@ export function TasksTab() {
     try {
       await createTask.mutateAsync({ 
         ...newTask, 
+        assigned_to: newTask.assigned_to === "unassigned" ? null : newTask.assigned_to,
         status: "pending",
         scheduled_date: dateStr,
       } as any);
@@ -106,7 +107,7 @@ export function TasksTab() {
         id: editTask.id,
         task_type: newTask.task_type,
         priority: newTask.priority,
-        assigned_to: newTask.assigned_to || null,
+        assigned_to: (newTask.assigned_to === "unassigned" || !newTask.assigned_to) ? null : newTask.assigned_to,
         notes: newTask.notes,
       });
       toast.success("Task updated");
@@ -218,7 +219,7 @@ export function TasksTab() {
                 <Select value={newTask.assigned_to} onValueChange={(v) => setNewTask({ ...newTask, assigned_to: v })}>
                   <SelectTrigger><SelectValue placeholder="Select staff (optional)" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {housekeepingStaff.map((s) => (
                       <SelectItem key={s.id} value={s.first_name + " " + s.last_name}>
                         {s.first_name} {s.last_name}
@@ -412,7 +413,7 @@ export function TasksTab() {
               <Select value={newTask.assigned_to} onValueChange={(v) => setNewTask({ ...newTask, assigned_to: v })}>
                 <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {housekeepingStaff.map((s) => (
                     <SelectItem key={s.id} value={s.first_name + " " + s.last_name}>
                       {s.first_name} {s.last_name}

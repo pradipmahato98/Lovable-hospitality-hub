@@ -87,6 +87,7 @@ export interface UIPreferences {
   // Animations
   animation_preset: "linear" | "smooth" | "spring" | "none";
   sidebar_dropdowns_enabled: boolean;
+  persistent_popups: boolean;
   // Release Management
   is_staged: boolean;
   last_published_at?: string;
@@ -113,6 +114,11 @@ export interface APIKey {
 
 export interface APIKeysSettings {
   keys: APIKey[];
+}
+
+export interface BanquetSettings {
+  venues: { id: string; name: string; capacity: number }[];
+  menu_packages: { id: string; name: string; price_per_head: number }[];
 }
 
 export interface LocalizationSettings {
@@ -204,6 +210,7 @@ const defaultUIPreferences: UIPreferences = {
   saturation: 1.2,
   animation_preset: "spring",
   sidebar_dropdowns_enabled: true,
+  persistent_popups: true,
   is_staged: false,
 };
 
@@ -233,6 +240,21 @@ const defaultUITemplates: UITemplatesSettings = {
 
 const defaultAPIKeys: APIKeysSettings = {
   keys: [],
+};
+
+const defaultBanquetSettings: BanquetSettings = {
+  venues: [
+    { id: "ballroom", name: "Grand Ballroom", capacity: 500 },
+    { id: "crystal", name: "Crystal Room", capacity: 200 },
+    { id: "garden", name: "Royal Garden", capacity: 1000 },
+    { id: "meeting_a", name: "Meeting Room A", capacity: 50 },
+  ],
+  menu_packages: [
+    { id: "standard", name: "Standard Buffet", price_per_head: 45 },
+    { id: "premium", name: "Premium Buffet", price_per_head: 75 },
+    { id: "deluxe", name: "Deluxe Plated", price_per_head: 95 },
+    { id: "gourmet", name: "Gourmet Experience", price_per_head: 125 },
+  ],
 };
 
 const defaultLocalizationSettings: LocalizationSettings = {
@@ -409,4 +431,12 @@ export function useBusinessDate() {
 
 export function useUpdateBusinessDate() {
   return useUpdateSettings<string>("business_date");
+}
+
+export function useBanquetSettings() {
+  return useSettings<BanquetSettings>("banquet_settings", defaultBanquetSettings);
+}
+
+export function useUpdateBanquetSettings() {
+  return useUpdateSettings<BanquetSettings>("banquet_settings");
 }

@@ -15,7 +15,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { 
-  Plus, Package, Search, Filter, Loader2, Eye, Check
+  Plus, Package, Search, Filter, Loader2, Eye, Check, History
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLostAndFound, LostAndFound } from "@/hooks/useHousekeeping";
@@ -45,12 +45,22 @@ export function LostFoundTab() {
     filterStatus !== "all" ? filterStatus : undefined
   );
 
+  const { data: guests = [] } = useQuery({
+    queryKey: ["guests-simple"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("guests").select("id, first_name, last_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [newItem, setNewItem] = useState({
     item_description: "",
     found_location: "",
     found_by: "",
     category: "",
     storage_location: "",
+    guest_id: "",
     notes: "",
   });
 
@@ -143,11 +153,39 @@ export function LostFoundTab() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Found Location *</Label>
-                      <Input 
-                        value={newItem.found_location}
-                        onChange={(e) => setNewItem({ ...newItem, found_location: e.target.value })}
-                        placeholder="e.g., Room 101, Lobby"
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          value={newItem.found_location}
+                          onChange={(e) => setNewItem({ ...newItem, found_location: e.target.value })}
+                          placeholder="e.g., Room 101, Lobby"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          title="Get Last Guest"
+                          onClick={async () => {
+                            if (!newItem.found_location) return;
+                            const roomNum = newItem.found_location.match(/\d+/)?.[0];
+                            if (roomNum) {
+                              const { data } = await (supabase as any)
+                                .from("reservations")
+                                .select("guest_id, guests(first_name, last_name), rooms!inner(room_number)")
+                                .eq("rooms.room_number", roomNum)
+                                .order("check_out", { ascending: false })
+                                .limit(1)
+                                .maybeSingle();
+
+                              if (data) {
+                                setNewItem(prev => ({ ...prev, guest_id: data.guest_id }));
+                                toast.info(`Linked to last guest: ${data.guests.first_name} ${data.guests.last_name}`);
+                              }
+                            }
+                          }}
+                        >
+                          <History className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Category</Label>
@@ -162,6 +200,18 @@ export function LostFoundTab() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Linked Guest (Optional)</Label>
+                      <Select value={newItem.guest_id} onValueChange={(v) => setNewItem({ ...newItem, guest_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select guest" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {guests.map((g: any) => (
+                            <SelectItem key={g.id} value={g.id}>{g.first_name} {g.last_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2">
                       <Label>Found By</Label>
                       <Input 

@@ -17,7 +17,8 @@ import {
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
   useSuppliers, usePurchaseOrders, useInventoryWastage,
-  useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts
+  useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts,
+  InventoryItem, StockMovement, InventoryWastage, Supplier
 } from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
