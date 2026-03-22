@@ -122,9 +122,10 @@ const FrontDesk = () => {
   ];
 
   return (
-    <MainLayout title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
+    <MainLayout fixedHeight title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
+          <div className="px-4 sm:px-6">
           <TabsList>
             <TabsTrigger value="rooms" className="gap-2"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
             <TabsTrigger value="billing" className="gap-2"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
@@ -137,9 +138,11 @@ const FrontDesk = () => {
             <TabsTrigger value="keycards" className="gap-2"><Key className="h-4 w-4" />Key Cards</TabsTrigger>
             <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
           </TabsList>
+          </div>
 
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           {/* Rooms Tab */}
-          <TabsContent value="rooms">
+          <TabsContent value="rooms" className="mt-0 focus-visible:outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-3 space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -220,10 +223,10 @@ const FrontDesk = () => {
           <TabsContent value="wakeup"><WakeUpCallScheduler /></TabsContent>
           <TabsContent value="group"><GroupCheckInOut /></TabsContent>
           <TabsContent value="keycards"><KeyCardManagement /></TabsContent>
-          <TabsContent value="reports"><FrontDeskReportsTab /></TabsContent>
+          <TabsContent value="reports" className="mt-0 focus-visible:outline-none"><FrontDeskReportsTab /></TabsContent>
 
           {/* Billing Tab */}
-          <TabsContent value="billing">
+          <TabsContent value="billing" className="mt-0 focus-visible:outline-none">
             <div className="space-y-6">
               {(() => {
                 const totalRevenue = invoices.reduce((s: number, i: any) => s + (i.total || 0), 0);
@@ -299,6 +302,7 @@ const FrontDesk = () => {
               </Card>
             </div>
           </TabsContent>
+          </div>
         </Tabs>
       </ErrorBoundary>
     </MainLayout>

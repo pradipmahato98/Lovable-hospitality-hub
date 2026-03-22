@@ -13,9 +13,10 @@ export interface MainLayoutProps {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  fixedHeight?: boolean;
 }
 
-export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
+export function MainLayout({ children, title, subtitle, actions, fixedHeight = false }: MainLayoutProps) {
   const { collapsed, isMobile } = useSidebar();
   const { data: uiPrefs } = useUIPreferences();
   const navStyle = uiPrefs?.navigation_style || "default";
@@ -43,7 +44,10 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         <AnimatePresence mode="wait">
           {isHorizontal && <HorizontalNav />}
         </AnimatePresence>
-        <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden scrollbar-hide">
+        <main className={cn(
+          "flex-1 overflow-x-hidden scrollbar-hide",
+          fixedHeight ? "overflow-hidden" : "p-4 sm:p-6 overflow-y-auto"
+        )}>
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

@@ -130,9 +130,9 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
   const ActiveComponent = tabs.find((t) => t.id === activeSubTab)?.component;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4">
+    <div className="flex flex-col lg:flex-row gap-4 h-full overflow-hidden">
       {/* Mobile: horizontal scroll tabs */}
-      <div className="lg:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+      <div className="lg:hidden overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
         <div className="flex gap-1.5 min-w-max pb-2">
           {tabs.map((tab) => (
             <Button
@@ -148,18 +148,19 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
         </div>
       </div>
       {/* Desktop: vertical scrollable sidebar tabs */}
-      <div className="hidden lg:block w-44 xl:w-48 shrink-0">
-        <div className="sticky top-16 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide space-y-0.5 pr-2 border-r border-border/60">
+      <div className="hidden lg:block w-48 xl:w-56 shrink-0 h-full overflow-y-auto scrollbar-hide border-r border-border/60 pr-2">
+        <div className="space-y-0.5">
           {tabs.map((tab) => (
             <Button
               key={tab.id}
               variant={activeSubTab === tab.id ? "default" : "ghost"}
               size="sm"
-              className={`w-full justify-start text-xs h-9 ${
+              className={cn(
+                "w-full justify-start text-xs h-9 transition-colors",
                 activeSubTab === tab.id
-                  ? ""
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              )}
               onClick={() => setActiveSubTab(tab.id)}
             >
               {tab.label}
@@ -168,7 +169,7 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
         </div>
       </div>
       {/* Content area */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-y-auto pr-2 scrollbar-hide">
         {ActiveComponent && <ActiveComponent />}
       </div>
     </div>
@@ -221,6 +222,7 @@ export default function Finance() {
 
   return (
     <MainLayout
+      fixedHeight
       title="Finance & Accounting"
       subtitle={`Business Date: ${businessDate || "Loading..."} ${businessDate ? `(${formatISOasBS(businessDate, "short")} BS)` : ""}`}
       actions={
@@ -230,8 +232,8 @@ export default function Finance() {
         </Badge>
       }
     >
-      <div className="space-y-6">
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+      <div className="flex flex-col h-full overflow-hidden">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
               <TabsTrigger value="dashboard" className={tabTriggerClass}>
@@ -288,18 +290,61 @@ export default function Finance() {
           </TabsContent>
 
           {/* ========== SETUP ========== */}
-          <TabsContent value="setup" className="mt-4">
-            <SubTabPanel tabs={setupSubTabs} />
+          <TabsContent value="setup" className="flex-1 overflow-hidden mt-0">
+             <div className="h-full p-4 sm:p-6 overflow-hidden">
+                <SubTabPanel tabs={setupSubTabs} />
+             </div>
           </TabsContent>
 
           {/* ========== TRANSACTIONS ========== */}
-          <TabsContent value="transactions" className="mt-4">
-            <SubTabPanel tabs={transactionSubTabs} />
+          <TabsContent value="transactions" className="flex-1 overflow-hidden mt-0">
+             <div className="h-full p-4 sm:p-6 overflow-hidden">
+                <SubTabPanel tabs={transactionSubTabs} />
+             </div>
           </TabsContent>
 
           {/* ========== REPORTS ========== */}
-          <TabsContent value="reports" className="mt-4">
-            <SubTabPanel tabs={reportSubTabs} />
+          <TabsContent value="reports" className="flex-1 overflow-hidden mt-0">
+             <div className="h-full p-4 sm:p-6 overflow-hidden">
+                <SubTabPanel tabs={reportSubTabs} />
+             </div>
+          </TabsContent>
+
+          <TabsContent value="dashboard" className="flex-1 overflow-y-auto mt-0">
+             <div className="p-4 sm:p-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <MetricCard title="Total Assets" value={formatCurrency(totalAssets)} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
+                  <MetricCard title="Net Income" value={formatCurrency(netIncome)} change={netIncome >= 0 ? "Profit" : "Loss"} changeType={netIncome >= 0 ? "positive" : "negative"} icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight} delay={50} />
+                  <MetricCard title="Outstanding Receivables" value={formatCurrency(stats.outstandingReceivables)} change={`${stats.invoiceCount} invoices`} changeType="neutral" icon={CreditCard} delay={100} />
+                  <MetricCard title="Trial Balance" value={isBalanced ? "Balanced" : "Unbalanced"} change={isBalanced ? "All entries balanced" : `Diff: ${formatCurrency(Math.abs(totalDebits - totalCredits))}`} changeType={isBalanced ? "positive" : "negative"} icon={Scale} delay={150} />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <MetricCard title="Total Accounts" value={accounts.length.toString()} change={`${accounts.filter((a) => a.is_active).length} active`} changeType="neutral" icon={BookOpen} delay={200} />
+                  <MetricCard title="Journal Entries" value={journalEntries.length.toString()} change={`${journalEntries.filter((e) => e.is_posted).length} posted`} changeType="neutral" icon={FileText} delay={250} />
+                  <MetricCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
+                  <MetricCard title="Total Expenses" value={formatCurrency(stats.totalExpenses)} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("transactions")}>
+                    <Send className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Journal Entries</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("transactions")}>
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Invoices & Payments</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("reports")}>
+                    <Scale className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Trial Balance</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("reports")}>
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Financial Statements</span>
+                  </Button>
+                </div>
+             </div>
           </TabsContent>
 
         </Tabs>

@@ -283,12 +283,13 @@ const POSTerminal = () => {
   };
 
   return (
-    <MainLayout title="POS Terminal" subtitle="Process orders and handle table service">
+    <MainLayout fixedHeight title="POS Terminal" subtitle="Process orders and handle table service">
+      <div className="flex flex-col h-full overflow-hidden">
       <POSHeader />
 
       {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-4 px-4 sm:px-6 mt-4">
           <TabsList>
             <TabsTrigger value="tables" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
@@ -309,8 +310,9 @@ const POSTerminal = () => {
           </TabsList>
         </div>
 
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
         {/* Tables Tab - Table Selection System */}
-        <TabsContent value="tables">
+        <TabsContent value="tables" className="mt-0 focus-visible:outline-none">
           <POSTableSystem onCheckout={(total, items) => {
             toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
           }} />
@@ -764,7 +766,9 @@ const POSTerminal = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        </div>
       </Tabs>
+      </div>
     </MainLayout>
   );
 };

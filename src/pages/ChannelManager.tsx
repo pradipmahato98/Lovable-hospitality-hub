@@ -96,9 +96,10 @@ function ChannelManager() {
   const totalRevenue = reportStats?.totalReservationRevenue || 0;
 
   return (
-    <MainLayout title="Channel Manager" subtitle="Manage OTA connections and distribution">
+    <MainLayout fixedHeight title="Channel Manager" subtitle="Manage OTA connections and distribution">
+      <div className="flex flex-col h-full overflow-hidden">
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 px-4 sm:px-6 mt-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -145,16 +146,19 @@ function ChannelManager() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="px-4 sm:px-6">
         <TabsList>
           <TabsTrigger value="channels" className="gap-2"><Globe className="h-4 w-4" />Channels</TabsTrigger>
           <TabsTrigger value="rates" className="gap-2"><DollarSign className="h-4 w-4" />Rate Calendar</TabsTrigger>
           <TabsTrigger value="logs" className="gap-2"><History className="h-4 w-4" />Sync Logs</TabsTrigger>
           <TabsTrigger value="reports" className="gap-2"><BarChart3 className="h-4 w-4" />Reports</TabsTrigger>
         </TabsList>
+        </div>
 
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
         {/* Channels Tab */}
-        <TabsContent value="channels">
+        <TabsContent value="channels" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {isLoading ? (
               <div className="col-span-full flex items-center justify-center py-20">
@@ -312,7 +316,7 @@ function ChannelManager() {
         </TabsContent>
 
         {/* Reports Tab */}
-        <TabsContent value="reports">
+        <TabsContent value="reports" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -360,7 +364,9 @@ function ChannelManager() {
             </Card>
           </div>
         </TabsContent>
+        </div>
       </Tabs>
+      </div>
 
       {/* Edit Channel Commission Dialog */}
       <Dialog open={!!editingChannel} onOpenChange={() => setEditingChannel(null)}>

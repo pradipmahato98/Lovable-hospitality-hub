@@ -53,13 +53,19 @@ const StaffManagement = () => {
   }
 
   const canSeeRestricted = isAdmin || isManager;
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   return (
-    <MainLayout title="Staff Management" subtitle="Manage employees and your professional profile">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-          <aside className="w-full md:w-64 flex-shrink-0">
-            <TabsList className="flex md:flex-col h-auto w-full bg-card/50 border border-border/50 p-2 gap-1 overflow-x-auto md:overflow-visible justify-start md:items-stretch rounded-xl scrollbar-hide">
+    <MainLayout fixedHeight title="Staff Management" subtitle="Manage employees and your professional profile">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full h-full flex flex-col overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1 overflow-hidden p-4 sm:p-6">
+          <aside className="w-full md:w-64 flex-shrink-0 md:h-full md:overflow-y-auto scrollbar-hide">
+            <TabsList
+              className={cn(
+                "flex md:flex-col h-auto w-full bg-card/50 border border-border/50 p-2 gap-1 overflow-x-auto md:overflow-visible justify-start md:items-stretch rounded-xl scrollbar-hide transition-all duration-300",
+              )}
+            >
               {canSeeRestricted && (
                 <TabsTrigger value="directory" className="justify-start gap-3 px-4 py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg">
                   <Users className="h-4 w-4" />
@@ -124,52 +130,52 @@ const StaffManagement = () => {
             </TabsList>
           </aside>
 
-          <main className="flex-1 min-w-0">
-            <TabsContent value="directory" className="mt-0">
+          <main className="flex-1 min-w-0 overflow-y-auto pr-2 scrollbar-hide">
+            <TabsContent value="directory" className="mt-0 focus-visible:outline-none">
               {canSeeRestricted && <StaffDirectoryTab />}
             </TabsContent>
 
-            <TabsContent value="details" className="mt-0">
+            <TabsContent value="details" className="mt-0 focus-visible:outline-none">
               <PersonalDetailsTab />
             </TabsContent>
 
-            <TabsContent value="preferences" className="mt-0">
+            <TabsContent value="preferences" className="mt-0 focus-visible:outline-none">
               <PreferencesTab />
             </TabsContent>
 
-            <TabsContent value="alerts" className="mt-0">
+            <TabsContent value="alerts" className="mt-0 focus-visible:outline-none">
               <AlertsTab />
             </TabsContent>
 
-            <TabsContent value="security" className="mt-0">
+            <TabsContent value="security" className="mt-0 focus-visible:outline-none">
               <SecurityTab />
             </TabsContent>
 
-            <TabsContent value="schedules" className="mt-0">
+            <TabsContent value="schedules" className="mt-0 focus-visible:outline-none">
               <SchedulesTab />
             </TabsContent>
 
-            <TabsContent value="payroll" className="mt-0">
+            <TabsContent value="payroll" className="mt-0 focus-visible:outline-none">
               <PayrollTab />
             </TabsContent>
 
-            <TabsContent value="leave" className="mt-0">
+            <TabsContent value="leave" className="mt-0 focus-visible:outline-none">
               <LeaveTab />
             </TabsContent>
 
-            <TabsContent value="performance" className="mt-0">
+            <TabsContent value="performance" className="mt-0 focus-visible:outline-none">
               <PerformanceTab />
             </TabsContent>
 
-            <TabsContent value="attendance" className="mt-0">
+            <TabsContent value="attendance" className="mt-0 focus-visible:outline-none">
               <AttendanceTab />
             </TabsContent>
 
-            <TabsContent value="logs" className="mt-0">
+            <TabsContent value="logs" className="mt-0 focus-visible:outline-none">
               <LogsReportTab />
             </TabsContent>
 
-            <TabsContent value="analytics" className="mt-0">
+            <TabsContent value="analytics" className="mt-0 focus-visible:outline-none">
               <StaffAnalyticsTab />
             </TabsContent>
           </main>

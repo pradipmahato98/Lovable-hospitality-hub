@@ -49,9 +49,10 @@ const Reports = () => {
   const revenueBySource = stats?.revenueBySource || [];
 
   return (
-    <MainLayout title="Reports" subtitle="Analytics and business intelligence">
-      <Tabs value={activeReportTab} onValueChange={handleTabChange} className="space-y-8">
-        <div className="flex justify-between items-center">
+    <MainLayout fixedHeight title="Reports" subtitle="Analytics and business intelligence">
+      <div className="flex flex-col h-full overflow-hidden">
+      <Tabs value={activeReportTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-8">
+        <div className="flex justify-between items-center px-4 sm:px-6 mt-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
@@ -65,8 +66,9 @@ const Reports = () => {
           </div>
         </div>
 
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
         {/* Overview */}
-        <TabsContent value="overview" className="space-y-8">
+        <TabsContent value="overview" className="space-y-8 mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {reportTypes.map((report) => (
               <Card key={report.title} variant="elevated">
@@ -209,10 +211,12 @@ const Reports = () => {
         </TabsContent>
 
         {/* Financial Summary */}
-        <TabsContent value="financial" className="space-y-6">
+        <TabsContent value="financial" className="space-y-6 mt-0 focus-visible:outline-none">
           <FinancialSummaryReport />
         </TabsContent>
+        </div>
       </Tabs>
+      </div>
     </MainLayout>
   );
 };
