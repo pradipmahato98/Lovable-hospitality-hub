@@ -32,23 +32,6 @@ export const navItems: NavItemConfig[] = [
     ]
   },
   {
-    icon: Users,
-    label: "Guests",
-    path: "/guests",
-    defaultTab: "guests",
-    subItems: [
-      { label: "Guests", tab: "guests" },
-      { label: "Feedback", tab: "feedback" },
-      { label: "Loyalty", tab: "loyalty" },
-      { label: "Preferences", tab: "preferences" },
-      { label: "Communications", tab: "communications" },
-      { label: "Documents", tab: "documents" },
-      { label: "History", tab: "history" },
-      { label: "Messaging", tab: "messaging" },
-      { label: "De-dup", tab: "dedup" },
-    ]
-  },
-  {
     icon: BedDouble,
     label: "Front Desk",
     path: "/front-desk",
@@ -80,18 +63,6 @@ export const navItems: NavItemConfig[] = [
     ]
   },
   {
-    icon: Wrench,
-    label: "Engineering",
-    path: "/engineering",
-    defaultTab: "requests",
-    subItems: [
-      { label: "Requests", tab: "requests" },
-      { label: "Preventive", tab: "preventive" },
-      { label: "Assets", tab: "assets" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
     icon: ShoppingCart,
     label: "POS",
     path: "/pos",
@@ -100,6 +71,31 @@ export const navItems: NavItemConfig[] = [
       { label: "Terminal", path: "/pos/terminal" },
       { label: "History", path: "/pos/history" },
       { label: "Reports", path: "/pos/reports" },
+    ]
+  },
+  {
+    icon: PartyPopper,
+    label: "Banquet",
+    path: "/banquet",
+    defaultTab: "events",
+    subItems: [
+      { label: "Events", tab: "events" },
+      { label: "Calendar", tab: "calendar" },
+      { label: "Catering", tab: "catering" },
+      { label: "Venue Setup", tab: "venue" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: DollarSign,
+    label: "Finance/Account",
+    path: "/finance",
+    defaultTab: "dashboard",
+    subItems: [
+      { label: "Dashboard", tab: "dashboard" },
+      { label: "Setup", tab: "setup" },
+      { label: "Transactions", tab: "transactions" },
+      { label: "Reports", tab: "reports" },
     ]
   },
   {
@@ -117,41 +113,15 @@ export const navItems: NavItemConfig[] = [
       { label: "Reports", tab: "stock-on-hand" },
     ]
   },
+  { icon: Lock, label: "Day Close", path: "/day-close" },
   {
-    icon: Globe,
-    label: "Channel Manager",
-    path: "/channel-manager",
-    defaultTab: "channels",
+    icon: Moon,
+    label: "Night Audit",
+    path: "/night-audit",
+    defaultTab: "audit",
     subItems: [
-      { label: "Channels", tab: "channels" },
-      { label: "Rate Calendar", tab: "rates" },
-      { label: "Sync Logs", tab: "logs" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: DollarSign,
-    label: "Finance/Account",
-    path: "/finance",
-    defaultTab: "dashboard",
-    subItems: [
-      { label: "Dashboard", tab: "dashboard" },
-      { label: "Setup", tab: "setup" },
-      { label: "Transactions", tab: "transactions" },
-      { label: "Reports", tab: "reports" },
-    ]
-  },
-  {
-    icon: PartyPopper,
-    label: "Banquet",
-    path: "/banquet",
-    defaultTab: "events",
-    subItems: [
-      { label: "Events", tab: "events" },
-      { label: "Calendar", tab: "calendar" },
-      { label: "Catering", tab: "catering" },
-      { label: "Venue Setup", tab: "venue" },
-      { label: "Reports", tab: "reports" },
+      { label: "Run Audit", tab: "audit" },
+      { label: "Audit History", tab: "history" },
     ]
   },
   {
@@ -190,19 +160,7 @@ export const navItems: NavItemConfig[] = [
   },
 ];
 
-export const operationsNavItems: NavItemConfig[] = [
-  {
-    icon: Moon,
-    label: "Night Audit",
-    path: "/night-audit",
-    defaultTab: "audit",
-    subItems: [
-      { label: "Run Audit", tab: "audit" },
-      { label: "Audit History", tab: "history" },
-    ]
-  },
-  { icon: Lock, label: "Day Close", path: "/day-close" },
-];
+export const operationsNavItems: NavItemConfig[] = [];
 
 export const adminNavItems: NavItemConfig[] = [
   {

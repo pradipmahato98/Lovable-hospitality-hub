@@ -124,11 +124,15 @@ export function HorizontalNav() {
   };
 
   const filteredMainItems = filterNavItems(navItems);
-  const visibleItems = filteredMainItems.slice(0, 6);
-  const hiddenNavItems = filteredMainItems.slice(6);
   const filteredOperationsItems = filterNavItems(operationsNavItems);
   const filteredAdminItems = isAdmin ? filterNavItems(adminNavItems) : [];
-  const moreItems = [...hiddenNavItems, ...filteredOperationsItems, ...filteredAdminItems];
+
+  const allEnabledItems = [...filteredMainItems, ...filteredOperationsItems, ...filteredAdminItems];
+
+  // Show top 10 items in the horizontal bar
+  const visibleItems = allEnabledItems.slice(0, 10);
+  // Anything after 10 goes into the More dropdown
+  const moreItems = allEnabledItems.slice(10);
 
   return (
     <motion.div
@@ -137,7 +141,7 @@ export function HorizontalNav() {
       exit={{ y: -10, opacity: 0 }}
       className="sticky top-14 z-20 w-full bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 border-b border-border/40 shadow-sm overflow-hidden"
     >
-      <div className="px-4 h-12 flex items-center gap-1.5 overflow-x-auto scrollbar-hide no-scrollbar">
+      <div className="px-4 h-12 flex items-center gap-1.5 overflow-x-auto scrollbar-hide no-scrollbar justify-center">
         {visibleItems.map(renderNavItem)}
 
         {moreItems.length > 0 && (
@@ -153,63 +157,23 @@ export function HorizontalNav() {
                 {t('common.more', 'More')}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[220px] p-1.5 max-h-[80vh] overflow-y-auto">
-              {hiddenNavItems.length > 0 && (
-                <>
-                  <div className="px-2 py-1.5 mb-1 border-b border-border/40">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Main Modules</p>
-                  </div>
-                  {hiddenNavItems.map((item) => (
-                    <DropdownMenuItem key={item.path} asChild>
-                      <Link to={item.path} className={cn(
-                        "flex items-center gap-2.5 py-2 px-2.5 cursor-pointer rounded-md",
-                        isItemActive(item.path) && "bg-primary/10 text-primary"
-                      )}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{t(`nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, item.label)}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-
-              {filteredOperationsItems.length > 0 && (
-                <>
-                  <div className="px-2 py-1.5 my-1 border-b border-border/40">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Operations</p>
-                  </div>
-                  {filteredOperationsItems.map((item) => (
-                    <DropdownMenuItem key={item.path} asChild>
-                      <Link to={item.path} className={cn(
-                        "flex items-center gap-2.5 py-2 px-2.5 cursor-pointer rounded-md",
-                        isItemActive(item.path) && "bg-primary/10 text-primary"
-                      )}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{t(`nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, item.label)}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-
-              {isAdmin && filteredAdminItems.length > 0 && (
-                <>
-                  <div className="px-2 py-1.5 my-1 border-b border-border/40">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Administration</p>
-                  </div>
-                  {filteredAdminItems.map((item) => (
-                    <DropdownMenuItem key={item.path} asChild>
-                      <Link to={item.path} className={cn(
-                        "flex items-center gap-2.5 py-2 px-2.5 cursor-pointer rounded-md",
-                        isItemActive(item.path) && "bg-primary/10 text-primary"
-                      )}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{t(`nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, item.label)}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
+            <DropdownMenuContent align="end" className="min-w-[220px] p-1.5 max-h-[80vh] overflow-y-auto shadow-2xl border-primary/20">
+               <div className="px-2 py-1.5 mb-1 border-b border-border/40">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Extended Modules</p>
+               </div>
+               {moreItems.map((item) => (
+                  <DropdownMenuItem key={item.path} asChild>
+                     <Link to={item.path} className={cn(
+                        "flex items-center gap-2.5 py-2.5 px-3 cursor-pointer rounded-md transition-colors",
+                        isItemActive(item.path)
+                           ? "bg-primary text-primary-foreground"
+                           : "hover:bg-primary/5 text-foreground"
+                     )}>
+                        <item.icon className={cn("h-4 w-4", isItemActive(item.path) ? "text-white" : "text-primary")} />
+                        <span className="font-semibold text-xs">{t(`nav.${item.label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, item.label)}</span>
+                     </Link>
+                  </DropdownMenuItem>
+               ))}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
