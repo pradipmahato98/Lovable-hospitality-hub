@@ -76,7 +76,7 @@ const Settings = () => {
   const tabs = [
     { id: "checkin" as const, icon: ClipboardCheck, label: "Check-in Settings" },
     { id: "ui" as const, icon: LayoutDashboard, label: "UI Standardization" },
-    { id: "user_roles" as const, icon: Shield, label: "User & Roles" },
+    { id: "user_roles" as const, icon: Shield, label: "User & Roles Management" },
     { id: "localization" as const, icon: Globe, label: "Localization" },
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },

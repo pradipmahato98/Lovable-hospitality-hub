@@ -103,6 +103,7 @@ export interface UIPreferences {
   sidebar_dropdowns_enabled: boolean;
   navigation_style: "default" | "vertical-icon" | "hidden-hover" | "horizontal-subheader";
   persistent_popups: boolean;
+  standardize_page_dropdowns: boolean;
   // Release Management
   is_staged: boolean;
   last_published_at?: string;
@@ -222,6 +223,7 @@ const defaultUIPreferences: UIPreferences = {
   sidebar_dropdowns_enabled: true,
   navigation_style: "default",
   persistent_popups: true,
+  standardize_page_dropdowns: true,
   is_staged: false,
 };
 
