@@ -118,10 +118,10 @@ const Reservations = () => {
   };
 
   return (
-    <MainLayout title="Reservations" subtitle="Manage all bookings and reservations">
+    <MainLayout fixedHeight title="Reservations" subtitle="Manage all bookings and reservations">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-6">
             <TabsList>
               <TabsTrigger value="list" className="gap-2">
                 <List className="h-4 w-4" />
@@ -160,7 +160,8 @@ const Reservations = () => {
             </div>
           </div>
 
-          <TabsContent value="list">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+          <TabsContent value="list" className="mt-0 focus-visible:outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className={selectedReservation ? "lg:col-span-3" : "lg:col-span-4"}>
                 <Card variant="elevated" className="animate-fade-in overflow-hidden">
@@ -309,13 +310,14 @@ const Reservations = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="calendar">
+          <TabsContent value="calendar" className="mt-0 focus-visible:outline-none">
             <ReservationCalendar />
           </TabsContent>
 
-          <TabsContent value="reports">
+          <TabsContent value="reports" className="mt-0 focus-visible:outline-none">
             <ReservationReportsTab />
           </TabsContent>
+          </div>
         </Tabs>
 
         <NewReservationDialog open={newDialogOpen} onOpenChange={setNewDialogOpen} onSuccess={refetch} />

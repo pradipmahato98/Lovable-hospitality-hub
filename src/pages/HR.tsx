@@ -68,9 +68,10 @@ const HR = () => {
   ];
 
   return (
-    <MainLayout title="HR Management" subtitle="Employee management and HR operations">
+    <MainLayout fixedHeight title="HR Management" subtitle="Employee management and HR operations">
+      <div className="flex flex-col h-full overflow-hidden">
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 px-4 sm:px-6 flex-shrink-0">
         {stats.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="p-4">
@@ -88,15 +89,18 @@ const HR = () => {
         ))}
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="px-4 sm:px-6">
         <TabsList>
           <TabsTrigger value="employees" className="gap-2"><Users className="h-4 w-4" />Employees</TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2"><DollarSign className="h-4 w-4" />Payroll</TabsTrigger>
           <TabsTrigger value="leave" className="gap-2"><CalendarDays className="h-4 w-4" />Leave</TabsTrigger>
           <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
         </TabsList>
+        </div>
 
-        <TabsContent value="employees">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <TabsContent value="employees" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <Card variant="elevated">
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
@@ -205,10 +209,12 @@ const HR = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="payroll"><PayrollPanel /></TabsContent>
-        <TabsContent value="leave"><LeaveManagement /></TabsContent>
-        <TabsContent value="reports"><HRReportsTab /></TabsContent>
+        <TabsContent value="payroll" className="mt-0 focus-visible:outline-none"><PayrollPanel /></TabsContent>
+        <TabsContent value="leave" className="mt-0 focus-visible:outline-none"><LeaveManagement /></TabsContent>
+        <TabsContent value="reports" className="mt-0 focus-visible:outline-none"><HRReportsTab /></TabsContent>
+        </div>
       </Tabs>
+      </div>
     </MainLayout>
   );
 };

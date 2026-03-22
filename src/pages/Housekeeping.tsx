@@ -27,8 +27,10 @@ const Housekeeping = () => {
   };
 
   return (
-    <MainLayout title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+    <MainLayout fixedHeight title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
+      <div className="flex flex-col h-full overflow-hidden">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="px-4 sm:px-6">
         <TabsList>
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />
@@ -57,8 +59,10 @@ const Housekeeping = () => {
             Reports
           </TabsTrigger>
         </TabsList>
+        </div>
 
-        <TabsContent value="rooms">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <TabsContent value="rooms" className="mt-0 focus-visible:outline-none">
           <RoomsTab />
         </TabsContent>
 
@@ -78,10 +82,12 @@ const Housekeeping = () => {
           <SuppliesTab />
         </TabsContent>
 
-        <TabsContent value="reports">
+        <TabsContent value="reports" className="mt-0 focus-visible:outline-none">
           <HousekeepingReportsTab />
         </TabsContent>
+        </div>
       </Tabs>
+      </div>
     </MainLayout>
   );
 };

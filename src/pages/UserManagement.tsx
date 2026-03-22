@@ -135,15 +135,16 @@ const UserManagement = () => {
   }
 
   return (
-    <MainLayout title="User Management" subtitle="Manage user roles and permissions (Admin only)">
+    <MainLayout fixedHeight title="User Management" subtitle="Manage user roles and permissions (Admin only)">
       <ErrorBoundary>
-        <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+        <div className="flex flex-col h-full overflow-hidden">
+        <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800 flex-shrink-0 mx-4 sm:mx-6 mt-4">
           <ShieldAlert className="h-4 w-4" />
           <span>You are viewing admin-only settings. Role changes take effect immediately.</span>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div className="overflow-x-auto pb-1 scrollbar-hide">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+          <div className="overflow-x-auto pb-1 scrollbar-hide px-4 sm:px-6">
             <TabsList>
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
                 <Users className="h-4 w-4" />
@@ -172,7 +173,8 @@ const UserManagement = () => {
             </TabsList>
           </div>
 
-          <TabsContent value="users">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+          <TabsContent value="users" className="mt-0 focus-visible:outline-none">
             <div className="flex justify-end mb-4">
               <Button variant="outline" onClick={exportUsersToExcel}>
                 <Download className="h-4 w-4 mr-2" />
@@ -331,7 +333,7 @@ const UserManagement = () => {
             <InvitationsTab />
           </TabsContent>
 
-          <TabsContent value="audit">
+          <TabsContent value="audit" className="mt-0 focus-visible:outline-none">
             <AuditLogTable
               logs={auditLogs}
               isLoading={isLoadingAudit}
@@ -343,7 +345,9 @@ const UserManagement = () => {
               onDateFilterChange={setAuditDateFilter}
             />
           </TabsContent>
+          </div>
         </Tabs>
+        </div>
       </ErrorBoundary>
     </MainLayout>
   );
