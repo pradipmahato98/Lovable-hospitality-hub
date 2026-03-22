@@ -46,16 +46,12 @@ import {
 import { usePOSTransactions, POSTransaction, POSOrderItem } from "@/hooks/usePOS";
 import { useSearchParams } from "react-router-dom";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isWithinInterval } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--success))", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export default function POSReports() {
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [period, setPeriod] = useState<"today" | "week" | "month" | "custom">("week");
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -452,14 +448,8 @@ export default function POSReports() {
         </div>
 
         {/* Charts Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div
-            className={cn(
-              "sticky z-10 transition-all duration-300",
-              isHorizontalNav ? "top-[112px]" : "top-14"
-            )}
-          >
-          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList>
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Revenue Trends
@@ -477,9 +467,8 @@ export default function POSReports() {
               Detailed Reports
             </TabsTrigger>
           </TabsList>
-          </div>
 
-          <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
+          <TabsContent value="overview" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Daily Revenue Chart */}
               <Card>

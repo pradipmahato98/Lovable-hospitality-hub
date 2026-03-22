@@ -50,8 +50,6 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { 
   DraggableBanquetCalendar,
@@ -405,8 +403,8 @@ export default function Banquet() {
 
   return (
     <ErrorBoundary>
-    <MainLayout title="Banquet & Events" subtitle="Manage events, bookings, and catering">
-      <div className="flex flex-col space-y-6">
+    <MainLayout fixedHeight title="Banquet & Events" subtitle="Manage events, bookings, and catering">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
@@ -456,14 +454,9 @@ export default function Banquet() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div
-            className={cn(
-              "sticky z-10 transition-all duration-300",
-              isHorizontalNav ? "top-[112px]" : "top-14"
-            )}
-          >
-          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 sm:px-6">
+          <TabsList>
             <TabsTrigger value="events" className="gap-2">
               <CalendarDays className="h-4 w-4" />
               Events
@@ -487,7 +480,7 @@ export default function Banquet() {
           </TabsList>
           </div>
 
-          <div className="mt-0">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           <TabsContent value="events" className="space-y-4 mt-0 focus-visible:outline-none">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="relative flex-1 max-w-sm">

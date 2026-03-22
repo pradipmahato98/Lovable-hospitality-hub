@@ -6,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Bed, ClipboardList, Package, ClipboardCheck, ShoppingBag, BarChart3
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 import { useHousekeepingStats, useLostAndFound } from "@/hooks/useHousekeeping";
 import { 
   RoomsTab, TasksTab, InspectionsTab, LostFoundTab, SuppliesTab, HousekeepingReportsTab
@@ -15,8 +13,6 @@ import {
 
 const Housekeeping = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const activeTab = searchParams.get("tab") || "rooms";
   const today = new Date().toISOString().split("T")[0];
   const stats = useHousekeepingStats(today);
@@ -31,16 +27,11 @@ const Housekeeping = () => {
   };
 
   return (
-    <MainLayout title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
-      <div className="flex flex-col space-y-6">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <div
-          className={cn(
-            "sticky z-10 transition-all duration-300",
-            isHorizontalNav ? "top-[112px]" : "top-14"
-          )}
-        >
-        <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+    <MainLayout fixedHeight title="Housekeeping" subtitle="Room cleaning, tasks, inspections, and lost & found management">
+      <div className="flex flex-col h-full overflow-hidden">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="px-4 sm:px-6">
+        <TabsList>
           <TabsTrigger value="rooms" className="gap-2">
             <Bed className="h-4 w-4" />
             Rooms
@@ -70,7 +61,7 @@ const Housekeeping = () => {
         </TabsList>
         </div>
 
-        <div className="mt-0">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
         <TabsContent value="rooms" className="mt-0 focus-visible:outline-none">
           <RoomsTab />
         </TabsContent>
