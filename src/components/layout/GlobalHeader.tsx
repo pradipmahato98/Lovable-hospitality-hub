@@ -9,7 +9,8 @@ import { HeaderUserMenu } from "./header/HeaderUserMenu";
 import { todayBS, formatBSDate } from "@/lib/nepaliDate";
 import { formatAD } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useLocalizationSettings, useUpdateLocalizationSettings } from "@/hooks/useSettings";
+import { useLocalizationSettings, useUpdateLocalizationSettings, useUIPreferences } from "@/hooks/useSettings";
+import { Hotel } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -44,10 +45,13 @@ export function Header({ title, subtitle }: HeaderProps) {
     }
   };
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontal = uiPrefs?.navigation_style === "horizontal-subheader" && !isMobile;
+
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center border-b border-border/60 bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4">
-      {/* Left Section: Title & Mobile Menu */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-[1_0_0%]">
+    <header className="sticky top-0 z-40 flex h-14 items-center border-b border-border/60 bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4">
+      {/* Left Section: Logo & Title & Mobile Menu */}
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-[1_0_0%]">
         {isMobile && (
           <Button
             variant="ghost"
@@ -57,6 +61,17 @@ export function Header({ title, subtitle }: HeaderProps) {
           >
             <Menu className="h-4 w-4" />
           </Button>
+        )}
+
+        {(isHorizontal || isMobile) && (
+          <div className="flex items-center gap-2.5 mr-2 pr-4 border-r border-border/40">
+             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blue flex-shrink-0 shadow-sm">
+                <Hotel className="h-4 w-4 text-primary-foreground" />
+             </div>
+             <span className="hidden sm:inline font-display text-lg font-bold text-gradient-blue tracking-tight">
+                LuxeStay
+             </span>
+          </div>
         )}
         
         <div className="min-w-0">

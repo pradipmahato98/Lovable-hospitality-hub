@@ -12,6 +12,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useIsAdmin, useIsManager } from "@/hooks/useUserRole";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { StaffDirectoryTab } from "@/components/staff/StaffDirectoryTab";
 import { PersonalDetailsTab } from "@/components/staff/PersonalDetailsTab";
@@ -57,13 +58,14 @@ const StaffManagement = () => {
   const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   return (
-    <MainLayout fixedHeight title="Staff Management" subtitle="Manage employees and your professional profile">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full h-full flex flex-col overflow-hidden">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1 overflow-hidden p-4 sm:p-6">
-          <aside className="w-full md:w-64 flex-shrink-0 md:h-full md:overflow-y-auto scrollbar-hide">
+    <MainLayout title="Staff Management" subtitle="Manage employees and your professional profile">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-10">
+          <aside className="w-full md:w-64 flex-shrink-0">
             <TabsList
               className={cn(
-                "flex md:flex-col h-auto w-full bg-card/50 border border-border/50 p-2 gap-1 overflow-x-auto md:overflow-visible justify-start md:items-stretch rounded-xl scrollbar-hide transition-all duration-300",
+                "flex md:flex-col h-auto w-full bg-card/50 border border-border/50 p-2 gap-1 overflow-x-auto md:overflow-visible justify-start md:items-stretch rounded-xl scrollbar-hide transition-all duration-300 sticky",
+                isHorizontalNav ? "top-[128px]" : "top-20"
               )}
             >
               {canSeeRestricted && (
@@ -130,8 +132,8 @@ const StaffManagement = () => {
             </TabsList>
           </aside>
 
-          <main className="flex-1 min-w-0 overflow-y-auto pr-2 scrollbar-hide">
-            <TabsContent value="directory" className="mt-0 focus-visible:outline-none">
+          <main className="flex-1 min-w-0">
+            <TabsContent value="directory" className="mt-0">
               {canSeeRestricted && <StaffDirectoryTab />}
             </TabsContent>
 
@@ -175,7 +177,7 @@ const StaffManagement = () => {
               <LogsReportTab />
             </TabsContent>
 
-            <TabsContent value="analytics" className="mt-0 focus-visible:outline-none">
+            <TabsContent value="analytics" className="mt-0">
               <StaffAnalyticsTab />
             </TabsContent>
           </main>

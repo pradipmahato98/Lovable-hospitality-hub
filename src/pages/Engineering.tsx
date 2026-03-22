@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Wrench, CalendarClock, Settings, BarChart3
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useMaintenanceRequests } from "@/hooks/useMaintenanceRequests";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { ModuleQuickActions, QuickAction } from "@/components/shared";
 import { Bed, DoorOpen, Users, FileText } from "lucide-react";
 import { 
@@ -34,14 +36,21 @@ const Engineering = () => {
     { icon: FileText, label: "Generate Report", to: "/reports", color: "text-primary" },
   ];
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
+
   return (
-    <MainLayout fixedHeight title="Engineering" subtitle="Maintenance, preventive schedules, and asset management">
-      <div className="flex flex-col h-full overflow-hidden">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 flex-1 overflow-hidden">
-        <div className="xl:col-span-3 flex flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-            <div className="px-4 sm:px-6">
-            <TabsList>
+    <MainLayout title="Engineering" subtitle="Maintenance, preventive schedules, and asset management">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="xl:col-span-3">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+            <div
+              className={cn(
+                "sticky z-10 transition-all duration-300",
+                isHorizontalNav ? "top-[112px]" : "top-14"
+              )}
+            >
+            <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
               <TabsTrigger value="requests" className="gap-2">
                 <Wrench className="h-4 w-4" />
                 Requests
@@ -62,7 +71,7 @@ const Engineering = () => {
             </TabsList>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+            <div className="mt-0">
             <TabsContent value="requests" className="mt-0 focus-visible:outline-none">
               <RequestsTab />
             </TabsContent>
@@ -81,10 +90,16 @@ const Engineering = () => {
             </div>
           </Tabs>
         </div>
-        <div className="space-y-6 p-4 sm:p-6 overflow-y-auto">
-          <ModuleQuickActions actions={quickActions} variant="list" />
+        <div className="space-y-6">
+          <div
+            className={cn(
+              "sticky z-10 transition-all duration-300",
+              isHorizontalNav ? "top-[112px]" : "top-14"
+            )}
+          >
+            <ModuleQuickActions actions={quickActions} variant="list" />
+          </div>
         </div>
-      </div>
       </div>
     </MainLayout>
   );

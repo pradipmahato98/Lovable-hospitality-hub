@@ -37,7 +37,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { supabase } from "@/integrations/supabase/client";
-import { useUpdateSettings, useSettings, useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
+import { useUpdateSettings, useSettings, useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey, useUIPreferences } from "@/hooks/useSettings";
 import {
   Dialog,
   DialogContent,
@@ -72,7 +72,7 @@ import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
 import { useReservations } from "@/hooks/useReservations";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -92,6 +92,8 @@ const AdminConsole = () => {
   }, []);
 
   const { isAdmin, isLoading: loadingAdmin } = useIsAdmin();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
   const navigate = useNavigate();
@@ -299,12 +301,22 @@ const AdminConsole = () => {
   if (!isAdmin && !import.meta.env.DEV) return <Navigate to="/" replace />;
 
   return (
-    <MainLayout fixedHeight title="Admin Console" subtitle="System-wide administrative controls and security">
+    <MainLayout title="Admin Console" subtitle="System-wide administrative controls and security">
       <ErrorBoundary>
-      <div className="flex flex-col h-full overflow-hidden">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-        <div className="overflow-x-auto pb-1 scrollbar-hide px-4 sm:px-6 mt-4">
-          <TabsList>
+      <div className="flex flex-col space-y-6">
+      <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+        <ShieldAlert className="h-4 w-4" />
+        <span>You are viewing admin-only settings. Role changes take effect immediately.</span>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <div
+          className={cn(
+            "overflow-x-auto pb-1 scrollbar-hide sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[112px]" : "top-14"
+          )}
+        >
+          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
             <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">
             <Activity className="h-4 w-4" />
             System Overview
@@ -340,7 +352,7 @@ const AdminConsole = () => {
           </TabsList>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <div className="mt-0">
         <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card variant="elevated">

@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { useNightAudit } from "@/hooks/useNightAudit";
 import { useReportStats } from "@/hooks/useReportStats";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { format, parseISO } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -138,11 +139,20 @@ function DayClose() {
     doc.save(`daily-summary-${businessDate || "report"}.pdf`);
   };
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
+
   return (
     <MainLayout title="Day Close" subtitle="Financial balancing and department reconciliation">
-      <div className="space-y-6">
+      <div className="flex flex-col space-y-6">
         {/* Status Card */}
-        <Card className={cn("border-l-4 transition-all", isClosed ? "border-l-success" : "border-l-amber-500")}>
+        <div
+          className={cn(
+            "sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[112px]" : "top-14"
+          )}
+        >
+        <Card className={cn("border-l-4 transition-all bg-background/80 backdrop-blur-md shadow-sm", isClosed ? "border-l-success" : "border-l-amber-500")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -164,6 +174,7 @@ function DayClose() {
             )}
           </CardHeader>
         </Card>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Revenue Summary */}

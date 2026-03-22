@@ -8,8 +8,9 @@ import {
   Target, ShieldCheck, FileText, Download, Briefcase, Users
 } from "lucide-react";
 import { useManagement } from "@/hooks/useManagement";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 
 const Management = () => {
@@ -18,10 +19,19 @@ const Management = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
+
   return (
-    <MainLayout fixedHeight title="Management Console" subtitle="Executive overview and strategic insights">
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex justify-between items-center px-4 sm:px-6 mb-6">
+    <MainLayout title="Management Console" subtitle="Executive overview and strategic insights">
+      <div className="flex flex-col space-y-6">
+        <div
+          className={cn(
+            "flex justify-between items-center sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[112px]" : "top-14"
+          )}
+        >
+          <div className="flex items-center gap-4 bg-background/80 backdrop-blur-md p-1 rounded-lg border shadow-sm w-full sm:w-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
             <TabsList>
               <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -33,9 +43,14 @@ const Management = () => {
             <Button variant="outline" size="sm"><Calendar className="h-4 w-4 mr-2" /> Today</Button>
             <Button size="sm"><Download className="h-4 w-4 mr-2" /> Export Summary</Button>
           </div>
+          </div>
+          <div className="hidden sm:flex gap-2">
+            <Button variant="outline" size="sm"><Calendar className="h-4 w-4 mr-2" /> Today</Button>
+            <Button size="sm"><Download className="h-4 w-4 mr-2" /> Export Summary</Button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6 space-y-6">
+        <div className="mt-0 space-y-6">
         {/* Executive Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">

@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { useReportStats } from "@/hooks/useReportStats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { formatCurrency } from "@/lib/utils";
 import { DailyManagementReport } from "@/components/reports/DailyManagementReport";
 import { useManagement } from "@/hooks/useManagement";
@@ -30,6 +32,8 @@ const Reports = () => {
   const activeReportTab = searchParams.get("tab") || "overview";
   const { data: stats, isLoading } = useReportStats();
   const { data: managementData, isLoading: isManagementLoading } = useManagement();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -49,11 +53,16 @@ const Reports = () => {
   const revenueBySource = stats?.revenueBySource || [];
 
   return (
-    <MainLayout fixedHeight title="Reports" subtitle="Analytics and business intelligence">
-      <div className="flex flex-col h-full overflow-hidden">
-      <Tabs value={activeReportTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-8">
-        <div className="flex justify-between items-center px-4 sm:px-6 mt-4">
-          <TabsList>
+    <MainLayout title="Reports" subtitle="Analytics and business intelligence">
+      <div className="flex flex-col space-y-8">
+      <Tabs value={activeReportTab} onValueChange={handleTabChange} className="space-y-8">
+        <div
+          className={cn(
+            "flex justify-between items-center sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[112px]" : "top-14"
+          )}
+        >
+          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="dmr">DMR Executive</TabsTrigger>
             <TabsTrigger value="daily">Daily Stats</TabsTrigger>
@@ -66,7 +75,7 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <div className="mt-0">
         {/* Overview */}
         <TabsContent value="overview" className="space-y-8 mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

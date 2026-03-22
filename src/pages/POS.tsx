@@ -4,8 +4,10 @@ import { POSDashboard, POSHeader } from "@/components/pos";
 const POS = () => {
   return (
     <MainLayout title="Point of Sale" subtitle="Manage your restaurant and bar operations">
-      <POSHeader />
-      <POSDashboard />
+      <div className="flex flex-col space-y-6">
+        <POSHeader />
+        <POSDashboard />
+      </div>
     </MainLayout>
   );
 };
