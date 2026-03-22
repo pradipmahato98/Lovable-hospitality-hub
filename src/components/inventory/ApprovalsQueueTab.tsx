@@ -3,29 +3,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Clock, ArrowRightLeft, ClipboardList, TrendingUp } from "lucide-react";
-import { useInventoryRequisitions, useInventoryTransfers, useInventoryItems } from "@/hooks/useInventory";
-import { supabase } from "@/integrations/supabase/client";
+import { useProcurementService } from "@/hooks/inventory/useProcurementService";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PendingAdjustment {
-  id: string;
+  movement_id: string;
   item_id: string;
   quantity: number;
   movement_type: string;
   notes: string | null;
-  item?: { name: string };
+  item?: { item_name: string };
 }
 
 export function ApprovalsQueueTab() {
-  const { data: requisitions = [], updateRequisitionStatus, refetch: refetchReq } = useInventoryRequisitions();
-  const { data: transfers = [], completeTransfer, refetch: refetchTrf } = useInventoryTransfers();
-  const { adjustStock } = useInventoryItems();
+  const { requisitions: requisitionsQuery, updateRequisition } = useProcurementService();
+  const requisitions = (requisitionsQuery.data || []) as any[];
+
+  const { transfers: transfersQuery, updateTransfer, updateMovement, deleteMovement } = useInventoryTransactionService();
+  const transfers = (transfersQuery.data || []) as any[];
 
   const { data: pendingAdjustments = [], refetch: refetchAdj } = useQuery({
      queryKey: ["pending-inventory-adjustments-queue"],
      queryFn: async () => {
-        const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
+        const { data } = await supabase.from('stock_movements').select('*, item:items(item_name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
         return (data || []) as unknown as PendingAdjustment[];
      }
   });
@@ -36,14 +39,10 @@ export function ApprovalsQueueTab() {
   const handleApproveAdj = async (adj: PendingAdjustment) => {
      try {
         const [, reason, notes] = adj.notes?.split('|') || [];
-        await adjustStock.mutateAsync({
-           itemId: adj.item_id,
-           quantity: adj.quantity,
-           type: (adj.movement_type === 'out' ? 'out' : 'in') as "in" | "out",
-           reason: reason || 'Adjustment',
-           notes: notes || ''
+        await updateMovement.mutateAsync({
+           movement_id: adj.movement_id,
+           notes: `APPROVED|${reason}|${notes}`
         });
-        await supabase.from('stock_movements').delete().eq('id', adj.id);
         toast.success("Adjustment approved");
         refetchAdj();
      } catch { toast.error("Failed"); }
@@ -68,15 +67,15 @@ export function ApprovalsQueueTab() {
                <Table>
                   <TableBody>
                      {pendingReqs.map(r => (
-                        <TableRow key={r.id}>
+                        <TableRow key={r.requisition_id}>
                            <TableCell className="py-3">
                               <p className="text-xs font-bold">{r.department}</p>
                               <p className="text-[10px] text-muted-foreground">{r.requisition_number}</p>
                            </TableCell>
                            <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
-                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => updateRequisitionStatus.mutateAsync({id: r.id, status: 'approved'}).then(() => refetchReq())}><CheckCircle2 className="h-4 w-4" /></Button>
-                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => updateRequisitionStatus.mutateAsync({id: r.id, status: 'rejected'}).then(() => refetchReq())}><XCircle className="h-4 w-4" /></Button>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => updateRequisition.mutateAsync({ requisition_id: r.requisition_id, status: 'approved' })}><CheckCircle2 className="h-4 w-4" /></Button>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => updateRequisition.mutateAsync({ requisition_id: r.requisition_id, status: 'rejected' })}><XCircle className="h-4 w-4" /></Button>
                               </div>
                            </TableCell>
                         </TableRow>
@@ -96,14 +95,14 @@ export function ApprovalsQueueTab() {
                <Table>
                   <TableBody>
                      {pendingTrfs.map(t => (
-                        <TableRow key={t.id}>
+                        <TableRow key={t.transfer_id}>
                            <TableCell className="py-3">
-                              <p className="text-xs font-bold">{t.item?.name}</p>
-                              <p className="text-[10px] text-muted-foreground">Qty: {t.quantity}</p>
+                              <p className="text-xs font-bold">{t.items?.[0]?.item?.item_name}</p>
+                              <p className="text-[10px] text-muted-foreground">Qty: {t.items?.[0]?.quantity}</p>
                            </TableCell>
                            <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
-                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => completeTransfer.mutateAsync(t.id).then(() => refetchTrf())}><CheckCircle2 className="h-4 w-4" /></Button>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => updateTransfer.mutateAsync({ transfer_id: t.transfer_id, status: 'completed' })}><CheckCircle2 className="h-4 w-4" /></Button>
                               </div>
                            </TableCell>
                         </TableRow>
@@ -123,11 +122,11 @@ export function ApprovalsQueueTab() {
                <Table>
                   <TableBody>
                      {pendingAdjustments.map((a) => (
-                        <TableRow key={a.id}>
+                        <TableRow key={a.movement_id}>
                            <TableCell className="py-3">
                               <div className="flex justify-between items-start">
                                  <div>
-                                    <p className="text-xs font-bold">{a.item?.name}</p>
+                                    <p className="text-xs font-bold">{a.item?.item_name}</p>
                                     <p className="text-[10px] text-muted-foreground">{a.movement_type.toUpperCase()} - Qty: {a.quantity}</p>
                                  </div>
                                  <Badge variant="outline" className="text-[8px] h-4 uppercase">{a.notes?.split('|')[1] || 'Adj'}</Badge>
@@ -137,7 +136,7 @@ export function ApprovalsQueueTab() {
                            <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => handleApproveAdj(a)}><CheckCircle2 className="h-4 w-4" /></Button>
-                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => supabase.from('stock_movements').delete().eq('id', a.id).then(() => refetchAdj())}><XCircle className="h-4 w-4" /></Button>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMovement.mutateAsync(a.movement_id).then(() => refetchAdj())}><XCircle className="h-4 w-4" /></Button>
                               </div>
                            </TableCell>
                         </TableRow>

@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChefHat, Plus, Loader2, Play, CheckCircle, Clock, Trash2, ArrowRight } from "lucide-react";
-import { useInventoryRecipes, useInventoryProduction, InventoryRecipe } from "@/hooks/useInventory";
+import { useRecipeService } from "@/hooks/inventory/useRecipeService";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,8 +17,10 @@ import { toast } from "sonner";
 
 export function ProductionOrdersTab() {
   const queryClient = useQueryClient();
-  const { data: recipes = [] } = useInventoryRecipes();
-  const { produceBatch } = useInventoryProduction();
+  const { recipes: recipesQuery } = useRecipeService();
+  const recipes = (recipesQuery.data || []) as any[];
+
+  const { createMovement } = useInventoryTransactionService();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [form, setForm] = useState({ recipe_id: "", target_quantity: 1, notes: "" });
@@ -25,7 +28,7 @@ export function ProductionOrdersTab() {
   const { data: orders = [], isLoading } = useQuery({
      queryKey: ["inventory-production-orders"],
      queryFn: async () => {
-        const { data } = await supabase.from('inventory_production_logs').select('*, recipe:inventory_recipes(*)').order('created_at', { ascending: false });
+        const { data } = await supabase.from('inventory_production_logs').select('*, recipe:recipes(*)').order('created_at', { ascending: false });
         return data || [];
      }
   });
@@ -49,11 +52,19 @@ export function ProductionOrdersTab() {
 
   const handleFinalize = async (order: any) => {
      try {
-        await produceBatch.mutateAsync({
-           recipeId: order.recipe_id,
-           quantity: order.target_quantity || 1,
-           producedBy: order.produced_by
-        });
+        const { data: recipe } = await supabase.from('recipes').select('*, ingredients:recipe_ingredients(*)').eq('recipe_id', order.recipe_id).single();
+        if (recipe) {
+           for (const ing of (recipe as any).ingredients) {
+              await createMovement.mutateAsync({
+                 item_id: ing.item_id,
+                 quantity: ing.quantity_required * (order.target_quantity || 1),
+                 movement_type: 'out',
+                 reference_id: order.id,
+                 reference_type: 'production',
+                 notes: `Production: ${order.recipe?.recipe_name}`
+              });
+           }
+        }
         await supabase.from('inventory_production_logs').update({
            status: 'completed',
            quantity_produced: order.target_quantity
@@ -94,7 +105,7 @@ export function ProductionOrdersTab() {
                      ) : orders.map((order: any) => (
                         <TableRow key={order.id}>
                            <TableCell>
-                              <div className="font-bold text-xs">{order.recipe?.name}</div>
+                              <div className="font-bold text-xs">{order.recipe?.recipe_name}</div>
                               <p className="text-[10px] text-muted-foreground">{order.notes || "No notes"}</p>
                            </TableCell>
                            <TableCell className="font-mono text-xs font-bold">{order.target_quantity || order.quantity_produced}</TableCell>
@@ -131,7 +142,7 @@ export function ProductionOrdersTab() {
                   <Label>Select Recipe (BOM)</Label>
                   <Select value={form.recipe_id} onValueChange={(v) => setForm({...form, recipe_id: v})}>
                      <SelectTrigger><SelectValue placeholder="Recipe" /></SelectTrigger>
-                     <SelectContent>{recipes.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                     <SelectContent>{recipes.map(r => <SelectItem key={r.recipe_id} value={r.recipe_id}>{r.recipe_name}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
                <div className="space-y-1">

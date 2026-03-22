@@ -9,26 +9,34 @@ import {
   ArrowUpDown, Search, Download, History,
   Filter, Package, ArrowRight, ArrowLeft, RefreshCw
 } from "lucide-react";
-import { useInventoryItems, useStockMovements, useInventoryStores } from "@/hooks/useInventory";
+import { useItemService } from "@/hooks/inventory/useItemService";
+import { useStoreService } from "@/hooks/inventory/useStoreService";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/reportExport";
 
 export function ItemLedgerReport() {
-  const { data: items = [] } = useInventoryItems();
-  const { data: stores = [] } = useInventoryStores();
-  const [selectedItemId, setSelectedItemId] = useState<string>("");
-  const { data: movements = [], isLoading } = useStockMovements(selectedItemId || undefined);
+  const { items: itemsQuery } = useItemService();
+  const items = itemsQuery.data || [];
 
-  const selectedItem = items.find(i => i.id === selectedItemId);
+  const { stores: storesQuery } = useStoreService();
+  const stores = storesQuery.data || [];
+
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const { movements: movementsQuery } = useInventoryTransactionService();
+  const movements = (movementsQuery.data || []).filter((m: any) => !selectedItemId || m.item_id === selectedItemId);
+  const isLoading = movementsQuery.isLoading;
+
+  const selectedItem = items.find((i: any) => i.item_id === selectedItemId);
 
   const handleExport = () => {
     if (!selectedItem) return;
     const data = {
-      title: `Item Ledger: ${selectedItem.name} (${selectedItem.sku})`,
+      title: `Item Ledger: ${selectedItem.item_name} (${selectedItem.item_code})`,
       headers: ["Date", "Store", "Type", "Reference", "Qty Change", "Balance After"],
-      rows: movements.map((m) => [
-        formatAD(new Date(m.created_at), "time"),
-        stores.find(s => s.id === m.store_id)?.name || "Main",
+      rows: movements.map((m: any) => [
+        formatAD(new Date(m.movement_date), "time"),
+        stores.find((s: any) => s.store_id === m.store_id)?.store_name || "Main",
         m.movement_type.toUpperCase(),
         m.reference_type || "Manual",
         m.movement_type === 'out' ? `-${m.quantity}` : `+${m.quantity}`,
@@ -48,8 +56,8 @@ export function ItemLedgerReport() {
                   <SelectValue placeholder="Choose an item to view history..." />
                </SelectTrigger>
                <SelectContent>
-                  {items.map(i => (
-                     <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku})</SelectItem>
+                  {items.map((i: any) => (
+                     <SelectItem key={i.item_id} value={i.item_id}>{i.item_name} ({i.item_code})</SelectItem>
                   ))}
                </SelectContent>
             </Select>
@@ -72,14 +80,14 @@ export function ItemLedgerReport() {
                   <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                      <Package className="h-6 w-6 text-primary" />
                   </div>
-                  <CardTitle className="text-lg font-bold">{selectedItem?.name}</CardTitle>
-                  <CardDescription className="font-mono text-xs uppercase">{selectedItem?.sku}</CardDescription>
+                  <CardTitle className="text-lg font-bold">{selectedItem?.item_name}</CardTitle>
+                  <CardDescription className="font-mono text-xs uppercase">{selectedItem?.item_code}</CardDescription>
                </CardHeader>
                <CardContent className="space-y-4 pt-4 border-t">
                   <div className="grid grid-cols-2 gap-4">
                      <div className="space-y-1">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase">On Hand</p>
-                        <p className="text-xl font-bold">{selectedItem?.current_stock} {selectedItem?.unit}</p>
+                        <p className="text-xl font-bold">{selectedItem?.current_stock} {selectedItem?.unit?.unit_symbol || 'pcs'}</p>
                      </div>
                      <div className="space-y-1">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase">Avg Cost</p>
@@ -89,7 +97,7 @@ export function ItemLedgerReport() {
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2">
                      <div className="flex justify-between text-xs font-medium">
                         <span className="text-muted-foreground">Category</span>
-                        <span>{selectedItem?.category?.name || "General"}</span>
+                        <span>{selectedItem?.category?.category_name || "General"}</span>
                      </div>
                      <div className="flex justify-between text-xs font-medium">
                         <span className="text-muted-foreground">Status</span>
@@ -126,9 +134,9 @@ export function ItemLedgerReport() {
                         ) : movements.length === 0 ? (
                            <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">No movements recorded for this item.</TableCell></TableRow>
                         ) : (
-                           movements.map((m) => (
-                              <TableRow key={m.id} className="hover:bg-muted/5">
-                                 <TableCell className="text-[10px] font-mono whitespace-nowrap">{formatAD(new Date(m.created_at), "time")}</TableCell>
+                           movements.map((m: any) => (
+                              <TableRow key={m.movement_id} className="hover:bg-muted/5">
+                                 <TableCell className="text-[10px] font-mono whitespace-nowrap">{formatAD(new Date(m.movement_date), "time")}</TableCell>
                                  <TableCell>
                                     <Badge variant="outline" className={cn(
                                        "text-[8px] h-4 uppercase",
@@ -142,7 +150,7 @@ export function ItemLedgerReport() {
                                     {m.reference_type?.replace('_', ' ') || "Manual Adjustment"}
                                     {m.notes && <p className="text-[8px] text-muted-foreground font-normal italic mt-0.5 line-clamp-1">{m.notes}</p>}
                                  </TableCell>
-                                 <TableCell className="text-[10px] font-semibold">{stores.find(s => s.id === m.store_id)?.name || "Main Store"}</TableCell>
+                                 <TableCell className="text-[10px] font-semibold">{stores.find((s: any) => s.store_id === m.store_id)?.store_name || "Main Store"}</TableCell>
                                  <TableCell className={cn("text-right font-mono text-xs font-bold", m.movement_type === 'out' ? "text-destructive" : "text-success")}>
                                     {m.movement_type === 'out' ? '-' : '+'}{m.quantity}
                                  </TableCell>
