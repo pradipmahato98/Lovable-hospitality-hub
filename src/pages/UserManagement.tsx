@@ -11,6 +11,8 @@ import { Navigate } from "react-router-dom";
 import { useUsersWithRoles, useRoleChangeAudit, useUpdateUserRole, AppRole, roleConfig } from "@/hooks/useUsersWithRoles";
 import { UsersTable, AuditLogTable, PermissionsTab, InvitationsTab } from "@/components/users";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { format, formatDistanceToNow } from "date-fns";
 import { useSearchParams } from "react-router-dom";
@@ -34,6 +36,8 @@ import {
 
 const UserManagement = () => {
   useAdminRealtime();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "users";
   const [searchQuery, setSearchQuery] = useState("");
@@ -135,17 +139,22 @@ const UserManagement = () => {
   }
 
   return (
-    <MainLayout fixedHeight title="User Management" subtitle="Manage user roles and permissions (Admin only)">
+    <MainLayout title="User Management" subtitle="Manage user roles and permissions (Admin only)">
       <ErrorBoundary>
-        <div className="flex flex-col h-full overflow-hidden">
-        <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800 flex-shrink-0 mx-4 sm:mx-6 mt-4">
+        <div className="flex flex-col space-y-6">
+        <div className="mb-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
           <ShieldAlert className="h-4 w-4" />
           <span>You are viewing admin-only settings. Role changes take effect immediately.</span>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-          <div className="overflow-x-auto pb-1 scrollbar-hide px-4 sm:px-6">
-            <TabsList>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <div
+            className={cn(
+              "overflow-x-auto pb-1 scrollbar-hide sticky z-10 transition-all duration-300",
+              isHorizontalNav ? "top-[112px]" : "top-14"
+            )}
+          >
+          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
                 <Users className="h-4 w-4" />
                 Users
@@ -170,10 +179,10 @@ const UserManagement = () => {
                 <History className="h-4 w-4" />
                 Audit Log
               </TabsTrigger>
-            </TabsList>
+          </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+          <div className="mt-0">
           <TabsContent value="users" className="mt-0 focus-visible:outline-none">
             <div className="flex justify-end mb-4">
               <Button variant="outline" onClick={exportUsersToExcel}>

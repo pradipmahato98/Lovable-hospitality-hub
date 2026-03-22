@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload, LayoutDashboard } from "lucide-react";
 import { 
   useCheckInSettings, useUpdateCheckInSettings, 
+  useUIPreferences,
   usePaymentSettings, useUpdatePaymentSettings,
   useBookingSourcesSettings, useUpdateBookingSourcesSettings,
   useRatePlansSettings, useUpdateRatePlansSettings,
@@ -31,6 +32,8 @@ const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as SettingsTab) || "checkin";
   const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   const handleTabChange = (value: SettingsTab) => {
     setSearchParams(prev => {
@@ -135,10 +138,10 @@ const Settings = () => {
   };
 
   return (
-    <MainLayout fixedHeight title="Admin Settings" subtitle="Manage system configuration (Admin only)">
+    <MainLayout title="Admin Settings" subtitle="Manage system configuration (Admin only)">
       <ErrorBoundary>
-        <div className="flex flex-col h-full overflow-hidden p-4 sm:p-6">
-        <div className="mb-4 flex items-center justify-between flex-shrink-0">
+        <div className="flex flex-col space-y-6">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
             <ShieldAlert className="h-4 w-4" />
             <span>You are viewing admin-only settings. Changes affect all users.</span>
@@ -154,22 +157,29 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden">
-          <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto pb-2 lg:pb-0 scrollbar-hide">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div
+            className={cn(
+              "flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide sticky z-10 transition-all duration-300",
+              isHorizontalNav ? "top-[112px]" : "top-14"
+            )}
+          >
+            <div className="flex lg:flex-col gap-2 bg-background/80 backdrop-blur-md p-1 rounded-lg border shadow-sm">
             {tabs.map((item) => (
               <Button
                 key={item.id}
                 variant={activeTab === item.id ? "secondary" : "ghost"}
-                className="justify-start gap-3 whitespace-nowrap flex-shrink-0"
+                className="justify-start gap-3 whitespace-nowrap flex-shrink-0 h-9"
                 onClick={() => handleTabChange(item.id)}
               >
                 <item.icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{item.label}</span>
               </Button>
             ))}
+            </div>
           </div>
 
-          <div className="lg:col-span-3 space-y-6 overflow-y-auto pr-2 scrollbar-hide">
+          <div className="lg:col-span-3 space-y-6 mt-0">
             {activeTab === "checkin" && (
               <CheckInSettingsCard
                 settings={checkInSettings}

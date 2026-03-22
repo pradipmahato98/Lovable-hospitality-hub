@@ -141,7 +141,8 @@ export function HorizontalNav() {
       exit={{ y: -10, opacity: 0 }}
       className="sticky top-14 z-20 w-full bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 border-b border-border/40 shadow-sm overflow-hidden"
     >
-      <div className="px-4 h-12 flex items-center gap-1.5 overflow-x-auto scrollbar-hide no-scrollbar justify-center">
+      <div className="px-4 h-12 flex items-center gap-1.5 overflow-x-auto scrollbar-hide no-scrollbar justify-start lg:justify-center">
+        <div className="flex-shrink-0 w-2 lg:hidden" />
         {visibleItems.map(renderNavItem)}
 
         {moreItems.length > 0 && (

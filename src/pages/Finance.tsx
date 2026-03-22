@@ -69,8 +69,9 @@ import { FinanceTrialBalanceTab } from "@/components/finance/tabs/TrialBalanceTa
 
 import { useAccounts, useJournalEntries, useTrialBalance } from "@/hooks/useFinance";
 import { useFinancialStats } from "@/hooks/useFinanceExtended";
-import { useBusinessDate } from "@/hooks/useSettings";
+import { useBusinessDate, useUIPreferences } from "@/hooks/useSettings";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { cn } from "@/lib/utils";
 
 // Sub-tab definition type
 interface SubTabDef {
@@ -129,10 +130,13 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
   const [activeSubTab, setActiveSubTab] = useState(defaultTab || tabs[0]?.id || "");
   const ActiveComponent = tabs.find((t) => t.id === activeSubTab)?.component;
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
+
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-4">
       {/* Mobile: horizontal scroll tabs */}
-      <div className="lg:hidden overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
+      <div className="lg:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
         <div className="flex gap-1.5 min-w-max pb-2">
           {tabs.map((tab) => (
             <Button
@@ -148,8 +152,13 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
         </div>
       </div>
       {/* Desktop: vertical scrollable sidebar tabs */}
-      <div className="hidden lg:block w-48 xl:w-56 shrink-0 h-full overflow-y-auto scrollbar-hide border-r border-border/60 pr-2">
-        <div className="space-y-0.5">
+      <div className="hidden lg:block w-48 xl:w-56 shrink-0">
+        <div
+          className={cn(
+            "sticky max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide space-y-0.5 pr-2 border-r border-border/60 transition-all duration-300",
+            isHorizontalNav ? "top-[128px]" : "top-20"
+          )}
+        >
           {tabs.map((tab) => (
             <Button
               key={tab.id}
@@ -169,7 +178,7 @@ function SubTabPanel({ tabs, defaultTab }: { tabs: SubTabDef[]; defaultTab?: str
         </div>
       </div>
       {/* Content area */}
-      <div className="flex-1 min-w-0 overflow-y-auto pr-2 scrollbar-hide">
+      <div className="flex-1 min-w-0">
         {ActiveComponent && <ActiveComponent />}
       </div>
     </div>
@@ -222,7 +231,6 @@ export default function Finance() {
 
   return (
     <MainLayout
-      fixedHeight
       title="Finance & Accounting"
       subtitle={`Business Date: ${businessDate || "Loading..."} ${businessDate ? `(${formatISOasBS(businessDate, "short")} BS)` : ""}`}
       actions={
@@ -232,8 +240,8 @@ export default function Finance() {
         </Badge>
       }
     >
-      <div className="flex flex-col h-full overflow-hidden">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-col space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col space-y-6">
           <div className="border-b overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="justify-start h-12 bg-transparent p-0 flex-nowrap min-w-max gap-6">
               <TabsTrigger value="dashboard" className={tabTriggerClass}>
@@ -290,28 +298,22 @@ export default function Finance() {
           </TabsContent>
 
           {/* ========== SETUP ========== */}
-          <TabsContent value="setup" className="flex-1 overflow-hidden mt-0">
-             <div className="h-full p-4 sm:p-6 overflow-hidden">
-                <SubTabPanel tabs={setupSubTabs} />
-             </div>
+          <TabsContent value="setup" className="mt-0">
+             <SubTabPanel tabs={setupSubTabs} />
           </TabsContent>
 
           {/* ========== TRANSACTIONS ========== */}
-          <TabsContent value="transactions" className="flex-1 overflow-hidden mt-0">
-             <div className="h-full p-4 sm:p-6 overflow-hidden">
-                <SubTabPanel tabs={transactionSubTabs} />
-             </div>
+          <TabsContent value="transactions" className="mt-0">
+             <SubTabPanel tabs={transactionSubTabs} />
           </TabsContent>
 
           {/* ========== REPORTS ========== */}
-          <TabsContent value="reports" className="flex-1 overflow-hidden mt-0">
-             <div className="h-full p-4 sm:p-6 overflow-hidden">
-                <SubTabPanel tabs={reportSubTabs} />
-             </div>
+          <TabsContent value="reports" className="mt-0">
+             <SubTabPanel tabs={reportSubTabs} />
           </TabsContent>
 
-          <TabsContent value="dashboard" className="flex-1 overflow-y-auto mt-0">
-             <div className="p-4 sm:p-6 space-y-6">
+          <TabsContent value="dashboard" className="mt-0">
+             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <MetricCard title="Total Assets" value={formatCurrency(totalAssets)} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
                   <MetricCard title="Net Income" value={formatCurrency(netIncome)} change={netIncome >= 0 ? "Profit" : "Loss"} changeType={netIncome >= 0 ? "positive" : "negative"} icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight} delay={50} />

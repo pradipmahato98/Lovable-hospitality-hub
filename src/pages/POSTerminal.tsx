@@ -50,6 +50,8 @@ import { useInvoices } from "@/hooks/useBillingData";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useInventoryPOS } from "@/hooks/useInventory";
+import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 interface CartItem {
   id: string;
@@ -282,15 +284,23 @@ const POSTerminal = () => {
     }
   };
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
+
   return (
-    <MainLayout fixedHeight title="POS Terminal" subtitle="Process orders and handle table service">
-      <div className="flex flex-col h-full overflow-hidden">
+    <MainLayout title="POS Terminal" subtitle="Process orders and handle table service">
+      <div className="flex flex-col space-y-6">
       <POSHeader />
 
-      {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4 px-4 sm:px-6 mt-4">
-          <TabsList>
+      {/* Tab Navigation - Level 3 offsets since POSHeader is Level 2 */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <div
+          className={cn(
+            "flex items-center justify-between flex-wrap gap-4 sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[160px]" : "top-[112px]"
+          )}
+        >
+          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
             <TabsTrigger value="tables" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
               Tables
@@ -310,7 +320,7 @@ const POSTerminal = () => {
           </TabsList>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <div className="mt-0">
         {/* Tables Tab - Table Selection System */}
         <TabsContent value="tables" className="mt-0 focus-visible:outline-none">
           <POSTableSystem onCheckout={(total, items) => {
@@ -449,7 +459,7 @@ const POSTerminal = () => {
         </TabsContent>
 
         {/* Billing Tab - Checkout */}
-        <TabsContent value="billing">
+        <TabsContent value="billing" className="mt-0 focus-visible:outline-none">
           <Card variant="elevated" className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
