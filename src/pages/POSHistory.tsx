@@ -58,6 +58,8 @@ import {
 } from "lucide-react";
 import { usePOSTransactions, POSTransaction, useVoidTransaction, useRefundTransaction } from "@/hooks/usePOS";
 import { format, subDays, subHours, isValid } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -78,6 +80,8 @@ const paymentMethodLabels: Record<string, string> = {
 };
 
 export default function POSHistory() {
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<string>("");
@@ -341,7 +345,12 @@ export default function POSHistory() {
       <POSHeader />
       <div className="space-y-6">
         {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          className={cn(
+            "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[160px]" : "top-[112px]"
+          )}
+        >
           <Card variant="elevated" className="bg-gradient-to-br from-primary/10 to-primary/5">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">

@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePOSOrders, useUpdateOrderItemStatus } from "@/hooks/usePOS";
 import { POSHeader } from "@/components/pos";
+import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 interface KitchenOrder {
   id: string;
@@ -51,6 +53,8 @@ function playBeep() {
 }
 
 export default function KitchenDisplay() {
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const { data: ordersData, isLoading, refetch } = usePOSOrders();
   const updateItem = useUpdateOrderItemStatus();
 
@@ -194,10 +198,16 @@ export default function KitchenDisplay() {
 
   return (
     <MainLayout title="Kitchen Display" subtitle="Monitor and manage active food and bar orders">
+      <div className="flex flex-col space-y-6">
       <POSHeader />
       <div className="space-y-6">
         {/* Enhanced Header with Stats */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-secondary/30 rounded-lg">
+        <div
+          className={cn(
+            "flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-background/80 backdrop-blur-md border shadow-sm rounded-lg sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[160px]" : "top-[112px]"
+          )}
+        >
           <div className="flex items-center gap-6 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-full bg-amber-500/20">
@@ -268,6 +278,7 @@ export default function KitchenDisplay() {
               Refresh
             </Button>
           </div>
+        </div>
         </div>
 
         {orders.length === 0 ? (

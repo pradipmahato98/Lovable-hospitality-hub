@@ -38,9 +38,10 @@ import { DataSeeder } from "@/components/dev/DataSeeder";
 import { MCPConfigPanel } from "@/components/dev/MCPConfig";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
-import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
+import { useSettings, useUpdateSettings, useUIPreferences } from "@/hooks/useSettings";
 import { useSearchParams } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type AppRole = DbTypes["public"]["Enums"]["app_role"];
 
@@ -76,6 +77,8 @@ interface SystemHealthStatus {
 const DevPanel = () => {
   useAdminRealtime();
   const { isAdmin, isLoading } = useIsAdmin();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "status";
 
@@ -339,8 +342,13 @@ const DevPanel = () => {
   return (
     <MainLayout title="Developer Panel" subtitle="System monitoring and diagnostics (Admin only)">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList>
+        <div
+          className={cn(
+            "overflow-x-auto pb-1 scrollbar-hide sticky z-10 transition-all duration-300",
+            isHorizontalNav ? "top-[112px]" : "top-14"
+          )}
+        >
+          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
             <TabsTrigger value="status" className="gap-2 whitespace-nowrap flex-shrink-0">
             <Activity className="h-4 w-4" />
             System Status
@@ -377,7 +385,8 @@ const DevPanel = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="status">
+        <div className="mt-0">
+        <TabsContent value="status" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* System Status */}
             <Card variant="elevated">
@@ -714,9 +723,10 @@ const DevPanel = () => {
           <MCPConfigPanel />
         </TabsContent>
 
-        <TabsContent value="security">
+        <TabsContent value="security" className="mt-0 focus-visible:outline-none">
           <SecurityBreachPanel />
         </TabsContent>
+        </div>
       </Tabs>
     </MainLayout>
   );

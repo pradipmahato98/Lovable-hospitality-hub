@@ -19,12 +19,15 @@ import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useUIPreferences } from "@/hooks/useSettings";
 import jsPDF from "jspdf";
 
 type AuditStep = 'validation' | 'posting' | 'closing' | 'summary';
 
 function NightAudit() {
   const navigate = useNavigate();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "audit";
   const { businessDate, isDateLoading, usePendingArrivals, useStayOvers, postCharges, closeDay } = useNightAudit();
@@ -134,17 +137,22 @@ function NightAudit() {
   if (isDateLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <MainLayout fixedHeight title="Night Audit" subtitle="End-of-day processing and automated billing">
-      <div className="flex flex-col h-full overflow-hidden">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-          <div className="px-4 sm:px-6 mt-4">
-            <TabsList>
+    <MainLayout title="Night Audit" subtitle="End-of-day processing and automated billing">
+      <div className="flex flex-col space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <div
+            className={cn(
+              "sticky z-10 transition-all duration-300",
+              isHorizontalNav ? "top-[112px]" : "top-14"
+            )}
+          >
+            <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
               <TabsTrigger value="audit" className="gap-2"><Moon className="h-4 w-4" />Run Audit</TabsTrigger>
               <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4" />Audit History</TabsTrigger>
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+          <div className="mt-0">
             <TabsContent value="audit" className="mt-0 focus-visible:outline-none">
               <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header Status */}
