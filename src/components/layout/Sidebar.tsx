@@ -181,7 +181,9 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     if (!perms?.modules) return items;
     return items.filter(item => {
       const m = perms.modules[item.label];
-      return m?.enabled !== false && m?.view !== false;
+      // If module is explicitly disabled in permissions, hide it
+      if (m?.enabled === false || m?.view === false) return false;
+      return true;
     });
   };
   const isVerticalIcon = navStyle === "vertical-icon" && !isMobile;

@@ -76,7 +76,7 @@ const Settings = () => {
   const tabs = [
     { id: "checkin" as const, icon: ClipboardCheck, label: "Check-in Settings" },
     { id: "ui" as const, icon: LayoutDashboard, label: "UI Standardization" },
-    { id: "user_roles" as const, icon: Shield, label: "User & Roles" },
+    { id: "user_roles" as const, icon: Shield, label: "User & Roles Management" },
     { id: "localization" as const, icon: Globe, label: "Localization" },
     { id: "payment" as const, icon: CreditCard, label: "Payment Settings" },
     { id: "sources" as const, icon: Globe, label: "Booking Sources" },
@@ -135,9 +135,10 @@ const Settings = () => {
   };
 
   return (
-    <MainLayout title="Admin Settings" subtitle="Manage system configuration (Admin only)">
+    <MainLayout fixedHeight title="Admin Settings" subtitle="Manage system configuration (Admin only)">
       <ErrorBoundary>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex flex-col h-full overflow-hidden p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
             <ShieldAlert className="h-4 w-4" />
             <span>You are viewing admin-only settings. Changes affect all users.</span>
@@ -153,8 +154,8 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden">
+          <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto pb-2 lg:pb-0 scrollbar-hide">
             {tabs.map((item) => (
               <Button
                 key={item.id}
@@ -168,7 +169,7 @@ const Settings = () => {
             ))}
           </div>
 
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-6 overflow-y-auto pr-2 scrollbar-hide">
             {activeTab === "checkin" && (
               <CheckInSettingsCard
                 settings={checkInSettings}
@@ -269,6 +270,7 @@ const Settings = () => {
             {activeTab === "configure" && <ConfigureModuleCard />}
             {activeTab === "security" && <SecuritySettingsCard />}
           </div>
+        </div>
         </div>
       </ErrorBoundary>
     </MainLayout>

@@ -3,7 +3,10 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { useUIPreferences, useUpdateUIPreferences, UIPreferences } from "@/hooks/useSettings";
-import { Loader2, LayoutDashboard, PanelLeft, Maximize, Monitor, MousePointer2, ChevronDown } from "lucide-react";
+import {
+  Loader2, LayoutDashboard, PanelLeft, Maximize, Monitor,
+  MousePointer2, ChevronDown, Layers
+} from "lucide-react";
 
 export function UIStandardizationCard() {
   const { data: uiPrefs, isLoading } = useUIPreferences();
@@ -152,13 +155,27 @@ export function UIStandardizationCard() {
             <div className="flex items-center gap-3">
               <MousePointer2 className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm font-semibold">Persistent Popups</p>
+                <p className="text-sm font-semibold">Persistent Dialog Popups</p>
                 <p className="text-xs text-muted-foreground">Prevent closing dialogs/menus on outside click</p>
               </div>
             </div>
             <Switch
               checked={uiPrefs?.persistent_popups ?? true}
               onCheckedChange={(v) => handleTogglePreference("persistent_popups", v)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-card/50">
+            <div className="flex items-center gap-3">
+              <Layers className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">Standardize Page Dropdowns</p>
+                <p className="text-xs text-muted-foreground">Uniform styling for form selection menus and page-level dropdowns</p>
+              </div>
+            </div>
+            <Switch
+              checked={uiPrefs?.standardize_page_dropdowns ?? true}
+              onCheckedChange={(v) => handleTogglePreference("standardize_page_dropdowns", v)}
             />
           </div>
         </div>

@@ -398,10 +398,13 @@ export default function Banquet() {
     .filter((e) => e.status === "confirmed")
     .reduce((sum, e) => sum + (e.deposit_amount || 0), 0);
 
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
+
   return (
     <ErrorBoundary>
-    <MainLayout title="Banquet & Events" subtitle="Manage events, bookings, and catering">
-      <div className="space-y-6">
+    <MainLayout fixedHeight title="Banquet & Events" subtitle="Manage events, bookings, and catering">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
@@ -451,7 +454,8 @@ export default function Banquet() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 sm:px-6">
           <TabsList>
             <TabsTrigger value="events" className="gap-2">
               <CalendarDays className="h-4 w-4" />
@@ -474,8 +478,10 @@ export default function Banquet() {
               Reports
             </TabsTrigger>
           </TabsList>
+          </div>
 
-          <TabsContent value="events" className="space-y-4">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+          <TabsContent value="events" className="space-y-4 mt-0 focus-visible:outline-none">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -660,7 +666,7 @@ export default function Banquet() {
             />
           </TabsContent>
 
-          <TabsContent value="reports">
+          <TabsContent value="reports" className="mt-0 focus-visible:outline-none">
             <EventReportsPanel
               events={events.map(e => ({
                 id: e.id,
@@ -675,6 +681,66 @@ export default function Banquet() {
               }))}
             />
           </TabsContent>
+
+          {/* Calendar, Catering, and Venue also need to be wrapped in the scrollable div but they are usually full-height panels */}
+          <TabsContent value="calendar" className="mt-0 focus-visible:outline-none h-full">
+            <DraggableBanquetCalendar
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                start_time: e.start_time,
+                end_time: e.end_time,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+                total_amount: e.total_amount,
+              }))}
+              onEventClick={(event) => {
+                toast.info(`Selected: ${event.event_name}`);
+              }}
+              onDateClick={(date) => {
+                setNewEvent(prev => ({ ...prev, event_date: date }));
+                setEventDialogOpen(true);
+              }}
+              onEventDrop={handleEventDrop}
+            />
+          </TabsContent>
+
+          <TabsContent value="catering" className="mt-0 focus-visible:outline-none">
+            <CateringManagementPanel
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+                menu_package: e.menu_package,
+                special_requests: e.special_requests,
+              }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="venue" className="mt-0 focus-visible:outline-none">
+            <VenueSetupPanel
+              events={events.map(e => ({
+                id: e.id,
+                event_name: e.event_name,
+                event_type: e.event_type,
+                client_name: e.client_name,
+                event_date: e.event_date,
+                venue: e.venue,
+                guest_count: e.guest_count,
+                status: e.status,
+              }))}
+            />
+          </TabsContent>
+          </div>
         </Tabs>
       </div>
 

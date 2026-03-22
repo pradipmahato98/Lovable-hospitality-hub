@@ -229,9 +229,10 @@ const Guests = () => {
   };
 
   return (
-    <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
+    <MainLayout fixedHeight title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
+          <div className="px-4 sm:px-6">
           <TabsList>
             <TabsTrigger value="guests" className="gap-2"><Users className="h-4 w-4" />Guests</TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2">
@@ -247,7 +248,9 @@ const Guests = () => {
             <TabsTrigger value="dedup" className="gap-2"><GitMerge className="h-4 w-4" />De-dup</TabsTrigger>
             <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
           </TabsList>
+          </div>
 
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           {/* === Guests Tab === */}
           <TabsContent value="guests" className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -512,9 +515,10 @@ const Guests = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="messaging"><AutomatedMessaging /></TabsContent>
-          <TabsContent value="dedup"><GuestMergeTool /></TabsContent>
-          <TabsContent value="reports"><GuestReportsTab /></TabsContent>
+          <TabsContent value="messaging" className="mt-0 focus-visible:outline-none"><AutomatedMessaging /></TabsContent>
+          <TabsContent value="dedup" className="mt-0 focus-visible:outline-none"><GuestMergeTool /></TabsContent>
+          <TabsContent value="reports" className="mt-0 focus-visible:outline-none"><GuestReportsTab /></TabsContent>
+          </div>
         </Tabs>
 
         {/* Feedback Dialog */}

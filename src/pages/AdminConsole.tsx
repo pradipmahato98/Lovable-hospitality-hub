@@ -299,10 +299,11 @@ const AdminConsole = () => {
   if (!isAdmin && !import.meta.env.DEV) return <Navigate to="/" replace />;
 
   return (
-    <MainLayout title="Admin Console" subtitle="System-wide administrative controls and security">
+    <MainLayout fixedHeight title="Admin Console" subtitle="System-wide administrative controls and security">
       <ErrorBoundary>
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex flex-col h-full overflow-hidden">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="overflow-x-auto pb-1 scrollbar-hide px-4 sm:px-6 mt-4">
           <TabsList>
             <TabsTrigger value="overview" className="gap-2 whitespace-nowrap flex-shrink-0">
             <Activity className="h-4 w-4" />
@@ -339,7 +340,8 @@ const AdminConsole = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="overview">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card variant="elevated">
               <CardHeader className="pb-2">
@@ -673,10 +675,12 @@ const AdminConsole = () => {
           <DesignSystemTab />
         </TabsContent>
 
-        <TabsContent value="security_breach">
+        <TabsContent value="security_breach" className="mt-0 focus-visible:outline-none">
           <SecurityBreachPanel />
         </TabsContent>
+        </div>
       </Tabs>
+      </div>
 
       {/* Provision Account Modal */}
       <Dialog open={provisionModalOpen} onOpenChange={setProvisionModalOpen}>

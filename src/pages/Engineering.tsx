@@ -35,10 +35,12 @@ const Engineering = () => {
   ];
 
   return (
-    <MainLayout title="Engineering" subtitle="Maintenance, preventive schedules, and asset management">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <div className="xl:col-span-3">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+    <MainLayout fixedHeight title="Engineering" subtitle="Maintenance, preventive schedules, and asset management">
+      <div className="flex flex-col h-full overflow-hidden">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 flex-1 overflow-hidden">
+        <div className="xl:col-span-3 flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+            <div className="px-4 sm:px-6">
             <TabsList>
               <TabsTrigger value="requests" className="gap-2">
                 <Wrench className="h-4 w-4" />
@@ -58,8 +60,10 @@ const Engineering = () => {
                 Reports
               </TabsTrigger>
             </TabsList>
+            </div>
 
-            <TabsContent value="requests">
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+            <TabsContent value="requests" className="mt-0 focus-visible:outline-none">
               <RequestsTab />
             </TabsContent>
 
@@ -71,14 +75,16 @@ const Engineering = () => {
               <AssetsTab />
             </TabsContent>
 
-            <TabsContent value="reports">
+            <TabsContent value="reports" className="mt-0 focus-visible:outline-none">
               <EngineeringReportsTab />
             </TabsContent>
+            </div>
           </Tabs>
         </div>
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 sm:p-6 overflow-y-auto">
           <ModuleQuickActions actions={quickActions} variant="list" />
         </div>
+      </div>
       </div>
     </MainLayout>
   );
