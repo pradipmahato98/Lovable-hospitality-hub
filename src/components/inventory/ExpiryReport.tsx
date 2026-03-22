@@ -2,17 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePurchaseOrders } from "@/hooks/useInventory";
+import { useProcurementService } from "@/hooks/inventory/useProcurementService";
 import { ShieldAlert } from "lucide-react";
 
 export function ExpiryReport() {
-  const { data: orders = [] } = usePurchaseOrders('received');
+  const { grns } = useProcurementService();
+  const orders = grns.data || [];
 
-  // Extract items with expiry dates from received POs
-  const expiringItems = orders.flatMap(po =>
-    (po.items || []).filter(item => item.expiry_date).map(item => ({
-      poNumber: po.order_number,
-      itemName: item.item?.name,
+  // Extract items with expiry dates from GRNs
+  const expiringItems = orders.flatMap((po: any) =>
+    (po.items || []).filter((item: any) => item.expiry_date).map((item: any) => ({
+      poNumber: po.grn_number,
+      itemName: item.item?.item_name,
       batch: item.batch_number,
       expiry: item.expiry_date,
       qty: item.received_quantity,

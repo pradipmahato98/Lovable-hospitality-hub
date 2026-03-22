@@ -9,18 +9,76 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, CheckCircle2, Loader2, ArrowUpRight, Search, Printer, RotateCcw, Package, History, ArrowDownLeft, XCircle, User, Building } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryRequisitions, useInventoryItems, useInventoryStores, useInventoryIssues, InventoryRequisition, InventoryStockIssue } from "@/hooks/useInventory";
+import { useProcurementService } from "@/hooks/inventory/useProcurementService";
+import { useItemService } from "@/hooks/inventory/useItemService";
+import { useStoreService } from "@/hooks/inventory/useStoreService";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
+import { useReportingService } from "@/hooks/inventory/useReportingService";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Database } from "@/integrations/supabase/types";
+
+type Requisition = Database['public']['Tables']['purchase_requisitions']['Row'] & {
+  items?: (Database['public']['Tables']['purchase_requisition_items']['Row'] & {
+     item?: Database['public']['Tables']['items']['Row']
+  })[]
+};
 
 export function StockIssueTab() {
   const [isIssueOpen, setIsIssueOpen] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isDirectIssueOpen, setIsDirectIssueOpen] = useState(false);
 
-  const { data: requisitions = [] } = useInventoryRequisitions();
-  const { data: stores = [] } = useInventoryStores();
-  const { data: items = [] } = useInventoryItems();
-  const { data: issueHistory = [], createIssue } = useInventoryIssues();
+  const { requisitions: requisitionsQuery } = useProcurementService();
+  const requisitions = (requisitionsQuery.data || []) as Requisition[];
+
+  const { stores: storesQuery } = useStoreService();
+  const stores = storesQuery.data || [];
+
+  const queryClient = useQueryClient();
+  const { items: itemsQuery } = useItemService();
+  const items = itemsQuery.data || [];
+  const { createMovement } = useInventoryTransactionService();
+
+  const { data: issueHistory = [] } = useQuery({
+     queryKey: ["inventory-stock-issues"],
+     queryFn: async () => {
+        const { data, error } = await supabase.from('inventory_stock_issues').select('*, items:inventory_stock_issue_items(*, item:items(*))').order('created_at', { ascending: false });
+        if (error) throw error;
+        return data;
+     }
+  });
+
+  const createIssue = useMutation({
+     mutationFn: async (payload: any) => {
+        const { data: issue, error } = await supabase.from('inventory_stock_issues').insert({
+           requisition_id: payload.requisition_id,
+           department: payload.department,
+           issue_number: `SIV-${Date.now()}`,
+           status: 'issued'
+        }).select().single();
+        if (error) throw error;
+
+        for (const item of payload.items) {
+           await supabase.from('inventory_stock_issue_items').insert({
+              stock_issue_id: issue.id,
+              item_id: item.item_id,
+              quantity: item.quantity
+           });
+
+           await createMovement.mutateAsync({
+              item_id: item.item_id,
+              quantity: item.quantity,
+              movement_type: 'out',
+              reference_id: issue.id,
+              reference_type: 'stock_issue',
+              notes: `Issue to ${payload.department}`
+           });
+        }
+        return issue;
+     },
+     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-stock-issues"] })
+  });
 
   const [selectedReqId, setSelectedReqId] = useState<string | null>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
@@ -37,8 +95,8 @@ export function StockIssueTab() {
 
   const pendingReqs = requisitions.filter(r => r.status === 'approved' || r.status === 'pending');
 
-  const handleIssue = (req: InventoryRequisition) => {
-    setSelectedReqId(req.id);
+  const handleIssue = (req: Requisition) => {
+    setSelectedReqId(req.requisition_id);
     const initialQtys: Record<string, { qty: number, batch: string }> = {};
     req.items?.forEach((i) => {
       initialQtys[i.id] = { qty: i.quantity, batch: "" };
@@ -48,7 +106,7 @@ export function StockIssueTab() {
   };
 
   const confirmIssue = async () => {
-    const req = pendingReqs.find(r => r.id === selectedReqId);
+    const req = pendingReqs.find(r => r.requisition_id === selectedReqId);
     if (!req) return;
 
     try {
@@ -66,10 +124,8 @@ export function StockIssueTab() {
       const { data: { user } } = await supabase.auth.getUser();
 
       await createIssue.mutateAsync({
-        requisition_id: req.id,
-        department: req.department,
-        issued_to: req.requested_by,
-        issued_by: user?.id,
+        requisition_id: req.requisition_id,
+        department: (req as any).department || "General",
         items: itemsToIssue
       });
 
@@ -87,10 +143,7 @@ export function StockIssueTab() {
         const { data: { user } } = await supabase.auth.getUser();
         await createIssue.mutateAsync({
            department: directIssueForm.department,
-           storeId: directIssueForm.store_id,
-           notes: `Direct Issue to ${directIssueForm.issued_to_name}`,
-           issued_by: user?.id,
-        items: directIssueForm.items
+           items: directIssueForm.items
         });
         toast.success("Direct stock issue complete");
         setIsDirectIssueOpen(false);
@@ -102,10 +155,10 @@ export function StockIssueTab() {
      setDirectIssueForm({ ...directIssueForm, items: [...directIssueForm.items, { item_id: "", quantity: 1 }] });
   };
 
-  const handleReturn = (issue: InventoryStockIssue) => {
+  const handleReturn = (issue: any) => {
     setSelectedIssueId(issue.id);
     const initialQtys: Record<string, number> = {};
-    issue.items?.forEach((i) => {
+    issue.items?.forEach((i: any) => {
       initialQtys[i.id] = 0;
     });
     setReturnQtys(initialQtys);
@@ -120,8 +173,8 @@ export function StockIssueTab() {
       for (const item of (issue.items || [])) {
         const qty = returnQtys[item.id] || 0;
         if (qty > 0) {
-          const { data: invItem } = await supabase.from('inventory_items').select('current_stock').eq('id', item.item_id).single();
-          await supabase.from('inventory_items').update({ current_stock: (invItem?.current_stock || 0) + qty }).eq('id', item.item_id);
+          const { data: invItem } = await supabase.from('items').select('current_stock').eq('item_id', item.item_id).single();
+          await supabase.from('items').update({ current_stock: (invItem?.current_stock || 0) + qty }).eq('item_id', item.item_id);
 
           await supabase.from('stock_movements').insert({
             item_id: item.item_id,
@@ -164,9 +217,9 @@ export function StockIssueTab() {
                   <TableHeader><TableRow><TableHead className="text-[10px]">Req #</TableHead><TableHead className="text-[10px]">Dept</TableHead><TableHead className="text-right text-[10px]">Action</TableHead></TableRow></TableHeader>
                   <TableBody>
                      {pendingReqs.map(req => (
-                        <TableRow key={req.id}>
+                        <TableRow key={req.requisition_id}>
                            <TableCell className="font-mono text-[10px] font-bold">{req.requisition_number}</TableCell>
-                           <TableCell className="text-xs">{req.department}</TableCell>
+                           <TableCell className="text-xs">{(req as any).department}</TableCell>
                            <TableCell className="text-right">
                               {req.status === 'approved' ? (
                                 <Button variant="success" size="xs" className="h-6 text-[10px]" onClick={() => handleIssue(req)}>Issue Stock</Button>
@@ -218,7 +271,7 @@ export function StockIssueTab() {
                <div className="space-y-1"><Label>Source Store *</Label>
                   <Select value={directIssueForm.store_id} onValueChange={(v) => setDirectIssueForm({...directIssueForm, store_id: v})}>
                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                     <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                     <SelectContent>{stores.map((s: any) => <SelectItem key={s.store_id} value={s.store_id}>{s.store_name}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
                <div className="col-span-2 space-y-1"><Label>Issued To (Person Name)</Label><Input value={directIssueForm.issued_to_name} onChange={(e) => setDirectIssueForm({...directIssueForm, issued_to_name: e.target.value})} /></div>
@@ -233,7 +286,7 @@ export function StockIssueTab() {
                           setDirectIssueForm({...directIssueForm, items: newItems});
                        }}>
                           <SelectTrigger className="flex-1 h-9"><SelectValue placeholder="Item" /></SelectTrigger>
-                          <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name} ({i.current_stock})</SelectItem>)}</SelectContent>
+                          <SelectContent>{items.map((i: any) => <SelectItem key={i.item_id} value={i.item_id}>{i.item_name} ({i.current_stock})</SelectItem>)}</SelectContent>
                        </Select>
                        <Input type="number" className="w-24 h-9" value={it.quantity} onChange={(e) => {
                           const newItems = [...directIssueForm.items];
@@ -264,9 +317,9 @@ export function StockIssueTab() {
              <Table>
                 <TableHeader><TableRow><TableHead className="text-[10px]">Item</TableHead><TableHead className="text-[10px]">Issued</TableHead><TableHead className="text-[10px]">Return Qty</TableHead></TableRow></TableHeader>
                 <TableBody>
-                   {issueHistory.find(i => i.id === selectedIssueId)?.items?.map((item) => (
+                   {issueHistory.find(i => i.id === selectedIssueId)?.items?.map((item: any) => (
                       <TableRow key={item.id}>
-                         <TableCell className="text-xs font-medium">{item.item?.name}</TableCell>
+                         <TableCell className="text-xs font-medium">{item.item?.item_name}</TableCell>
                          <TableCell className="text-xs font-bold">{item.quantity}</TableCell>
                          <TableCell><Input type="number" className="w-20 h-8 text-xs"
                               max={item.quantity}

@@ -9,13 +9,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Loader2, AlertTriangle, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryWastage, useInventoryItems } from "@/hooks/useInventory";
+import { useWastageService } from "@/hooks/inventory/useWastageService";
+import { useItemService } from "@/hooks/inventory/useItemService";
 import { formatCurrency } from "@/lib/utils";
 
 export function WastageTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const { data: wastageList = [], isLoading, reportWastage } = useInventoryWastage();
-  const { data: items = [] } = useInventoryItems();
+  const { wastage, createWastage } = useWastageService();
+  const { items } = useItemService();
+  const wastageList = wastage.data || [];
+  const itemsList = items.data || [];
+  const isLoading = wastage.isLoading;
 
   const [form, setForm] = useState({
     item_id: "", quantity: 0, wastage_type: "expired", reason: "", cost_impact: 0
@@ -28,10 +32,10 @@ export function WastageTab() {
         return;
       }
 
-      const item = items.find(i => i.id === form.item_id);
+      const item = itemsList.find((i: any) => i.item_id === form.item_id);
       const costImpact = (item?.cost_price || 0) * form.quantity;
 
-      await reportWastage.mutateAsync({ ...form, cost_impact: costImpact });
+      await createWastage.mutateAsync({ ...form, cost_impact: costImpact, status: 'approved' });
       toast.success("Wastage reported");
       setIsAddOpen(false);
       setForm({ item_id: "", quantity: 0, wastage_type: "expired", reason: "", cost_impact: 0 });
@@ -54,7 +58,7 @@ export function WastageTab() {
                 <Label>Item *</Label>
                 <Select value={form.item_id} onValueChange={(v) => setForm({ ...form, item_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                  <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name} ({i.current_stock} available)</SelectItem>)}</SelectContent>
+                  <SelectContent>{itemsList.map((i: any) => <SelectItem key={i.item_id} value={i.item_id}>{i.item_name} ({i.current_stock} available)</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -75,8 +79,8 @@ export function WastageTab() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={reportWastage.isPending} variant="destructive">
-                {reportWastage.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Report Loss
+              <Button onClick={handleCreate} disabled={createWastage.isPending} variant="destructive">
+                {createWastage.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Report Loss
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -103,12 +107,12 @@ export function WastageTab() {
                 {wastageList.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No wastage records found</TableCell></TableRow>
                 ) : (
-                  wastageList.map((w) => (
+                  wastageList.map((w: any) => (
                     <TableRow key={w.id}>
                       <TableCell className="text-sm">{new Date(w.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-medium">{w.item?.name}</TableCell>
+                      <TableCell className="font-medium">{w.item?.item_name}</TableCell>
                       <TableCell><Badge variant="outline" className="capitalize">{w.wastage_type}</Badge></TableCell>
-                      <TableCell>{w.quantity} {w.item?.unit}</TableCell>
+                      <TableCell>{w.quantity} {w.item?.unit?.unit_symbol}</TableCell>
                       <TableCell className="text-destructive font-mono">{formatCurrency(w.cost_impact)}</TableCell>
                       <TableCell><Badge variant="secondary" className="capitalize">{w.status}</Badge></TableCell>
                     </TableRow>

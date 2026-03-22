@@ -14,12 +14,13 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, LineChart, Line, BarChart, Bar, Cell, ComposedChart
 } from "recharts";
-import {
-  useInventoryStats, useInventoryItems, useStockMovements,
-  useSuppliers, usePurchaseOrders, useInventoryWastage,
-  useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts,
-  InventoryItem, StockMovement, InventoryWastage, Supplier
-} from "@/hooks/useInventory";
+import { useItemService } from "@/hooks/inventory/useItemService";
+import { useStoreService } from "@/hooks/inventory/useStoreService";
+import { useProcurementService } from "@/hooks/inventory/useProcurementService";
+import { useRecipeService } from "@/hooks/inventory/useRecipeService";
+import { useAuditService } from "@/hooks/inventory/useAuditService";
+import { useWastageService } from "@/hooks/inventory/useWastageService";
+import { useReportingService } from "@/hooks/inventory/useReportingService";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 import { toast } from "sonner";
@@ -35,31 +36,37 @@ interface ReportInfo {
 }
 
 export function ReportsTab() {
-  const stats = useInventoryStats();
-  const { data: stockCounts = [] } = useInventoryStockCounts();
-  const { data: items = [] } = useInventoryItems();
-  const { data: movements = [] } = useStockMovements();
-  const { data: suppliers = [] } = useSuppliers();
-  const { data: orders = [] } = usePurchaseOrders();
-  const { data: wastageList = [] } = useInventoryWastage();
-  const { createRequisition } = useInventoryRequisitions();
-  const { data: recipes = [] } = useInventoryRecipes();
+  const { inventoryStats, movementReport } = useReportingService();
+  const stats = inventoryStats.data || { totalValue: 0, lowStock: 0, demandForecast: "+0.0%", avgAgingDays: 0, stockVariance: 0 };
+  const { counts } = useAuditService();
+  const { items, suppliers } = useItemService();
+  const { pos, requisitions } = useProcurementService();
+  const { recipes } = useRecipeService();
+  const { wastage } = useWastageService();
+
+  const stockCounts = counts.data || [];
+  const itemsList = items.data || [];
+  const movementsList = movementReport.data || [];
+  const suppliersList = suppliers.data || [];
+  const ordersList = pos.data || [];
+  const wastageList = wastage.data || [];
+  const recipesList = recipes.data || [];
 
   const [isReplenishing, setIsReplenishing] = useState(false);
   const [reportDetailOpen, setReportDetailOpen] = useState(false);
   const [activeReport, setActiveReport] = useState<ReportInfo | null>(null);
 
-  const departmentValue = (items || []).reduce((acc: Record<string, number>, item: InventoryItem) => {
+  const departmentValue = (itemsList || []).reduce((acc: Record<string, number>, item: any) => {
     const dept = item.department || "Unassigned";
     const cost = (item.avg_cost || item.cost_price || 0);
     acc[dept] = (acc[dept] || 0) + (item.current_stock * cost);
     return acc;
   }, {});
 
-  const consumptionByDept = (movements || [])
-    .filter(m => m.movement_type === 'out')
-    .reduce((acc: Record<string, number>, m) => {
-      const item = m.item as InventoryItem | undefined;
+  const consumptionByDept = (movementsList || [])
+    .filter((m: any) => m.movement_type === 'out')
+    .reduce((acc: Record<string, number>, m: any) => {
+      const item = m.item as any;
       const dept = item?.department || "General";
       const value = m.quantity * (item?.avg_cost || item?.cost_price || 0);
       acc[dept] = (acc[dept] || 0) + value;
@@ -67,7 +74,7 @@ export function ReportsTab() {
     }, {});
 
   const totalConsumption = Object.values(consumptionByDept).reduce((a, b) => a + b, 0) as number;
-  const totalWastage = (wastageList || []).reduce((sum, w) => sum + w.cost_impact, 0);
+  const totalWastageValue = (wastageList || []).reduce((sum: number, w: any) => sum + (w.cost_impact || 0), 0);
 
   const { data: posTransactions = [] } = useQuery<{ total: number | null }[]>({
     queryKey: ["pos-transactions-report"],
@@ -81,34 +88,34 @@ export function ReportsTab() {
   const foodCostPercentage = mtdSales > 0 ? (((consumptionByDept["F&B"] || totalConsumption * 0.4) / mtdSales) * 100).toFixed(1) : "28.4";
 
   const inventoryTurnover = totalConsumption > 0 ? (totalConsumption / stats.totalValue).toFixed(2) : "0.00";
-  const wastePercentage = totalConsumption > 0 ? ((totalWastage / totalConsumption) * 100).toFixed(1) : "0.0";
+  const wastePercentage = totalConsumption > 0 ? ((totalWastageValue / totalConsumption) * 100).toFixed(1) : "0.0";
 
-  const avgAgingDays = (items || []).length > 0 ? Math.ceil((items || []).reduce((sum, i) => {
+  const avgAgingDays = (itemsList || []).length > 0 ? Math.ceil((itemsList || []).reduce((sum: number, i: any) => {
      const lastActionDate = i.last_restocked_at ? new Date(i.last_restocked_at) : new Date(i.created_at);
      const diff = Math.abs(Date.now() - lastActionDate.getTime()) / (1000 * 60 * 60 * 24);
      return sum + diff;
-  }, 0) / (items || []).length) : 0;
+  }, 0) / (itemsList || []).length) : 0;
 
-  const lowStockItems = (items || []).filter(i => i.current_stock <= i.reorder_point);
+  const lowStockItems = (itemsList || []).filter((i: any) => i.current_stock <= i.reorder_point);
 
   const topConsumed = useMemo(() => {
     const map = new Map<string, { name: string, qty: number, value: number }>();
-    (movements || [])
-      .filter(m => m.movement_type === 'out')
-      .forEach(m => {
-        const item = m.item as InventoryItem | undefined;
+    (movementsList || [])
+      .filter((m: any) => m.movement_type === 'out')
+      .forEach((m: any) => {
+        const item = m.item as any;
         if (!item) return;
-        const current = map.get(m.item_id) || { name: item.name, qty: 0, value: 0 };
+        const current = map.get(m.item_id) || { name: item.item_name, qty: 0, value: 0 };
         current.qty += m.quantity;
         current.value += m.quantity * (item.avg_cost || item.cost_price || 0);
         map.set(m.item_id, current);
       });
     return Array.from(map.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
-  }, [movements]);
+  }, [movementsList]);
 
   const supplierPerformance = useMemo(() => {
-    return (suppliers || []).map(s => {
-      const supplierOrders = (orders || []).filter(o => o.supplier_id === s.id);
+    return (suppliersList || []).map((s: any) => {
+      const supplierOrders = (ordersList || []).filter((o: any) => o.supplier_id === s.supplier_id);
       const receivedOrders = supplierOrders.filter(o => (o.status === 'received' || o.status === 'partially_received'));
 
       let avgLeadTime = 0;
@@ -142,26 +149,26 @@ export function ReportsTab() {
   }, [suppliers, orders]);
 
   const varianceTrend = useMemo(() => {
-    return (stockCounts || []).slice(0, 5).reverse().map(sc => ({
+    return (stockCounts || []).slice(0, 5).reverse().map((sc: any) => ({
       date: new Date(sc.count_date).toLocaleDateString(),
-      variance: sc.items?.reduce((sum, i) => sum + Math.abs(i.variance), 0) || 0
+      variance: sc.items?.reduce((sum: number, i: any) => sum + Math.abs(i.variance), 0) || 0
     }));
   }, [stockCounts]);
 
   const priceTrend = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
-    const received = (orders || []).filter(o => o.status === 'received').slice(0, 10).reverse();
-    return received.map(o => ({
+    if (!ordersList || ordersList.length === 0) return [];
+    const received = (ordersList || []).filter((o: any) => o.status === 'received').slice(0, 10).reverse();
+    return received.map((o: any) => ({
       date: new Date(o.order_date).toLocaleDateString(),
       avgPrice: (o.subtotal || 0) / (o.items?.length || 1),
-      total: o.total
+      total: o.total_amount
     }));
-  }, [orders]);
+  }, [ordersList]);
 
-  const recipeStats = (recipes || []).map(r => {
-     const cost = r.items?.reduce((s, i) => s + (i.quantity * (i.item?.cost_price || 0)), 0) || 0;
-     const theoreticalUsage = (movements || []).filter(m => m.reference_type === 'pos_sale' && m.notes?.includes(r.id)).length;
-     return { name: r.name, cost, theoreticalUsage };
+  const recipeStats = (recipesList || []).map((r: any) => {
+     const cost = r.items?.reduce((s: number, i: any) => s + (i.quantity_required * (i.item?.cost_price || 0)), 0) || 0;
+     const theoreticalUsage = (movementsList || []).filter((m: any) => m.reference_type === 'pos_sale' && m.notes?.includes(r.recipe_id)).length;
+     return { name: r.recipe_name, cost, theoreticalUsage };
   });
 
   const handleAutoReplenish = async () => {
@@ -169,13 +176,12 @@ export function ReportsTab() {
      setIsReplenishing(true);
      try {
         const { data: { user } } = await supabase.auth.getUser();
-        await createRequisition.mutateAsync({
-           department: "Procurement (Auto)",
-           priority: "high",
-           notes: "Automated replenishment for low stock items",
-           requested_by: user?.id,
-           items: lowStockItems.map(i => ({
-              item_id: i.id,
+        await requisitions.mutateAsync({
+           department_id: undefined, // Add proper mapping if needed
+           request_date: new Date().toISOString(),
+           status: "pending",
+           items: lowStockItems.map((i: any) => ({
+              item_id: i.item_id,
               quantity: (i.reorder_point * 2)
            }))
         });
@@ -194,25 +200,25 @@ export function ReportsTab() {
     if (reportName === "Departmental Performance") {
        headers = ["Department", "Stock Value", "Usage (MTD)"];
        rows = Object.entries(departmentValue).map(([dept, val]) => [
-         dept, formatCurrency(val), formatCurrency(consumptionByDept[dept] || 0)
+         dept, formatCurrency(val as number), formatCurrency(consumptionByDept[dept] || 0)
        ]);
     } else if (reportName === "Wastage Analysis") {
        headers = ["Date", "Item", "Type", "Quantity", "Cost Impact"];
-       rows = wastageList.map(w => [new Date(w.created_at).toLocaleDateString(), w.item?.name, w.wastage_type, w.quantity, formatCurrency(w.cost_impact)]);
+       rows = wastageList.map((w: any) => [new Date(w.created_at).toLocaleDateString(), w.item?.item_name, w.wastage_type, w.quantity, formatCurrency(w.cost_impact)]);
     } else if (reportName === "Consumption Analysis") {
        headers = ["Department", "Item", "Quantity", "Value"];
-       rows = (movements || []).filter(m => m.movement_type === 'out').map(m => {
-          const item = m.item as InventoryItem | undefined;
+       rows = (movementsList || []).filter((m: any) => m.movement_type === 'out').map((m: any) => {
+          const item = m.item as any;
           return [
             item?.department || 'General',
-            item?.name || 'Unknown',
+            item?.item_name || 'Unknown',
             m.quantity,
             formatCurrency(m.quantity * (item?.avg_cost || item?.cost_price || 0))
           ];
        });
     } else {
        headers = ["Item", "Category", "Stock", "Avg Cost", "Value"];
-       rows = (items || []).map(i => [i.name, i.category?.name || "-", i.current_stock, formatCurrency(i.avg_cost || i.cost_price), formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))]);
+       rows = (itemsList || []).map((i: any) => [i.item_name, i.category?.category_name || "-", i.current_stock, formatCurrency(i.avg_cost || i.cost_price), formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))]);
     }
 
     const data = { title: `${reportName} - Inventory`, headers, rows };
@@ -501,13 +507,13 @@ export function ReportsTab() {
         <h4 className="font-semibold text-lg flex items-center gap-2"><FileText className="h-5 w-5" /> Executive Reporting Queries</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { title: "Stock Valuation", desc: "Detailed item-wise stock value", icon: Package, data: items, headers: ["Item", "Category", "Stock", "Cost", "Value"] },
-            { title: "Consumption Analysis", desc: "Usage breakdown by department", icon: Activity, data: movements.filter(m => m.movement_type === 'out'), headers: ["Date", "Item", "Qty", "Dept"] },
+            { title: "Stock Valuation", desc: "Detailed item-wise stock value", icon: Package, data: itemsList, headers: ["Item", "Category", "Stock", "Cost", "Value"] },
+            { title: "Consumption Analysis", desc: "Usage breakdown by department", icon: Activity, data: movementsList.filter((m: any) => m.movement_type === 'out'), headers: ["Date", "Item", "Qty", "Dept"] },
             { title: "Wastage Analysis", desc: "Detailed breakdown of losses", icon: AlertCircle, data: wastageList, headers: ["Date", "Item", "Type", "Qty", "Cost"] },
-            { title: "Supplier Scorecard", desc: "Fulfillment & rating metrics", icon: Truck, data: suppliers, headers: ["Supplier", "Rating", "Active", "Lead Time"] },
-            { title: "Reorder Report", desc: "Items below minimum stock levels", icon: ShoppingCart, data: items.filter(i => i.current_stock <= i.min_stock), headers: ["Item", "Current", "Min", "Reorder Qty"] },
-            { title: "Audit Trail", desc: "Manual stock adjustment history", icon: FileText, data: movements.filter(m => m.reference_type === 'manual_adjustment' || m.movement_type === 'adjustment'), headers: ["Date", "Item", "Action", "Qty", "Notes"] },
-          ].map((rpt, idx) => (
+            { title: "Supplier Scorecard", desc: "Fulfillment & rating metrics", icon: Truck, data: suppliersList, headers: ["Supplier", "Rating", "Active", "Lead Time"] },
+            { title: "Reorder Report", desc: "Items below minimum stock levels", icon: ShoppingCart, data: itemsList.filter((i: any) => i.current_stock <= i.min_stock), headers: ["Item", "Current", "Min", "Reorder Qty"] },
+            { title: "Audit Trail", desc: "Manual stock adjustment history", icon: FileText, data: movementsList.filter((m: any) => m.reference_type === 'manual_adjustment' || m.movement_type === 'adjustment'), headers: ["Date", "Item", "Action", "Qty", "Notes"] },
+          ].map((rpt: any, idx) => (
             <Card key={idx} className="hover:bg-muted/50 transition-colors cursor-pointer group border-dashed" onClick={() => openReport(rpt)}>
               <CardContent className="pt-6">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
@@ -600,36 +606,36 @@ export function ReportsTab() {
                      </TableRow>
                   </TableHeader>
                   <TableBody>
-                     {activeReport?.title === "Stock Valuation" && activeReport.data.map((i: InventoryItem) => (
-                        <TableRow key={i.id}>
-                           <TableCell className="text-xs">{i.name}</TableCell>
-                           <TableCell className="text-xs">{i.category?.name || "-"}</TableCell>
+                     {activeReport?.title === "Stock Valuation" && activeReport.data.map((i: any) => (
+                        <TableRow key={i.item_id}>
+                           <TableCell className="text-xs">{i.item_name}</TableCell>
+                           <TableCell className="text-xs">{i.category?.category_name || "-"}</TableCell>
                            <TableCell className="text-xs font-bold">{i.current_stock}</TableCell>
                            <TableCell className="text-xs font-mono">{formatCurrency(i.avg_cost || i.cost_price)}</TableCell>
                            <TableCell className="text-xs font-bold font-mono">{formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))}</TableCell>
                         </TableRow>
                      ))}
-                     {activeReport?.title === "Consumption Analysis" && activeReport.data.map((m: StockMovement) => {
-                        const item = m.item as InventoryItem | undefined;
+                     {activeReport?.title === "Consumption Analysis" && activeReport.data.map((m: any) => {
+                        const item = m.item as any;
                         return (
-                          <TableRow key={m.id}>
-                             <TableCell className="text-xs">{new Date(m.created_at).toLocaleDateString()}</TableCell>
-                             <TableCell className="text-xs font-bold">{item?.name || 'Unknown'}</TableCell>
+                          <TableRow key={m.movement_id}>
+                             <TableCell className="text-xs">{new Date(m.movement_date || m.created_at).toLocaleDateString()}</TableCell>
+                             <TableCell className="text-xs font-bold">{item?.item_name || 'Unknown'}</TableCell>
                              <TableCell className="text-xs">{m.quantity}</TableCell>
                              <TableCell className="text-xs text-muted-foreground">{item?.department || 'General'}</TableCell>
                           </TableRow>
                         );
                      })}
-                     {activeReport?.title === "Wastage Analysis" && activeReport.data.map((w: InventoryWastage) => (
+                     {activeReport?.title === "Wastage Analysis" && activeReport.data.map((w: any) => (
                         <TableRow key={w.id}>
                            <TableCell className="text-xs">{new Date(w.created_at).toLocaleDateString()}</TableCell>
-                           <TableCell className="text-xs">{w.item?.name}</TableCell>
+                           <TableCell className="text-xs">{w.item?.item_name}</TableCell>
                            <TableCell className="text-xs"><Badge variant="outline" className="text-[10px]">{w.wastage_type}</Badge></TableCell>
                            <TableCell className="text-xs font-bold">{w.quantity}</TableCell>
                            <TableCell className="text-xs font-mono text-destructive">{formatCurrency(w.cost_impact)}</TableCell>
                         </TableRow>
                      ))}
-                     {activeReport?.title === "Supplier Scorecard" && supplierPerformance.map((s) => (
+                     {activeReport?.title === "Supplier Scorecard" && supplierPerformance.map((s: any) => (
                         <TableRow key={s.id}>
                            <TableCell className="text-xs font-bold">{s.name}</TableCell>
                            <TableCell className="text-xs">{s.rating}/5</TableCell>
@@ -638,23 +644,23 @@ export function ReportsTab() {
                            <TableCell className="text-xs font-mono">{formatCurrency(s.totalSpend)} Spend</TableCell>
                         </TableRow>
                      ))}
-                     {activeReport?.title === "Reorder Report" && activeReport.data.map((i) => {
-                        const item = i as InventoryItem;
+                     {activeReport?.title === "Reorder Report" && activeReport.data.map((i: any) => {
+                        const item = i as any;
                         return (
-                          <TableRow key={item.id}>
-                             <TableCell className="text-xs font-bold">{item.name}</TableCell>
+                          <TableRow key={item.item_id}>
+                             <TableCell className="text-xs font-bold">{item.item_name}</TableCell>
                              <TableCell className="text-xs text-destructive font-bold">{item.current_stock}</TableCell>
                              <TableCell className="text-xs">{item.min_stock}</TableCell>
                              <TableCell className="text-xs font-bold">{Math.max(0, (item.reorder_point * 2) - item.current_stock)}</TableCell>
                           </TableRow>
                         );
                      })}
-                     {activeReport?.title === "Audit Trail" && activeReport.data.map((m: StockMovement) => {
-                        const item = m.item as InventoryItem | undefined;
+                     {activeReport?.title === "Audit Trail" && activeReport.data.map((m: any) => {
+                        const item = m.item as any;
                         return (
-                          <TableRow key={m.id}>
-                             <TableCell className="text-xs">{new Date(m.created_at).toLocaleString()}</TableCell>
-                             <TableCell className="text-xs font-bold">{item?.name || 'Unknown'}</TableCell>
+                          <TableRow key={m.movement_id}>
+                             <TableCell className="text-xs">{new Date(m.movement_date || m.created_at).toLocaleString()}</TableCell>
+                             <TableCell className="text-xs font-bold">{item?.item_name || 'Unknown'}</TableCell>
                              <TableCell className="text-xs uppercase font-mono">{m.movement_type}</TableCell>
                              <TableCell className="text-xs">{m.quantity}</TableCell>
                              <TableCell className="text-xs text-muted-foreground italic">{m.notes || 'No comments'}</TableCell>

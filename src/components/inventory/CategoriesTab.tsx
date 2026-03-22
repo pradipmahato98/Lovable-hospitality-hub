@@ -9,28 +9,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Loader2, FolderTree, Barcode } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryCategories, useInventoryItems, InventoryCategory } from "@/hooks/useInventory";
+import { useItemService } from "@/hooks/inventory/useItemService";
 
 export function CategoriesTab() {
-  const { data: categories = [], createCategory, updateCategory, deleteCategory } = useInventoryCategories();
-  const { data: items = [] } = useInventoryItems();
+  const { categories: categoriesQuery, items: itemsQuery, createCategory, updateCategory, deleteCategory } = useItemService();
+  const categories = categoriesQuery.data || [];
+  const items = itemsQuery.data || [];
+
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "", parent_id: "", sku_prefix: "" });
 
-  const getItemCount = (catId: string) => items.filter((i) => i.category_id === catId).length;
-  const getParentName = (parentId: string | null) => categories.find((c) => c.id === parentId)?.name || "-";
+  const getItemCount = (catId: string) => items.filter((i: any) => i.category_id === catId).length;
+  const getParentName = (parentId: string | null) => categories.find((c: any) => c.category_id === parentId)?.category_name || "-";
 
   const handleSave = async () => {
     try {
       const payload = {
-        name: form.name,
+        category_name: form.name,
         description: form.description || null,
-        parent_id: form.parent_id || null,
+        parent_category: form.parent_id || null,
         sku_prefix: form.sku_prefix || null
       };
       if (editId) {
-        await updateCategory.mutateAsync({ id: editId, ...payload });
+        await updateCategory.mutateAsync({ category_id: editId, ...payload });
         toast.success("Category updated");
       } else {
         await createCategory.mutateAsync(payload);
@@ -56,12 +58,12 @@ export function CategoriesTab() {
     }
   };
 
-  const openEdit = (cat: InventoryCategory) => {
-    setEditId(cat.id);
+  const openEdit = (cat: any) => {
+    setEditId(cat.category_id);
     setForm({
-      name: cat.name,
+      name: cat.category_name,
       description: cat.description || "",
-      parent_id: cat.parent_id || "",
+      parent_id: cat.parent_category || "",
       sku_prefix: cat.sku_prefix || ""
     });
     setOpen(true);
@@ -88,7 +90,7 @@ export function CategoriesTab() {
                     <SelectTrigger><SelectValue placeholder="None (top level)" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None (top level)</SelectItem>
-                      {categories.filter((c) => c.id !== editId).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {categories.filter((c: any) => c.category_id !== editId).map((c: any) => <SelectItem key={c.category_id} value={c.category_id}>{c.category_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -119,19 +121,19 @@ export function CategoriesTab() {
             {categories.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No categories yet</TableCell></TableRow>
             ) : (
-              categories.map((cat) => (
-                <TableRow key={cat.id}>
+              categories.map((cat: any) => (
+                <TableRow key={cat.category_id}>
                   <TableCell>
-                     <div className="font-medium">{cat.name}</div>
+                     <div className="font-medium">{cat.category_name}</div>
                      <div className="text-[10px] text-muted-foreground line-clamp-1">{cat.description}</div>
                   </TableCell>
                   <TableCell><Badge variant="secondary" className="font-mono text-[10px]">{cat.sku_prefix || "NONE"}</Badge></TableCell>
-                  <TableCell className="text-xs">{getParentName(cat.parent_id)}</TableCell>
-                  <TableCell><span className="font-bold text-xs">{getItemCount(cat.id)}</span> items</TableCell>
+                  <TableCell className="text-xs">{getParentName(cat.parent_category)}</TableCell>
+                  <TableCell><span className="font-bold text-xs">{getItemCount(cat.category_id)}</span> items</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.category_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

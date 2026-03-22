@@ -9,14 +9,19 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Cell
 } from "recharts";
-import { useInventoryItems, usePurchaseOrders, useSuppliers } from "@/hooks/useInventory";
+import { useItemService } from "@/hooks/inventory/useItemService";
+import { useProcurementService } from "@/hooks/inventory/useProcurementService";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ShoppingCart, TrendingDown, TrendingUp, DollarSign, Truck } from "lucide-react";
 
 export function PriceComparisonReport() {
-  const { data: items = [] } = useInventoryItems();
-  const { data: orders = [] } = usePurchaseOrders();
-  const { data: suppliers = [] } = useSuppliers();
+  const { items: itemsQuery } = useItemService();
+  const items = itemsQuery.data || [];
+
+  const { orders: ordersQuery, suppliers: suppliersQuery } = useProcurementService();
+  const orders = (ordersQuery.data || []) as any[];
+  const suppliers = (suppliersQuery.data || []) as any[];
+
   const [selectedItemId, setSelectedItemId] = useState<string>("");
 
   const comparisonData = useMemo(() => {
@@ -25,23 +30,23 @@ export function PriceComparisonReport() {
     const supplierPrices: Record<string, { lastPrice: number, minPrice: number, maxPrice: number, orders: number }> = {};
 
     orders.forEach(order => {
-      const lineItem = order.items?.find(i => i.item_id === selectedItemId);
+      const lineItem = order.items?.find((i: any) => i.item_id === selectedItemId);
       if (lineItem && order.supplier_id) {
-        const sName = suppliers.find(s => s.id === order.supplier_id)?.name || "Unknown";
+        const sName = suppliers.find(s => s.supplier_id === order.supplier_id)?.supplier_name || "Unknown";
         if (!supplierPrices[sName]) {
           supplierPrices[sName] = {
-            lastPrice: lineItem.unit_price,
-            minPrice: lineItem.unit_price,
-            maxPrice: lineItem.unit_price,
+            lastPrice: lineItem.price,
+            minPrice: lineItem.price,
+            maxPrice: lineItem.price,
             orders: 0
           };
         }
 
         supplierPrices[sName].orders += 1;
-        supplierPrices[sName].minPrice = Math.min(supplierPrices[sName].minPrice, lineItem.unit_price);
-        supplierPrices[sName].maxPrice = Math.max(supplierPrices[sName].maxPrice, lineItem.unit_price);
+        supplierPrices[sName].minPrice = Math.min(supplierPrices[sName].minPrice, lineItem.price);
+        supplierPrices[sName].maxPrice = Math.max(supplierPrices[sName].maxPrice, lineItem.price);
         // Assuming orders are sorted by date or we update lastPrice correctly
-        supplierPrices[sName].lastPrice = lineItem.unit_price;
+        supplierPrices[sName].lastPrice = lineItem.price;
       }
     });
 
@@ -51,7 +56,7 @@ export function PriceComparisonReport() {
     })).sort((a, b) => a.lastPrice - b.lastPrice);
   }, [selectedItemId, orders, suppliers]);
 
-  const selectedItem = items.find(i => i.id === selectedItemId);
+  const selectedItem = items.find((i: any) => i.item_id === selectedItemId);
   const COLORS = ['#0066ff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
@@ -64,8 +69,8 @@ export function PriceComparisonReport() {
                   <SelectValue placeholder="Choose an item to compare vendor pricing..." />
                </SelectTrigger>
                <SelectContent>
-                  {items.map(i => (
-                     <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku})</SelectItem>
+                  {items.map((i: any) => (
+                     <SelectItem key={i.item_id} value={i.item_id}>{i.item_name} ({i.item_code})</SelectItem>
                   ))}
                </SelectContent>
             </Select>
@@ -84,7 +89,7 @@ export function PriceComparisonReport() {
                <CardHeader>
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
                      <TrendingDown className="h-4 w-4 text-primary" />
-                     Vendor Price Variance: {selectedItem?.name}
+                     Vendor Price Variance: {selectedItem?.item_name}
                   </CardTitle>
                   <CardDescription>Comparison of last purchase prices by supplier</CardDescription>
                </CardHeader>

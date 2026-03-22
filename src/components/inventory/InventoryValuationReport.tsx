@@ -3,29 +3,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useInventoryItems, useInventoryStores } from "@/hooks/useInventory";
+import { useItemService } from "@/hooks/inventory/useItemService";
+import { useStoreService } from "@/hooks/inventory/useStoreService";
 import { formatCurrency } from "@/lib/utils";
 import { Download, MapPin } from "lucide-react";
 import { exportToExcel } from "@/lib/reportExport";
 
 export function InventoryValuationReport() {
-  const { data: items = [], isLoading } = useInventoryItems();
-  const { data: stores = [] } = useInventoryStores();
+  const { items: itemsQuery } = useItemService();
+  const { stores: storesQuery } = useStoreService();
+
+  const items = itemsQuery.data || [];
+  const stores = storesQuery.data || [];
+
   const [storeFilter, setStoreFilter] = useState("all");
 
-  const filteredItems = storeFilter === "all"
+  const filteredItems = (storeFilter === "all"
     ? items
-    : items.filter(i => i.department === storeFilter || i.location === storeFilter); // Fallback logic as store-item relation is in separate table
+    : items.filter((i: any) => i.department === storeFilter || i.location === storeFilter)) as any[];
 
-  const totalValue = filteredItems.reduce((sum, item) => sum + (item.current_stock * (item.avg_cost || item.cost_price)), 0);
+  const totalValue = filteredItems.reduce((sum, item) => sum + (item.current_stock * (item.avg_cost || item.cost_price || 0)), 0);
 
   const handleExport = () => {
     const data = {
       title: `Inventory Valuation Report - ${storeFilter === 'all' ? 'All Locations' : storeFilter}`,
       headers: ["Item", "Category", "Stock", "Unit", "Valuation"],
       rows: filteredItems.map(i => [
-        i.name, i.category?.name || "-", i.current_stock, i.uom?.abbreviation || i.unit,
-        formatCurrency(i.current_stock * (i.avg_cost || i.cost_price))
+        i.item_name, i.category?.category_name || "-", i.current_stock, i.unit?.unit_symbol || 'units',
+        formatCurrency(i.current_stock * (i.avg_cost || i.cost_price || 0))
       ])
     };
     exportToExcel(data);
@@ -45,7 +50,7 @@ export function InventoryValuationReport() {
                   <SelectTrigger className="w-40 h-8 text-xs bg-background"><SelectValue placeholder="All Stores" /></SelectTrigger>
                   <SelectContent>
                      <SelectItem value="all">All Stores (Master)</SelectItem>
-                     {stores.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                     {stores.map((s: any) => <SelectItem key={s.store_id} value={s.store_name}>{s.store_name}</SelectItem>)}
                   </SelectContent>
                </Select>
             </div>
@@ -73,13 +78,13 @@ export function InventoryValuationReport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
-                  <TableCell className="font-medium text-xs">{item.name}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{item.category?.name || "-"}</TableCell>
-                  <TableCell className="text-right text-xs font-bold">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.uom?.abbreviation || item.unit}</span></TableCell>
-                  <TableCell className="text-right font-mono text-[10px]">{formatCurrency(item.avg_cost || item.cost_price)}</TableCell>
-                  <TableCell className="text-right font-bold text-xs text-primary">{formatCurrency(item.current_stock * (item.avg_cost || item.cost_price))}</TableCell>
+              {filteredItems.map((item: any) => (
+                <TableRow key={item.item_id} className="hover:bg-muted/10 transition-colors">
+                  <TableCell className="font-medium text-xs">{item.item_name}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{item.category?.category_name || "-"}</TableCell>
+                  <TableCell className="text-right text-xs font-bold">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.unit?.unit_symbol || 'units'}</span></TableCell>
+                  <TableCell className="text-right font-mono text-[10px]">{formatCurrency(item.avg_cost || item.cost_price || 0)}</TableCell>
+                  <TableCell className="text-right font-bold text-xs text-primary">{formatCurrency(item.current_stock * (item.avg_cost || item.cost_price || 0))}</TableCell>
                 </TableRow>
               ))}
               {filteredItems.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10 text-xs italic text-muted-foreground">No items in selected store</TableCell></TableRow>}

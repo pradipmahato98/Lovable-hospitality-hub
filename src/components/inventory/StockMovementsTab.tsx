@@ -6,20 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpDown, TrendingUp, TrendingDown, Search, Download, MapPin } from "lucide-react";
-import { useStockMovements, useInventoryStores } from "@/hooks/useInventory";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
+import { useStoreService } from "@/hooks/inventory/useStoreService";
 import { formatAD, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 
 export function StockMovementsTab() {
-  const { data: movements = [] } = useStockMovements();
-  const { data: stores = [] } = useInventoryStores();
+  const { movements } = useInventoryTransactionService();
+  const { stores } = useStoreService();
+  const movementsList = movements.data || [];
+  const storesList = stores.data || [];
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [storeFilter, setStoreFilter] = useState("all");
 
-  const filtered = (movements || []).filter((m) => {
-    const item = m.item as Record<string, unknown> | undefined;
-    const matchesSearch = !search || (item?.name as string)?.toLowerCase().includes(search.toLowerCase());
+  const filtered = (movementsList || []).filter((m: any) => {
+    const item = m.item as any;
+    const matchesSearch = !search || (item?.item_name as string)?.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === "all" || m.movement_type === typeFilter;
     const matchesStore = storeFilter === "all" || m.store_id === storeFilter;
     return matchesSearch && matchesType && matchesStore;
@@ -29,12 +33,12 @@ export function StockMovementsTab() {
     const data = {
       title: "Stock Movements Audit Ledger",
       headers: ["Date", "Item", "Store", "Type", "Quantity", "Ref"],
-      rows: filtered.map((m) => {
-        const item = m.item as Record<string, unknown> | undefined;
+      rows: filtered.map((m: any) => {
+        const item = m.item as any;
         return [
-          formatAD(new Date(m.created_at), "time"),
-          (item?.name as string) || "-",
-          stores.find(s => s.id === m.store_id)?.name || "Main",
+          formatAD(new Date(m.movement_date || m.created_at), "time"),
+          (item?.item_name as string) || "-",
+          storesList.find((s: any) => s.store_id === m.store_id)?.store_name || "Main",
           m.movement_type,
           m.quantity,
           m.reference_type || "Manual",
@@ -79,7 +83,7 @@ export function StockMovementsTab() {
               <SelectTrigger className="w-40 h-9 text-xs"><SelectValue placeholder="All Stores" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Stores</SelectItem>
-                {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                {storesList.map((s: any) => <SelectItem key={s.store_id} value={s.store_id}>{s.store_name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -99,11 +103,11 @@ export function StockMovementsTab() {
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs italic">No matching movements</TableCell></TableRow>
               ) : (
-                filtered.map((m) => (
-                  <TableRow key={m.id} className="hover:bg-muted/5 transition-colors">
-                    <TableCell className="text-[10px] font-mono">{formatAD(new Date(m.created_at), "time")}</TableCell>
-                    <TableCell className="text-xs font-semibold">{(m.item as Record<string, unknown>)?.name as string || "-"}</TableCell>
-                    <TableCell className="text-[10px]"><Badge variant="outline" className="h-4 font-normal">{stores.find(s => s.id === m.store_id)?.name || "Main"}</Badge></TableCell>
+                filtered.map((m: any) => (
+                  <TableRow key={m.movement_id} className="hover:bg-muted/5 transition-colors">
+                    <TableCell className="text-[10px] font-mono">{formatAD(new Date(m.movement_date || m.created_at), "time")}</TableCell>
+                    <TableCell className="text-xs font-semibold">{(m.item as any)?.item_name as string || "-"}</TableCell>
+                    <TableCell className="text-[10px]"><Badge variant="outline" className="h-4 font-normal">{storesList.find((s: any) => s.store_id === m.store_id)?.store_name || "Main"}</Badge></TableCell>
                     <TableCell>
                       <Badge className={cn("text-[9px] h-4", m.movement_type === "in" ? "bg-success/10 text-success border-success/20" : m.movement_type === "out" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-muted text-muted-foreground")}>
                         {m.movement_type.toUpperCase()}

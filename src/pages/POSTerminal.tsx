@@ -49,7 +49,7 @@ import { useSearchParams } from "react-router-dom";
 import { useInvoices } from "@/hooks/useBillingData";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useInventoryPOS } from "@/hooks/useInventory";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
 
 interface CartItem {
   id: string;
@@ -116,7 +116,7 @@ const POSTerminal = () => {
   const { data: gatewaysData } = usePaymentGateways();
   const { addFolioItem } = useGuestFolios();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
-  const { deductBulkInventoryForSale } = useInventoryPOS();
+  const { deductBulkInventoryForSale } = useInventoryTransactionService();
 
   const menuItems = dbMenuItems.map((item: any) => ({
     id: item.id,
@@ -259,7 +259,11 @@ const POSTerminal = () => {
       // Trigger inventory deduction
       await deductBulkInventoryForSale.mutateAsync({
         saleId: data.id,
-        items: cart.map(i => ({ menu_item_id: i.id, quantity: i.quantity }))
+        items: cart.map(i => ({
+          menu_item_id: i.id,
+          quantity: i.quantity,
+          name: i.name
+        }))
       });
 
       const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
