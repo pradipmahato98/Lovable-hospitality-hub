@@ -9,13 +9,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Store, Loader2, Edit, Trash2, MapPin, Thermometer, Wind, User } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryStores } from "@/hooks/useInventory";
+import { useStoreService } from "@/hooks/inventory/useStoreService";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 export function StoresTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const { data: stores = [], isLoading, createStore, updateStore } = useInventoryStores();
+  const { stores: storesQuery, createStore, updateStore } = useStoreService();
   const { data: staff = [] } = useStaffMembers();
+  const stores = storesQuery.data || [];
+  const isLoading = storesQuery.isLoading;
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -29,14 +31,10 @@ export function StoresTab() {
   const handleCreate = async () => {
     try {
       await createStore.mutateAsync({
-        name: form.name,
-        code: form.code,
+        store_name: form.name,
         location: form.location,
         store_type: form.store_type,
-        temperature_classification: form.temperature_classification,
-        storage_conditions: form.storage_conditions,
-        is_active: true,
-        store_manager_id: (form as any).store_manager_id || null
+        manager_id: (form as any).store_manager_id || null
       });
       toast.success("Store created");
       setIsAddOpen(false);
@@ -125,8 +123,8 @@ export function StoresTab() {
         ) : stores.length === 0 ? (
           <div className="col-span-full text-center py-10 border rounded-lg bg-muted/20 text-muted-foreground">No stores configured</div>
         ) : (
-          stores.map((store) => (
-            <Card key={store.id} className="hover:shadow-md transition-shadow">
+          stores.map((store: any) => (
+            <Card key={store.store_id} className="hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
@@ -134,9 +132,9 @@ export function StoresTab() {
                       <Store className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-bold text-lg">{store.name}</p>
+                      <p className="font-bold text-lg">{store.store_name}</p>
                       <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground font-mono">{store.code}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{store.store_id.split('-')[0]}</p>
                         <Badge variant="outline" className="text-[8px] h-3 px-1">Main</Badge>
                       </div>
                     </div>
@@ -155,8 +153,8 @@ export function StoresTab() {
                     </div>
                     <div className="flex items-center gap-2">
                        <User className="h-3 w-3" />
-                       {store.store_manager_id ?
-                          staff.find(s => s.id === store.store_manager_id)?.first_name + " " + staff.find(s => s.id === store.store_manager_id)?.last_name :
+                       {store.manager_id ?
+                          staff.find(s => s.id === store.manager_id)?.first_name + " " + staff.find(s => s.id === store.manager_id)?.last_name :
                           "No Manager Assigned"}
                     </div>
                 </div>

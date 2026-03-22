@@ -35,11 +35,11 @@ export function SuppliesTab() {
     queryKey: ["housekeeping-supplies"],
     queryFn: async () => {
       const { data, error } = await db
-        .from("inventory_items")
+        .from("items")
         .select("*")
         .eq("department", "Housekeeping")
-        .eq("is_active", true)
-        .order("name");
+        .eq("status", true)
+        .order("item_name");
       if (error) throw error;
       return data;
     },
@@ -48,14 +48,14 @@ export function SuppliesTab() {
   const useSupplyMutation = useMutation({
     mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
       // Deduct from inventory
-      const item = supplies.find((s: any) => s.id === itemId);
+      const item = supplies.find((s: any) => s.item_id === itemId);
       if (!item) throw new Error("Item not found");
       
       const newStock = Math.max(0, item.current_stock - quantity);
       const { error } = await db
-        .from("inventory_items")
+        .from("items")
         .update({ current_stock: newStock })
-        .eq("id", itemId);
+        .eq("item_id", itemId);
       if (error) throw error;
 
       // Log the usage in stock movements table if available
@@ -82,7 +82,7 @@ export function SuppliesTab() {
   });
 
   const filteredSupplies = supplies.filter((item: any) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    item.item_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const lowStockItems = supplies.filter((item: any) => item.current_stock <= item.reorder_point);
@@ -95,7 +95,7 @@ export function SuppliesTab() {
 
   const handleUseSupply = () => {
     if (!selectedItem || useQuantity <= 0) return;
-    useSupplyMutation.mutate({ itemId: selectedItem.id, quantity: useQuantity });
+    useSupplyMutation.mutate({ itemId: selectedItem.item_id, quantity: useQuantity });
   };
 
   return (
@@ -109,7 +109,7 @@ export function SuppliesTab() {
               <div>
                 <p className="font-medium text-amber-500">Low Stock Alert</p>
                 <p className="text-sm text-muted-foreground">
-                  {lowStockItems.length} item(s) below reorder point: {lowStockItems.slice(0, 3).map((i: any) => i.name).join(", ")}
+                  {lowStockItems.length} item(s) below reorder point: {lowStockItems.slice(0, 3).map((i: any) => i.item_name).join(", ")}
                   {lowStockItems.length > 3 && ` and ${lowStockItems.length - 3} more`}
                 </p>
               </div>
@@ -177,8 +177,8 @@ export function SuppliesTab() {
                     const isLow = item.current_stock <= item.reorder_point;
                     const isEmpty = item.current_stock === 0;
                     return (
-                      <TableRow key={item.id} className={isEmpty ? "bg-destructive/5" : isLow ? "bg-amber-500/5" : ""}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableRow key={item.item_id} className={isEmpty ? "bg-destructive/5" : isLow ? "bg-amber-500/5" : ""}>
+                        <TableCell className="font-medium">{item.item_name}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tight">
                             {item.category_name || "General"}
@@ -226,7 +226,7 @@ export function SuppliesTab() {
           <DialogHeader>
             <DialogTitle>Use Supply</DialogTitle>
             <DialogDescription>
-              Record usage of: {selectedItem?.name}
+              Record usage of: {selectedItem?.item_name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

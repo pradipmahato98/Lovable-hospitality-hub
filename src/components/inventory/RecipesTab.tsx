@@ -9,40 +9,52 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, ChefHat, Loader2, Edit, Trash2, UtensilsCrossed, Play, Calculator, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryRecipes, useInventoryItems, useInventoryUoMs, useInventoryProduction, InventoryRecipe, InventoryRecipeItem } from "@/hooks/useInventory";
+import { useRecipeService } from "@/hooks/inventory/useRecipeService";
+import { useItemService } from "@/hooks/inventory/useItemService";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 
 export function RecipesTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isProduceOpen, setIsProduceOpen] = useState(false);
-  const { data: recipes = [], isLoading } = useInventoryRecipes();
-  const { data: items = [] } = useInventoryItems();
-  const { data: uoms = [] } = useInventoryUoMs();
-  const { produceBatch } = useInventoryProduction();
+  const { recipes: recipesQuery, createRecipe, updateRecipe } = useRecipeService();
+  const { items: itemsQuery, units: unitsQuery } = useItemService();
+  const { createMovement } = useInventoryTransactionService();
 
-  const [selectedRecipe, setSelectedRecipe] = useState<InventoryRecipe | null>(null);
+  const recipes = recipesQuery.data || [];
+  const items = itemsQuery.data || [];
+  const uoms = unitsQuery.data || [];
+  const isLoading = recipesQuery.isLoading;
+
+  const [selectedRecipe, setSelectedRecipe] = useState<any | null>(null);
   const [produceQty, setProduceQty] = useState(1);
 
-  const calculateRecipeCost = (recipe: InventoryRecipe) => {
-     const rawCost = recipe.items?.reduce((sum: number, rItem: InventoryRecipeItem) => {
-        return sum + (rItem.quantity * (rItem.item?.cost_price || 0));
+  const calculateRecipeCost = (recipe: any) => {
+     const rawCost = recipe.ingredients?.reduce((sum: number, rItem: any) => {
+        return sum + (rItem.quantity_required * (rItem.item?.cost_price || 0));
      }, 0) || 0;
-     // Account for yield loss (e.g. 90% yield means cost increases by 1/0.9)
-     const yieldFactor = (recipe.yield_percentage || 100) / 100;
-     return rawCost / (yieldFactor || 1);
+     return rawCost;
   };
 
   const handleProduce = async () => {
     if (!selectedRecipe) return;
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      await produceBatch.mutateAsync({
-        recipeId: selectedRecipe.id,
-        quantity: produceQty,
-        producedBy: user?.id || ""
-      });
-      toast.success(`Production logged: ${produceQty} portions of ${selectedRecipe.name}`);
+
+      // For each ingredient, record an "out" movement
+      for (const ingredient of selectedRecipe.ingredients) {
+        await createMovement.mutateAsync({
+           item_id: ingredient.item_id,
+           quantity: ingredient.quantity_required * produceQty,
+           movement_type: 'out',
+           reference_id: selectedRecipe.recipe_id,
+           reference_type: 'production',
+           notes: `Production of ${selectedRecipe.recipe_name}`
+        });
+      }
+
+      toast.success(`Production logged: ${produceQty} portions of ${selectedRecipe.recipe_name}`);
       setIsProduceOpen(false);
     } catch {
       toast.error("Production logging failed");
@@ -65,10 +77,10 @@ export function RecipesTab() {
         ) : recipes.length === 0 ? (
           <div className="col-span-full text-center py-10 border rounded-lg bg-muted/20 text-muted-foreground">No recipes defined</div>
         ) : (
-          recipes.map((recipe) => {
+          recipes.map((recipe: any) => {
             const recipeCost = calculateRecipeCost(recipe);
             return (
-              <Card key={recipe.id} className="hover:shadow-md transition-shadow">
+              <Card key={recipe.recipe_id} className="hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
@@ -76,15 +88,14 @@ export function RecipesTab() {
                         <ChefHat className="h-5 w-5 text-orange-500" />
                       </div>
                       <div>
-                        <p className="font-bold text-lg">{recipe.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{recipe.description || "No description"}</p>
+                        <p className="font-bold text-lg">{recipe.recipe_name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{recipe.menu_item?.name || "No linked menu item"}</p>
                       </div>
                     </div>
                     <div className="text-right">
                        <Badge variant="outline" className="flex items-center gap-1 mb-1"><UtensilsCrossed className="h-3 w-3" /> {recipe.portion_size}</Badge>
                        <div className="flex flex-col items-end">
                           <p className="text-[10px] font-bold text-primary">{formatCurrency(recipeCost)} / portion</p>
-                          <p className="text-[8px] text-muted-foreground">Yield: {recipe.yield_percentage}%</p>
                        </div>
                     </div>
                   </div>
@@ -95,14 +106,14 @@ export function RecipesTab() {
                        <Badge variant="secondary" className="text-[9px] h-4">Automated Deduction</Badge>
                     </div>
                     <div className="bg-muted/30 rounded-lg p-3 space-y-1">
-                      {recipe.items?.map((item) => {
-                        const itemCost = item.quantity * (item.item?.cost_price || 0);
-                        const weight = (itemCost / recipeCost) * 100;
+                      {recipe.ingredients?.map((ing: any) => {
+                        const itemCost = ing.quantity_required * (ing.item?.cost_price || 0);
+                        const weight = recipeCost > 0 ? (itemCost / recipeCost) * 100 : 0;
                         return (
-                          <div key={item.id} className="space-y-1">
+                          <div key={ing.id} className="space-y-1">
                             <div className="flex justify-between text-xs">
-                              <span className="font-medium">{item.item?.name}</span>
-                              <span className="font-mono text-muted-foreground">{item.quantity} {item.uom?.abbreviation || item.item?.unit}</span>
+                              <span className="font-medium">{ing.item?.item_name}</span>
+                              <span className="font-mono text-muted-foreground">{ing.quantity_required} {ing.item?.unit?.unit_symbol || 'units'}</span>
                             </div>
                             <div className="w-full h-0.5 bg-muted rounded-full overflow-hidden">
                                <div className="h-full bg-primary/40" style={{ width: `${weight}%` }} />
@@ -134,26 +145,26 @@ export function RecipesTab() {
       {/* Production Dialog */}
       <Dialog open={isProduceOpen} onOpenChange={setIsProduceOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Log Production: {selectedRecipe?.name}</DialogTitle><DialogDescription>Deduct ingredients from stock based on quantity produced</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Log Production: {selectedRecipe?.recipe_name}</DialogTitle><DialogDescription>Deduct ingredients from stock based on quantity produced</DialogDescription></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Batch Size (Portions)</Label>
               <div className="flex items-center gap-4">
                  <Input type="number" value={produceQty} onChange={(e) => setProduceQty(Number(e.target.value))} className="w-32" />
                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                 <p className="text-sm font-bold text-primary">Total Est. Cost: {formatCurrency(calculateRecipeCost(selectedRecipe || ({} as InventoryRecipe)) * produceQty)}</p>
+                 <p className="text-sm font-bold text-primary">Total Est. Cost: {formatCurrency(calculateRecipeCost(selectedRecipe || {}) * produceQty)}</p>
               </div>
               <p className="text-xs text-muted-foreground italic">Target: {selectedRecipe?.portion_size} per portion</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg border">
                <p className="text-xs font-bold uppercase mb-2 text-muted-foreground">Inventory Consumption:</p>
-               {selectedRecipe?.items?.map((item) => (
-                 <div key={item.id} className="flex justify-between text-xs py-1 border-b border-muted last:border-0">
-                   <span>{item.item?.name}</span>
+               {selectedRecipe?.ingredients?.map((ing: any) => (
+                 <div key={ing.id} className="flex justify-between text-xs py-1 border-b border-muted last:border-0">
+                   <span>{ing.item?.item_name}</span>
                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground line-through">{item.item?.current_stock}</span>
-                      <span className="text-destructive font-mono font-bold">-{item.quantity * produceQty}</span>
-                      <span className="text-[10px] font-bold uppercase">{item.uom?.abbreviation || item.item?.unit}</span>
+                      <span className="text-muted-foreground line-through">{ing.item?.current_stock}</span>
+                      <span className="text-destructive font-mono font-bold">-{ing.quantity_required * produceQty}</span>
+                      <span className="text-[10px] font-bold uppercase">{ing.item?.unit?.unit_symbol || 'units'}</span>
                    </div>
                  </div>
                ))}
@@ -161,8 +172,7 @@ export function RecipesTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProduceOpen(false)}>Cancel</Button>
-            <Button onClick={handleProduce} disabled={produceBatch.isPending} variant="blue" className="gap-2">
-               {produceBatch.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button onClick={handleProduce} variant="blue" className="gap-2">
                Finalize Production
             </Button>
           </DialogFooter>

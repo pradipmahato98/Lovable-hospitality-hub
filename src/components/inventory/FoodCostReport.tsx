@@ -1,26 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useInventoryRecipes, useStockMovements, useInventoryItems } from "@/hooks/useInventory";
+import { useRecipeService } from "@/hooks/inventory/useRecipeService";
+import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
+import { useItemService } from "@/hooks/inventory/useItemService";
 import { formatCurrency } from "@/lib/utils";
 import { UtensilsCrossed, TrendingDown, Info } from "lucide-react";
 
 export function FoodCostReport() {
-  const { data: recipes = [] } = useInventoryRecipes();
-  const { data: movements = [] } = useStockMovements();
-  const { data: items = [] } = useInventoryItems();
+  const { recipes: recipesQuery } = useRecipeService();
+  const recipes = (recipesQuery.data || []) as any[];
+
+  const { movements: movementsQuery } = useInventoryTransactionService();
+  const movements = (movementsQuery.data || []) as any[];
+
+  const { items: itemsQuery } = useItemService();
+  const items = (itemsQuery.data || []) as any[];
 
   const reportData = recipes.map(recipe => {
      // Theoretical: Recipe standard cost * POS sales count
-     const standardPortionCost = recipe.items?.reduce((s, i) => s + (i.quantity * (i.item?.cost_price || 0)), 0) || 0;
-     const salesCount = movements.filter(m => m.reference_type === 'pos_sale' && m.notes?.includes(recipe.id)).length;
+     const standardPortionCost = recipe.ingredients?.reduce((s: number, i: any) => s + (i.quantity_required * (i.item?.cost_price || 0)), 0) || 0;
+     const salesCount = movements.filter(m => m.reference_type === 'pos_sale' && m.notes?.includes(recipe.recipe_id)).length;
      const theoreticalCost = standardPortionCost * salesCount;
 
      // Actual: Value of all ingredient movements linked to this recipe
      const actualUsageValue = movements
-        .filter(m => m.reference_type === 'production' && m.reference_id === recipe.id && m.movement_type === 'out')
+        .filter(m => m.reference_type === 'production' && m.reference_id === recipe.recipe_id && m.movement_type === 'out')
         .reduce((s, m) => {
-          const item = items.find(i => i.id === m.item_id);
+          const item = items.find(i => i.item_id === m.item_id);
           return s + (m.quantity * (item?.avg_cost || item?.cost_price || 0));
         }, 0);
 
@@ -28,7 +35,7 @@ export function FoodCostReport() {
      const variancePercent = theoreticalCost > 0 ? (variance / theoreticalCost) * 100 : 0;
 
      return {
-        name: recipe.name,
+        name: recipe.recipe_name,
         sales: salesCount,
         theoretical: theoreticalCost,
         actual: actualUsageValue,
