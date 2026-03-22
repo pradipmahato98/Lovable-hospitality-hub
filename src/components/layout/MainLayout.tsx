@@ -32,11 +32,11 @@ export function MainLayout({ children, title, subtitle, actions, fixedHeight = f
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex overflow-hidden">
       <Sidebar />
       <div 
         className={cn(
-          "transition-[margin] duration-300 ease-in-out flex-1 flex flex-col",
+          "transition-[margin] duration-300 ease-in-out flex-1 flex flex-col h-screen overflow-hidden",
           getMarginLeft()
         )}
       >
@@ -44,7 +44,10 @@ export function MainLayout({ children, title, subtitle, actions, fixedHeight = f
         <AnimatePresence mode="wait">
           {isHorizontal && <HorizontalNav />}
         </AnimatePresence>
-        <main className="flex-1 overflow-x-hidden scrollbar-hide">
+        <main className={cn(
+          "flex-1 overflow-x-hidden scrollbar-hide",
+          fixedHeight ? "overflow-hidden" : "p-4 sm:p-6 overflow-y-auto"
+        )}>
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

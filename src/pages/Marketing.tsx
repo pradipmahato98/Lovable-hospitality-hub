@@ -12,26 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 
 const Marketing = () => {
   const { inquiries, salesActivities } = useMarketing();
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [activeTab, setActiveTab] = useState("inquiries");
 
   return (
-    <MainLayout title="Sales & Marketing" subtitle="Campaigns, inquiries, and corporate accounts">
-      <div className="flex flex-col space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div
-          className={cn(
-            "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky z-10 transition-all duration-300",
-            isHorizontalNav ? "top-[112px]" : "top-14"
-          )}
-        >
-          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+    <MainLayout fixedHeight title="Sales & Marketing" subtitle="Campaigns, inquiries, and corporate accounts">
+      <div className="flex flex-col h-full overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4 sm:px-6 mt-4">
+          <TabsList>
             <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
             <TabsTrigger value="activities">Sales Activities</TabsTrigger>
             <TabsTrigger value="accounts">Corporate Accounts</TabsTrigger>
@@ -46,7 +37,7 @@ const Marketing = () => {
           </div>
         </div>
 
-        <div className="mt-0">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
         {/* Inquiries Tab */}
         <TabsContent value="inquiries" className="space-y-6 mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

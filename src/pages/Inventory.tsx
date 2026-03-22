@@ -20,7 +20,6 @@ import {
   InventoryAuditLogs
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 
 const Inventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -107,15 +106,10 @@ const Inventory = () => {
   const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   return (
-    <MainLayout title="Inventory Management" subtitle="Comprehensive stock control for all departments">
-      <div className="flex flex-col space-y-6">
+    <MainLayout fixedHeight title="Inventory Management" subtitle="Comprehensive stock control for all departments">
+      <div className="flex flex-col h-full overflow-hidden p-4 sm:p-6">
         {/* Main Navigation Groups */}
-        <div
-          className={cn(
-            "flex items-center gap-1 p-1 bg-muted/50 rounded-lg self-start sticky z-10 transition-all duration-300",
-            isHorizontalNav ? "top-[112px]" : "top-14"
-          )}
-        >
+        <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg self-start flex-shrink-0 mb-6">
           {navGroups.map((group) => (
             <button
               key={group.id}
@@ -134,15 +128,10 @@ const Inventory = () => {
         </div>
 
         <ErrorBoundary>
-          <Tabs value={activeSubTab} onValueChange={handleTabChange} className="space-y-6">
+          <Tabs value={activeSubTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
             {mainTab !== "dashboard" && (
-              <div
-                className={cn(
-                  "overflow-x-auto pb-1 sticky z-10 transition-all duration-300",
-                  isHorizontalNav ? "top-[160px]" : "top-[112px]"
-                )}
-              >
-                <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+              <div className="overflow-x-auto pb-2 flex-shrink-0">
+                <TabsList className="bg-muted/30 border shadow-sm">
                   {(subTabs[mainTab as keyof typeof subTabs] || []).map((tab) => (
                     <TabsTrigger key={tab.id} value={tab.id} className="gap-2 shrink-0">
                       <tab.icon className="h-4 w-4" />
@@ -153,42 +142,44 @@ const Inventory = () => {
               </div>
             )}
 
-            {/* Dashboard */}
-            <TabsContent value="overview" className="mt-0 focus-visible:outline-none"><InventoryDashboard /></TabsContent>
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide mt-4">
+               {/* Dashboard */}
+               <TabsContent value="overview" className="mt-0 focus-visible:outline-none"><InventoryDashboard /></TabsContent>
 
-            {/* Setup */}
-            <TabsContent value="items" className="mt-0 focus-visible:outline-none"><ItemsTab /></TabsContent>
-            <TabsContent value="categories" className="mt-0 focus-visible:outline-none"><CategoriesTab /></TabsContent>
-            <TabsContent value="uoms" className="mt-0 focus-visible:outline-none"><UoMTab /></TabsContent>
-            <TabsContent value="stores" className="mt-0 focus-visible:outline-none"><StoresTab /></TabsContent>
-            <TabsContent value="suppliers" className="mt-0 focus-visible:outline-none"><SuppliersTab /></TabsContent>
-            <TabsContent value="recipes" className="mt-0 focus-visible:outline-none"><RecipesTab /></TabsContent>
-            <TabsContent value="settings" className="mt-0 focus-visible:outline-none"><InventorySettingsTab /></TabsContent>
+               {/* Setup */}
+               <TabsContent value="items" className="mt-0 focus-visible:outline-none"><ItemsTab /></TabsContent>
+               <TabsContent value="categories" className="mt-0 focus-visible:outline-none"><CategoriesTab /></TabsContent>
+               <TabsContent value="uoms" className="mt-0 focus-visible:outline-none"><UoMTab /></TabsContent>
+               <TabsContent value="stores" className="mt-0 focus-visible:outline-none"><StoresTab /></TabsContent>
+               <TabsContent value="suppliers" className="mt-0 focus-visible:outline-none"><SuppliersTab /></TabsContent>
+               <TabsContent value="recipes" className="mt-0 focus-visible:outline-none"><RecipesTab /></TabsContent>
+               <TabsContent value="settings" className="mt-0 focus-visible:outline-none"><InventorySettingsTab /></TabsContent>
 
-            {/* Transactions */}
-            <TabsContent value="approvals" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
-            <TabsContent value="requisitions" className="mt-0 focus-visible:outline-none"><RequisitionsTab /></TabsContent>
-            <TabsContent value="orders" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
-            <TabsContent value="grn" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
-            <TabsContent value="issue" className="mt-0 focus-visible:outline-none"><StockIssueTab /></TabsContent>
-            <TabsContent value="transfers" className="mt-0 focus-visible:outline-none"><TransfersTab /></TabsContent>
-            <TabsContent value="returns" className="mt-0 focus-visible:outline-none"><ReturnsTab /></TabsContent>
-            <TabsContent value="adjustments" className="mt-0 focus-visible:outline-none"><WastageTab /></TabsContent>
-            <TabsContent value="stock-count" className="mt-0 focus-visible:outline-none"><StockCountTab /></TabsContent>
-            <TabsContent value="production" className="mt-0 focus-visible:outline-none"><ProductionOrdersTab /></TabsContent>
+               {/* Transactions */}
+               <TabsContent value="approvals" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
+               <TabsContent value="requisitions" className="mt-0 focus-visible:outline-none"><RequisitionsTab /></TabsContent>
+               <TabsContent value="orders" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
+               <TabsContent value="grn" className="mt-0 focus-visible:outline-none"><PurchaseOrdersTab /></TabsContent>
+               <TabsContent value="issue" className="mt-0 focus-visible:outline-none"><StockIssueTab /></TabsContent>
+               <TabsContent value="transfers" className="mt-0 focus-visible:outline-none"><TransfersTab /></TabsContent>
+               <TabsContent value="returns" className="mt-0 focus-visible:outline-none"><ReturnsTab /></TabsContent>
+               <TabsContent value="adjustments" className="mt-0 focus-visible:outline-none"><WastageTab /></TabsContent>
+               <TabsContent value="stock-count" className="mt-0 focus-visible:outline-none"><StockCountTab /></TabsContent>
+               <TabsContent value="production" className="mt-0 focus-visible:outline-none"><ProductionOrdersTab /></TabsContent>
 
-            {/* Reports */}
-            <TabsContent value="stock-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
-            <TabsContent value="movement-rpt" className="mt-0 focus-visible:outline-none"><StockMovementsTab /></TabsContent>
-            <TabsContent value="consumption-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
-            <TabsContent value="purchase-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
-            <TabsContent value="valuation" className="mt-0 focus-visible:outline-none"><InventoryValuationReport /></TabsContent>
-            <TabsContent value="item-ledger" className="mt-0 focus-visible:outline-none"><ItemLedgerReport /></TabsContent>
-            <TabsContent value="price-comparison" className="mt-0 focus-visible:outline-none"><PriceComparisonReport /></TabsContent>
+               {/* Reports */}
+               <TabsContent value="stock-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
+               <TabsContent value="movement-rpt" className="mt-0 focus-visible:outline-none"><StockMovementsTab /></TabsContent>
+               <TabsContent value="consumption-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
+               <TabsContent value="purchase-rpt" className="mt-0 focus-visible:outline-none"><ReportsTab /></TabsContent>
+               <TabsContent value="valuation" className="mt-0 focus-visible:outline-none"><InventoryValuationReport /></TabsContent>
+               <TabsContent value="item-ledger" className="mt-0 focus-visible:outline-none"><ItemLedgerReport /></TabsContent>
+               <TabsContent value="price-comparison" className="mt-0 focus-visible:outline-none"><PriceComparisonReport /></TabsContent>
 
-            {/* Admin */}
-            <TabsContent value="audit-logs" className="mt-0 focus-visible:outline-none"><InventoryAuditLogs /></TabsContent>
-            <TabsContent value="workflows" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
+               {/* Admin */}
+               <TabsContent value="audit-logs" className="mt-0 focus-visible:outline-none"><InventoryAuditLogs /></TabsContent>
+               <TabsContent value="workflows" className="mt-0 focus-visible:outline-none"><ApprovalsQueueTab /></TabsContent>
+            </div>
           </Tabs>
         </ErrorBoundary>
       </div>
