@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Use of Cryptographically Weak PRNG for Sensitive Identifiers
+**Vulnerability:** Use of `Math.random()` for generating API keys, real-time channel IDs, and reservation codes. `Math.random()` is not cryptographically secure and can be predictable.
+**Learning:** Legacy code often defaults to `Math.random()` for any "random" requirement. In security-sensitive contexts, this can lead to identifier predictability or collisions.
+**Prevention:** Centralize secure random generation utilities that use `window.crypto.getRandomValues()` and mandate their use for any identifier that needs to be unique and unpredictable.
