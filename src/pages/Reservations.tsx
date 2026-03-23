@@ -22,8 +22,6 @@ import { useReservations, Reservation } from "@/hooks/useReservations";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 import { ReservationReportsTab } from "@/components/reservations/ReservationReportsTab";
 import {
@@ -50,8 +48,6 @@ const allStatuses = ["all", "pending", "confirmed", "checked-in", "checked-out",
 
 const Reservations = () => {
   const navigate = useNavigate();
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "list";
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,15 +118,10 @@ const Reservations = () => {
   };
 
   return (
-    <MainLayout title="Reservations" subtitle="Manage all bookings and reservations">
+    <MainLayout fixedHeight title="Reservations" subtitle="Manage all bookings and reservations">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div
-            className={cn(
-              "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sticky z-10 transition-all duration-300",
-              isHorizontalNav ? "top-[112px]" : "top-14"
-            )}
-          >
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-6">
             <TabsList>
               <TabsTrigger value="list" className="gap-2">
                 <List className="h-4 w-4" />
@@ -169,7 +160,7 @@ const Reservations = () => {
             </div>
           </div>
 
-          <div className="mt-0">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           <TabsContent value="list" className="mt-0 focus-visible:outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className={selectedReservation ? "lg:col-span-3" : "lg:col-span-4"}>

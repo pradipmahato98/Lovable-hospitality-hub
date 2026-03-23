@@ -21,15 +21,11 @@ import { HRReportsTab } from "@/components/hr/HRReportsTab";
 import { useStaffMembers, useStaffDepartments } from "@/hooks/useStaffMembers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 
 const HR = () => {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const { data: employees = [], isLoading: staffLoading } = useStaffMembers();
   const { data: departments = [] } = useStaffDepartments();
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "employees";
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,10 +68,10 @@ const HR = () => {
   ];
 
   return (
-    <MainLayout title="HR Management" subtitle="Employee management and HR operations">
-      <div className="flex flex-col space-y-6">
+    <MainLayout fixedHeight title="HR Management" subtitle="Employee management and HR operations">
+      <div className="flex flex-col h-full overflow-hidden">
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 px-4 sm:px-6 flex-shrink-0">
         {stats.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="p-4">
@@ -93,14 +89,9 @@ const HR = () => {
         ))}
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <div
-          className={cn(
-            "sticky z-10 transition-all duration-300",
-            isHorizontalNav ? "top-[112px]" : "top-14"
-          )}
-        >
-        <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
+        <div className="px-4 sm:px-6">
+        <TabsList>
           <TabsTrigger value="employees" className="gap-2"><Users className="h-4 w-4" />Employees</TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2"><DollarSign className="h-4 w-4" />Payroll</TabsTrigger>
           <TabsTrigger value="leave" className="gap-2"><CalendarDays className="h-4 w-4" />Leave</TabsTrigger>
@@ -108,8 +99,8 @@ const HR = () => {
         </TabsList>
         </div>
 
-        <div className="mt-0">
-        <TabsContent value="employees" className="mt-0">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <TabsContent value="employees" className="mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <Card variant="elevated">
               <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
@@ -220,7 +211,7 @@ const HR = () => {
 
         <TabsContent value="payroll" className="mt-0 focus-visible:outline-none"><PayrollPanel /></TabsContent>
         <TabsContent value="leave" className="mt-0 focus-visible:outline-none"><LeaveManagement /></TabsContent>
-        <TabsContent value="reports" className="mt-0"><HRReportsTab /></TabsContent>
+        <TabsContent value="reports" className="mt-0 focus-visible:outline-none"><HRReportsTab /></TabsContent>
         </div>
       </Tabs>
       </div>

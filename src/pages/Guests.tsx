@@ -33,7 +33,6 @@ import { LoyaltyActionsDialog } from "@/components/guests/LoyaltyActionsDialog";
 import { NewGuestDialog } from "@/components/quick-actions/NewGuestDialog";
 import { useGuestFeedback, useLoyaltyMembers, useGuestStats, GuestFeedback, LoyaltyMember } from "@/hooks/useGuestManagement";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useUIPreferences } from "@/hooks/useSettings";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -70,8 +69,6 @@ const getGuestStatus = (guest: Guest): "vip" | "regular" | "new" => {
 
 const Guests = () => {
   const navigate = useNavigate();
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "guests";
   const { data: guests = [], isLoading } = useGuests();
@@ -232,16 +229,11 @@ const Guests = () => {
   };
 
   return (
-    <MainLayout title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
+    <MainLayout fixedHeight title="Guest Management" subtitle="Guest profiles, loyalty, and feedback">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div
-            className={cn(
-              "sticky z-10 transition-all duration-300",
-              isHorizontalNav ? "top-[112px]" : "top-14"
-            )}
-          >
-          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
+          <div className="px-4 sm:px-6">
+          <TabsList>
             <TabsTrigger value="guests" className="gap-2"><Users className="h-4 w-4" />Guests</TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2">
               <MessageSquare className="h-4 w-4" />Feedback
@@ -258,7 +250,7 @@ const Guests = () => {
           </TabsList>
           </div>
 
-          <div className="mt-0">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           {/* === Guests Tab === */}
           <TabsContent value="guests" className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

@@ -15,8 +15,7 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ModuleQuickActions, QuickAction } from "@/components/shared";
 import { useInvoices, useBillingStats } from "@/hooks/useBillingData";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency, cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
+import { formatCurrency } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   paid: "bg-success/20 text-success border-success/30",
@@ -37,13 +36,10 @@ const Billing = () => {
     { icon: FileText, label: "Financial Reports", to: "/reports", color: "text-blue-400" },
   ];
 
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
-
   return (
-    <MainLayout title="Billing" subtitle="Manage invoices, payments and financial reports">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <div className="xl:col-span-3 space-y-6">
+    <MainLayout fixedHeight title="Billing" subtitle="Manage invoices, payments and financial reports">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full overflow-hidden">
+        <div className="xl:col-span-3 space-y-6 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <MetricCard
               title="Total Revenue"
@@ -146,15 +142,8 @@ const Billing = () => {
           </Card>
         </div>
 
-        <div className="space-y-6">
-          <div
-            className={cn(
-              "sticky z-10 transition-all duration-300",
-              isHorizontalNav ? "top-[112px]" : "top-14"
-            )}
-          >
-            <ModuleQuickActions actions={quickActions} variant="list" />
-          </div>
+        <div className="space-y-6 p-4 sm:p-6 overflow-y-auto">
+          <ModuleQuickActions actions={quickActions} variant="list" />
         </div>
       </div>
     </MainLayout>

@@ -10,13 +10,10 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useUIPreferences } from "@/hooks/useSettings";
 
 export const POSHeader: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   const navItems = [
     { label: "Dashboard", path: "/pos", icon: LayoutDashboard },
@@ -47,13 +44,7 @@ export const POSHeader: React.FC = () => {
         </div>
       </div>
 
-      <div
-        className={cn(
-          "flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar sticky z-10 transition-all duration-300",
-          isHorizontalNav ? "top-[112px]" : "top-14"
-        )}
-      >
-        <div className="flex items-center gap-2 bg-background/80 backdrop-blur-md p-1 rounded-lg border shadow-sm">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
         {navItems.map((item) => (
           <Button
             key={item.path}
@@ -71,7 +62,6 @@ export const POSHeader: React.FC = () => {
             {item.label}
           </Button>
         ))}
-        </div>
       </div>
     </div>
   );

@@ -25,7 +25,6 @@ import { Tables } from "@/integrations/supabase/types";
 import { RoomActionsPanel } from "@/components/rooms/RoomActionsPanel";
 import { useQuickActions } from "@/contexts/QuickActionsContext";
 import { FrontDeskReportsTab } from "@/components/front-desk/FrontDeskReportsTab";
-import { useUIPreferences } from "@/hooks/useSettings";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { exportToExcel } from "@/lib/reportExport";
@@ -52,8 +51,6 @@ const invoiceStatusColors = {
 };
 
 const FrontDesk = () => {
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
   const { data: rooms = [], isLoading } = useRooms();
   const { data: invoices = [] } = useInvoices();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -125,16 +122,11 @@ const FrontDesk = () => {
   ];
 
   return (
-    <MainLayout title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
+    <MainLayout fixedHeight title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
       <ErrorBoundary>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <div
-            className={cn(
-              "sticky z-10 transition-all duration-300",
-              isHorizontalNav ? "top-[112px]" : "top-14"
-            )}
-          >
-          <TabsList className="bg-background/80 backdrop-blur-md border shadow-sm">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
+          <div className="px-4 sm:px-6">
+          <TabsList>
             <TabsTrigger value="rooms" className="gap-2"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
             <TabsTrigger value="billing" className="gap-2"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
             <TabsTrigger value="folios" className="gap-2"><FileText className="h-4 w-4" />Guest Folios</TabsTrigger>
@@ -148,7 +140,7 @@ const FrontDesk = () => {
           </TabsList>
           </div>
 
-          <div className="mt-0">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           {/* Rooms Tab */}
           <TabsContent value="rooms" className="mt-0 focus-visible:outline-none">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
