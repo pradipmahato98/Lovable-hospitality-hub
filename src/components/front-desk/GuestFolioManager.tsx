@@ -75,15 +75,18 @@ import {
 } from "@/components/ui/tabs";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
 export const GuestFolioManager = () => {
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
   const { profile } = useAuth();
   const {
     folios,
@@ -99,6 +102,8 @@ export const GuestFolioManager = () => {
     useRoutingRules,
     addRoutingRule,
     deleteRoutingRule,
+    settleToCityLedger,
+    bulkPostCharges,
     useFolioItems
   } = useGuestFolios();
   const [selectedFolio, setSelectedFolio] = useState<GuestFolio | null>(null);
@@ -166,6 +171,31 @@ export const GuestFolioManager = () => {
   }>({
     category: 'all',
     target_folio_id: ''
+  });
+
+  // City Ledger State
+  const [isCityLedgerOpen, setIsCityLedgerOpen] = useState(false);
+  const [cityLedgerDetails, setCityLedgerDetails] = useState({
+    company_id: "",
+    notes: ""
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ["pos_companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("pos_companies").select("id, name");
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Bulk Post State
+  const [isBulkPostOpen, setIsBulkPostOpen] = useState(false);
+  const [selectedFolioIds, setSelectedFolioIds] = useState<string[]>([]);
+  const [bulkPostDetails, setBulkPostDetails] = useState({
+    description: "",
+    amount: 0,
+    source: "manual"
   });
 
   const { data: items = [] } = useFolioItems(selectedFolio?.id || "");
@@ -268,7 +298,7 @@ export const GuestFolioManager = () => {
         }
       );
       if (!result.success) {
-        toast.error(result.error || "Payment failed");
+        toast({ title: "Error", description: result.error || "Payment failed", variant: "destructive" });
         return;
       }
     }
@@ -335,6 +365,33 @@ export const GuestFolioManager = () => {
     setNewRoutingRule({ category: 'all', target_folio_id: '' });
   };
 
+  const handleSettleToCityLedger = async () => {
+    if (!selectedFolio || !cityLedgerDetails.company_id) return;
+
+    await settleToCityLedger.mutateAsync({
+      folio_id: selectedFolio.id,
+      company_id: cityLedgerDetails.company_id,
+      amount: selectedFolio.balance,
+      notes: cityLedgerDetails.notes
+    });
+
+    setIsCityLedgerOpen(false);
+    setCityLedgerDetails({ company_id: "", notes: "" });
+  };
+
+  const handleBulkPost = async () => {
+    if (selectedFolioIds.length === 0 || !bulkPostDetails.description || bulkPostDetails.amount === 0) return;
+
+    await bulkPostCharges.mutateAsync({
+      folioIds: selectedFolioIds,
+      ...bulkPostDetails
+    });
+
+    setIsBulkPostOpen(false);
+    setSelectedFolioIds([]);
+    setBulkPostDetails({ description: "", amount: 0, source: "manual" });
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -378,14 +435,25 @@ export const GuestFolioManager = () => {
               <History className="h-5 w-5 text-primary" />
               Active Folios
             </CardTitle>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search folios..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="flex flex-col gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search folios..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => setIsBulkPostOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Bulk Post Charges
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -784,6 +852,20 @@ export const GuestFolioManager = () => {
                 </div>
                 <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
               </Card>
+              <Card
+                variant="glass"
+                className="p-4 flex items-center gap-4 group cursor-pointer hover:bg-orange-500/5 transition-colors"
+                onClick={() => setIsCityLedgerOpen(true)}
+              >
+                <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                  <Home className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-semibold">Settle to City Ledger</h4>
+                  <p className="text-sm text-muted-foreground">Post balance to corporate/company account.</p>
+                </div>
+                <ArrowRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+              </Card>
             </div>
           </div>
         ) : (
@@ -1142,6 +1224,132 @@ export const GuestFolioManager = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRoutingOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settle to City Ledger Dialog */}
+      <Dialog open={isCityLedgerOpen} onOpenChange={setIsCityLedgerOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Settle to City Ledger</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Company</Label>
+              <Select
+                value={cityLedgerDetails.company_id}
+                onValueChange={(v) => setCityLedgerDetails({...cityLedgerDetails, company_id: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select corporate account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                  ))}
+                  {companies.length === 0 && <p className="p-2 text-xs text-muted-foreground text-center italic">No companies found</p>}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Settlement Amount</Label>
+              <Input value={formatCurrency(selectedFolio?.balance || 0)} disabled className="bg-secondary" />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes / Reference</Label>
+              <Input
+                placeholder="Purchase Order #, Authorizer name"
+                value={cityLedgerDetails.notes}
+                onChange={(e) => setCityLedgerDetails({...cityLedgerDetails, notes: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCityLedgerOpen(false)}>Cancel</Button>
+            <Button onClick={handleSettleToCityLedger} disabled={!cityLedgerDetails.company_id || settleToCityLedger.isPending}>
+              {settleToCityLedger.isPending ? "Settling..." : "Confirm Settlement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Post Dialog */}
+      <Dialog open={isBulkPostOpen} onOpenChange={setIsBulkPostOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Bulk Folio Posting</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-6 py-4">
+            <div className="space-y-4">
+              <Label>Select Target Folios</Label>
+              <div className="border rounded-md h-[300px] overflow-y-auto p-2 space-y-1">
+                {folios?.filter(f => f.status === 'open').map(folio => (
+                  <div key={folio.id} className="flex items-center space-x-2 p-2 hover:bg-secondary rounded-sm transition-colors">
+                    <input
+                      type="checkbox"
+                      id={`folio-${folio.id}`}
+                      checked={selectedFolioIds.includes(folio.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedFolioIds([...selectedFolioIds, folio.id]);
+                        } else {
+                          setSelectedFolioIds(selectedFolioIds.filter(id => id !== folio.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor={`folio-${folio.id}`} className="text-sm flex-1 cursor-pointer">
+                      <span className="font-medium">{folio.rooms?.room_number}</span> - {folio.guests?.first_name} {folio.guests?.last_name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{selectedFolioIds.length} folios selected</span>
+                <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setSelectedFolioIds(folios?.map(f => f.id) || [])}>Select All</Button>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Source</Label>
+                <Select value={bulkPostDetails.source} onValueChange={(v) => setBulkPostDetails({...bulkPostDetails, source: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual Entry</SelectItem>
+                    <SelectItem value="restaurant">Restaurant</SelectItem>
+                    <SelectItem value="laundry">Laundry Service</SelectItem>
+                    <SelectItem value="other">Misc Service</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  placeholder="e.g. Daily Service Fee"
+                  value={bulkPostDetails.description}
+                  onChange={(e) => setBulkPostDetails({...bulkPostDetails, description: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Amount (per folio)</Label>
+                <Input
+                  type="number"
+                  value={bulkPostDetails.amount}
+                  onChange={(e) => setBulkPostDetails({...bulkPostDetails, amount: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                <p className="text-xs font-medium text-primary uppercase mb-1">Total Impact</p>
+                <p className="text-xl font-bold">{formatCurrency(bulkPostDetails.amount * selectedFolioIds.length)}</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkPostOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkPost} disabled={selectedFolioIds.length === 0 || !bulkPostDetails.description || bulkPostDetails.amount === 0 || bulkPostCharges.isPending}>
+              {bulkPostCharges.isPending ? "Posting..." : "Post to All"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
