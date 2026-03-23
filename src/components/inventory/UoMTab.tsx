@@ -9,53 +9,18 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Ruler, Loader2, Edit, Trash2, ArrowRightLeft, X } from "lucide-react";
 import { toast } from "sonner";
-import { useItemService } from "@/hooks/inventory/useItemService";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useInventoryUoMs } from "@/hooks/useInventory";
 
 export function UoMTab() {
-  const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isConvOpen, setIsConvOpen] = useState(false);
-  const { units: unitsQuery, createUoM } = useItemService();
-
-  const uoms = unitsQuery.data || [];
-  const isLoading = unitsQuery.isLoading;
-
-  const { data: conversions = [], isLoading: isConversionsLoading } = useQuery({
-     queryKey: ["inventory-uom-conversions"],
-     queryFn: async () => {
-        const { data, error } = await supabase.from('unit_conversions').select('*, from_uom:units!from_unit(unit_name, unit_symbol), to_uom:units!to_unit(unit_name, unit_symbol)');
-        if (error) throw error;
-        return data;
-     }
-  });
-
-  const createConversion = useMutation({
-     mutationFn: async (payload: any) => {
-        const { error } = await supabase.from('unit_conversions').insert(payload);
-        if (error) throw error;
-     },
-     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] })
-  });
-
-  const deleteConversion = useMutation({
-     mutationFn: async (id: string) => {
-        const { error } = await supabase.from('unit_conversions').delete().eq('conversion_id', id);
-        if (error) throw error;
-     },
-     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] })
-  });
-
+  const { data: uoms = [], isLoading, conversions = [], isConversionsLoading, createUoM, createConversion, deleteConversion } = useInventoryUoMs();
   const [form, setForm] = useState({ name: "", abbreviation: "" });
   const [convForm, setConvForm] = useState({ from_uom_id: "", to_uom_id: "", conversion_factor: 1 });
 
   const handleCreate = async () => {
     try {
-      await createUoM.mutateAsync({
-         unit_name: form.name,
-         unit_symbol: form.abbreviation
-      });
+      await createUoM.mutateAsync(form);
       toast.success("Unit of measurement created");
       setIsAddOpen(false);
       setForm({ name: "", abbreviation: "" });
@@ -137,10 +102,10 @@ export function UoMTab() {
                   {uoms.length === 0 ? (
                     <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">No units found</TableCell></TableRow>
                   ) : (
-                    uoms.map((uom: any) => (
-                      <TableRow key={uom.unit_id}>
-                        <TableCell className="font-medium">{uom.unit_name}</TableCell>
-                        <TableCell>{uom.unit_symbol || "-"}</TableCell>
+                    uoms.map((uom) => (
+                      <TableRow key={uom.id}>
+                        <TableCell className="font-medium">{uom.name}</TableCell>
+                        <TableCell>{uom.abbreviation || "-"}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
                         </TableCell>
@@ -163,13 +128,13 @@ export function UoMTab() {
                <p className="text-xs text-muted-foreground text-center py-4">No conversion rules defined</p>
             ) : (
               conversions.map((c) => (
-                <div key={c.conversion_id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                   <div className="flex items-center gap-3">
-                    <Badge variant="blue">1 {c.from_uom?.unit_name}</Badge>
+                    <Badge variant="blue">1 {c.from_uom?.name}</Badge>
                     <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant="outline">{c.conversion_factor} {c.to_uom?.unit_name}</Badge>
+                    <Badge variant="outline">{c.conversion_factor} {c.to_uom?.name}</Badge>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteConv(c.conversion_id)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteConv(c.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))
             )}
@@ -191,14 +156,14 @@ export function UoMTab() {
                 <Label className="text-sm font-bold">From Unit</Label>
                 <Select value={convForm.from_uom_id} onValueChange={(v) => setConvForm({...convForm, from_uom_id: v})}>
                   <SelectTrigger className="bg-[#1E293B]/50 border-[#334155] h-12"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent className="bg-[#0F172A] border-[#334155] text-white">{uoms.map((u: any) => <SelectItem key={u.unit_id} value={u.unit_id}>{u.unit_name}</SelectItem>)}</SelectContent>
+                  <SelectContent className="bg-[#0F172A] border-[#334155] text-white">{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-bold">To Unit</Label>
                 <Select value={convForm.to_uom_id} onValueChange={(v) => setConvForm({...convForm, to_uom_id: v})}>
                   <SelectTrigger className="bg-[#1E293B]/50 border-[#334155] h-12"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent className="bg-[#0F172A] border-[#334155] text-white">{uoms.map((u: any) => <SelectItem key={u.unit_id} value={u.unit_id}>{u.unit_name}</SelectItem>)}</SelectContent>
+                  <SelectContent className="bg-[#0F172A] border-[#334155] text-white">{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -208,7 +173,7 @@ export function UoMTab() {
             </div>
 
             <div className="p-4 bg-[#1E293B]/30 rounded-lg text-gray-400 text-sm italic border border-[#334155]/20">
-              Meaning: 1 {uoms.find((u: any) => u.unit_id === convForm.from_uom_id)?.unit_name || "Selected"} = {convForm.conversion_factor} {uoms.find((u: any) => u.unit_id === convForm.to_uom_id)?.unit_name || "Base"} units
+              Meaning: 1 {uoms.find(u => u.id === convForm.from_uom_id)?.name || "Selected"} = {convForm.conversion_factor} {uoms.find(u => u.id === convForm.to_uom_id)?.name || "Base"} units
             </div>
           </div>
           <DialogFooter className="gap-3">

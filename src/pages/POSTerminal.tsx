@@ -118,7 +118,7 @@ const POSTerminal = () => {
   const { data: gatewaysData } = usePaymentGateways();
   const { addFolioItem } = useGuestFolios();
   const availableGateways = gatewaysData?.gateways.filter(g => g.enabled) || [];
-  const { deductBulkInventoryForSale } = useInventoryTransactionService();
+  const { deductBulkInventoryForSale } = useInventoryPOS();
 
   const menuItems = dbMenuItems.map((item: any) => ({
     id: item.id,
@@ -261,11 +261,7 @@ const POSTerminal = () => {
       // Trigger inventory deduction
       await deductBulkInventoryForSale.mutateAsync({
         saleId: data.id,
-        items: cart.map(i => ({
-          menu_item_id: i.id,
-          quantity: i.quantity,
-          name: i.name
-        }))
+        items: cart.map(i => ({ menu_item_id: i.id, quantity: i.quantity }))
       });
 
       const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
