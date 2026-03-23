@@ -19,6 +19,7 @@ import { RoomUpgradeManager } from "@/components/front-desk/RoomUpgradeManager";
 import { WakeUpCallScheduler } from "@/components/front-desk/WakeUpCallScheduler";
 import { GroupCheckInOut } from "@/components/front-desk/GroupCheckInOut";
 import { KeyCardManagement } from "@/components/front-desk/KeyCardManagement";
+import { InHouseGuestManager } from "@/components/front-desk/InHouseGuestManager";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { TableSkeleton } from "@/components/skeletons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -157,6 +158,7 @@ const FrontDesk = () => {
           <div className="px-4 sm:px-6">
           <TabsList>
             <TabsTrigger value="rooms" className="gap-2"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
+            <TabsTrigger value="inhouse" className="gap-2"><Users className="h-4 w-4" />In-house</TabsTrigger>
             <TabsTrigger value="billing" className="gap-2"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
             <TabsTrigger value="folios" className="gap-2"><FileText className="h-4 w-4" />Guest Folios</TabsTrigger>
             <TabsTrigger value="queue" className="gap-2"><UserPlus className="h-4 w-4" />Queue</TabsTrigger>
@@ -243,6 +245,7 @@ const FrontDesk = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="inhouse"><InHouseGuestManager /></TabsContent>
           <TabsContent value="folios"><GuestFolioManager /></TabsContent>
           <TabsContent value="queue"><QueueManager /></TabsContent>
           <TabsContent value="messages"><FrontDeskMessages /></TabsContent>

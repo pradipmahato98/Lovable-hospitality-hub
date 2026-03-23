@@ -295,6 +295,30 @@ export const useGuestFolios = () => {
     },
   });
 
+  const bulkPostCharges = useMutation({
+    mutationFn: async ({ folioIds, description, amount, source }: { folioIds: string[], description: string, amount: number, source: string }) => {
+      const chargeItems = folioIds.map(folio_id => ({
+        folio_id,
+        item_type: 'charge',
+        source,
+        description,
+        amount: Math.abs(amount)
+      }));
+
+      const { error } = await db.from("folio_items").insert(chargeItems);
+      if (error) throw error;
+      return { count: folioIds.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      queryClient.invalidateQueries({ queryKey: ["folio_items"] });
+      toast({ title: "Bulk Post Success", description: "Charges posted to all selected folios." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
   const createFolio = useMutation({
     mutationFn: async (folio: Partial<GuestFolio>) => {
       const { data, error } = await db
@@ -314,11 +338,106 @@ export const useGuestFolios = () => {
     },
   });
 
+  const settleToCityLedger = useMutation({
+    mutationFn: async ({ folio_id, company_id, amount, notes }: { folio_id: string, company_id: string, amount: number, notes?: string }) => {
+      // 1. Record the settlement as a payment in folio_items
+      const { error: itemError } = await db
+        .from("folio_items")
+        .insert([{
+          folio_id,
+          item_type: 'payment',
+          source: 'city_ledger',
+          description: `Settlement to City Ledger - Company ID: ${company_id}`,
+          amount: -Math.abs(amount),
+          reference_id: company_id,
+          reason: notes
+        }]);
+
+      if (itemError) throw itemError;
+
+      // 2. Optionally close the folio if balance is zero (handled by logic later or here)
+      // For now we just record the settlement.
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["folio_items", variables.folio_id] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast({ title: "Success", description: "Folio settled to City Ledger." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const postRoomCharges = useMutation({
+    mutationFn: async ({ businessDate }: { businessDate: string }) => {
+      // 1. Get all in-house reservations
+      const { data: inHouse, error: resError } = await db
+        .from("reservations")
+        .select("id, room_id, rooms(price_per_night, room_number)")
+        .eq("status", "checked-in");
+
+      if (resError) throw resError;
+      if (!inHouse || inHouse.length === 0) return { count: 0 };
+
+      // 2. Get active folios for these reservations
+      const { data: folios, error: folioError } = await db
+        .from("guest_folios")
+        .select("id, reservation_id")
+        .in("reservation_id", inHouse.map(r => r.id))
+        .eq("status", "open");
+
+      if (folioError) throw folioError;
+
+      const chargeItems = [];
+      let totalRevenue = 0;
+      for (const res of inHouse) {
+        const folio = folios?.find(f => f.reservation_id === res.id);
+        const roomPrice = res.rooms?.price_per_night;
+        if (folio && roomPrice) {
+          // Check if already posted for this date to prevent duplicates
+          const { data: existing } = await db
+            .from("folio_items")
+            .select("id")
+            .eq("folio_id", folio.id)
+            .eq("source", "room_rate")
+            .eq("description", `Room Charge - ${businessDate}`)
+            .maybeSingle();
+
+          if (!existing) {
+            chargeItems.push({
+              folio_id: folio.id,
+              item_type: 'charge',
+              source: 'room_rate',
+              description: `Room Charge - ${businessDate}`,
+              amount: roomPrice
+            });
+            totalRevenue += roomPrice;
+          }
+        }
+      }
+
+      if (chargeItems.length > 0) {
+        const { error: insertError } = await db.from("folio_items").insert(chargeItems);
+        if (insertError) throw insertError;
+      }
+
+      return { count: chargeItems.length, totalRevenue };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      queryClient.invalidateQueries({ queryKey: ["folio_items"] });
+      toast({ title: "Night Audit Posting", description: `Successfully posted room charges for ${data.count} rooms.` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
   return {
     folios, isLoading, error,
     useFolioItems, addFolioItem, closeFolio, voidFolio,
     updateFolioItem, deleteFolioItem, transferFolioItem,
-    createFolio, processRefund,
+    createFolio, processRefund, settleToCityLedger, postRoomCharges, bulkPostCharges,
     useRoutingRules, addRoutingRule, deleteRoutingRule,
   };
 };
