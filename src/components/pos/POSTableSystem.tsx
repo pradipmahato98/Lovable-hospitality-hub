@@ -64,7 +64,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { SplitBillPanel } from "./SplitBillPanel";
-import { useInventoryPOS } from "@/hooks/useInventory";
+import { useInventoryPOS } from "@/hooks/inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
 

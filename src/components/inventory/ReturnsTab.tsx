@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Undo2, Trash2, Loader2, Receipt, AlertCircle, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryReturns, useSuppliers, useInventoryItems, usePurchaseOrders } from "@/hooks/useInventory";
+import { useInventoryReturns, useSuppliers, useInventoryItems, usePurchaseOrders } from "@/hooks/inventory";
 import { formatCurrency } from "@/lib/utils";
 
 export function ReturnsTab() {

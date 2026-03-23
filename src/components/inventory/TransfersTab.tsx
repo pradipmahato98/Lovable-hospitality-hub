@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, ArrowRightLeft, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryTransfers, useInventoryItems } from "@/hooks/useInventory";
+import { useInventoryTransfers, useInventoryItems } from "@/hooks/inventory";
 import { formatAD } from "@/lib/utils";
 
 const LOCATIONS = ["Main Store", "Kitchen", "Housekeeping", "F&B", "Engineering", "Bar", "Laundry", "Front Office"];

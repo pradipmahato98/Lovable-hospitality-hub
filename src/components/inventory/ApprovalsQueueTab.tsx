@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Clock, ArrowRightLeft, ClipboardList, TrendingUp } from "lucide-react";
-import { useInventoryRequisitions, useInventoryTransfers, useInventoryItems } from "@/hooks/useInventory";
+import { useInventoryRequisitions, useInventoryTransfers, useInventoryItems } from "@/hooks/inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";

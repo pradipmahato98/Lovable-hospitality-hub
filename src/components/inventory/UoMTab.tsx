@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Ruler, Loader2, Edit, Trash2, ArrowRightLeft, X } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryUoMs } from "@/hooks/useInventory";
+import { useInventoryUoMs } from "@/hooks/inventory";
 
 export function UoMTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);

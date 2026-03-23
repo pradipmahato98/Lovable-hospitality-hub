@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Store, Loader2, Edit, Trash2, MapPin, Thermometer, Wind, User } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryStores } from "@/hooks/useInventory";
+import { useInventoryStores } from "@/hooks/inventory";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 export function StoresTab() {

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useGuestCRUD } from "@/hooks/useGuestCRUD";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -39,44 +38,26 @@ const initialFormData: GuestFormData = {
 
 export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialogProps) {
   const [formData, setFormData] = useState<GuestFormData>(initialFormData);
-  const queryClient = useQueryClient();
+  const { createGuest } = useGuestCRUD();
 
-  const createGuestMutation = useMutation({
-    mutationFn: async (data: GuestFormData) => {
-      const { data: guest, error } = await supabase
-        .from("guests")
-        .insert({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email || null,
-          phone: data.phone || null,
-          is_vip: data.is_vip,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return guest;
-    },
-    onSuccess: () => {
-      toast.success("Guest created successfully");
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
-      onOpenChange(false);
-      setFormData(initialFormData);
-      onSuccess?.();
-    },
-    onError: (error) => {
-      toast.error("Failed to create guest: " + error.message);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.first_name || !formData.last_name) {
       toast.error("First name and last name are required");
       return;
     }
-    createGuestMutation.mutate(formData);
+
+    await createGuest.mutateAsync({
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      email: formData.email || null,
+      phone: formData.phone || null,
+      is_vip: formData.is_vip,
+    });
+
+    onOpenChange(false);
+    setFormData(initialFormData);
+    onSuccess?.();
   };
 
   const handleClose = () => {
@@ -162,8 +143,8 @@ export function NewGuestDialog({ open, onOpenChange, onSuccess }: NewGuestDialog
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createGuestMutation.isPending}>
-              {createGuestMutation.isPending ? "Creating..." : "Create Guest"}
+            <Button type="submit" disabled={createGuest.isPending}>
+              {createGuest.isPending ? "Creating..." : "Create Guest"}
             </Button>
           </DialogFooter>
         </form>

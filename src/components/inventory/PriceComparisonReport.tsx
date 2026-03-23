@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Cell
 } from "recharts";
-import { useInventoryItems, usePurchaseOrders, useSuppliers } from "@/hooks/useInventory";
+import { useInventoryItems, usePurchaseOrders, useSuppliers } from "@/hooks/inventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ShoppingCart, TrendingDown, TrendingUp, DollarSign, Truck } from "lucide-react";
 

@@ -20,12 +20,12 @@ export const useStaffMembers = () => {
   return useQuery({
     queryKey: ["staff-members"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("staff_members")
         .select("*")
         .order("first_name", { ascending: true });
       if (error) throw error;
-      return data as StaffMember[];
+      return data as unknown as StaffMember[];
     },
   });
 };
@@ -34,7 +34,7 @@ export const useStaffDepartments = () => {
   return useQuery({
     queryKey: ["staff-departments"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("staff_members")
         .select("department")
         .order("department", { ascending: true });

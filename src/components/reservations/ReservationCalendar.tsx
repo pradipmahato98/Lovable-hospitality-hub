@@ -57,21 +57,28 @@ export function ReservationCalendar() {
 
   // Performance optimization: Pre-group and pre-parse reservations to avoid O(N) lookups in every cell
   const processedReservations = useMemo(() => {
-    const map: Record<string, (Reservation & { _checkIn: Date; _checkOutEnd: Date; _checkOut: Date })[]> = {};
+    const map: Record<string, Record<string, (Reservation & { _checkIn: Date; _checkOutEnd: Date; _checkOut: Date })[]>> = {};
     reservations.forEach((res) => {
       const roomNum = res.room?.room_number;
       if (!roomNum) return;
-      if (!map[roomNum]) map[roomNum] = [];
+      if (!map[roomNum]) map[roomNum] = {};
 
       const checkIn = startOfDay(parseISO(res.check_in_date));
       const checkOut = startOfDay(parseISO(res.check_out_date));
 
-      map[roomNum].push({
-        ...res,
-        _checkIn: checkIn,
-        _checkOut: checkOut,
-        _checkOutEnd: addDays(checkOut, -1), // Reservations end the day before checkout
-      });
+      // Index by each date of the stay for O(1) lookup in the cell
+      let current = checkIn;
+      while (current < checkOut) {
+        const dateKey = format(current, "yyyy-MM-dd");
+        if (!map[roomNum][dateKey]) map[roomNum][dateKey] = [];
+        map[roomNum][dateKey].push({
+          ...res,
+          _checkIn: checkIn,
+          _checkOut: checkOut,
+          _checkOutEnd: addDays(checkOut, -1),
+        });
+        current = addDays(current, 1);
+      }
     });
     return map;
   }, [reservations]);
@@ -124,17 +131,11 @@ export function ReservationCalendar() {
 
   /**
    * Performance-optimized lookup for reservations in a specific cell.
-   * Reduced from O(N) to O(N/R) by pre-grouping by room.
+   * Reduced from O(N) to O(1) using pre-computed date index.
    */
   const getReservationsForRoomAndDate = (roomNumber: string, date: Date) => {
-    const roomRes = processedReservations[roomNumber];
-    if (!roomRes) return [];
-
-    const normalizedDate = startOfDay(date);
-    return roomRes.filter((res) =>
-      isWithinInterval(normalizedDate, { start: res._checkIn, end: res._checkOutEnd }) ||
-      isSameDay(normalizedDate, res._checkIn)
-    );
+    const dateKey = format(date, "yyyy-MM-dd");
+    return processedReservations[roomNumber]?.[dateKey] || [];
   };
 
   const isCheckInDate = (reservation: Reservation | (Reservation & { _checkIn: Date }), date: Date) => {

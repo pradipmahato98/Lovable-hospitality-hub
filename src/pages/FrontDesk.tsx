@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard, ArrowUpCircle, AlarmClock, LogIn, Key } from "lucide-react";
+import { Plus, Users, Wifi, Tv, Coffee, Bath, Grid, List, Bed, Receipt, Search, Filter, Download, FileText, UserPlus, MessageSquare, DollarSign, TrendingUp, CreditCard, ArrowUpCircle, AlarmClock, LogIn, Key, Loader2 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { GuestFolioManager } from "@/components/front-desk/GuestFolioManager";
 import { QueueManager } from "@/components/front-desk/QueueManager";
 import { FrontDeskMessages } from "@/components/front-desk/FrontDeskMessages";
@@ -50,6 +51,32 @@ const invoiceStatusColors = {
   overdue: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
+const RoomCard = React.memo(({ room, isSelected, onClick }: { room: Room, isSelected: boolean, onClick: (room: Room) => void }) => (
+  <Card
+    variant="elevated"
+    className={cn(
+      "animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group",
+      isSelected && "ring-2 ring-primary"
+    )}
+    onClick={() => onClick(room)}
+  >
+    <div className="h-32 bg-gradient-card flex items-center justify-center relative">
+      <span className="text-5xl font-display font-bold text-gradient-blue">{room.room_number}</span>
+      <Badge variant="outline" className={cn("absolute top-3 right-3", statusStyles[room.status as keyof typeof statusStyles] || statusStyles.available)}>{room.status}</Badge>
+    </div>
+    <CardContent className="p-4">
+      <div className="mb-3"><h3 className="font-semibold text-foreground">{room.room_type}</h3><p className="text-sm text-muted-foreground">Floor {room.floor}</p></div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1 text-sm text-muted-foreground"><Users className="h-4 w-4" /><span>Up to {room.capacity}</span></div>
+        <div className="text-right"><span className="text-xl font-bold text-primary">{formatCurrency(room.price_per_night)}</span><span className="text-xs text-muted-foreground">/night</span></div>
+      </div>
+      <div className="flex gap-2 pt-3 border-t border-border">
+        {(room.amenities || []).map((amenity) => { const Icon = amenityIcons[amenity.toLowerCase()]; return Icon ? <div key={amenity} className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center" title={amenity}><Icon className="h-4 w-4 text-muted-foreground" /></div> : null; })}
+      </div>
+    </CardContent>
+  </Card>
+));
+
 const FrontDesk = () => {
   const { data: rooms = [], isLoading } = useRooms();
   const { data: invoices = [] } = useInvoices();
@@ -68,6 +95,8 @@ const FrontDesk = () => {
   const [billingSearch, setBillingSearch] = useState("");
   const [billingStatusFilter, setBillingStatusFilter] = useState("all");
   const { setNewRoomOpen } = useQuickActions();
+  const { data: uiPrefs } = useUIPreferences();
+  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   const filteredRooms = useMemo(() => {
     if (roomStatusFilter === "all") return rooms;
@@ -181,7 +210,11 @@ const FrontDesk = () => {
                   ))}
                 </div>
 
-                {isLoading ? <TableSkeleton columns={7} rows={5} /> : viewMode === "table" ? (
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : viewMode === "table" ? (
                   <Card variant="elevated">
                     <CardHeader><CardTitle>All Rooms ({filteredRooms.length})</CardTitle></CardHeader>
                     <CardContent>
@@ -190,29 +223,23 @@ const FrontDesk = () => {
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {filteredRooms.map((room, index) => (
-                      <Card key={room.id} variant="elevated" className={cn("animate-slide-up overflow-hidden hover:shadow-glow transition-all cursor-pointer group", selectedRoom?.id === room.id && "ring-2 ring-primary")} style={{ animationDelay: `${index * 50}ms` }} onClick={() => setSelectedRoom(room)}>
-                        <div className="h-32 bg-gradient-card flex items-center justify-center relative">
-                          <span className="text-5xl font-display font-bold text-gradient-blue">{room.room_number}</span>
-                          <Badge variant="outline" className={cn("absolute top-3 right-3", statusStyles[room.status as keyof typeof statusStyles] || statusStyles.available)}>{room.status}</Badge>
-                        </div>
-                        <CardContent className="p-4">
-                          <div className="mb-3"><h3 className="font-semibold text-foreground">{room.room_type}</h3><p className="text-sm text-muted-foreground">Floor {room.floor}</p></div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground"><Users className="h-4 w-4" /><span>Up to {room.capacity}</span></div>
-                            <div className="text-right"><span className="text-xl font-bold text-primary">{formatCurrency(room.price_per_night)}</span><span className="text-xs text-muted-foreground">/night</span></div>
-                          </div>
-                          <div className="flex gap-2 pt-3 border-t border-border">
-                            {(room.amenities || []).map((amenity) => { const Icon = amenityIcons[amenity.toLowerCase()]; return Icon ? <div key={amenity} className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center" title={amenity}><Icon className="h-4 w-4 text-muted-foreground" /></div> : null; })}
-                          </div>
-                        </CardContent>
-                      </Card>
+                    {filteredRooms.map((room) => (
+                      <RoomCard
+                        key={room.id}
+                        room={room}
+                        isSelected={selectedRoom?.id === room.id}
+                        onClick={setSelectedRoom}
+                      />
                     ))}
                     {filteredRooms.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground">No rooms found</div>}
                   </div>
                 )}
               </div>
-              <div className="lg:col-span-1"><RoomActionsPanel selectedRoom={selectedRoom} onClearSelection={() => setSelectedRoom(null)} /></div>
+              <div className="lg:col-span-1">
+                <div className={cn("sticky transition-all duration-300", isHorizontalNav ? "top-[112px]" : "top-20")}>
+                  <RoomActionsPanel selectedRoom={selectedRoom} onClearSelection={() => setSelectedRoom(null)} />
+                </div>
+              </div>
             </div>
           </TabsContent>
 

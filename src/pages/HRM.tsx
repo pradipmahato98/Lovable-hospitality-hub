@@ -22,7 +22,7 @@ import { useStaffMembers, useStaffDepartments } from "@/hooks/useStaffMembers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-const HR = () => {
+const HRM = () => {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const { data: employees = [], isLoading: staffLoading } = useStaffMembers();
   const { data: departments = [] } = useStaffDepartments();
@@ -68,7 +68,7 @@ const HR = () => {
   ];
 
   return (
-    <MainLayout fixedHeight title="HR Management" subtitle="Employee management and HR operations">
+    <MainLayout fixedHeight title="HRM Management" subtitle="Employee management and HR operations">
       <div className="flex flex-col h-full overflow-hidden">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 px-4 sm:px-6 flex-shrink-0">
@@ -219,10 +219,10 @@ const HR = () => {
   );
 };
 
-const HRPage = () => (
+const HRMPage = () => (
   <ErrorBoundary>
-    <HR />
+    <HRM />
   </ErrorBoundary>
 );
 
-export default HRPage;
+export default HRMPage;

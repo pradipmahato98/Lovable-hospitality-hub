@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, Warehouse, PackageCheck, Eye, X, CheckCircle, ShieldAlert, Calendar, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
-import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs, PurchaseOrderItem } from "@/hooks/useInventory";
+import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs, PurchaseOrderItem } from "@/hooks/inventory";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 

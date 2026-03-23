@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Loader2, Truck, Star, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSuppliers, useInventoryItems, Supplier } from "@/hooks/useInventory";
+import { useSuppliers, useInventoryItems, Supplier } from "@/hooks/inventory";
 import { cn } from "@/lib/utils";
 
 export function SuppliersTab() {

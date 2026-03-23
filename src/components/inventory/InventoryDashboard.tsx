@@ -13,7 +13,7 @@ import {
 import {
   useInventoryStats, useInventoryItems, useStockMovements,
   useInventoryCategories, useInventoryWastage
-} from "@/hooks/useInventory";
+} from "@/hooks/inventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 

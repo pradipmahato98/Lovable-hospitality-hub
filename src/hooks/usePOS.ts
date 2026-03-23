@@ -198,6 +198,10 @@ export function useUpdatePOSTable() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos-tables"] });
+      toast.success("Table updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to update table: " + error.message);
     },
   });
 }
@@ -252,6 +256,10 @@ export function useCreatePOSCompany() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos-companies"] });
+      toast.success("Company created successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to create company: " + error.message);
     },
   });
 }
@@ -358,6 +366,10 @@ export function useCreatePOSTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos-transactions"] });
+      toast.success("Transaction completed successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to complete transaction: " + error.message);
     },
   });
 }

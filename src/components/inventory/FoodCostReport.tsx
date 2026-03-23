@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useInventoryRecipes, useStockMovements, useInventoryItems } from "@/hooks/useInventory";
+import { useInventoryRecipes, useStockMovements, useInventoryItems } from "@/hooks/inventory";
 import { formatCurrency } from "@/lib/utils";
 import { UtensilsCrossed, TrendingDown, Info } from "lucide-react";
 

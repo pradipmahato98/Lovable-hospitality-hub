@@ -22,6 +22,23 @@ export interface GuestUpdate {
 export function useGuestCRUD() {
   const queryClient = useQueryClient();
 
+  const createGuest = useMutation({
+    mutationFn: async (guest: Omit<GuestUpdate, "id">) => {
+      const { data, error } = await db
+        .from("guests")
+        .insert({ ...guest, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      toast.success("Guest created successfully");
+    },
+    onError: (e: Error) => toast.error("Failed to create guest: " + e.message),
+  });
+
   const updateGuest = useMutation({
     mutationFn: async ({ id, ...updates }: GuestUpdate) => {
       const { data, error } = await db
@@ -69,5 +86,5 @@ export function useGuestCRUD() {
     },
   });
 
-  return { updateGuest, deleteGuest, toggleVIP };
+  return { createGuest, updateGuest, deleteGuest, toggleVIP };
 }
