@@ -137,14 +137,12 @@ function NightAudit() {
     <MainLayout fixedHeight title="Night Audit" subtitle="End-of-day processing and automated billing">
       <div className="flex flex-col h-full overflow-hidden">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-          <div className="px-4 sm:px-6 mt-4">
-            <TabsList>
-              <TabsTrigger value="audit" className="gap-2"><Moon className="h-4 w-4" />Run Audit</TabsTrigger>
-              <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4" />Audit History</TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList>
+            <TabsTrigger value="audit" className="gap-2"><Moon className="h-4 w-4" />Run Audit</TabsTrigger>
+            <TabsTrigger value="history" className="gap-2"><History className="h-4 w-4" />Audit History</TabsTrigger>
+          </TabsList>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
             <TabsContent value="audit" className="mt-0 focus-visible:outline-none">
               <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header Status */}
