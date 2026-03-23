@@ -125,7 +125,7 @@ The `.env` file is auto-managed by Lovable Cloud:
 
 ```env
 VITE_SUPABASE_URL=https://[project].supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=[key]
+VITE_SUPABASE_ANON_KEY=[key]
 VITE_SUPABASE_PROJECT_ID=[id]
 ```
 

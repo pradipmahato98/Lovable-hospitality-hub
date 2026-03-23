@@ -35,13 +35,24 @@ interface AppConfig {
 function validateEnv(): void {
   const required = [
     'VITE_SUPABASE_URL',
-    'VITE_SUPABASE_PUBLISHABLE_KEY',
+    'VITE_SUPABASE_ANON_KEY',
   ];
   
-  const missing = required.filter(key => !import.meta.env[key]);
+  // Fallback check for the old variable name
+  const missing = required.filter(key => {
+    if (key === 'VITE_SUPABASE_ANON_KEY') {
+      return !import.meta.env.VITE_SUPABASE_ANON_KEY && !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    }
+    return !import.meta.env[key];
+  });
   
-  if (missing.length > 0 && !import.meta.env.DEV) {
-    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+  if (missing.length > 0) {
+    const errorMsg = `Critical: Missing required environment variables: ${missing.join(', ')}. The application may not function correctly.`;
+    console.error(errorMsg);
+    if (!import.meta.env.DEV) {
+      // In production, we might want to alert the user or show a more prominent error UI
+      // For now, logging to console is standard for these variables
+    }
   }
 }
 
@@ -54,7 +65,7 @@ export function getConfig(): AppConfig {
   return {
     deploymentMode: (import.meta.env.VITE_DEPLOYMENT_MODE as 'lovable' | 'selfhosted') || 'lovable',
     supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
-    supabaseAnonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+    supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
     supabaseProjectId: import.meta.env.VITE_SUPABASE_PROJECT_ID || '',
     debug: import.meta.env.VITE_DEBUG === 'true',
     analyticsEnabled: import.meta.env.VITE_ENABLE_ANALYTICS === 'true',

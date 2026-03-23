@@ -60,7 +60,7 @@ JWT_SECRET="minimum-32-character-secret-key-change-this"
 
 # Frontend connection
 VITE_SUPABASE_URL="http://localhost:8000"
-VITE_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
+VITE_SUPABASE_ANON_KEY="your-anon-key"
 VITE_DEPLOYMENT_MODE="selfhosted"
 ```
 
