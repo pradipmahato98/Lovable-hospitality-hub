@@ -630,7 +630,7 @@ $$;
 
 ```env
 VITE_SUPABASE_URL=https://[project].supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=[anon-key]
+VITE_SUPABASE_ANON_KEY=[anon-key]
 VITE_SUPABASE_PROJECT_ID=[project-id]
 ```
 
