@@ -35,149 +35,99 @@ import {
   Clock,
   User,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { formatAD } from "@/lib/utils";
 import { toast } from "sonner";
-
-interface LeaveRequest {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: "pending" | "approved" | "rejected";
-  createdAt: string;
-  approvedBy?: string;
-}
+import { useLeaveRequests, useHRStats } from "@/hooks/useHR";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 const leaveTypes = [
-  "Annual Leave",
-  "Sick Leave",
-  "Personal Leave",
-  "Maternity Leave",
-  "Paternity Leave",
-  "Unpaid Leave",
-  "Bereavement Leave",
+  { id: "annual", label: "Annual Leave" },
+  { id: "sick", label: "Sick Leave" },
+  { id: "personal", label: "Personal Leave" },
+  { id: "unpaid", label: "Unpaid Leave" },
 ];
 
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: "1",
-    employeeId: "EMP001",
-    employeeName: "John Smith",
-    leaveType: "Annual Leave",
-    startDate: "2024-01-20",
-    endDate: "2024-01-25",
-    reason: "Family vacation",
-    status: "pending",
-    createdAt: "2024-01-10",
-  },
-  {
-    id: "2",
-    employeeId: "EMP002",
-    employeeName: "Sarah Johnson",
-    leaveType: "Sick Leave",
-    startDate: "2024-01-15",
-    endDate: "2024-01-16",
-    reason: "Medical appointment",
-    status: "approved",
-    createdAt: "2024-01-12",
-    approvedBy: "Admin",
-  },
-  {
-    id: "3",
-    employeeId: "EMP003",
-    employeeName: "Mike Brown",
-    leaveType: "Personal Leave",
-    startDate: "2024-01-22",
-    endDate: "2024-01-22",
-    reason: "Personal matters",
-    status: "rejected",
-    createdAt: "2024-01-11",
-  },
-];
-
-const statusColors = {
+const statusColors: Record<string, string> = {
   pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   approved: "bg-success/20 text-success border-success/30",
   rejected: "bg-destructive/20 text-destructive border-destructive/30",
+  cancelled: "bg-muted text-muted-foreground border-muted",
 };
 
 export function LeaveManagement() {
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(mockLeaveRequests);
+  const [filter, setFilter] = useState<string>("all");
+  const { data: leaveRequests = [], isLoading, createLeaveRequest, approveLeave, rejectLeave } = useLeaveRequests(
+    filter !== "all" ? { status: filter } : undefined
+  );
+  const { data: staff = [] } = useStaffMembers();
+  const stats = useHRStats();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    employeeName: "",
-    employeeId: "",
-    leaveType: "",
-    startDate: "",
-    endDate: "",
+    staff_id: "",
+    leave_type: "annual",
+    start_date: "",
+    end_date: "",
     reason: "",
   });
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.employeeName || !formData.leaveType || !formData.startDate || !formData.endDate) {
+    if (!formData.staff_id || !formData.leave_type || !formData.start_date || !formData.end_date) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const newRequest: LeaveRequest = {
-      id: Date.now().toString(),
-      employeeId: formData.employeeId || `EMP${Date.now().toString().slice(-4)}`,
-      employeeName: formData.employeeName,
-      leaveType: formData.leaveType,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      reason: formData.reason,
-      status: "pending",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
+    const days = differenceInDays(parseISO(formData.end_date), parseISO(formData.start_date)) + 1;
 
-    setLeaveRequests((prev) => [newRequest, ...prev]);
-    toast.success("Leave request submitted successfully");
-    setDialogOpen(false);
-    setFormData({
-      employeeName: "",
-      employeeId: "",
-      leaveType: "",
-      startDate: "",
-      endDate: "",
-      reason: "",
-    });
+    try {
+      await createLeaveRequest.mutateAsync({
+        staff_id: formData.staff_id,
+        leave_type: formData.leave_type,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        days_requested: days,
+        reason: formData.reason,
+        status: "pending",
+      });
+
+      toast.success("Leave request submitted successfully");
+      setDialogOpen(false);
+      setFormData({
+        staff_id: "",
+        leave_type: "annual",
+        start_date: "",
+        end_date: "",
+        reason: "",
+      });
+    } catch (error: any) {
+      toast.error("Failed to submit request: " + error.message);
+    }
   };
 
-  const handleApprove = (id: string) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) =>
-        req.id === id ? { ...req, status: "approved" as const, approvedBy: "Admin" } : req
-      )
-    );
-    toast.success("Leave request approved");
+  const handleApprove = async (id: string) => {
+    try {
+      await approveLeave.mutateAsync({ id, approvedBy: "Admin" });
+      toast.success("Leave request approved");
+    } catch (error: any) {
+      toast.error("Failed to approve: " + error.message);
+    }
   };
 
-  const handleReject = (id: string) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: "rejected" as const } : req))
-    );
-    toast.error("Leave request rejected");
-  };
+  const handleReject = async (id: string) => {
+    const reason = window.prompt("Enter rejection reason:");
+    if (reason === null) return;
 
-  const filteredRequests = leaveRequests.filter((req) => {
-    if (filter === "all") return true;
-    return req.status === filter;
-  });
-
-  const stats = {
-    total: leaveRequests.length,
-    pending: leaveRequests.filter((r) => r.status === "pending").length,
-    approved: leaveRequests.filter((r) => r.status === "approved").length,
-    rejected: leaveRequests.filter((r) => r.status === "rejected").length,
+    try {
+      await rejectLeave.mutateAsync({ id, reason });
+      toast.error("Leave request rejected");
+    } catch (error: any) {
+      toast.error("Failed to reject: " + error.message);
+    }
   };
 
   return (
@@ -204,40 +154,39 @@ export function LeaveManagement() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="employeeName">Employee Name *</Label>
-                    <Input
-                      id="employeeName"
-                      value={formData.employeeName}
-                      onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
-                      placeholder="Full name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="employeeId">Employee ID</Label>
-                    <Input
-                      id="employeeId"
-                      value={formData.employeeId}
-                      onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                      placeholder="EMP001"
-                    />
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="staff">Employee *</Label>
+                    <Select
+                      value={formData.staff_id}
+                      onValueChange={(v) => setFormData({ ...formData, staff_id: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staff.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.first_name} {s.last_name} ({s.employee_id})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="leaveType">Leave Type *</Label>
                   <Select
-                    value={formData.leaveType}
-                    onValueChange={(v) => setFormData({ ...formData, leaveType: v })}
+                    value={formData.leave_type}
+                    onValueChange={(v) => setFormData({ ...formData, leave_type: v })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select leave type" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {leaveTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -250,9 +199,8 @@ export function LeaveManagement() {
                     <Input
                       id="startDate"
                       type="date"
-                      value={formData.startDate}
-                      max={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                       required
                     />
                   </div>
@@ -261,10 +209,9 @@ export function LeaveManagement() {
                     <Input
                       id="endDate"
                       type="date"
-                      value={formData.endDate}
-                      max={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      min={formData.startDate}
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      min={formData.start_date}
                       required
                     />
                   </div>
@@ -285,7 +232,8 @@ export function LeaveManagement() {
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="blue">
+                  <Button type="submit" variant="blue" disabled={createLeaveRequest.isPending}>
+                    {createLeaveRequest.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Submit Request
                   </Button>
                 </div>
@@ -298,19 +246,21 @@ export function LeaveManagement() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3">
           <div className="p-3 rounded-lg bg-secondary/50 text-center">
-            <p className="text-2xl font-bold">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="text-2xl font-bold">{leaveRequests.length}</p>
+            <p className="text-xs text-muted-foreground">Total Requests</p>
           </div>
           <div className="p-3 rounded-lg bg-amber-500/10 text-center">
-            <p className="text-2xl font-bold text-amber-400">{stats.pending}</p>
+            <p className="text-2xl font-bold text-amber-400">{stats.pendingLeaveRequests}</p>
             <p className="text-xs text-muted-foreground">Pending</p>
           </div>
           <div className="p-3 rounded-lg bg-success/10 text-center">
-            <p className="text-2xl font-bold text-success">{stats.approved}</p>
+            <p className="text-2xl font-bold text-success">{stats.approvedLeaveRequests}</p>
             <p className="text-xs text-muted-foreground">Approved</p>
           </div>
           <div className="p-3 rounded-lg bg-destructive/10 text-center">
-            <p className="text-2xl font-bold text-destructive">{stats.rejected}</p>
+            <p className="text-2xl font-bold text-destructive">
+              {leaveRequests.filter(r => r.status === 'rejected').length}
+            </p>
             <p className="text-xs text-muted-foreground">Rejected</p>
           </div>
         </div>
@@ -342,16 +292,16 @@ export function LeaveManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRequests.length === 0 ? (
+              {isLoading ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+              ) : leaveRequests.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No leave requests found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRequests.map((request) => {
-                  const days =
-                    differenceInDays(parseISO(request.endDate), parseISO(request.startDate)) + 1;
+                leaveRequests.map((request) => {
                   return (
                     <TableRow key={request.id}>
                       <TableCell>
@@ -360,31 +310,31 @@ export function LeaveManagement() {
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium">{request.employeeName}</p>
-                            <p className="text-xs text-muted-foreground">{request.employeeId}</p>
+                            <p className="font-medium">{request.staff ? `${request.staff.first_name} ${request.staff.last_name}` : "Unknown"}</p>
+                            <p className="text-xs text-muted-foreground">{request.staff?.employee_id}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span>{request.leaveType}</span>
+                          <span className="capitalize">{request.leave_type}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-1 text-sm">
                             <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span>{days} day{days !== 1 ? "s" : ""}</span>
+                            <span>{request.days_requested} day{request.days_requested !== 1 ? "s" : ""}</span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {formatAD(parseISO(request.startDate))} -{" "}
-                            {formatAD(parseISO(request.endDate))}
+                            {formatAD(parseISO(request.start_date))} -{" "}
+                            {formatAD(parseISO(request.end_date))}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={statusColors[request.status]}>
+                        <Badge variant="outline" className={statusColors[request.status] || ""}>
                           {request.status}
                         </Badge>
                       </TableCell>
@@ -396,21 +346,23 @@ export function LeaveManagement() {
                               size="icon"
                               className="h-8 w-8 text-success hover:text-success hover:bg-success/20"
                               onClick={() => handleApprove(request.id)}
+                              disabled={approveLeave.isPending}
                             >
-                              <Check className="h-4 w-4" />
+                              {approveLeave.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/20"
                               onClick={() => handleReject(request.id)}
+                              disabled={rejectLeave.isPending}
                             >
-                              <X className="h-4 w-4" />
+                              {rejectLeave.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                             </Button>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            {request.approvedBy && `By ${request.approvedBy}`}
+                            {request.approved_by && `By ${request.approved_by}`}
                           </span>
                         )}
                       </TableCell>

@@ -39,7 +39,7 @@ const Billing = () => {
   return (
     <MainLayout fixedHeight title="Billing" subtitle="Manage invoices, payments and financial reports">
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full overflow-hidden">
-        <div className="xl:col-span-3 space-y-6 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <div className="xl:col-span-3 space-y-6 overflow-y-auto pr-2 scrollbar-hide">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <MetricCard
               title="Total Revenue"

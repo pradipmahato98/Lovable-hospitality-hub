@@ -21,7 +21,7 @@ const Marketing = () => {
     <MainLayout fixedHeight title="Sales & Marketing" subtitle="Campaigns, inquiries, and corporate accounts">
       <div className="flex flex-col h-full overflow-hidden">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4 sm:px-6 mt-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-4">
           <TabsList>
             <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
             <TabsTrigger value="activities">Sales Activities</TabsTrigger>
@@ -37,7 +37,7 @@ const Marketing = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
         {/* Inquiries Tab */}
         <TabsContent value="inquiries" className="space-y-6 mt-0 focus-visible:outline-none">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
