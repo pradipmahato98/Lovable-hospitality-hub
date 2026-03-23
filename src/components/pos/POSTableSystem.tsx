@@ -64,7 +64,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { SplitBillPanel } from "./SplitBillPanel";
-import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
+import { useInventoryPOS } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
 
@@ -119,7 +119,7 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
   const updateTable = useUpdatePOSTable();
   const createTransaction = useCreatePOSTransaction();
   const { addFolioItem } = useGuestFolios();
-  const { deductBulkInventoryForSale } = useInventoryTransactionService();
+  const { deductBulkInventoryForSale } = useInventoryPOS();
 
   // Transform POSTable to TableInfo format
   const tables: TableInfo[] = posTables.map((t) => ({
@@ -457,13 +457,11 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       }
 
       // Trigger inventory deduction
+      // For real inventory link, the OrderItem name/id should match MenuItem name/id
+      // Assuming OrderItem contains MenuItem ID or name that can be mapped
       await deductBulkInventoryForSale.mutateAsync({
-        saleId: selectedTable.id, // Using table id as temporary sale ref if txn id not captured
-        items: selectedTable.orders.map(o => ({
-          menu_item_id: o.id,
-          quantity: o.quantity,
-          name: o.name
-        }))
+        saleId: selectedTable.id, // Or transaction id if available
+        items: selectedTable.orders.map(o => ({ menu_item_id: o.id, quantity: o.quantity }))
       });
 
       await handleCloseTable();

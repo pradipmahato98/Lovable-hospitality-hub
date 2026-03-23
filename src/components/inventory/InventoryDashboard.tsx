@@ -10,30 +10,25 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, PieChart, Pie, Cell, BarChart, Bar
 } from "recharts";
-import { useItemService } from "@/hooks/inventory/useItemService";
-import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
-import { useWastageService } from "@/hooks/inventory/useWastageService";
-import { useReportingService } from "@/hooks/inventory/useReportingService";
+import {
+  useInventoryStats, useInventoryItems, useStockMovements,
+  useInventoryCategories, useInventoryWastage
+} from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function InventoryDashboard() {
-  const { inventoryStats } = useReportingService();
-  const stats = inventoryStats.data || { totalValue: 0, lowStock: 0, demandForecast: "+0.0%" };
-  const { items, categories } = useItemService();
-  const { movements } = useInventoryTransactionService();
-  const { wastage } = useWastageService();
-
-  const itemsList = items.data || [];
-  const categoriesList = categories.data || [];
-  const movementsList = movements.data || [];
-  const wastageList = wastage.data || [];
+  const stats = useInventoryStats();
+  const { data: items = [] } = useInventoryItems();
+  const { data: categories = [] } = useInventoryCategories();
+  const { data: movements = [] } = useStockMovements();
+  const { data: wastage = [] } = useInventoryWastage();
 
   const categoryDistribution = useMemo(() => {
     const dist: Record<string, number> = {};
-    itemsList.forEach((item: any) => {
-      const catName = categoriesList.find((c: any) => c.category_id === item.category_id)?.category_name || "Uncategorized";
-      dist[catName] = (dist[catName] || 0) + (item.current_stock * (item.avg_cost || item.cost_price || 0));
+    items.forEach(item => {
+      const catName = categories.find(c => c.id === item.category_id)?.name || "Uncategorized";
+      dist[catName] = (dist[catName] || 0) + (item.current_stock * (item.avg_cost || item.cost_price));
     });
     return Object.entries(dist).map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
@@ -41,10 +36,10 @@ export function InventoryDashboard() {
   }, [items, categories]);
 
   const topItemsByValue = useMemo(() => {
-    return itemsList
-      .map((i: any) => ({
-        name: i.item_name,
-        value: i.current_stock * (i.avg_cost || i.cost_price || 0)
+    return items
+      .map(i => ({
+        name: i.name,
+        value: i.current_stock * (i.avg_cost || i.cost_price)
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
@@ -99,7 +94,7 @@ export function InventoryDashboard() {
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">MTD Consumption</p>
                 <p className="text-3xl font-black mt-1 text-emerald-600 font-mono">
-                  {formatCurrency(movementsList.filter((m: any) => m.movement_type === 'out').reduce((s: number, m: any) => s + (m.quantity * (m.item?.avg_cost || 0)), 0))}
+                  {formatCurrency(movements.filter(m => m.movement_type === 'out').reduce((s, m) => s + (m.quantity * ((m.item as any)?.avg_cost || 0)), 0))}
                 </p>
                 <div className="flex items-center gap-1 mt-2 text-xs font-medium text-muted-foreground">
                   <Activity className="h-3 w-3" />
@@ -119,7 +114,7 @@ export function InventoryDashboard() {
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Wastage Loss</p>
                 <p className="text-3xl font-black mt-1 text-destructive">
-                   {formatCurrency(wastageList.reduce((s: number, w: any) => s + (w.cost_impact || 0), 0))}
+                   {formatCurrency(wastage.reduce((s, w) => s + w.cost_impact, 0))}
                 </p>
                 <div className="flex items-center gap-1 mt-2 text-xs font-medium text-destructive">
                   <TrendingDown className="h-3 w-3" />

@@ -9,29 +9,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Loader2, Warehouse, PackageCheck, Eye, X, CheckCircle, ShieldAlert, Calendar, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
-import { useProcurementService } from "@/hooks/inventory/useProcurementService";
-import { useItemService } from "@/hooks/inventory/useItemService";
+import { usePurchaseOrders, useSuppliers, useInventoryItems, PurchaseOrder, useInventoryUoMs, PurchaseOrderItem } from "@/hooks/useInventory";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
 
-type PurchaseOrder = Database['public']['Tables']['purchase_orders']['Row'] & {
-  supplier?: Database['public']['Tables']['suppliers']['Row'];
-  items?: (Database['public']['Tables']['purchase_order_items']['Row'] & {
-     item?: Database['public']['Tables']['items']['Row']
-  })[]
-};
-
-interface POLineItem { item_id: string; quantity: number; price: number; }
+interface POLineItem { item_id: string; quantity: number; unit_price: number; }
 
 export function PurchaseOrdersTab() {
-  const { orders: ordersQuery, createOrder, updateOrder, receiveOrder } = useProcurementService();
-  const { items: itemsQuery, suppliers: suppliersQuery, units: unitsQuery } = useItemService();
-
-  const orders = (ordersQuery.data || []) as PurchaseOrder[];
-  const suppliers = suppliersQuery.data || [];
-  const items = itemsQuery.data || [];
-  const uoms = unitsQuery.data || [];
+  const { data: orders = [], createPurchaseOrder, updatePurchaseOrderStatus, receivePurchaseOrder } = usePurchaseOrders();
+  const { data: suppliers = [] } = useSuppliers();
+  const { data: items = [] } = useInventoryItems();
+  const { data: uoms = [], conversions = [] } = useInventoryUoMs();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -41,27 +29,27 @@ export function PurchaseOrdersTab() {
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
 
   const [form, setForm] = useState({ supplier_id: "", expected_delivery: "", notes: "" });
-  const [lineItems, setLineItems] = useState<POLineItem[]>([{ item_id: "", quantity: 1, price: 0 }]);
+  const [lineItems, setLineItems] = useState<POLineItem[]>([{ item_id: "", quantity: 1, unit_price: 0 }]);
   const [receiveData, setReceiveData] = useState<Record<string, { qty: number, uom_id: string, batch: string, expiry: string, damaged: number, quality: string }>>({});
   const [returnQtys, setReturnQtys] = useState<Record<string, number>>({});
   const [returnReason, setReturnReason] = useState("");
 
-  const subtotal = (lineItems || []).reduce((s, li) => s + li.quantity * li.price, 0);
+  const subtotal = (lineItems || []).reduce((s, li) => s + li.quantity * li.unit_price, 0);
   const taxAmount = subtotal * 0.13;
   const total = subtotal + taxAmount;
 
-  const addLine = () => setLineItems([...lineItems, { item_id: "", quantity: 1, price: 0 }]);
+  const addLine = () => setLineItems([...lineItems, { item_id: "", quantity: 1, unit_price: 0 }]);
   const removeLine = (i: number) => setLineItems(lineItems.filter((_, idx) => idx !== i));
   const updateLine = (i: number, field: keyof POLineItem, value: string | number) => {
     const updated = [...lineItems];
     if (field === "item_id") {
       updated[i].item_id = value as string;
-      const item = items.find((it: any) => it.item_id === value);
-      if (item) updated[i].price = item.cost_price;
+      const item = items.find((it) => it.id === value);
+      if (item) updated[i].unit_price = item.cost_price;
     } else if (field === "quantity") {
       updated[i].quantity = value as number;
-    } else if (field === "price") {
-      updated[i].price = value as number;
+    } else if (field === "unit_price") {
+      updated[i].unit_price = value as number;
     }
     setLineItems(updated);
   };
@@ -70,22 +58,20 @@ export function PurchaseOrdersTab() {
     try {
       const validLines = lineItems.filter((l) => l.item_id && l.quantity > 0);
       if (!form.supplier_id || validLines.length === 0) { toast.error("Select supplier and add items"); return; }
-      const orderNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
-      await createOrder.mutateAsync({
+      await createPurchaseOrder.mutateAsync({
         supplier_id: form.supplier_id,
         status: "draft",
         order_date: new Date().toISOString().split('T')[0],
-        order_number: orderNumber,
         subtotal,
         tax_amount: taxAmount,
-        total_amount: total,
+        total,
         notes: form.notes || undefined,
-        items: validLines as any[],
+        items: validLines,
       });
       toast.success("Purchase order created");
       setCreateOpen(false);
       setForm({ supplier_id: "", expected_delivery: "", notes: "" });
-      setLineItems([{ item_id: "", quantity: 1, price: 0 }]);
+      setLineItems([{ item_id: "", quantity: 1, unit_price: 0 }]);
     } catch { toast.error("Failed to create PO"); }
   };
 
@@ -95,7 +81,7 @@ export function PurchaseOrdersTab() {
     po.items?.forEach((pi) => {
       initialData[pi.id] = {
         qty: pi.quantity - (pi.received_quantity || 0),
-        uom_id: (pi as any).item?.unit_id || "",
+        uom_id: pi.item?.uom_id || "",
         batch: "",
         expiry: "",
         damaged: 0,
@@ -107,37 +93,38 @@ export function PurchaseOrdersTab() {
   };
 
   const handleReceive = async () => {
-    if (!selectedPO?.po_id) return;
+    if (!selectedPO?.items) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const receivedItems = selectedPO.items.map((pi) => {
+         const data = receiveData[pi.id];
+         let finalQty = data?.qty || 0;
 
-      const itemsToReceive = selectedPO.items?.map(pi => ({
-        id: pi.id,
-        received_quantity: receiveData[pi.id]?.qty || 0,
-        batch_number: receiveData[pi.id]?.batch,
-        expiry_date: receiveData[pi.id]?.expiry
-      })).filter(i => i.received_quantity > 0) || [];
+         if (data?.uom_id && pi.item?.uom_id && data.uom_id !== pi.item.uom_id) {
+            const conversion = conversions.find(c => c.from_uom_id === data.uom_id && c.to_uom_id === pi.item?.uom_id);
+            if (conversion) finalQty = finalQty * conversion.conversion_factor;
+         }
 
-      if (itemsToReceive.length === 0) {
-        toast.error("No quantities to receive");
-        return;
-      }
-
-      await receiveOrder.mutateAsync({
-        po_id: selectedPO.po_id,
-        items: itemsToReceive,
-        received_date: new Date().toISOString(),
-        received_by: user?.id
+         return {
+            poItemId: pi.id,
+            itemId: pi.item_id,
+            receivedQty: finalQty,
+            batchNumber: data?.batch,
+            expiryDate: data?.expiry,
+            damagedQty: data?.damaged || 0,
+            qualityStatus: data?.quality || 'passed'
+         };
       });
 
-      toast.success("GRN Processed Successfully");
+      const filteredReceived = receivedItems.filter(ri => ri.receivedQty > 0 || ri.damagedQty > 0);
+      await receivePurchaseOrder.mutateAsync({ poId: selectedPO.id, receivedItems: filteredReceived });
+      toast.success("GRN Processed");
       setReceiveOpen(false);
-    } catch { toast.error("Failed to process GRN"); }
+    } catch { toast.error("Failed"); }
   };
 
-  const handleStatusChange = async (po_id: string, status: string) => {
+  const handleStatusChange = async (id: string, status: string) => {
     try {
-      await updateOrder.mutateAsync({ po_id, status });
+      await updatePurchaseOrderStatus.mutateAsync({ id, status });
       toast.success(`Status updated to ${status}`);
     } catch { toast.error("Failed"); }
   };
@@ -157,39 +144,39 @@ export function PurchaseOrdersTab() {
         const returnNo = `RET-${Date.now().toString(36).toUpperCase()}`;
 
         let totalVal = 0;
-              const returnItems: { item_id: string, quantity: number, price: number }[] = [];
+        const returnItems: { item_id: string, quantity: number, unit_price: number }[] = [];
 
         for (const pi of (selectedPO.items || [])) {
            const qty = returnQtys[pi.id] || 0;
            if (qty > 0) {
-              const val = qty * pi.price;
+              const val = qty * pi.unit_price;
               totalVal += val;
-              returnItems.push({ item_id: pi.item_id, quantity: qty, price: pi.price });
+              returnItems.push({ item_id: pi.item_id, quantity: qty, unit_price: pi.unit_price });
 
-              const { data: item } = await supabase.from('items').select('current_stock').eq('item_id', pi.item_id).single();
-              await supabase.from('items').update({ current_stock: Math.max(0, (item?.current_stock || 0) - qty) }).eq('item_id', pi.item_id);
+              const { data: item } = await supabase.from('inventory_items').select('current_stock').eq('id', pi.item_id).single();
+              await supabase.from('inventory_items').update({ current_stock: Math.max(0, (item?.current_stock || 0) - qty) }).eq('id', pi.item_id);
 
               await supabase.from('stock_movements').insert({
                  item_id: pi.item_id,
                  movement_type: 'out',
                  quantity: qty,
                  reference_type: 'purchase_order',
-                 reference_id: selectedPO.po_id,
-                 notes: `Supplier Return: ${selectedPO.supplier?.supplier_name}`
+                 reference_id: selectedPO.id,
+                 notes: `Supplier Return: ${selectedPO.supplier?.name}`
               });
            }
         }
 
         if (returnItems.length > 0) {
            const { data: retHeader } = await supabase.from('inventory_supplier_returns').insert({
-              purchase_order_id: selectedPO.po_id,
+              purchase_order_id: selectedPO.id,
               return_number: returnNo,
               supplier_id: selectedPO.supplier_id,
               reason: returnReason,
               status: 'completed',
               total_amount: totalVal,
               created_by: user?.id
-           } as any).select().single();
+           } as Database["public"]["Tables"]["inventory_supplier_returns"]["Insert"]).select().single();
 
            if (retHeader) {
              const header = retHeader as { id: string };
@@ -215,7 +202,7 @@ export function PurchaseOrdersTab() {
                   <div className="space-y-2"><Label>Supplier *</Label>
                     <Select value={form.supplier_id} onValueChange={(v) => setForm({ ...form, supplier_id: v })}>
                       <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                      <SelectContent>{suppliers.filter((s) => s.status).map((s) => <SelectItem key={s.supplier_id} value={s.supplier_id}>{s.supplier_name}</SelectItem>)}</SelectContent>
+                      <SelectContent>{suppliers.filter((s) => s.is_active).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2"><Label>Expected Delivery</Label><Input type="date" value={form.expected_delivery} onChange={(e) => setForm({ ...form, expected_delivery: e.target.value })} /></div>
@@ -227,10 +214,10 @@ export function PurchaseOrdersTab() {
                     <div key={i} className="grid grid-cols-[1fr_80px_100px_32px] gap-2 items-end">
                       <Select value={li.item_id} onValueChange={(v) => updateLine(i, "item_id", v)}>
                         <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
-                        <SelectContent>{items.map((it: any) => <SelectItem key={it.item_id} value={it.item_id}>{it.item_name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}</SelectContent>
                       </Select>
                       <Input type="number" min={1} value={li.quantity} onChange={(e) => updateLine(i, "quantity", Number(e.target.value))} placeholder="Qty" />
-                      <Input type="number" min={0} value={li.price} onChange={(e) => updateLine(i, "price", Number(e.target.value))} placeholder="Price" />
+                      <Input type="number" min={0} value={li.unit_price} onChange={(e) => updateLine(i, "unit_price", Number(e.target.value))} placeholder="Price" />
                       {lineItems.length > 1 && <Button variant="ghost" size="sm" onClick={() => removeLine(i)}><X className="h-4 w-4" /></Button>}
                     </div>
                   ))}
@@ -244,7 +231,7 @@ export function PurchaseOrdersTab() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreate} variant="blue">Create PO</Button>
+                <Button onClick={handleCreate} disabled={createPurchaseOrder.isPending} variant="blue">Create PO</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -267,9 +254,9 @@ export function PurchaseOrdersTab() {
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No purchase orders yet</TableCell></TableRow>
             ) : (
               orders.map((po) => (
-                <TableRow key={po.po_id}>
+                <TableRow key={po.id}>
                   <TableCell className="font-mono font-bold text-primary">{po.order_number}</TableCell>
-                  <TableCell>{po.supplier?.supplier_name || "-"}</TableCell>
+                  <TableCell>{po.supplier?.name || "-"}</TableCell>
                   <TableCell className="text-xs">{formatAD(new Date(po.order_date))}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn(
@@ -277,11 +264,11 @@ export function PurchaseOrdersTab() {
                       po.status === 'sent' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : ""
                     )}>{po.status.replace("_", " ")}</Badge>
                   </TableCell>
-                  <TableCell className="font-bold">{formatCurrency(po.total_amount)}</TableCell>
+                  <TableCell className="font-bold">{formatCurrency(po.total)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => { setSelectedPO(po); setDetailOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                      {po.status === "draft" && <Button variant="blue" size="sm" onClick={() => handleStatusChange(po.po_id, "sent")}>Send</Button>}
+                      {po.status === "draft" && <Button variant="blue" size="sm" onClick={() => handleStatusChange(po.id, "sent")}>Send</Button>}
                       {(po.status === "sent" || po.status === "partially_received") && (
                         <div className="flex gap-1">
                            <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => { setIsMobileMode(true); openReceive(po); }} title="Mobile Receipt"><Smartphone className="h-4 w-4" /></Button>
@@ -311,9 +298,9 @@ export function PurchaseOrdersTab() {
                 <TableBody>
                   {selectedPO.items.map((pi) => (
                     <TableRow key={pi.id}>
-                      <TableCell className="text-xs">{pi.item?.item_name}</TableCell>
+                      <TableCell className="text-xs">{pi.item?.name}</TableCell>
                       <TableCell className="text-xs">{pi.quantity}</TableCell>
-                      <TableCell className="text-xs">{formatCurrency(pi.price)}</TableCell>
+                      <TableCell className="text-xs">{formatCurrency(pi.unit_price)}</TableCell>
                       <TableCell><Badge variant="secondary">{pi.received_quantity || 0}</Badge></TableCell>
                     </TableRow>
                   ))}
@@ -327,17 +314,17 @@ export function PurchaseOrdersTab() {
       {/* Supplier Return Modal */}
       <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
          <DialogContent className="max-w-xl">
-            <DialogHeader><DialogTitle>Supplier Return — {selectedPO?.supplier?.supplier_name}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Supplier Return — {selectedPO?.supplier?.name}</DialogTitle></DialogHeader>
             <div className="py-4 space-y-4">
                <Table>
                   <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Received</TableHead><TableHead>Return</TableHead></TableRow></TableHeader>
                   <TableBody>
                      {selectedPO?.items?.map(pi => (
                         <TableRow key={pi.id}>
-                           <TableCell className="text-xs">{pi.item?.item_name}</TableCell>
-                           <TableCell className="text-xs font-bold">{pi.received_quantity || 0}</TableCell>
+                           <TableCell className="text-xs">{pi.item?.name}</TableCell>
+                           <TableCell className="text-xs font-bold">{pi.received_quantity}</TableCell>
                            <TableCell><Input type="number" className="h-7 w-20 text-xs"
-                              max={pi.received_quantity || 0}
+                              max={pi.received_quantity}
                               value={returnQtys[pi.id] || 0}
                               onChange={(e) => setReturnQtys({...returnQtys, [pi.id]: Number(e.target.value)})} /></TableCell>
                         </TableRow>
@@ -367,8 +354,8 @@ export function PurchaseOrdersTab() {
               <div key={pi.id} className={cn("border p-4 rounded-xl bg-muted/20 space-y-4", isMobileMode ? "p-3" : "p-4")}>
                 <div className="flex justify-between items-start border-b pb-2">
                   <div>
-                    <h4 className="font-bold text-base flex items-center gap-2 text-primary"><PackageCheck className="h-4 w-4" /> {pi.item?.item_name}</h4>
-                    <p className="text-xs text-muted-foreground font-mono uppercase">{pi.item?.unit?.unit_name || 'pcs'}</p>
+                    <h4 className="font-bold text-base flex items-center gap-2 text-primary"><PackageCheck className="h-4 w-4" /> {pi.item?.name}</h4>
+                    <p className="text-xs text-muted-foreground font-mono uppercase">{pi.item?.uom?.name || pi.item?.unit}</p>
                   </div>
                   <div className="flex gap-4 items-end">
                     <div className="space-y-1 text-right">
@@ -396,7 +383,7 @@ export function PurchaseOrdersTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReceiveOpen(false)}>Cancel</Button>
-            <Button onClick={handleReceive} variant="blue">Confirm GRN</Button>
+            <Button onClick={handleReceive} disabled={receivePurchaseOrder.isPending} variant="blue">Confirm GRN</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

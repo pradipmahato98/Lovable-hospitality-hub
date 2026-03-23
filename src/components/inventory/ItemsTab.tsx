@@ -9,20 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent, Timer, Activity, Settings, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useItemService } from "@/hooks/inventory/useItemService";
-import { useStoreService } from "@/hooks/inventory/useStoreService";
-import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
-import { useReportingService } from "@/hooks/inventory/useReportingService";
+import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, useInventoryStores, InventoryItem } from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Database } from "@/integrations/supabase/types";
-
-type InventoryItem = Database['public']['Tables']['items']['Row'] & {
-  category?: Database['public']['Tables']['item_categories']['Row'];
-  unit?: Database['public']['Tables']['units']['Row'];
-  supplier?: Database['public']['Tables']['suppliers']['Row'];
-};
 
 export function ItemsTab() {
   const queryClient = useQueryClient();
@@ -38,33 +28,29 @@ export function ItemsTab() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
 
-  const { items: itemsQuery, categories: categoriesQuery, units: unitsQuery, createItem, updateItem, suppliers: suppliersQuery } = useItemService();
-  const items = (itemsQuery.data || []) as InventoryItem[];
-  const categories = categoriesQuery.data || [];
-  const uoms = unitsQuery.data || [];
-  const suppliers = suppliersQuery.data || [];
-  const isLoading = itemsQuery.isLoading;
-
-  const { stores: storesQuery } = useStoreService();
-  const stores = (storesQuery.data || []) as any[];
-
-  const { createMovement, updateMovement, deleteMovement } = useInventoryTransactionService();
-  const { inventoryStats } = useReportingService();
-  const stats = inventoryStats.data || { totalItems: 0, lowStock: 0, avgAgingDays: 0, stockVariance: 0, totalValue: 0 };
+  const { data: items = [], isLoading, createItem, updateItem, adjustStock } = useInventoryItems({
+    category: categoryFilter !== "all" ? categoryFilter : undefined,
+    lowStock: showLowStock,
+  });
+  const { data: categories = [] } = useInventoryCategories();
+  const { data: suppliers = [] } = useSuppliers();
+  const { data: uoms = [] } = useInventoryUoMs();
+  const { data: stores = [] } = useInventoryStores();
+  const stats = useInventoryStats();
 
   const { data: pendingAdjustments = [], refetch: refetchAdj } = useQuery({
      queryKey: ["pending-inventory-adjustments"],
      queryFn: async () => {
-        const { data } = await supabase.from('stock_movements').select('*, item:items(item_name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
-        return (data || []) as unknown as { movement_id: string, item_id: string, quantity: number, movement_type: string, notes: string | null, item?: { item_name: string } }[];
+        const { data } = await supabase.from('stock_movements').select('*, item:inventory_items(name)').eq('reference_type', 'manual_adjustment').filter('notes', 'ilike', 'PENDING_APPROVAL%');
+        return (data || []) as unknown as { id: string, item_id: string, quantity: number, movement_type: string, notes: string | null, item?: { name: string } }[];
      }
   });
 
   const emptyForm = {
-    item_name: "", item_code: "", category_id: "", supplier_id: "", unit_id: "",
+    name: "", sku: "", category_id: "", supplier_id: "", uom_id: "",
     cost_price: 0, selling_price: 0, item_type: "consumable",
     min_stock: 0, max_stock: 0, reorder_point: 0, safety_stock: 0,
-    shelf_life: "", storage_instructions: "",
+    shelf_life: "", storage_instructions: "", temperature_classification: "Ambient",
     image_url: "",
     tax_applicability: [] as string[],
     attributes: {} as Record<string, string>
@@ -79,8 +65,8 @@ export function ItemsTab() {
   });
 
   const filteredItems = items.filter((item) => {
-    const matchesQuery = item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) || item.item_code?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBarcode = !barcodeSearch || item.item_code === barcodeSearch;
+    const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesBarcode = !barcodeSearch || item.sku === barcodeSearch;
     return matchesQuery && matchesBarcode;
   });
 
@@ -89,21 +75,21 @@ export function ItemsTab() {
         toast.error("Please select a category first");
         return;
      }
-     const cat = categories.find(c => c.category_id === form.category_id);
-     const prefix = (cat as any)?.sku_prefix || cat?.category_name?.substring(0, 3).toUpperCase() || "ITEM";
+     const cat = categories.find(c => c.id === form.category_id);
+     const prefix = cat?.sku_prefix || cat?.name?.substring(0, 3).toUpperCase() || "ITEM";
      const random = Math.floor(1000 + Math.random() * 9000);
-     setForm({ ...form, item_code: `${prefix}-${random}` });
+     setForm({ ...form, sku: `${prefix}-${random}` });
      toast.success("SKU Generated");
   };
 
   const handleAdjustRequest = async () => {
     if (!selectedItem) return;
     try {
-      await createMovement.mutateAsync({
-         item_id: selectedItem.item_id,
+      await supabase.from('stock_movements').insert({
+         item_id: selectedItem.id,
          movement_type: stockAdj.type,
          quantity: stockAdj.quantity,
-         store_id: stockAdj.storeId || undefined,
+         store_id: stockAdj.storeId,
          reference_type: 'manual_adjustment',
          notes: `PENDING_APPROVAL|${stockAdj.reason}|${stockAdj.notes}`
       });
@@ -116,13 +102,18 @@ export function ItemsTab() {
     }
   };
 
-  const approveAdjustment = async (adj: { movement_id: string; item_id: string; quantity: number; movement_type: string; notes: string | null }) => {
+  const approveAdjustment = async (adj: { id: string; item_id: string; quantity: number; movement_type: string; notes: string | null }) => {
      try {
         const [, reason, notes] = adj.notes?.split('|') || [];
-        await updateMovement.mutateAsync({
-           movement_id: adj.movement_id,
-           notes: `APPROVED|${reason}|${notes}`
+        const type = adj.movement_type === 'out' ? 'out' : 'in';
+        await adjustStock.mutateAsync({
+           itemId: adj.item_id,
+           quantity: adj.quantity,
+           type: type as "in" | "out" | "adjustment",
+           reason: reason || 'Adjustment',
+           notes: notes || ''
         });
+        await supabase.from('stock_movements').delete().eq('id', adj.id);
         toast.success("Adjustment approved");
         refetchAdj();
      } catch (error: any) {
@@ -179,10 +170,10 @@ export function ItemsTab() {
     }
 
     try {
-      const payload: any = { ...form };
+      const payload: Partial<InventoryItem> = { ...form };
       if (!payload.category_id) delete payload.category_id;
       if (!payload.supplier_id) delete payload.supplier_id;
-      if (!payload.unit_id) delete payload.unit_id;
+      if (!payload.uom_id) delete payload.uom_id;
       await createItem.mutateAsync(payload);
       toast.success("Item registered");
       setAddItemOpen(false);
@@ -218,7 +209,7 @@ export function ItemsTab() {
             <SelectTrigger className="w-40 h-9 text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((c) => <SelectItem key={c.category_id} value={c.category_id}>{c.category_name}</SelectItem>)}
+              {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -243,21 +234,21 @@ export function ItemsTab() {
               ) : filteredItems.map((item) => {
                 const status = (item.current_stock === 0) ? { label: "Out", color: "bg-destructive/10 text-destructive" } : (item.current_stock <= item.reorder_point) ? { label: "Low", color: "bg-amber-500/10 text-amber-500" } : { label: "In Stock", color: "bg-success/10 text-success" };
                 return (
-                  <TableRow key={item.item_id} className="hover:bg-muted/10 transition-colors">
+                  <TableRow key={item.id} className="hover:bg-muted/10 transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded bg-muted flex items-center justify-center border">
                           {item.image_url ? <img src={item.image_url} alt="" className="h-full w-full object-cover rounded" /> : <Package className="h-4 w-4 text-muted-foreground" />}
                         </div>
-                        <div><p className="font-bold text-xs">{item.item_name}</p><p className="text-[9px] text-muted-foreground font-mono uppercase">{item.item_code || "No SKU"}</p></div>
+                        <div><p className="font-bold text-xs">{item.name}</p><p className="text-[9px] text-muted-foreground font-mono uppercase">{item.sku || "No SKU"}</p></div>
                       </div>
                     </TableCell>
                     <TableCell><Badge variant="secondary" className="text-[9px] h-4 uppercase">{item.item_type}</Badge></TableCell>
-                    <TableCell><p className="font-bold text-xs">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.unit?.unit_symbol || 'pcs'}</span></p></TableCell>
+                    <TableCell><p className="font-bold text-xs">{item.current_stock} <span className="text-[9px] text-muted-foreground font-normal uppercase">{item.uom?.abbreviation || item.unit}</span></p></TableCell>
                     <TableCell>
                        <div className="flex gap-1">
-                          {(item.tax_applicability as string[])?.map(t => <Badge key={t} variant="outline" className="text-[8px] h-4 px-1">{t}</Badge>)}
-                          {(!item.tax_applicability || (item.tax_applicability as string[]).length === 0) && <span className="text-[9px] text-muted-foreground">Exempt</span>}
+                          {item.tax_applicability?.map(t => <Badge key={t} variant="outline" className="text-[8px] h-4 px-1">{t}</Badge>)}
+                          {(!item.tax_applicability || item.tax_applicability.length === 0) && <span className="text-[9px] text-muted-foreground">Exempt</span>}
                        </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -280,28 +271,28 @@ export function ItemsTab() {
          <DialogContent className="max-w-3xl">
             <DialogHeader><DialogTitle>Item Master Registration</DialogTitle></DialogHeader>
             <div className="grid grid-cols-2 gap-6 py-4 pr-2">
-               <div className="col-span-2 space-y-1"><Label className="text-xs">Item Name *</Label><Input value={form.item_name} onChange={(e) => setForm({...form, item_name: e.target.value})} placeholder="e.g. Absolut Vodka 750ml" /></div>
+               <div className="col-span-2 space-y-1"><Label className="text-xs">Item Name *</Label><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder="e.g. Absolut Vodka 750ml" /></div>
 
                <div className="space-y-1">
                   <Label className="text-xs">Category</Label>
                   <Select value={form.category_id} onValueChange={(v) => setForm({...form, category_id: v})}>
                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-                     <SelectContent>{categories.map(c => <SelectItem key={c.category_id} value={c.category_id}>{c.category_name}</SelectItem>)}</SelectContent>
+                     <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
 
                <div className="space-y-1">
                   <Label className="text-xs">SKU / Barcode</Label>
                   <div className="flex gap-1">
-                     <Input value={form.item_code || ""} onChange={(e) => setForm({...form, item_code: e.target.value})} className="font-mono text-xs h-9" />
+                     <Input value={form.sku} onChange={(e) => setForm({...form, sku: e.target.value})} className="font-mono text-xs h-9" />
                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={generateSKU}><RefreshCw className="h-4 w-4" /></Button>
                   </div>
                </div>
 
                <div className="space-y-1"><Label className="text-xs">UoM</Label>
-                  <Select value={form.unit_id} onValueChange={(v) => setForm({...form, unit_id: v})}>
+                  <Select value={form.uom_id} onValueChange={(v) => setForm({...form, uom_id: v})}>
                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-                     <SelectContent>{uoms.map(u => <SelectItem key={u.unit_id} value={u.unit_id}>{u.unit_name}</SelectItem>)}</SelectContent>
+                     <SelectContent>{uoms.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
                <div className="space-y-1"><Label className="text-xs">Item Type</Label>
@@ -319,7 +310,18 @@ export function ItemsTab() {
                <div className="space-y-1"><Label className="text-xs">Max Stock</Label><Input type="number" value={form.max_stock} onChange={(e) => setForm({...form, max_stock: Number(e.target.value)})} /></div>
                <div className="space-y-1"><Label className="text-xs">Safety Stock</Label><Input type="number" value={form.safety_stock} onChange={(e) => setForm({...form, safety_stock: Number(e.target.value)})} /></div>
                <div className="space-y-1"><Label className="text-xs">Reorder Point</Label><Input type="number" value={form.reorder_point} onChange={(e) => setForm({...form, reorder_point: Number(e.target.value)})} /></div>
-               <div className="space-y-1"><Label className="text-xs">Shelf Life (Days)</Label><Input type="number" value={form.shelf_life_days || ""} onChange={(e) => setForm({...form, shelf_life_days: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label className="text-xs">Temp. Classification</Label>
+                  <Select value={form.temperature_classification} onValueChange={(v) => setForm({...form, temperature_classification: v})}>
+                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                     <SelectContent>
+                        <SelectItem value="Ambient">Ambient / Dry</SelectItem>
+                        <SelectItem value="Chilled">Chilled (0-5°C)</SelectItem>
+                        <SelectItem value="Frozen">Frozen (-18°C)</SelectItem>
+                     </SelectContent>
+                  </Select>
+               </div>
+
+               <div className="space-y-1"><Label className="text-xs">Shelf Life (Days)</Label><Input type="number" value={form.shelf_life} onChange={(e) => setForm({...form, shelf_life: e.target.value})} /></div>
                <div className="space-y-1"><Label className="text-xs">Storage Instructions</Label><Input value={form.storage_instructions} onChange={(e) => setForm({...form, storage_instructions: e.target.value})} placeholder="e.g. Keep away from light" /></div>
 
                <div className="col-span-2 space-y-1">
@@ -340,7 +342,7 @@ export function ItemsTab() {
                      <Label className="text-[10px] font-bold uppercase text-primary flex items-center gap-1"><Percent className="h-3 w-3" /> Tax Applicability</Label>
                      <div className="flex flex-wrap gap-2">
                         {["VAT 13%", "Service Tax 10%", "Tourism Levy 2%", "Excise Duty"].map(t => (
-                           <Button key={t} variant={(form.tax_applicability as string[]).includes(t) ? "blue" : "outline"} size="xs" className="h-7 text-[10px]" onClick={() => toggleTax(t)}>{t}</Button>
+                           <Button key={t} variant={form.tax_applicability.includes(t) ? "blue" : "outline"} size="xs" className="h-7 text-[10px]" onClick={() => toggleTax(t)}>{t}</Button>
                         ))}
                      </div>
                   </div>
@@ -386,24 +388,16 @@ export function ItemsTab() {
       {/* Reusing existing Store and Adjustment dialogs */}
       <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}>
          <DialogContent>
-            <DialogHeader><DialogTitle>Stock Correction: {selectedItem?.item_name}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Stock Correction: {selectedItem?.name}</DialogTitle></DialogHeader>
             <div className="py-4 space-y-4">
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1"><Label>Type</Label>
-                     <Select value={stockAdj.type} onValueChange={(v) => setStockAdj({...stockAdj, type: v as any})}>
+                     <Select value={stockAdj.type} onValueChange={(v) => setStockAdj({...stockAdj, type: v})}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="in">Increase (+)</SelectItem><SelectItem value="out">Decrease (-)</SelectItem></SelectContent>
                      </Select>
                   </div>
                   <div className="space-y-1"><Label>Quantity</Label><Input type="number" onChange={(e) => setStockAdj({...stockAdj, quantity: Number(e.target.value)})} /></div>
-               </div>
-               <div className="space-y-1"><Label>Store</Label>
-                  <Select value={stockAdj.storeId} onValueChange={(v) => setStockAdj({...stockAdj, storeId: v})}>
-                     <SelectTrigger><SelectValue placeholder="Select Store" /></SelectTrigger>
-                     <SelectContent>
-                        {stores.map((s) => <SelectItem key={s.store_id} value={s.store_id}>{s.store_name}</SelectItem>)}
-                     </SelectContent>
-                  </Select>
                </div>
                <div className="space-y-1"><Label>Reason</Label>
                   <Select value={stockAdj.reason} onValueChange={(v) => setStockAdj({...stockAdj, reason: v})}>
@@ -422,8 +416,8 @@ export function ItemsTab() {
             <DialogFooter><Button onClick={handleAdjustRequest}>Submit for Approval</Button></DialogFooter>
          </DialogContent>
       </Dialog>
-      <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.item_name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.store_id} className="flex justify-between p-2 border-b text-xs"><span>{s.store_name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
-      <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a) => <div key={a.movement_id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.item_name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
+      <Dialog open={storeStockOpen} onOpenChange={setStoreStockOpen}><DialogContent><DialogHeader><DialogTitle>Distribution: {selectedItem?.name}</DialogTitle></DialogHeader><div className="py-4">{stores.map(s => <div key={s.id} className="flex justify-between p-2 border-b text-xs"><span>{s.name}</span><span className="font-bold">0</span></div>)}</div></DialogContent></Dialog>
+      <Dialog open={pendingAdjOpen} onOpenChange={setPendingAdjOpen}><DialogContent><DialogHeader><DialogTitle>Pending Approvals</DialogTitle></DialogHeader><div className="py-4">{pendingAdjustments.map((a) => <div key={a.id} className="flex justify-between items-center p-2 border-b text-xs"><span>{a.item?.name} ({a.quantity})</span><Button size="xs" onClick={() => approveAdjustment(a)}>Approve</Button></div>)}</div></DialogContent></Dialog>
 
       <Dialog open={isLabelOpen} onOpenChange={setIsLabelOpen}>
          <DialogContent className="max-w-sm">
@@ -431,18 +425,18 @@ export function ItemsTab() {
             <div className="py-8 flex flex-col items-center justify-center bg-white rounded-xl border-2 border-dashed border-slate-200">
                <div className="text-center space-y-1 mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Inventory Asset</p>
-                  <p className="text-sm font-bold">{selectedItem?.item_name}</p>
+                  <p className="text-sm font-bold">{selectedItem?.name}</p>
                </div>
 
                <div className="bg-slate-50 p-4 rounded border flex flex-col items-center">
                   <Barcode className="h-12 w-48 text-slate-900" />
-                  <p className="mt-2 font-mono text-sm font-bold tracking-[0.2em]">{selectedItem?.item_code || 'NO-SKU'}</p>
+                  <p className="mt-2 font-mono text-sm font-bold tracking-[0.2em]">{selectedItem?.sku || 'NO-SKU'}</p>
                </div>
 
                <div className="mt-4 flex gap-4 text-[10px] font-bold uppercase text-slate-500">
                   <span>Price: {formatCurrency(selectedItem?.cost_price || 0)}</span>
                   <span>•</span>
-                  <span>Unit: {selectedItem?.unit?.unit_symbol || 'pcs'}</span>
+                  <span>Unit: {selectedItem?.unit}</span>
                </div>
             </div>
             <DialogFooter>

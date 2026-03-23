@@ -9,34 +9,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, ListChecks, Loader2, Search, CheckCircle2, AlertCircle, Eye, History, Smartphone, ScanBarcode } from "lucide-react";
 import { toast } from "sonner";
-import { useItemService } from "@/hooks/inventory/useItemService";
-import { useStoreService } from "@/hooks/inventory/useStoreService";
-import { useAuditService } from "@/hooks/inventory/useAuditService";
+import { useInventoryItems, useInventoryStores, useInventoryStockCounts, InventoryStockCount, InventoryStockCountItem } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { Database } from "@/integrations/supabase/types";
-
-type StockCount = Database['public']['Tables']['stock_counts']['Row'] & {
-  store?: { store_name: string };
-  items?: (Database['public']['Tables']['stock_count_items']['Row'] & {
-     item?: Database['public']['Tables']['items']['Row']
-  })[]
-};
 
 export function StockCountTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isMobileMode, setIsMobileMode] = useState(false);
-  const [selectedCount, setSelectedCount] = useState<StockCount | null>(null);
+  const [selectedCount, setSelectedCount] = useState<InventoryStockCount | null>(null);
 
-  const { items: itemsQuery } = useItemService();
-  const items = itemsQuery.data || [];
-
-  const { stores: storesQuery } = useStoreService();
-  const stores = storesQuery.data || [];
-
-  const { stockCounts: auditHistoryQuery, createStockCount, reconcileStockCount } = useAuditService();
-  const auditHistory = (auditHistoryQuery.data || []) as any[];
+  const { data: items = [] } = useInventoryItems();
+  const { data: stores = [] } = useInventoryStores();
+  const { data: auditHistory = [], reconcileCount } = useInventoryStockCounts();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
@@ -51,8 +36,8 @@ export function StockCountTab() {
       toast.error("Please select a store first");
       return;
     }
-    const initialCounts = items.map((item: any) => ({
-      item_id: item.item_id,
+    const initialCounts = items.map(item => ({
+      item_id: item.id,
       system_quantity: item.current_stock,
       counted_quantity: item.current_stock
     }));
@@ -71,19 +56,25 @@ export function StockCountTab() {
       const { data: { user } } = await supabase.auth.getUser();
       const countNo = `SC-${Date.now().toString(36).toUpperCase()}`;
 
-      await createStockCount.mutateAsync({
+      const { data: master, error: masterErr } = await supabase.from('inventory_stock_counts').insert({
         count_number: countNo,
         store_id: form.store_id,
         counted_by: user?.id,
         status: 'submitted',
-        notes: form.notes,
-        items: form.counts.map(c => ({
-           item_id: c.item_id,
-           system_qty: c.system_quantity,
-           physical_qty: c.counted_quantity,
-           variance: c.counted_quantity - c.system_quantity
-        })) as any[]
-      });
+        notes: form.notes
+      }).select().single();
+
+      if (masterErr) throw masterErr;
+
+      const countItems = form.counts.map(c => ({
+        stock_count_id: master.id,
+        item_id: c.item_id,
+        system_quantity: c.system_quantity,
+        counted_quantity: c.counted_quantity
+      }));
+
+      const { error: itemsErr } = await supabase.from('inventory_stock_count_items').insert(countItems);
+      if (itemsErr) throw itemsErr;
 
       toast.success("Inventory audit submitted");
       setIsAddOpen(false);
@@ -97,7 +88,7 @@ export function StockCountTab() {
 
   const handleReconcile = async (id: string) => {
     try {
-      await reconcileStockCount.mutateAsync(id);
+      await reconcileCount.mutateAsync(id);
       toast.success("Stock levels updated");
       setIsDetailOpen(false);
     } catch {
@@ -136,9 +127,9 @@ export function StockCountTab() {
                       <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground text-xs">No audits recorded</TableCell></TableRow>
                    ) : (
                       auditHistory.map((audit) => (
-                         <TableRow key={audit.count_id}>
+                         <TableRow key={audit.id}>
                             <TableCell className="font-mono text-xs font-bold">{audit.count_number}</TableCell>
-                            <TableCell className="text-xs">{audit.store?.store_name}</TableCell>
+                            <TableCell className="text-xs">{audit.store?.name}</TableCell>
                             <TableCell><Badge variant="outline" className={cn("text-[10px]", audit.status === 'reconciled' ? "text-success border-success/20" : "")}>{audit.status}</Badge></TableCell>
                             <TableCell className="text-right">
                                <Button variant="ghost" size="sm" onClick={() => { setSelectedCount(audit); setIsDetailOpen(true); }}><Eye className="h-4 w-4" /></Button>
@@ -175,7 +166,7 @@ export function StockCountTab() {
                 <Label className="text-xs">Select Store</Label>
                 <Select value={form.store_id} onValueChange={(v) => setForm({ ...form, store_id: v })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Store" /></SelectTrigger>
-                  <SelectContent>{stores.map((s: any) => <SelectItem key={s.store_id} value={s.store_id}>{s.store_name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <Button variant="secondary" className="h-9" onClick={startNewCount} disabled={!form.store_id}>Load</Button>
@@ -191,14 +182,14 @@ export function StockCountTab() {
                       </div>
                       <div className="space-y-2">
                          {form.counts.filter(c => {
-                            const item = items.find((i: any) => i.item_id === c.item_id);
-                            return !mobileSearch || (item as any)?.item_name.toLowerCase().includes(mobileSearch.toLowerCase());
+                            const item = items.find(i => i.id === c.item_id);
+                            return !mobileSearch || item?.name.toLowerCase().includes(mobileSearch.toLowerCase());
                          }).map((c, idx) => {
-                            const item: any = items.find((i: any) => i.item_id === c.item_id);
+                            const item = items.find(i => i.id === c.item_id);
                             return (
                                <div key={c.item_id} className="p-3 border rounded-xl bg-card shadow-sm space-y-2">
                                   <div className="flex justify-between items-start">
-                                     <span className="text-sm font-bold">{item?.item_name}</span>
+                                     <span className="text-sm font-bold">{item?.name}</span>
                                      <Badge variant="outline" className="text-[10px]">Sys: {c.system_quantity}</Badge>
                                   </div>
                                   <div className="flex items-center gap-3">
@@ -223,11 +214,11 @@ export function StockCountTab() {
                      </TableHeader>
                      <TableBody>
                        {form.counts.map((c, idx) => {
-                         const item: any = items.find((i: any) => i.item_id === c.item_id);
+                         const item = items.find(i => i.id === c.item_id);
                          const variance = c.counted_quantity - c.system_quantity;
                          return (
                            <TableRow key={c.item_id}>
-                             <TableCell className="font-medium text-xs">{item?.item_name}</TableCell>
+                             <TableCell className="font-medium text-xs">{item?.name}</TableCell>
                              <TableCell className="text-xs">{c.system_quantity}</TableCell>
                              <TableCell><Input type="number" className="w-20 h-8 text-xs" value={c.counted_quantity} onChange={(e) => updateCount(idx, Number(e.target.value))} /></TableCell>
                              <TableCell>
@@ -261,19 +252,19 @@ export function StockCountTab() {
            <DialogHeader><DialogTitle>Audit Review: {selectedCount?.count_number}</DialogTitle></DialogHeader>
            <div className="py-4 space-y-4">
               <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg text-xs font-semibold">
-                 <span>Store: {selectedCount?.store?.store_name}</span>
+                 <span>Store: {selectedCount?.store?.name}</span>
                  <span>Date: {selectedCount?.count_date && new Date(selectedCount.count_date).toLocaleDateString()}</span>
               </div>
               <Table>
                  <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>System</TableHead><TableHead>Physical</TableHead><TableHead>Variance</TableHead></TableRow></TableHeader>
                  <TableBody>
-                    {selectedCount?.items?.map((item: any) => {
-                       const v = item.physical_qty - item.system_qty;
+                    {selectedCount?.items?.map((item) => {
+                       const v = item.counted_quantity - item.system_quantity;
                        return (
                          <TableRow key={item.id}>
-                            <TableCell className="text-xs">{item.item?.item_name}</TableCell>
-                            <TableCell className="text-xs">{item.system_qty}</TableCell>
-                            <TableCell className="font-bold text-xs">{item.physical_qty}</TableCell>
+                            <TableCell className="text-xs">{item.item?.name}</TableCell>
+                            <TableCell className="text-xs">{item.system_quantity}</TableCell>
+                            <TableCell className="font-bold text-xs">{item.counted_quantity}</TableCell>
                             <TableCell>
                                <Badge variant={v === 0 ? "outline" : v > 0 ? "success" : "destructive"} className="text-[10px]">{v}</Badge>
                             </TableCell>
@@ -286,7 +277,7 @@ export function StockCountTab() {
            <DialogFooter>
               <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
               {selectedCount?.status === 'submitted' && (
-                <Button variant="success" onClick={() => handleReconcile(selectedCount.count_id)}>
+                <Button variant="success" onClick={() => handleReconcile(selectedCount.id)} disabled={reconcileCount.isPending}>
                    Apply Reconciliation
                 </Button>
               )}

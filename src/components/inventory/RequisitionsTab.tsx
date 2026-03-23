@@ -9,8 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, ClipboardList, Loader2, CheckCircle, XCircle, ShoppingCart, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { useProcurementService } from "@/hooks/inventory/useProcurementService";
-import { useItemService } from "@/hooks/inventory/useItemService";
+import { useInventoryRequisitions, useInventoryItems, usePurchaseOrders, useSuppliers, InventoryRequisition, PurchaseOrderItem } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -18,16 +17,13 @@ import { useQuery } from "@tanstack/react-query";
 export function RequisitionsTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isPOConvertOpen, setIsPOConvertOpen] = useState(false);
-  const [selectedReqForPO, setSelectedReqForPO] = useState<any | null>(null);
+  const [selectedReqForPO, setSelectedReqForPO] = useState<InventoryRequisition | null>(null);
   const [poSupplierId, setPoSupplierId] = useState("");
 
-  const { requisitions: requisitionsQuery, createRequisition, updateRequisition, createOrder } = useProcurementService();
-  const { items: itemsQuery, suppliers: suppliersQuery } = useItemService();
-
-  const requisitions = requisitionsQuery.data || [];
-  const items = itemsQuery.data || [];
-  const suppliers = suppliersQuery.data || [];
-  const isLoading = requisitionsQuery.isLoading;
+  const { data: requisitions = [], isLoading, createRequisition, updateRequisitionStatus } = useInventoryRequisitions();
+  const { data: items = [] } = useInventoryItems();
+  const { data: suppliers = [] } = useSuppliers();
+  const { createPurchaseOrder } = usePurchaseOrders();
 
   const [form, setForm] = useState({
     department: "", required_date: "", priority: "normal", notes: "",
@@ -44,7 +40,7 @@ export function RequisitionsTab() {
 
   const calculateTotalValue = () => {
     return form.items.reduce((sum, ri) => {
-       const item: any = items.find((i: any) => i.item_id === ri.item_id);
+       const item = items.find(i => i.id === ri.item_id);
        return sum + (ri.quantity * (item?.avg_cost || item?.cost_price || 0));
     }, 0);
   };
@@ -79,14 +75,8 @@ export function RequisitionsTab() {
 
       const { data: { user } } = await supabase.auth.getUser();
       await createRequisition.mutateAsync({
-        department_id: undefined, // Add proper mapping if needed
-        request_date: new Date().toISOString(),
-        status: "pending",
         ...form,
-        items: form.items.map(i => ({
-           item_id: i.item_id,
-           quantity: i.quantity
-        }))
+        requested_by: user?.id
       });
       toast.success("Requisition submitted for approval");
       setIsAddOpen(false);
@@ -94,16 +84,16 @@ export function RequisitionsTab() {
     } catch { toast.error("Failed to submit requisition"); }
   };
 
-  const handleStatusUpdate = async (requisition_id: string, status: string) => {
+  const handleStatusUpdate = async (id: string, status: string) => {
     try {
-      await updateRequisition.mutateAsync({ requisition_id, status });
+      await updateRequisitionStatus.mutateAsync({ id, status });
       toast.success(`Requisition ${status}`);
     } catch {
       toast.error("Failed to update status");
     }
   };
 
-  const handleOpenPOConvert = (req: any) => {
+  const handleOpenPOConvert = (req: InventoryRequisition) => {
      setSelectedReqForPO(req);
      // Try to guess supplier from first item
      const guessedSupplier = req.items?.[0]?.item?.supplier_id || "";
@@ -118,24 +108,24 @@ export function RequisitionsTab() {
      }
 
      try {
-        const poItems: any[] = (selectedReqForPO.items || []).map((i: any) => ({
+        const poItems: Partial<PurchaseOrderItem>[] = (selectedReqForPO.items || []).map((i) => ({
            item_id: i.item_id,
            quantity: i.quantity,
-           price: i.item?.cost_price || 0
+           unit_price: i.item?.cost_price || 0
         }));
 
-        await createOrder.mutateAsync({
+        await createPurchaseOrder.mutateAsync({
            supplier_id: poSupplierId,
            status: "draft",
            order_date: new Date().toISOString().split('T')[0],
-           subtotal: poItems.reduce((s: number, i) => s + (i.quantity * i.price), 0),
+           subtotal: poItems.reduce((s: number, i) => s + (i.quantity * i.unit_price), 0),
            tax_amount: 0,
-           total_amount: poItems.reduce((s: number, i) => s + (i.quantity * i.price), 0),
+           total: poItems.reduce((s: number, i) => s + (i.quantity * i.unit_price), 0),
            notes: `Generated from Requisition ${selectedReqForPO.requisition_number}`,
            items: poItems
         });
 
-        await updateRequisition.mutateAsync({ requisition_id: selectedReqForPO.requisition_id, status: "fully_ordered" });
+        await updateRequisitionStatus.mutateAsync({ id: selectedReqForPO.id, status: "partially_ordered" });
         toast.success("Purchase Order draft created from requisition");
         setIsPOConvertOpen(false);
         setSelectedReqForPO(null);
@@ -175,9 +165,9 @@ export function RequisitionsTab() {
                   <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No requisitions found</TableCell></TableRow>
                 ) : (
                   requisitions.map((req) => (
-                    <TableRow key={req.requisition_id}>
+                    <TableRow key={req.id}>
                       <TableCell className="font-mono font-bold text-primary">{req.requisition_number}</TableCell>
-                      <TableCell>{(req as any).department}</TableCell>
+                      <TableCell>{req.department}</TableCell>
                       <TableCell>
                          <Badge variant="outline" className={
                            req.status === 'approved' ? "text-success border-success/20" :
@@ -190,8 +180,8 @@ export function RequisitionsTab() {
                         <div className="flex justify-end gap-1">
                           {req.status === 'pending' && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-success" onClick={() => handleStatusUpdate(req.requisition_id, 'approved')}><CheckCircle className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleStatusUpdate(req.requisition_id, 'rejected')}><XCircle className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-success" onClick={() => handleStatusUpdate(req.id, 'approved')}><CheckCircle className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleStatusUpdate(req.id, 'rejected')}><XCircle className="h-4 w-4" /></Button>
                             </>
                           )}
                           {req.status === 'approved' && (
@@ -222,7 +212,7 @@ export function RequisitionsTab() {
                   <Select value={poSupplierId} onValueChange={setPoSupplierId}>
                      <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
                      <SelectContent>
-                           {suppliers.map((s: any) => <SelectItem key={s.supplier_id} value={s.supplier_id}>{s.supplier_name}</SelectItem>)}
+                        {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                      </SelectContent>
                   </Select>
                </div>
@@ -267,7 +257,7 @@ export function RequisitionsTab() {
                     <Label className="text-xs">Item</Label>
                     <Select value={item.item_id} onValueChange={(v) => updateItemInReq(idx, "item_id", v)}>
                       <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                      <SelectContent>{items.map((i: any) => <SelectItem key={i.item_id} value={i.item_id}>{i.item_name}</SelectItem>)}</SelectContent>
+                      <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="w-32 space-y-1">
