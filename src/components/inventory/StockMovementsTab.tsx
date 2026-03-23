@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpDown, TrendingUp, TrendingDown, Search, Download, MapPin } from "lucide-react";
-import { useStockMovements, useInventoryStores } from "@/hooks/useInventory";
+import { useStockMovements, useInventoryStores } from "@/hooks/inventory";
 import { formatAD, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Loader2, FolderTree, Barcode } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryCategories, useInventoryItems, InventoryCategory } from "@/hooks/useInventory";
+import { useInventoryCategories, useInventoryItems, InventoryCategory } from "@/hooks/inventory";
 
 export function CategoriesTab() {
   const { data: categories = [], createCategory, updateCategory, deleteCategory } = useInventoryCategories();

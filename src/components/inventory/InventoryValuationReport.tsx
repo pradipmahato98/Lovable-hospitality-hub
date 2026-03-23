@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useInventoryItems, useInventoryStores } from "@/hooks/useInventory";
+import { useInventoryItems, useInventoryStores } from "@/hooks/inventory";
 import { formatCurrency } from "@/lib/utils";
 import { Download, MapPin } from "lucide-react";
 import { exportToExcel } from "@/lib/reportExport";

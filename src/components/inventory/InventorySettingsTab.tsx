@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Settings2, Database, Calculator, Wallet, ShieldCheck, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { useInventorySettings, useInventoryAutomation } from "@/hooks/useInventory";
+import { useInventorySettings, useInventoryAutomation } from "@/hooks/inventory";
 
 export function InventorySettingsTab() {
   const { data: dbSettings, updateSettings, isLoading } = useInventorySettings();

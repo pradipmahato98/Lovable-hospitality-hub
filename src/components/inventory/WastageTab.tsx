@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Loader2, AlertTriangle, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryWastage, useInventoryItems } from "@/hooks/useInventory";
+import { useInventoryWastage, useInventoryItems } from "@/hooks/inventory";
 import { formatCurrency } from "@/lib/utils";
 
 export function WastageTab() {

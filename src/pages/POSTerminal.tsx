@@ -49,7 +49,7 @@ import { useSearchParams } from "react-router-dom";
 import { useInvoices } from "@/hooks/useBillingData";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
+import { useInventoryPOS } from "@/hooks/inventory/useInventoryPOSService";
 
 interface CartItem {
   id: string;

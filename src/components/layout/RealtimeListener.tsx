@@ -37,8 +37,22 @@ export const RealtimeListener = () => {
       )
       .subscribe();
 
+    // Global channel for Room status changes (Housekeeping -> Front Desk sync)
+    const roomsChannel = supabase
+      .channel("rooms-status-sync")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "rooms" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["rooms"] });
+          queryClient.invalidateQueries({ queryKey: ["room"] });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(settingsChannel);
+      supabase.removeChannel(roomsChannel);
     };
   }, [queryClient]);
 

@@ -9,7 +9,7 @@ import {
   ArrowUpDown, Search, Download, History,
   Filter, Package, ArrowRight, ArrowLeft, RefreshCw
 } from "lucide-react";
-import { useInventoryItems, useStockMovements, useInventoryStores } from "@/hooks/useInventory";
+import { useInventoryItems, useStockMovements, useInventoryStores } from "@/hooks/inventory";
 import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/reportExport";
 

@@ -19,7 +19,7 @@ import {
   useSuppliers, usePurchaseOrders, useInventoryWastage,
   useInventoryRequisitions, useInventoryRecipes, useInventoryStockCounts,
   InventoryItem, StockMovement, InventoryWastage, Supplier
-} from "@/hooks/useInventory";
+} from "@/hooks/inventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToExcel, exportToPDF } from "@/lib/reportExport";
 import { toast } from "sonner";

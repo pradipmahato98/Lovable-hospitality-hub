@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent, Timer, Activity, Settings, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, useInventoryStores, InventoryItem } from "@/hooks/useInventory";
+import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, useInventoryStores, InventoryItem } from "@/hooks/inventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

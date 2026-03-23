@@ -11,7 +11,7 @@ import {
 import {
   useInventoryItems, useInventoryAutomation, useSuppliers,
   useInventoryStats, InventoryItem
-} from "@/hooks/useInventory";
+} from "@/hooks/inventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { toast } from "sonner";
 
