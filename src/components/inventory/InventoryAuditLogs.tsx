@@ -13,8 +13,8 @@ export function InventoryAuditLogs() {
       // Fetching from stock_movements as it contains the most granular history
       const { data } = await supabase
         .from('stock_movements')
-        .select('*, item:items(item_name, item_code)')
-        .order('movement_date', { ascending: false })
+        .select('*, item:inventory_items(name, sku)')
+        .order('created_at', { ascending: false })
         .limit(100);
       return data || [];
     }
@@ -49,8 +49,8 @@ export function InventoryAuditLogs() {
                     <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">No system logs available.</TableCell></TableRow>
                   ) : (
                     logs.map((log: any) => (
-                      <TableRow key={log.movement_id} className="hover:bg-muted/5">
-                        <TableCell className="text-[10px] font-mono whitespace-nowrap">{formatAD(new Date(log.movement_date), "time")}</TableCell>
+                      <TableRow key={log.id} className="hover:bg-muted/5">
+                        <TableCell className="text-[10px] font-mono whitespace-nowrap">{formatAD(new Date(log.created_at), "time")}</TableCell>
                         <TableCell>
                            <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-[8px] h-4 uppercase">{log.movement_type}</Badge>
@@ -58,8 +58,8 @@ export function InventoryAuditLogs() {
                            </div>
                         </TableCell>
                         <TableCell>
-                           <div className="font-bold text-[10px]">{log.item?.item_name}</div>
-                           <div className="text-[9px] text-muted-foreground">{log.item?.item_code}</div>
+                           <div className="font-bold text-[10px]">{log.item?.name}</div>
+                           <div className="text-[9px] text-muted-foreground">{log.item?.sku}</div>
                         </TableCell>
                         <TableCell className="font-mono text-xs font-bold">
                            {log.movement_type === 'out' ? '-' : '+'}{log.quantity}

@@ -9,39 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Undo2, Trash2, Loader2, Receipt, AlertCircle, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { useItemService } from "@/hooks/inventory/useItemService";
-import { useProcurementService } from "@/hooks/inventory/useProcurementService";
-import { useInventoryTransactionService } from "@/hooks/inventory/useInventoryTransactionService";
+import { useInventoryReturns, useSuppliers, useInventoryItems, usePurchaseOrders } from "@/hooks/useInventory";
 import { formatCurrency } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function ReturnsTab() {
-  const queryClient = useQueryClient();
-  const { items: itemsQuery, suppliers: suppliersQuery } = useItemService();
-  const { orders: ordersQuery } = useProcurementService();
-  const { createMovement } = useInventoryTransactionService();
-
-  const items = itemsQuery.data || [];
-  const suppliers = suppliersQuery.data || [];
-  const orders = ordersQuery.data || [];
-
-  const { data: returns = [] } = useQuery({
-     queryKey: ["inventory-supplier-returns"],
-     queryFn: async () => {
-        const { data, error } = await supabase.from('inventory_supplier_returns').select('*, supplier:suppliers(*)').order('created_at', { ascending: false });
-        if (error) throw error;
-        return data;
-     }
-  });
-
-  const createReturn = useMutation({
-     mutationFn: async (payload: any) => {
-        const { error } = await supabase.from('inventory_supplier_returns').insert(payload);
-        if (error) throw error;
-     },
-     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-supplier-returns"] })
-  });
+  const { data: returns = [], createReturn } = useInventoryReturns();
+  const { data: suppliers = [] } = useSuppliers();
+  const { data: items = [] } = useInventoryItems();
+  const { data: orders = [] } = usePurchaseOrders();
+  const { adjustStock } = useInventoryItems();
 
   const [open, setOpen] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -52,9 +28,9 @@ export function ReturnsTab() {
   const [returnItems, setReturnItems] = useState<{item_id: string, quantity: number, unit_price: number}[]>([]);
 
   const handleAddReturnItem = (itemId: string) => {
-    const item = items.find((i: any) => i.item_id === itemId);
+    const item = items.find(i => i.id === itemId);
     if (!item) return;
-    setReturnItems([...returnItems, { item_id: itemId, quantity: 1, unit_price: item.avg_cost || item.cost_price || 0 }]);
+    setReturnItems([...returnItems, { item_id: itemId, quantity: 1, unit_price: item.avg_cost || item.cost_price }]);
   };
 
   const handleCreate = async () => {
@@ -93,11 +69,11 @@ export function ReturnsTab() {
      }
      try {
         for (const item of internalReturn.items) {
-           await createMovement.mutateAsync({
-              item_id: item.item_id,
+           await adjustStock.mutateAsync({
+              itemId: item.item_id,
               quantity: item.qty,
-              movement_type: 'in',
-              reference_type: 'manual_adjustment',
+              type: 'in',
+              reason: 'Department Return',
               notes: `Returned from ${internalReturn.department}: ${internalReturn.notes}`
            });
         }
@@ -132,7 +108,7 @@ export function ReturnsTab() {
                               setInternalReturn({...internalReturn, items: newI});
                             }}>
                               <SelectTrigger className="flex-1"><SelectValue placeholder="Select item" /></SelectTrigger>
-                              <SelectContent>{items.map((i: any) => <SelectItem key={i.item_id} value={i.item_id}>{i.item_name}</SelectItem>)}</SelectContent>
+                              <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
                             </Select>
                             <Input type="number" className="w-24" value={it.qty} onChange={(e) => {
                               const newI = [...internalReturn.items];
@@ -155,7 +131,7 @@ export function ReturnsTab() {
                   <Label>Supplier *</Label>
                   <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
                     <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-                    <SelectContent>{suppliers.map((s: any) => <SelectItem key={s.supplier_id} value={s.supplier_id}>{s.supplier_name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -163,7 +139,7 @@ export function ReturnsTab() {
                   <Select value={selectedPO} onValueChange={setSelectedPO}>
                     <SelectTrigger><SelectValue placeholder="Select PO" /></SelectTrigger>
                     <SelectContent>
-                      {orders.filter((o: any) => o.supplier_id === selectedSupplier).map((o: any) => <SelectItem key={o.po_id} value={o.po_id}>{o.order_number}</SelectItem>)}
+                      {orders.filter(o => o.supplier_id === selectedSupplier).map(o => <SelectItem key={o.id} value={o.id}>{o.order_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -196,7 +172,7 @@ export function ReturnsTab() {
                       <Select onValueChange={handleAddReturnItem}>
                         <SelectTrigger className="w-64 h-8 text-xs"><SelectValue placeholder="Add item to return..." /></SelectTrigger>
                         <SelectContent>
-                            {items.map((i: any) => <SelectItem key={i.item_id} value={i.item_id}>{i.item_name} (Stock: {i.current_stock})</SelectItem>)}
+                            {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name} (Stock: {i.current_stock})</SelectItem>)}
                         </SelectContent>
                       </Select>
                   </div>
@@ -205,10 +181,10 @@ export function ReturnsTab() {
                         <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="w-24">Qty</TableHead><TableHead className="w-32">Rate</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
                         <TableBody>
                             {returnItems.map((ri, idx) => {
-                              const item: any = items.find((i: any) => i.item_id === ri.item_id);
+                              const item = items.find(i => i.id === ri.item_id);
                               return (
                                   <TableRow key={idx}>
-                                    <TableCell className="text-xs">{item?.item_name}</TableCell>
+                                    <TableCell className="text-xs">{item?.name}</TableCell>
                                     <TableCell><Input type="number" className="h-7 text-xs" value={ri.quantity} onChange={(e) => {
                                         const newItems = [...returnItems];
                                         newItems[idx].quantity = Number(e.target.value);
@@ -256,15 +232,15 @@ export function ReturnsTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {returns.map((ret: any) => (
+              {returns.map((ret) => (
                 <TableRow key={ret.id}>
                   <TableCell>
                     <div className="font-bold text-xs">{ret.return_number}</div>
                     <div className="text-[10px] text-muted-foreground">{new Date(ret.created_at).toLocaleDateString()}</div>
                   </TableCell>
-                  <TableCell className="text-xs font-medium">{ret.supplier?.supplier_name}</TableCell>
+                  <TableCell className="text-xs font-medium">{ret.supplier?.name}</TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px] uppercase">{ret.reason}</Badge></TableCell>
-                  <TableCell className="text-xs">{ret.items?.length || 0} categories</TableCell>
+                  <TableCell className="text-xs">{ret.items?.length} categories</TableCell>
                   <TableCell className="text-right font-bold font-mono text-xs">{formatCurrency(ret.total_amount)}</TableCell>
                 </TableRow>
               ))}

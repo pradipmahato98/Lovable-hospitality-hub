@@ -8,35 +8,18 @@ import {
   ShoppingCart, Loader2, AlertTriangle, ArrowRight,
   PackageCheck, Filter, RefreshCw, Zap
 } from "lucide-react";
-import { useItemService } from "@/hooks/inventory/useItemService";
-import { useProcurementService } from "@/hooks/inventory/useProcurementService";
-import { useReportingService } from "@/hooks/inventory/useReportingService";
+import {
+  useInventoryItems, useInventoryAutomation, useSuppliers,
+  useInventoryStats, InventoryItem
+} from "@/hooks/useInventory";
 import { formatCurrency, cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 export function ReplenishmentTab() {
-  const queryClient = useQueryClient();
-  const { items: itemsQuery } = useItemService();
-  const items = (itemsQuery.data || []).filter((i: any) => i.current_stock <= i.reorder_point);
-  const isLoading = itemsQuery.isLoading;
-
-  const { suppliers: suppliersQuery } = useProcurementService();
-  const suppliers = (suppliersQuery.data || []) as any[];
-  const { inventoryStats } = useReportingService();
-  const stats = inventoryStats.data || { lowStock: 0, outOfStock: 0 };
-
-  const generateLowStockPOs = useMutation({
-     mutationFn: async () => {
-        toast.info("Generating draft POs...");
-        // Simulation of logic
-     },
-     onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-        toast.success("Draft POs generated successfully");
-     }
-  });
+  const { data: items = [], isLoading } = useInventoryItems({ lowStock: true });
+  const { data: suppliers = [] } = useSuppliers();
+  const { generateLowStockPOs } = useInventoryAutomation();
+  const stats = useInventoryStats();
 
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -52,7 +35,7 @@ export function ReplenishmentTab() {
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(items.map((i: any) => i.item_id)));
+      setSelectedItems(new Set(items.map(i => i.id)));
     }
   };
 
@@ -125,25 +108,25 @@ export function ReplenishmentTab() {
                         ) : items.length === 0 ? (
                            <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground italic">No items require replenishment at this time.</TableCell></TableRow>
                         ) : (
-                           items.map((item: any) => {
-                              const supplier = suppliers.find(s => s.supplier_id === item.supplier_id);
+                           items.map((item) => {
+                              const supplier = suppliers.find(s => s.id === item.supplier_id);
                               const suggestedQty = Math.max(10, (item.reorder_point * 2) - item.current_stock);
 
                               return (
-                                 <TableRow key={item.item_id} className={cn(selectedItems.has(item.item_id) && "bg-blue-50/30")}>
+                                 <TableRow key={item.id} className={cn(selectedItems.has(item.id) && "bg-blue-50/30")}>
                                     <TableCell>
-                                       <Checkbox checked={selectedItems.has(item.item_id)} onCheckedChange={() => toggleSelect(item.item_id)} />
+                                       <Checkbox checked={selectedItems.has(item.id)} onCheckedChange={() => toggleSelect(item.id)} />
                                     </TableCell>
                                     <TableCell>
-                                       <div className="font-bold text-xs">{item.item_name}</div>
-                                       <div className="text-[10px] text-muted-foreground font-mono">{item.item_code}</div>
+                                       <div className="font-bold text-xs">{item.name}</div>
+                                       <div className="text-[10px] text-muted-foreground font-mono">{item.sku}</div>
                                     </TableCell>
                                     <TableCell>
                                        <Badge variant="destructive" className="text-[10px] font-bold">{item.current_stock}</Badge>
                                     </TableCell>
                                     <TableCell className="text-xs font-medium">{item.reorder_point}</TableCell>
                                     <TableCell className="text-xs font-bold text-primary">{suggestedQty}</TableCell>
-                                    <TableCell className="text-xs">{supplier?.supplier_name || "Multiple Vendors"}</TableCell>
+                                    <TableCell className="text-xs">{supplier?.name || "Multiple Vendors"}</TableCell>
                                     <TableCell className="text-right">
                                        <Button variant="ghost" size="sm" className="h-8 text-blue-600">
                                           <ArrowRight className="h-4 w-4" />

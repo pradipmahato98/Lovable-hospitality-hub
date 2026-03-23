@@ -8,32 +8,30 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Loader2, Truck, Star, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { useItemService } from "@/hooks/inventory/useItemService";
+import { useSuppliers, useInventoryItems, Supplier } from "@/hooks/useInventory";
 import { cn } from "@/lib/utils";
 
 export function SuppliersTab() {
-  const { suppliers: suppliersQuery, items: itemsQuery, createSupplier, updateSupplier } = useItemService();
-  const suppliers = suppliersQuery.data || [];
-  const items = itemsQuery.data || [];
-
+  const { data: suppliers = [], createSupplier, updateSupplier } = useSuppliers();
+  const { data: items = [] } = useInventoryItems();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const emptyForm = {
-    supplier_name: "", supplier_code: "", contact_person: "", email: "",
+    name: "", supplier_code: "", contact_person: "", email: "",
     phone: "", address: "", payment_terms: "", notes: "",
-    status: true, rating: 5
+    is_active: true, rating: 5, is_approved: true
   };
   const [form, setForm] = useState(emptyForm);
 
-  const getItemCount = (supplierId: string) => items.filter((i: any) => i.supplier_id === supplierId).length;
+  const getItemCount = (supplierId: string) => items.filter((i) => i.supplier_id === supplierId).length;
 
   const handleSave = async () => {
     try {
-      const payload: any = { ...form };
+      const payload: Record<string, unknown> = { ...form };
       Object.keys(payload).forEach((k) => { if (payload[k] === "") payload[k] = null; });
 
       if (editId) {
-        await updateSupplier.mutateAsync({ supplier_id: editId, ...payload });
+        await updateSupplier.mutateAsync({ id: editId, ...payload });
         toast.success("Supplier updated");
       } else {
         await createSupplier.mutateAsync(payload);
@@ -45,14 +43,14 @@ export function SuppliersTab() {
     } catch { toast.error("Failed to save supplier"); }
   };
 
-  const openEdit = (s: any) => {
-    setEditId(s.supplier_id);
+  const openEdit = (s: Supplier) => {
+    setEditId(s.id);
     setForm({
-      supplier_name: s.supplier_name, supplier_code: s.supplier_code || "",
+      name: s.name, supplier_code: s.supplier_code || "",
       contact_person: s.contact_person || "", email: s.email || "",
       phone: s.phone || "", address: s.address || "",
       payment_terms: s.payment_terms || "", notes: s.notes || "",
-      status: s.status, rating: s.rating || 5
+      is_active: s.is_active, rating: s.rating || 5, is_approved: s.is_approved
     });
     setOpen(true);
   };
@@ -67,7 +65,7 @@ export function SuppliersTab() {
             <DialogContent className="max-w-xl">
               <DialogHeader><DialogTitle>{editId ? "Edit" : "Register New"} Supplier</DialogTitle></DialogHeader>
               <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2"><Label>Supplier Name *</Label><Input value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} /></div>
+                <div className="space-y-2"><Label>Supplier Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Supplier Code</Label><Input value={form.supplier_code} onChange={(e) => setForm({ ...form, supplier_code: e.target.value })} placeholder="SUP-001" /></div>
                 <div className="space-y-2"><Label>Contact Person</Label><Input value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
@@ -81,8 +79,8 @@ export function SuppliersTab() {
                   </div>
                 </div>
                 <div className="space-y-2 flex items-center gap-3 pt-6">
-                  <Badge variant={form.status ? "success" : "secondary"}>{form.status ? "Active" : "Inactive"}</Badge>
-                  <Button variant="outline" size="xs" onClick={() => setForm({...form, status: !form.status})}>Toggle Status</Button>
+                  <Badge variant={form.is_approved ? "success" : "secondary"}>{form.is_approved ? "Approved" : "Pending Approval"}</Badge>
+                  <Button variant="outline" size="xs" onClick={() => setForm({...form, is_approved: !form.is_approved})}>Toggle Status</Button>
                 </div>
 
                 <div className="col-span-2 space-y-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
@@ -91,7 +89,7 @@ export function SuppliersTab() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={handleSave} variant="blue" disabled={!form.supplier_name || createSupplier.isPending || updateSupplier.isPending}>
+                <Button onClick={handleSave} variant="blue" disabled={!form.name || createSupplier.isPending || updateSupplier.isPending}>
                   {(createSupplier.isPending || updateSupplier.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {editId ? "Save Changes" : "Register Supplier"}
                 </Button>
@@ -117,12 +115,12 @@ export function SuppliersTab() {
             {suppliers.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No suppliers registered</TableCell></TableRow>
             ) : (
-              suppliers.map((s: any) => (
-                <TableRow key={s.supplier_id}>
+              suppliers.map((s) => (
+                <TableRow key={s.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="font-medium">{s.supplier_name}</div>
-                      {s.status && <CheckCircle2 className="h-3 w-3 text-success" />}
+                      <div className="font-medium">{s.name}</div>
+                      {s.is_approved && <CheckCircle2 className="h-3 w-3 text-success" />}
                     </div>
                     <div className="text-[10px] text-muted-foreground font-mono">{s.supplier_code || "NO-CODE"}</div>
                   </TableCell>
@@ -137,12 +135,12 @@ export function SuppliersTab() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{getItemCount(s.supplier_id)} SKUs</Badge>
+                    <Badge variant="outline">{getItemCount(s.id)} SKUs</Badge>
                   </TableCell>
                   <TableCell className="text-sm">{s.payment_terms || "-"}</TableCell>
                   <TableCell>
-                    <Badge variant={s.status ? "secondary" : "outline"} className={cn(s.status ? "text-success border-success/20" : "")}>
-                      {s.status ? "Active" : "Inactive"}
+                    <Badge variant={s.is_active ? "secondary" : "outline"} className={cn(s.is_active ? "text-success border-success/20" : "")}>
+                      {s.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
