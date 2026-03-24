@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { addDays, format, parseISO } from "date-fns";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
 
 export const useNightAudit = () => {
   const { toast } = useToast();
