@@ -20,6 +20,7 @@ import {
   InventoryAuditLogs
 } from "@/components/inventory";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "@/hooks/useSettings";
 
 const Inventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();

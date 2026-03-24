@@ -373,7 +373,7 @@ export function Sidebar() {
       <aside
         onMouseLeave={() => isHiddenHover && setIsHovered(false)}
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-300 overflow-hidden shadow-xl",
+          "fixed left-0 top-0 z-40 h-screen bg-gradient-sidebar border-r border-sidebar-border/60 transition-all duration-150 overflow-hidden shadow-xl",
           isVerticalIcon ? "w-[70px]" : collapsed ? "w-20" : "w-64",
           isHiddenHover && (isHovered ? "w-64 translate-x-0" : "w-64 -translate-x-full")
         )}

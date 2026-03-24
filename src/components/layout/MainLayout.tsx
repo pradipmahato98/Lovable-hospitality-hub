@@ -36,7 +36,7 @@ export function MainLayout({ children, title, subtitle, actions, fixedHeight = f
       <Sidebar />
       <div 
         className={cn(
-          "transition-[margin] duration-300 ease-in-out flex-1 flex flex-col h-full overflow-hidden",
+          "transition-[margin] duration-150 ease-in-out flex-1 flex flex-col h-full overflow-hidden",
           getMarginLeft()
         )}
       >

@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";

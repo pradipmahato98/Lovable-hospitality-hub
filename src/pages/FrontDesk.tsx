@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useInvoices } from "@/hooks/useBillingData";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

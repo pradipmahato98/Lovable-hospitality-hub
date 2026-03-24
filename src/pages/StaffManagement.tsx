@@ -1,5 +1,7 @@
+import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUIPreferences } from "@/hooks/useSettings";
 import {
   Users,
   UserCircle,
