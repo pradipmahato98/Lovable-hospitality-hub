@@ -63,13 +63,13 @@ export const useNightAudit = () => {
   });
 
   // 4. Mutation: Post Daily Room Charges
+  const { postRoomCharges } = useGuestFolios();
   const postCharges = useMutation({
     mutationFn: async (date: string) => {
-      const { data, error } = await (supabase as any).rpc('post_daily_room_charges', {
-        v_business_date: date
-      });
-      if (error) throw error;
-      return data[0]; // { posted_count, total_revenue }
+      const result = await postRoomCharges.mutateAsync({ businessDate: date });
+      // useGuestFolios.postRoomCharges returns { count }, useNightAudit expects { posted_count, total_revenue }
+      // Let's align them to return full stats in useGuestFolios
+      return { posted_count: result.count, total_revenue: result.totalRevenue || 0 };
     }
   });
 
