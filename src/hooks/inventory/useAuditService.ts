@@ -51,7 +51,24 @@ export function useInventoryCategories() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
   });
 
-  return { ...query, createCategory };
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name: string; description?: string | null; parent_id?: string | null; sku_prefix?: string | null }) => {
+      const { data, error } = await db.from("inventory_categories").update(updates as any).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-categories"] }),
+  });
+
+  return { ...query, createCategory, updateCategory, deleteCategory };
 }
 
 export function useInventoryUoMs() {
@@ -77,5 +94,38 @@ export function useInventoryUoMs() {
     },
   });
 
-  return { ...query, conversions: conversionsQuery.data || [], isConversionsLoading: conversionsQuery.isLoading };
+  const createUoM = useMutation({
+    mutationFn: async (uom: { name: string; abbreviation?: string }) => {
+      const { data, error } = await db.from("inventory_uoms").insert(uom as any).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uoms"] }),
+  });
+
+  const createConversion = useMutation({
+    mutationFn: async (conv: { from_uom_id: string; to_uom_id: string; conversion_factor: number }) => {
+      const { data, error } = await db.from("inventory_uom_conversions").insert(conv as any).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] }),
+  });
+
+  const deleteConversion = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_uom_conversions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-uom-conversions"] }),
+  });
+
+  return {
+    ...query,
+    conversions: conversionsQuery.data || [],
+    isConversionsLoading: conversionsQuery.isLoading,
+    createUoM,
+    createConversion,
+    deleteConversion
+  };
 }

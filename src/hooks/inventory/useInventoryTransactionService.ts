@@ -97,7 +97,15 @@ export function useInventoryTransfers() {
     },
   });
 
-  return { ...query, createTransfer, completeTransfer };
+  const cancelTransfer = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from("inventory_transfers").update({ status: "cancelled" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-transfers"] }),
+  });
+
+  return { ...query, createTransfer, completeTransfer, cancelTransfer };
 }
 
 export function useInventoryWastage() {
