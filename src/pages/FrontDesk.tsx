@@ -44,6 +44,8 @@ const amenityIcons: Record<string, React.ComponentType<{ className?: string }>> 
   wifi: Wifi, tv: Tv, minibar: Coffee, jacuzzi: Bath,
 };
 
+import React from "react";
+
 const invoiceStatusColors = {
   paid: "bg-success/20 text-success border-success/30",
   pending: "bg-warning/20 text-warning border-warning/30",

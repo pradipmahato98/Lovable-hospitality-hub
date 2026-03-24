@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Loader2, Hotel, Bell, Shield, ClipboardCheck, CreditCard, Globe, Tags, ShieldAlert, Zap, Megaphone, Settings2, Download, Upload, LayoutDashboard } from "lucide-react";
@@ -137,8 +137,8 @@ const Settings = () => {
   return (
     <MainLayout fixedHeight title="Admin Settings" subtitle="Manage system configuration (Admin only)">
       <ErrorBoundary>
-        <div className="flex flex-col h-full overflow-hidden p-4 sm:p-6">
-        <div className="mb-4 flex items-center justify-between flex-shrink-0">
+        <div className="flex flex-col h-full overflow-hidden">
+        <div className="mb-4 flex items-center justify-between flex-shrink-0 px-4 sm:px-6 pt-4">
           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
             <ShieldAlert className="h-4 w-4" />
             <span>You are viewing admin-only settings. Changes affect all users.</span>
@@ -154,7 +154,7 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden p-4 sm:p-6">
           <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto pb-2 lg:pb-0 scrollbar-hide">
             {tabs.map((item) => (
               <Button

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +47,8 @@ export default function Profile() {
   };
 
   return (
-    <MainLayout title="Profile" subtitle="Manage your account settings">
+    <MainLayout fixedHeight title="Profile" subtitle="Manage your account settings">
+      <div className="flex flex-col h-full overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
       <div className="grid gap-6 md:grid-cols-3">
         {/* Profile Card */}
         <Card variant="elevated" className="md:col-span-1 animate-fade-in">
@@ -190,6 +191,7 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </MainLayout>
   );

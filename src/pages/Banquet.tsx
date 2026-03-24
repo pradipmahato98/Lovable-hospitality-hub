@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -49,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useUIPreferences } from "@/hooks/useSettings";
 import { useSearchParams } from "react-router-dom";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { 
@@ -480,8 +481,8 @@ export default function Banquet() {
           </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
-          <TabsContent value="events" className="space-y-4 mt-0 focus-visible:outline-none">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+          <TabsContent value="events" className="space-y-4 mt-0 focus-visible:outline-none p-4 sm:p-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -608,65 +609,7 @@ export default function Banquet() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="calendar">
-            <DraggableBanquetCalendar
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                start_time: e.start_time,
-                end_time: e.end_time,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-                total_amount: e.total_amount,
-              }))}
-              onEventClick={(event) => {
-                toast.info(`Selected: ${event.event_name}`);
-              }}
-              onDateClick={(date) => {
-                setNewEvent(prev => ({ ...prev, event_date: date }));
-                setEventDialogOpen(true);
-              }}
-              onEventDrop={handleEventDrop}
-            />
-          </TabsContent>
-
-          <TabsContent value="catering">
-            <CateringManagementPanel
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-                menu_package: e.menu_package,
-                special_requests: e.special_requests,
-              }))}
-            />
-          </TabsContent>
-
-          <TabsContent value="venue">
-            <VenueSetupPanel
-              events={events.map(e => ({
-                id: e.id,
-                event_name: e.event_name,
-                event_type: e.event_type,
-                client_name: e.client_name,
-                event_date: e.event_date,
-                venue: e.venue,
-                guest_count: e.guest_count,
-                status: e.status,
-              }))}
-            />
-          </TabsContent>
-
-          <TabsContent value="reports" className="mt-0 focus-visible:outline-none">
+          <TabsContent value="reports" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
             <EventReportsPanel
               events={events.map(e => ({
                 id: e.id,
@@ -683,7 +626,7 @@ export default function Banquet() {
           </TabsContent>
 
           {/* Calendar, Catering, and Venue also need to be wrapped in the scrollable div but they are usually full-height panels */}
-          <TabsContent value="calendar" className="mt-0 focus-visible:outline-none h-full">
+          <TabsContent value="calendar" className="mt-0 focus-visible:outline-none h-full p-0">
             <DraggableBanquetCalendar
               events={events.map(e => ({
                 id: e.id,
@@ -709,7 +652,7 @@ export default function Banquet() {
             />
           </TabsContent>
 
-          <TabsContent value="catering" className="mt-0 focus-visible:outline-none">
+          <TabsContent value="catering" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
             <CateringManagementPanel
               events={events.map(e => ({
                 id: e.id,
@@ -726,7 +669,7 @@ export default function Banquet() {
             />
           </TabsContent>
 
-          <TabsContent value="venue" className="mt-0 focus-visible:outline-none">
+          <TabsContent value="venue" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
             <VenueSetupPanel
               events={events.map(e => ({
                 id: e.id,

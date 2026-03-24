@@ -1,3 +1,4 @@
+import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RecentBookings } from "@/components/dashboard/RecentBookings";
@@ -29,7 +30,8 @@ const Index = () => {
   }
 
   return (
-    <MainLayout title={t('nav.dashboard')} subtitle={formatDate(new Date())}>
+    <MainLayout fixedHeight title={t('nav.dashboard')} subtitle={formatDate(new Date())}>
+      <div className="flex flex-col h-full overflow-y-auto pr-2 scrollbar-hide p-4 lg:p-8">
       {/* Security Alert */}
       {isAdmin && stats?.securityAlerts !== undefined && stats.securityAlerts > 0 && (
         <Card className="mb-6 border-destructive/50 bg-destructive/5 animate-pulse">
@@ -105,6 +107,7 @@ const Index = () => {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5">
         <RecentBookings />
         <RoomStatusGrid />
+      </div>
       </div>
     </MainLayout>
   );

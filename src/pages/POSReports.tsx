@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { POSHeader } from "@/components/pos";
@@ -329,9 +329,10 @@ export default function POSReports() {
   };
 
   return (
-    <MainLayout title="POS Sales Reports" subtitle="Analyze sales performance and item popularity">
+    <MainLayout fixedHeight title="POS Sales Reports" subtitle="Analyze sales performance and item popularity">
+      <div className="flex flex-col h-full overflow-hidden">
       <POSHeader />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6 space-y-6">
         {/* Period Selector */}
         <Card>
           <CardContent className="pt-6">
@@ -746,6 +747,7 @@ export default function POSReports() {
             </Card>
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </MainLayout>
   );

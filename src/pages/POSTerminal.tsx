@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -310,21 +310,21 @@ const POSTerminal = () => {
           </TabsList>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
+      <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
         {/* Tables Tab - Table Selection System */}
-        <TabsContent value="tables" className="mt-0 focus-visible:outline-none">
+        <TabsContent value="tables" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
           <POSTableSystem onCheckout={(total, items) => {
             toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
           }} />
         </TabsContent>
 
          {/* Clock In/Out Tab */}
-         <TabsContent value="clock">
+         <TabsContent value="clock" className="p-4 sm:p-6">
            <StaffClockPanel />
          </TabsContent>
 
         {/* Order Tab - Menu Items & Cart */}
-        <TabsContent value="order">
+        <TabsContent value="order" className="p-4 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Menu Items */}
         <div className="lg:col-span-2 space-y-4">
@@ -449,7 +449,7 @@ const POSTerminal = () => {
         </TabsContent>
 
         {/* Billing Tab - Checkout */}
-        <TabsContent value="billing">
+        <TabsContent value="billing" className="p-4 sm:p-6">
           <Card variant="elevated" className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
