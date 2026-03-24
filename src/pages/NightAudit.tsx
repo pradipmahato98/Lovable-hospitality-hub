@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNightAudit } from "@/hooks/useNightAudit";
@@ -143,7 +143,7 @@ function NightAudit() {
           </TabsList>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
-            <TabsContent value="audit" className="mt-0 focus-visible:outline-none">
+            <TabsContent value="audit" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
               <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header Status */}
                 <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none shadow-xl">
@@ -369,7 +369,7 @@ function NightAudit() {
             </TabsContent>
 
             {/* Audit History Tab */}
-            <TabsContent value="history" className="mt-0 focus-visible:outline-none">
+            <TabsContent value="history" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Audit History</CardTitle>

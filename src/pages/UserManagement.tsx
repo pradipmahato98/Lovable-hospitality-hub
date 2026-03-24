@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -144,7 +144,7 @@ const UserManagement = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
-          <div className="overflow-x-auto pb-1 scrollbar-hide">
+          <div className="overflow-x-auto pb-1 scrollbar-hide px-4 sm:px-6">
             <TabsList>
               <TabsTrigger value="users" className="gap-2 whitespace-nowrap">
                 <Users className="h-4 w-4" />
@@ -173,7 +173,7 @@ const UserManagement = () => {
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
           <TabsContent value="users" className="mt-0 focus-visible:outline-none">
             <div className="flex justify-end mb-4">
               <Button variant="outline" onClick={exportUsersToExcel}>

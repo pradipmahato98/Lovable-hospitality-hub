@@ -1,5 +1,7 @@
+import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUIPreferences } from "@/hooks/useSettings";
 import {
   Users,
   UserCircle,
@@ -53,8 +55,6 @@ const StaffManagement = () => {
   }
 
   const canSeeRestricted = isAdmin || isManager;
-  const { data: uiPrefs } = useUIPreferences();
-  const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   return (
     <MainLayout fixedHeight title="Staff Management" subtitle="Manage employees and your professional profile">

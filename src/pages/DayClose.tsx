@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -139,8 +139,8 @@ function DayClose() {
   };
 
   return (
-    <MainLayout title="Day Close" subtitle="Financial balancing and department reconciliation">
-      <div className="space-y-6">
+    <MainLayout fixedHeight title="Day Close" subtitle="Financial balancing and department reconciliation">
+      <div className="flex flex-col h-full overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6 space-y-6">
         {/* Status Card */}
         <Card className={cn("border-l-4 transition-all", isClosed ? "border-l-success" : "border-l-amber-500")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">

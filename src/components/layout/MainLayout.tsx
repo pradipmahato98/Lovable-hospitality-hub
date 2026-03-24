@@ -44,7 +44,7 @@ export function MainLayout({ children, title, subtitle, actions, fixedHeight = f
         <AnimatePresence mode="wait">
           {isHorizontal && <HorizontalNav />}
         </AnimatePresence>
-        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide p-4 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

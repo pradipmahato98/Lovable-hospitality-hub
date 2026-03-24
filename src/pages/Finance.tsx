@@ -252,7 +252,7 @@ export default function Finance() {
           </div>
 
           {/* ========== DASHBOARD ========== */}
-          <TabsContent value="dashboard" className="space-y-6 mt-4">
+          <TabsContent value="dashboard" className="space-y-6 mt-0 p-4 sm:p-6 overflow-y-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard title="Total Assets" value={formatCurrency(totalAssets)} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
               <MetricCard title="Net Income" value={formatCurrency(netIncome)} change={netIncome >= 0 ? "Profit" : "Loss"} changeType={netIncome >= 0 ? "positive" : "negative"} icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight} delay={50} />
@@ -310,42 +310,6 @@ export default function Finance() {
              </div>
           </TabsContent>
 
-          <TabsContent value="dashboard" className="flex-1 overflow-y-auto mt-0">
-             <div className="p-4 sm:p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <MetricCard title="Total Assets" value={formatCurrency(totalAssets)} change="Current period" changeType="neutral" icon={Wallet} delay={0} />
-                  <MetricCard title="Net Income" value={formatCurrency(netIncome)} change={netIncome >= 0 ? "Profit" : "Loss"} changeType={netIncome >= 0 ? "positive" : "negative"} icon={netIncome >= 0 ? ArrowUpRight : ArrowDownRight} delay={50} />
-                  <MetricCard title="Outstanding Receivables" value={formatCurrency(stats.outstandingReceivables)} change={`${stats.invoiceCount} invoices`} changeType="neutral" icon={CreditCard} delay={100} />
-                  <MetricCard title="Trial Balance" value={isBalanced ? "Balanced" : "Unbalanced"} change={isBalanced ? "All entries balanced" : `Diff: ${formatCurrency(Math.abs(totalDebits - totalCredits))}`} changeType={isBalanced ? "positive" : "negative"} icon={Scale} delay={150} />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <MetricCard title="Total Accounts" value={accounts.length.toString()} change={`${accounts.filter((a) => a.is_active).length} active`} changeType="neutral" icon={BookOpen} delay={200} />
-                  <MetricCard title="Journal Entries" value={journalEntries.length.toString()} change={`${journalEntries.filter((e) => e.is_posted).length} posted`} changeType="neutral" icon={FileText} delay={250} />
-                  <MetricCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} change="This period" changeType="positive" icon={TrendingUp} delay={300} />
-                  <MetricCard title="Total Expenses" value={formatCurrency(stats.totalExpenses)} change={`${stats.expenseCount} records`} changeType="neutral" icon={CircleDollarSign} delay={350} />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("transactions")}>
-                    <Send className="h-5 w-5 text-primary" />
-                    <span className="text-xs">Journal Entries</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("transactions")}>
-                    <CreditCard className="h-5 w-5 text-primary" />
-                    <span className="text-xs">Invoices & Payments</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("reports")}>
-                    <Scale className="h-5 w-5 text-primary" />
-                    <span className="text-xs">Trial Balance</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleTabChange("reports")}>
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <span className="text-xs">Financial Statements</span>
-                  </Button>
-                </div>
-             </div>
-          </TabsContent>
 
         </Tabs>
       </div>

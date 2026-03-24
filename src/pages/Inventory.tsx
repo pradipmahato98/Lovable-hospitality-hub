@@ -1,7 +1,9 @@
+import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useSearchParams } from "react-router-dom";
+import { useUIPreferences } from "@/hooks/useSettings";
 import {
   Package, Truck, Warehouse, ArrowUpDown, FolderTree,
   ArrowRightLeft, BarChart3, Settings2, ClipboardList,
@@ -107,8 +109,9 @@ const Inventory = () => {
 
   return (
     <MainLayout fixedHeight title="Inventory Management" subtitle="Comprehensive stock control for all departments">
-      <div className="flex flex-col h-full overflow-hidden p-4 sm:p-6">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Main Navigation Groups */}
+        <div className="px-4 sm:px-6 pt-4">
         <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg self-start flex-shrink-0 mb-6">
           {navGroups.map((group) => (
             <button
@@ -126,6 +129,7 @@ const Inventory = () => {
             </button>
           ))}
         </div>
+        </div>
 
         <ErrorBoundary>
           <Tabs value={activeSubTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
@@ -142,7 +146,7 @@ const Inventory = () => {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide mt-4">
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
                {/* Dashboard */}
                <TabsContent value="overview" className="mt-0 focus-visible:outline-none"><InventoryDashboard /></TabsContent>
 

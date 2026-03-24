@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ const Management = () => {
   return (
     <MainLayout fixedHeight title="Management Console" subtitle="Executive overview and strategic insights">
       <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 px-4 sm:px-6 pt-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
             <TabsList>
               <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -35,7 +35,7 @@ const Management = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-6">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6 space-y-6">
         {/* Executive Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
