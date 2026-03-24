@@ -35,7 +35,16 @@ export function useSuppliers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
   });
 
-  return { ...query, createSupplier };
+  const updateSupplier = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
+      const { data, error } = await db.from("suppliers").update(updates as any).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
+  return { ...query, createSupplier, updateSupplier };
 }
 
 export function usePurchaseOrders(status?: string) {
@@ -65,6 +74,15 @@ export function usePurchaseOrders(status?: string) {
       const { error: itemsError } = await db.from("purchase_order_items").insert(poItems as any);
       if (itemsError) throw itemsError;
       return po;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }),
+  });
+
+  const updatePurchaseOrderStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { data, error } = await db.from("purchase_orders").update({ status }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }),
   });
@@ -138,5 +156,5 @@ export function usePurchaseOrders(status?: string) {
     },
   });
 
-  return { ...query, createPurchaseOrder, receivePurchaseOrder };
+  return { ...query, createPurchaseOrder, receivePurchaseOrder, updatePurchaseOrderStatus };
 }
