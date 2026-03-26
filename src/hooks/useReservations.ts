@@ -18,6 +18,10 @@ export interface Reservation {
   special_requests: string | null;
   actual_check_in: string | null;
   actual_check_out: string | null;
+  late_check_out: boolean | null;
+  is_complimentary: boolean | null;
+  is_upgrade: boolean | null;
+  market_segment: string | null;
   created_at: string;
   guest_id: string;
   room_id: string;
@@ -27,11 +31,14 @@ export interface Reservation {
     email: string | null;
     phone: string | null;
     address: string | null;
+    is_vip: boolean | null;
+    notes: string | null;
   } | null;
   room: {
     room_number: string;
     room_type: string;
     price_per_night: number;
+    floor: number;
   } | null;
 }
 
@@ -53,11 +60,15 @@ async function fetchReservations(): Promise<Reservation[]> {
       special_requests,
       actual_check_in,
       actual_check_out,
+      late_check_out,
+      is_complimentary,
+      is_upgrade,
+      market_segment,
       created_at,
       guest_id,
       room_id,
-      guest:guests(first_name, last_name, email, phone),
-      room:rooms(room_number, room_type, price_per_night)
+      guest:guests(first_name, last_name, email, phone, is_vip, notes),
+      room:rooms(room_number, room_type, price_per_night, floor)
     `)
     .order("check_in_date", { ascending: false });
 
