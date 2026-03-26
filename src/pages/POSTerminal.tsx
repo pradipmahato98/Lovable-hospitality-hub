@@ -242,6 +242,12 @@ const POSTerminal = () => {
              reference_id: data.id
            });
 
+             // Sync spending back to guest profile
+             const { data: guest } = await supabase.from('guests').select('total_spending').eq('id', folios.guest_id).single();
+             await supabase.from('guests').update({
+               total_spending: (guest?.total_spending || 0) + billTotal
+             }).eq('id', folios.guest_id);
+
            // If settling previous due as part of this payment
            if (settlePreviousDue && parseFloat(dueSettlementAmount) > 0) {
               await addFolioItem.mutateAsync({

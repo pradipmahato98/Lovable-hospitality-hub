@@ -51,6 +51,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { useSearchParams } from "react-router-dom";
+import { useInvoices } from "@/hooks/useBillingData";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { 
   DraggableBanquetCalendar,
@@ -317,9 +318,22 @@ export default function Banquet() {
    };
  
    const getPreviousDue = (clientName: string, currentEventId?: string) => {
-     return events
+     // 1. Banquet specific due
+     const banquetDue = events
        .filter(e => e.client_name === clientName && e.id !== currentEventId && e.status !== 'cancelled')
        .reduce((sum, e) => sum + (e.total_amount - (e.deposit_amount || 0)), 0);
+
+     // 2. Cross-module invoice due (Room, POS, etc)
+     const invoiceDue = allInvoices
+       .filter(inv => {
+         const guestName = `${inv.guest?.first_name || ""} ${inv.guest?.last_name || ""}`.trim();
+         return (guestName.toLowerCase().includes(clientName.toLowerCase()) ||
+                 inv.company_name?.toLowerCase().includes(clientName.toLowerCase())) &&
+                inv.status !== 'paid';
+       })
+       .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
+
+     return banquetDue + invoiceDue;
    };
 
    const handleSaveEvent = () => {
@@ -400,6 +414,7 @@ export default function Banquet() {
     .reduce((sum, e) => sum + (e.deposit_amount || 0), 0);
 
   const { data: uiPrefs } = useUIPreferences();
+  const { data: allInvoices = [] } = useInvoices();
   const isHorizontalNav = uiPrefs?.navigation_style === "horizontal-subheader";
 
   return (
