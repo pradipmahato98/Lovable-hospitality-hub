@@ -1,0 +1,81 @@
+import React from "react";
+import {
+  Grid,
+  LogIn,
+  LogOut,
+  CalendarDays,
+  Receipt,
+  Tag,
+  DollarSign,
+  ArrowRightLeft,
+  FileText,
+  BarChart3,
+  PlusCircle,
+  TrendingUp,
+  LayoutDashboard
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface PMSOperationsSidebarProps {
+  activeModule: string;
+  onModuleChange: (moduleId: string) => void;
+}
+
+const operations = [
+  { id: "room-status", label: "ROOM STATUS", icon: LayoutDashboard },
+  { id: "availability-grid", label: "AVAILABILITY GRID", icon: Grid },
+  { id: "check-in", label: "CHECK-IN", icon: LogIn },
+  { id: "check-out", label: "CHECK-OUT", icon: LogOut },
+  { id: "reservation", label: "RESERVATION/BOOKING", icon: CalendarDays },
+  { id: "advance-receipt", label: "ADVANCE RECEIPT", icon: Receipt },
+  { id: "additional-rate", label: "ADDITIONAL RATE", icon: PlusCircle },
+  { id: "rate-posting", label: "ROOM RATE POSTING", icon: DollarSign },
+  { id: "change-rate", label: "CHANGE RATE", icon: Tag },
+  { id: "room-move", label: "ROOM/PAX CHANGE", icon: ArrowRightLeft },
+  { id: "adjustment", label: "ADJUSTMENT", icon: TrendingUp },
+  { id: "guest-folios", label: "GUEST FOLIOS", icon: FileText },
+  { id: "reports", label: "REPORTS", icon: BarChart3 },
+];
+
+export const PMSOperationsSidebar = ({ activeModule, onModuleChange }: PMSOperationsSidebarProps) => {
+  return (
+    <div className="w-64 bg-card border-r border-border flex flex-col h-full overflow-hidden">
+      <div className="p-4 border-b border-border">
+        <h2 className="text-muted-foreground text-[10px] font-bold tracking-[0.2em] uppercase">Operations Center</h2>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-1">
+          {operations.map((op) => {
+            const isActive = activeModule === op.id;
+            const Icon = op.icon;
+            return (
+              <Button
+                key={op.id}
+                variant="ghost"
+                onClick={() => onModuleChange(op.id)}
+                className={cn(
+                  "w-full justify-start gap-3 h-11 px-3 text-[11px] font-bold tracking-wider transition-all duration-200",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  isActive
+                    ? "bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-500 rounded-none shadow-[inset_4px_0_10px_-4px_rgba(34,211,238,0.2)]"
+                    : "text-muted-foreground border-l-2 border-transparent"
+                )}
+              >
+                <Icon className={cn("h-4 w-4", isActive ? "text-cyan-400" : "text-muted-foreground")} />
+                {op.label}
+              </Button>
+            );
+          })}
+        </div>
+      </ScrollArea>
+      <div className="p-4 border-t border-border bg-card/50">
+        <div className="flex items-center gap-3 px-1">
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[10px] text-muted-foreground font-bold tracking-tight">SYSTEM ONLINE</span>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -31,6 +31,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { exportToExcel } from "@/lib/reportExport";
 import { formatAD } from "@/lib/utils";
+import { PMSRoomStatusView } from "@/components/pms/PMSRoomStatusView";
 
 type Room = Tables<"rooms">;
 
@@ -173,80 +174,13 @@ const FrontDesk = () => {
           </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6">
-          {/* Rooms Tab */}
-          <TabsContent value="rooms" className="mt-0 focus-visible:outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-3 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}><Grid className="h-4 w-4" /></Button>
-                    <Button variant={viewMode === "table" ? "default" : "outline"} size="sm" onClick={() => setViewMode("table")}><List className="h-4 w-4" /></Button>
-                    <Select value={roomStatusFilter} onValueChange={setRoomStatusFilter}>
-                      <SelectTrigger className="w-[140px] bg-secondary">
-                        <Filter className="h-4 w-4 mr-2" /><SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="occupied">Occupied</SelectItem>
-                        <SelectItem value="cleaning">Cleaning</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button variant="blue" size="sm" className="gap-2 w-full sm:w-auto" onClick={() => setNewRoomOpen(true)}>
-                    <Plus className="h-4 w-4" />Add Room
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  {[
-                    { label: "Available", count: stats.available, color: "text-success" },
-                    { label: "Occupied", count: stats.occupied, color: "text-primary" },
-                    { label: "Cleaning", count: stats.cleaning, color: "text-warning" },
-                    { label: "Maintenance", count: stats.maintenance, color: "text-destructive" },
-                  ].map((stat) => (
-                    <Card key={stat.label} variant="glass" className="p-3 sm:p-4 cursor-pointer" onClick={() => setRoomStatusFilter(stat.label.toLowerCase())}>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
-                      <p className={cn("text-xl sm:text-2xl font-bold font-display", stat.color)}>{isLoading ? "-" : stat.count}</p>
-                    </Card>
-                  ))}
-                </div>
-
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : viewMode === "table" ? (
-                  <Card variant="elevated">
-                    <CardHeader><CardTitle>All Rooms ({filteredRooms.length})</CardTitle></CardHeader>
-                    <CardContent>
-                      <DataTable data={filteredRooms} columns={columns} keyExtractor={(room) => room.id} searchPlaceholder="Search rooms..." emptyMessage="No rooms found." pageSize={10} onRowClick={(room) => setSelectedRoom(room)} />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {filteredRooms.map((room) => (
-                      <RoomCard
-                        key={room.id}
-                        room={room}
-                        isSelected={selectedRoom?.id === room.id}
-                        onClick={setSelectedRoom}
-                      />
-                    ))}
-                    {filteredRooms.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground">No rooms found</div>}
-                  </div>
-                )}
-              </div>
-              <div className="lg:col-span-1">
-                <div className={cn("sticky transition-all duration-300", isHorizontalNav ? "top-[112px]" : "top-20")}>
-                  <RoomActionsPanel selectedRoom={selectedRoom} onClearSelection={() => setSelectedRoom(null)} />
-                </div>
-              </div>
-            </div>
+          <div className="flex-1 overflow-hidden">
+          {/* Rooms Tab - Replaced with High-Fidelity PMSRoomStatusView */}
+          <TabsContent value="rooms" className="mt-0 focus-visible:outline-none h-full w-full overflow-hidden p-0 sm:p-0">
+            <PMSRoomStatusView />
           </TabsContent>
 
+          <div className="p-4 sm:p-6 h-full overflow-y-auto scrollbar-hide">
           <TabsContent value="inhouse"><InHouseGuestManager /></TabsContent>
           <TabsContent value="folios"><GuestFolioManager /></TabsContent>
           <TabsContent value="queue"><QueueManager /></TabsContent>
@@ -334,6 +268,7 @@ const FrontDesk = () => {
               </Card>
             </div>
           </TabsContent>
+          </div>
           </div>
         </Tabs>
       </ErrorBoundary>
