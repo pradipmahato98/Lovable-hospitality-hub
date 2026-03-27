@@ -36,8 +36,10 @@ import {
   AlertTriangle,
   Package,
   Users,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { useCateringOrders, useCreateCateringOrder, useUpdateCateringOrder } from "@/hooks/useBanquetData";
 
 interface BanquetEvent {
   id: string;
@@ -54,14 +56,13 @@ interface BanquetEvent {
 
 interface CateringOrder {
   id: string;
-  eventId: string;
-  menuPackage: string;
-  courses: string[];
-  dietaryRequirements: string[];
-  servingStyle: string;
+  event_id: string;
+  menu_package: string;
+  dietary_requirements: string[];
+  serving_style: string;
   beverages: string[];
-  specialNotes: string;
-  estimatedCost: number;
+  special_notes: string | null;
+  estimated_cost: number;
   status: "pending" | "confirmed" | "preparing" | "ready" | "served";
 }
 
@@ -105,8 +106,9 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BanquetEvent | null>(null);
 
-  // Local state for catering orders (would be DB in production)
-  const [cateringOrders, setCateringOrders] = useState<CateringOrder[]>([]);
+  const { data: cateringOrders = [], isLoading } = useCateringOrders();
+  const createOrder = useCreateCateringOrder();
+  const updateOrder = useUpdateCateringOrder();
 
   const [newOrder, setNewOrder] = useState({
     menuPackage: "standard",
@@ -130,7 +132,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
 
   // Get catering order for an event
   const getOrderForEvent = (eventId: string) => {
-    return cateringOrders.find((o) => o.eventId === eventId);
+    return cateringOrders.find((o) => o.event_id === eventId);
   };
 
   const handleOpenOrderDialog = (event: BanquetEvent) => {
@@ -138,12 +140,12 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     const existingOrder = getOrderForEvent(event.id);
     if (existingOrder) {
       setNewOrder({
-        menuPackage: existingOrder.menuPackage,
-        courses: existingOrder.courses,
-        dietaryRequirements: existingOrder.dietaryRequirements,
-        servingStyle: existingOrder.servingStyle,
+        menuPackage: existingOrder.menu_package,
+        courses: [],
+        dietaryRequirements: existingOrder.dietary_requirements,
+        servingStyle: existingOrder.serving_style,
         beverages: existingOrder.beverages,
-        specialNotes: existingOrder.specialNotes,
+        specialNotes: existingOrder.special_notes || "",
       });
     } else {
       setNewOrder({
@@ -158,36 +160,33 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     setOrderDialogOpen(true);
   };
 
-  const handleSaveOrder = () => {
+  const handleSaveOrder = async () => {
     if (!selectedEvent) return;
 
     const pkg = menuPackages.find((p) => p.id === newOrder.menuPackage);
     const estimatedCost = (pkg?.pricePerHead || 0) * selectedEvent.guest_count;
+    const existingOrder = getOrderForEvent(selectedEvent.id);
 
-    const order: CateringOrder = {
-      id: getOrderForEvent(selectedEvent.id)?.id || crypto.randomUUID(),
-      eventId: selectedEvent.id,
-      menuPackage: newOrder.menuPackage,
-      courses: newOrder.courses,
-      dietaryRequirements: newOrder.dietaryRequirements,
-      servingStyle: newOrder.servingStyle,
+    const orderData = {
+      event_id: selectedEvent.id,
+      menu_package: newOrder.menuPackage,
+      dietary_requirements: newOrder.dietaryRequirements,
+      serving_style: newOrder.servingStyle,
       beverages: newOrder.beverages,
-      specialNotes: newOrder.specialNotes,
-      estimatedCost,
-      status: "pending",
+      special_notes: newOrder.specialNotes,
+      estimated_cost: estimatedCost,
+      status: (existingOrder?.status || "pending") as any,
     };
 
-    setCateringOrders((prev) => {
-      const existing = prev.findIndex((o) => o.eventId === selectedEvent.id);
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing] = order;
-        return updated;
-      }
-      return [...prev, order];
-    });
+    if (existingOrder) {
+      await updateOrder.mutateAsync({
+        id: existingOrder.id,
+        updates: orderData as any
+      });
+    } else {
+      await createOrder.mutateAsync(orderData as any);
+    }
 
-    toast.success("Catering order saved");
     setOrderDialogOpen(false);
     setSelectedEvent(null);
   };
@@ -210,11 +209,11 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
     }));
   };
 
-  const updateOrderStatus = (orderId: string, status: CateringOrder["status"]) => {
-    setCateringOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
-    );
-    toast.success(`Order status updated to ${status}`);
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    await updateOrder.mutateAsync({
+      id: orderId,
+      updates: { status: status as any }
+    });
   };
 
   const statusColors: Record<string, string> = {
@@ -281,7 +280,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
               <div>
                 <p className="text-sm text-muted-foreground">Dietary Requests</p>
                 <p className="text-2xl font-bold">
-                  {cateringOrders.reduce((s, o) => s + o.dietaryRequirements.length, 0)}
+                  {cateringOrders.reduce((s, o: any) => s + (o.dietary_requirements?.length || 0), 0)}
                 </p>
               </div>
             </div>
@@ -356,16 +355,16 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                         )}
                       </TableCell>
                       <TableCell>
-                        {order && order.dietaryRequirements.length > 0 ? (
+                        {order && order.dietary_requirements?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {order.dietaryRequirements.slice(0, 2).map((d) => (
+                            {order.dietary_requirements.slice(0, 2).map((d) => (
                               <Badge key={d} variant="secondary" className="text-xs">
                                 {d}
                               </Badge>
                             ))}
-                            {order.dietaryRequirements.length > 2 && (
+                            {order.dietary_requirements.length > 2 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{order.dietaryRequirements.length - 2}
+                                +{order.dietary_requirements.length - 2}
                               </Badge>
                             )}
                           </div>
@@ -374,7 +373,7 @@ export function CateringManagementPanel({ events }: CateringManagementPanelProps
                         )}
                       </TableCell>
                       <TableCell className="font-mono">
-                        {order ? `$${order.estimatedCost.toLocaleString()}` : "-"}
+                        {order ? `$${order.estimated_cost.toLocaleString()}` : "-"}
                       </TableCell>
                       <TableCell>
                         {order ? (

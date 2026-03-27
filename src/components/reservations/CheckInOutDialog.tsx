@@ -14,6 +14,7 @@ import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut, Wallet, AlertTriangle } from "lucide-react";
 import { useCheckInSettings } from "@/hooks/useSettings";
 import { useInvoices } from "@/hooks/useBillingData";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
 
 interface Room {
   id: string;
@@ -42,6 +43,7 @@ export function CheckInOutDialog({
   const [rooms, setRooms] = useState<Room[]>([]);
   const { data: checkInSettings } = useCheckInSettings();
   const { data: allInvoices = [] } = useInvoices();
+  const { createFolio } = useGuestFolios();
   const [guestDue, setGuestDue] = useState(0);
   const [reservation, setReservation] = useState<any>(null);
 
@@ -165,7 +167,7 @@ export function CheckInOutDialog({
     const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
     
     // Create reservation with checked-in status
-    const { error: resError } = await supabase
+    const { data: reservation, error: resError } = await supabase
       .from("reservations")
       .insert([{
         guest_id: guest.id,
@@ -180,7 +182,9 @@ export function CheckInOutDialog({
         special_requests: formData.specialRequests || null,
         source: "walk-in" as const,
         reservation_code: reservationCode,
-      }]);
+      }])
+      .select()
+      .single();
 
     if (resError) {
       toast({
@@ -191,6 +195,15 @@ export function CheckInOutDialog({
       setIsLoading(false);
       return;
     }
+
+    // 4. Create initial folio for walk-in
+    await createFolio.mutateAsync({
+      reservation_id: reservation.id,
+      guest_id: guest.id,
+      room_id: formData.roomId,
+      status: "open",
+      folio_number: `FOL-${reservationCode.split('-')[1]}`
+    });
 
     // Update room status
     await supabase
@@ -218,13 +231,15 @@ export function CheckInOutDialog({
     if (!reservationId) return;
     setIsLoading(true);
 
-    const { error } = await supabase
+    const { data: resData, error } = await supabase
       .from("reservations")
       .update({
         status: "checked-in",
         actual_check_in: new Date().toISOString(),
       })
-      .eq("id", reservationId);
+      .eq("id", reservationId)
+      .select()
+      .single();
 
     if (error) {
       toast({
@@ -233,9 +248,26 @@ export function CheckInOutDialog({
         description: error.message,
       });
     } else {
+      // Create folio if it doesn't exist
+      const { data: existingFolio } = await supabase
+        .from('guest_folios')
+        .select('id')
+        .eq('reservation_id', reservationId)
+        .maybeSingle();
+
+      if (!existingFolio) {
+        await createFolio.mutateAsync({
+          reservation_id: reservationId,
+          guest_id: resData.guest_id,
+          room_id: resData.room_id,
+          status: "open",
+          folio_number: `FOL-${resData.reservation_code.split('-')[1] || Math.floor(Math.random()*1000)}`
+        });
+      }
+
       toast({
         title: "Check-in successful",
-        description: "Guest has been checked in.",
+        description: "Guest has been checked in and folio created.",
       });
       onSuccess?.();
     }
