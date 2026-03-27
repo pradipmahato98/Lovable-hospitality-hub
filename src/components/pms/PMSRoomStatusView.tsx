@@ -1,14 +1,7 @@
 import React, { useState, useMemo } from "react";
-import { PMSRoomCard } from "./PMSRoomCard";
 import { PMSOperationsSidebar } from "./PMSOperationsSidebar";
 import { useRooms } from "@/hooks/useRooms";
 import { useReservations } from "@/hooks/useReservations";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Search, Filter, RefreshCw } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { PMSActionDialog } from "./PMSActionDialog";
 import { usePMSRealtime } from "@/hooks/usePMSRealtime";
@@ -17,6 +10,23 @@ import { CheckInOutDialog } from "../reservations/CheckInOutDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
+import { StatusGridView } from "./views/StatusGridView";
+import { AvailabilityGridView } from "./views/AvailabilityGridView";
+import { ReservationManagerView } from "./views/ReservationManagerView";
+import { FinancialOperationsView } from "./views/FinancialOperationsView";
+
+// Placeholder views for next steps
+const PlaceholderView = ({ title }: { title: string }) => (
+  <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-background border-l border-border">
+    <div className="p-8 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+      <div className="h-12 w-12 text-cyan-500 font-bold text-2xl flex items-center justify-center">?</div>
+    </div>
+    <h2 className="text-xl font-bold tracking-tight">{title} View</h2>
+    <p className="text-muted-foreground text-sm max-w-md text-center">
+      This module is being initialized as a dedicated page for hotel operations.
+    </p>
+  </div>
+);
 
 interface PMSRoomStatusViewProps {
   onTabChange?: (tab: string) => void;
@@ -63,7 +73,7 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
         map[res.room_id] = {
           guestName: `${res.guest?.first_name} ${res.guest?.last_name}`,
           checkoutDate: res.check_out_date,
-          keyIssued: true, // Mocking key issued if checked in
+          keyIssued: true,
           arrivalToday: false
         };
       } else if (res.status === 'confirmed' && res.check_in_date === today && res.room_id) {
@@ -79,15 +89,6 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
     });
     return map;
   }, [reservations]);
-
-  const filteredRooms = useMemo(() => {
-    return rooms.filter(room => {
-      const matchesStatus = statusFilter === 'all' || room.status.toLowerCase() === statusFilter;
-      const matchesSearch = room.room_number.includes(searchQuery) ||
-                           room.room_type.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesStatus && matchesSearch;
-    });
-  }, [rooms, statusFilter, searchQuery]);
 
   const handleRefresh = async () => {
     try {
@@ -133,7 +134,6 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
         break;
       case 'folio':
         onTabChange?.('folios');
-        // Optional: set search params to filter folio for this guest
         if (room.id) {
           setSearchParams({ room: room.room_number });
         }
@@ -168,9 +168,7 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
   };
 
   const handleModuleChange = (moduleId: string) => {
-    setActiveModule(moduleId);
-
-    // Handle tab transitions for specific modules
+    // Modules that switch tabs entirely
     if (moduleId === 'guest-folios') {
       onTabChange?.('folios');
       return;
@@ -179,19 +177,63 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
       onTabChange?.('reports');
       return;
     }
+
+    // Modules that open specific dialogs but stay on grid (for now, will refactor to views)
     if (moduleId === 'check-in') {
       setCheckInOutMode('walk-in');
       setCheckInOutOpen(true);
       return;
     }
-    if (moduleId === 'reservation') {
-      onTabChange?.('rooms'); // Or stay and maybe open new res dialog if we had one
-      return;
-    }
 
-    if (moduleId !== 'room-status' && moduleId !== 'availability-grid') {
-      setActionType(moduleId);
-      setActionDialogOpen(true);
+    // Modules that switch the view in the main area
+    setActiveModule(moduleId);
+  };
+
+  const renderActiveView = () => {
+    switch(activeModule) {
+      case 'room-status':
+        return (
+          <StatusGridView
+            rooms={rooms}
+            roomOccupancy={roomOccupancy}
+            isLoading={isLoading}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            handleRefresh={handleRefresh}
+            handleAction={handleAction}
+          />
+        );
+      case 'availability-grid':
+        return (
+          <AvailabilityGridView
+            rooms={rooms}
+            reservations={reservations}
+            isLoading={isLoading}
+          />
+        );
+      case 'reservation':
+        return (
+          <ReservationManagerView
+            reservations={reservations}
+            isLoading={isLoading}
+          />
+        );
+      case 'advance-receipt':
+        return <FinancialOperationsView type="advance-receipt" />;
+      case 'rate-posting':
+        return <FinancialOperationsView type="rate-posting" />;
+      case 'adjustment':
+        return <FinancialOperationsView type="adjustment" />;
+      case 'additional-rate':
+        return <PlaceholderView title="Additional Rates" />;
+      case 'change-rate':
+        return <PlaceholderView title="Rate Changes" />;
+      case 'room-move':
+        return <PlaceholderView title="Room Move Log" />;
+      default:
+        return <PlaceholderView title={activeModule.toUpperCase()} />;
     }
   };
 
@@ -213,6 +255,7 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
         type={actionType}
         room={selectedRoom}
       />
+
       {/* Sidebar */}
       <PMSOperationsSidebar
         activeModule={activeModule}
@@ -220,90 +263,7 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header / Toolbar */}
-        <div className="h-16 border-b border-border bg-card/50 flex items-center justify-between px-6">
-          <div className="flex items-center gap-6">
-            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="bg-transparent">
-              <TabsList className="bg-secondary/50 border border-border p-1 h-9">
-                {['all', 'available', 'occupied', 'dirty', 'maintenance', 'blocked'].map(status => (
-                  <TabsTrigger
-                    key={status}
-                    value={status}
-                    className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider h-7 px-4",
-                      "data-[state=active]:bg-cyan-500 data-[state=active]:text-black"
-                    )}
-                  >
-                    {status}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="SEARCH ROOMS..."
-                className="w-64 bg-secondary/50 border-border h-9 pl-9 text-[10px] font-bold tracking-wider focus:ring-primary focus:border-primary"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 bg-secondary/50 border-border text-muted-foreground hover:text-foreground"
-              onClick={handleRefresh}
-            >
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-            </Button>
-          </div>
-        </div>
-
-        {/* Room Grid */}
-        <ScrollArea className="flex-1 p-6">
-          {isLoading ? (
-            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
-              <p className="text-zinc-500 text-xs font-bold tracking-widest uppercase">Initializing PMS Core...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {filteredRooms.map((room) => {
-                const occupancy = roomOccupancy[room.id];
-                return (
-                  <PMSRoomCard
-                    key={room.id}
-                    room={{
-                      id: room.id,
-                      room_number: room.room_number,
-                      room_type: room.room_type,
-                      status: room.status,
-                      price_per_night: room.price_per_night
-                    }}
-                    currentGuest={occupancy ? {
-                      name: occupancy.guestName,
-                      checkoutDate: occupancy.checkoutDate,
-                      keyIssued: occupancy.keyIssued
-                    } : undefined}
-                    arrivalToday={occupancy?.arrivalToday}
-                    onAction={handleAction}
-                  />
-                );
-              })}
-            </div>
-          )}
-
-          {!isLoading && filteredRooms.length === 0 && (
-            <div className="h-[400px] flex flex-col items-center justify-center gap-4 border-2 border-dashed border-border rounded-xl">
-              <p className="text-muted-foreground text-xs font-bold tracking-widest uppercase">No rooms found matching filters</p>
-            </div>
-          )}
-        </ScrollArea>
-      </div>
+      {renderActiveView()}
     </div>
   );
 };
