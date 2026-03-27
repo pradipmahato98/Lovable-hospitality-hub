@@ -12,7 +12,8 @@ import {
   BarChart3,
   PlusCircle,
   TrendingUp,
-  LayoutDashboard
+  LayoutDashboard,
+  Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,9 +42,12 @@ const operations = [
 
 export const PMSOperationsSidebar = ({ activeModule, onModuleChange }: PMSOperationsSidebarProps) => {
   return (
-    <div className="w-64 bg-card border-r border-border flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-border">
+    <div className="w-64 bg-card border-r border-border flex flex-col h-full overflow-hidden shrink-0">
+      <div className="p-4 border-b border-border flex items-center justify-between">
         <h2 className="text-muted-foreground text-[10px] font-bold tracking-[0.2em] uppercase">Operations Center</h2>
+        <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20">
+          <Plus className="h-3 w-3" />
+        </Button>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
