@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarDays, Users, BedDouble, Sparkles, Wrench,
   ShoppingCart, Package, Globe, DollarSign, PartyPopper, Target, Briefcase,
   BarChart3, Moon, Lock, UserCog, UserCheck, Settings, ShieldCheck, Code2,
-  LucideIcon
+  CreditCard, Receipt, LucideIcon
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -32,6 +32,32 @@ export const navItems: NavItemConfig[] = [
     ]
   },
   {
+    icon: Globe,
+    label: "Channel Manager",
+    path: "/channel-manager",
+    defaultTab: "channels",
+    subItems: [
+      { label: "Channels", tab: "channels" },
+      { label: "Rate Calendar", tab: "rates" },
+      { label: "Sync Logs", tab: "logs" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: Users,
+    label: "Guests",
+    path: "/guests",
+    defaultTab: "guests",
+    subItems: [
+      { label: "Guest List", tab: "guests" },
+      { label: "Feedback", tab: "feedback" },
+      { label: "Loyalty", tab: "loyalty" },
+      { label: "Preferences", tab: "preferences" },
+      { label: "Documents", tab: "documents" },
+      { label: "History", tab: "history" },
+    ]
+  },
+  {
     icon: BedDouble,
     label: "Front Desk",
     path: "/front-desk",
@@ -49,6 +75,11 @@ export const navItems: NavItemConfig[] = [
     ]
   },
   {
+    icon: Receipt,
+    label: "Billing",
+    path: "/billing",
+  },
+  {
     icon: Sparkles,
     label: "Housekeeping",
     path: "/housekeeping",
@@ -59,6 +90,18 @@ export const navItems: NavItemConfig[] = [
       { label: "Inspections", tab: "inspections" },
       { label: "Lost & Found", tab: "lost-found" },
       { label: "Supplies", tab: "supplies" },
+      { label: "Reports", tab: "reports" },
+    ]
+  },
+  {
+    icon: Wrench,
+    label: "Engineering",
+    path: "/engineering",
+    defaultTab: "requests",
+    subItems: [
+      { label: "Requests", tab: "requests" },
+      { label: "Preventive", tab: "preventive" },
+      { label: "Assets", tab: "assets" },
       { label: "Reports", tab: "reports" },
     ]
   },
@@ -85,6 +128,11 @@ export const navItems: NavItemConfig[] = [
       { label: "Venue Setup", tab: "venue" },
       { label: "Reports", tab: "reports" },
     ]
+  },
+  {
+    icon: CreditCard,
+    label: "Payments",
+    path: "/payments",
   },
   {
     icon: DollarSign,
