@@ -117,9 +117,23 @@ export function useHousekeepingTasks(filters?: { date?: string; status?: string;
 
       const { data, error } = await db.from("housekeeping_tasks").update(updates).eq("id", id).select().single();
       if (error) throw error;
+
+      // Sync with rooms table if completed or in progress
+      if (data.room_id) {
+        if (status === "completed") {
+          await db.from("rooms").update({ status: "available" }).eq("id", data.room_id);
+        } else if (status === "in_progress") {
+          await db.from("rooms").update({ status: "cleaning" }).eq("id", data.room_id);
+        }
+      }
+
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["housekeeping-tasks"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["housekeeping-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["housekeeping-rooms-status"] });
+    },
   });
 
   return { ...query, createTask, updateTask, updateTaskStatus };

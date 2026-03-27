@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export interface Guest {
   id: string;
@@ -18,6 +19,23 @@ export interface Guest {
 
 export const useGuests = () => {
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("guests-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "guests" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["guests"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const query = useQuery({
     queryKey: ["guests"],

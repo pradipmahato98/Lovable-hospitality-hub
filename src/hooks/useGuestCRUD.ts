@@ -52,7 +52,9 @@ export function useGuestCRUD() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guests"] });
-      toast.success("Guest updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+      toast.success("Guest updated successfully and synced across modules");
     },
     onError: (e: Error) => toast.error("Failed to update guest: " + e.message),
   });

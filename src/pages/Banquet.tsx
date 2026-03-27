@@ -23,6 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -52,6 +60,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUIPreferences } from "@/hooks/useSettings";
 import { useSearchParams } from "react-router-dom";
 import { useInvoices } from "@/hooks/useBillingData";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
+import { usePostBanquetToFolio } from "@/hooks/useBanquetData";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { 
   DraggableBanquetCalendar,
@@ -588,6 +598,7 @@ export default function Banquet() {
                             </Badge>
                           </TableCell>
                           <TableCell>
+                            <div className="flex items-center gap-2">
                             <Select
                               value={event.status}
                               onValueChange={(v: BanquetEvent["status"]) =>
@@ -605,6 +616,41 @@ export default function Banquet() {
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                               </SelectContent>
                             </Select>
+                            {event.status === 'confirmed' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                    <Receipt className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                  <DropdownMenuLabel>Billing Operations</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="gap-2"
+                                    onClick={() => {
+                                      const guestFolio = folios?.find(f =>
+                                        `${f.guests?.first_name} ${f.guests?.last_name}`.toLowerCase() === event.client_name.toLowerCase() &&
+                                        f.status === 'open'
+                                      );
+                                      if (guestFolio) {
+                                        postToFolio.mutate({
+                                          eventId: event.id,
+                                          folioId: guestFolio.id,
+                                          amount: event.total_amount,
+                                          description: `Banquet Event: ${event.event_name}`
+                                        });
+                                      } else {
+                                        toast.error("No active guest folio found for this client");
+                                      }
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" /> Post to In-house Folio
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            </div>
                           </TableCell>
                            <TableCell>
                              <Button

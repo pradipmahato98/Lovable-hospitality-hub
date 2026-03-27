@@ -42,7 +42,7 @@ export const RealtimeListener = () => {
       .channel("rooms-status-sync")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "rooms" },
+        { event: "*", schema: "public", table: "rooms" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["rooms"] });
           queryClient.invalidateQueries({ queryKey: ["room"] });
@@ -50,9 +50,63 @@ export const RealtimeListener = () => {
       )
       .subscribe();
 
+    // Global channel for Reservations
+    const resChannel = supabase
+      .channel("reservations-global-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reservations" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["reservations"] });
+        }
+      )
+      .subscribe();
+
+    // Global channel for Guest Folios
+    const folioChannel = supabase
+      .channel("folios-global-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "guest_folios" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+          queryClient.invalidateQueries({ queryKey: ["folio_items"] });
+        }
+      )
+      .subscribe();
+
+    // Global channel for Banquet Events
+    const banquetChannel = supabase
+      .channel("banquet-global-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "banquet_events" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+        }
+      )
+      .subscribe();
+
+    // Global channel for Guests
+    const guestChannel = supabase
+      .channel("guests-global-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "guests" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["guests"] });
+          queryClient.invalidateQueries({ queryKey: ["guest"] });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(settingsChannel);
       supabase.removeChannel(roomsChannel);
+      supabase.removeChannel(resChannel);
+      supabase.removeChannel(folioChannel);
+      supabase.removeChannel(banquetChannel);
+      supabase.removeChannel(guestChannel);
     };
   }, [queryClient]);
 
