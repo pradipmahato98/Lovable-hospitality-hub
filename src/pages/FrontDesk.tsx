@@ -177,7 +177,7 @@ const FrontDesk = () => {
           <div className="flex-1 overflow-hidden">
           {/* Rooms Tab - Replaced with High-Fidelity PMSRoomStatusView */}
           <TabsContent value="rooms" className="mt-0 focus-visible:outline-none h-full w-full overflow-hidden p-0 sm:p-0">
-            <PMSRoomStatusView />
+            <PMSRoomStatusView onTabChange={handleTabChange} />
           </TabsContent>
 
           <div className="p-4 sm:p-6 h-full overflow-y-auto scrollbar-hide">

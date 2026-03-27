@@ -16,9 +16,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckInOutDialog } from "../reservations/CheckInOutDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 
-export const PMSRoomStatusView = () => {
+interface PMSRoomStatusViewProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: rooms = [], isLoading: roomsLoading, refetch: refetchRooms } = useRooms();
   const { reservations = [], isLoading: resLoading, refetch: refetchRes } = useReservations();
 
@@ -26,10 +32,12 @@ export const PMSRoomStatusView = () => {
   usePMSRealtime({
     onRoomUpdate: () => {
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
       refetchRooms();
     },
     onReservationUpdate: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
       refetchRes();
     }
   });
@@ -81,6 +89,21 @@ export const PMSRoomStatusView = () => {
     });
   }, [rooms, statusFilter, searchQuery]);
 
+  const handleRefresh = async () => {
+    try {
+      await Promise.all([
+        refetchRooms(),
+        refetchRes(),
+        queryClient.invalidateQueries({ queryKey: ["rooms"] }),
+        queryClient.invalidateQueries({ queryKey: ["reservations"] }),
+        queryClient.invalidateQueries({ queryKey: ["guest_folios"] })
+      ]);
+      toast.success("PMS Core Resynchronized");
+    } catch (err) {
+      toast.error("Resynchronization Failed");
+    }
+  };
+
   const handleAction = (action: string, room: any) => {
     setSelectedRoom(room);
 
@@ -103,9 +126,17 @@ export const PMSRoomStatusView = () => {
       case 'room-move':
       case 'change-rate':
       case 'move':
-      case 'folio':
-        setActionType(action === 'move' ? 'room-move' : action);
+      case 'add-charge':
+      case 'quick-payment':
+        setActionType(action === 'move' ? 'room-move' : (action === 'add-charge' ? 'quick-charge' : action));
         setActionDialogOpen(true);
+        break;
+      case 'folio':
+        onTabChange?.('folios');
+        // Optional: set search params to filter folio for this guest
+        if (room.id) {
+          setSearchParams({ room: room.room_number });
+        }
         break;
       case 'set_available':
         updateRoomStatus(room.id, 'available');
@@ -138,6 +169,26 @@ export const PMSRoomStatusView = () => {
 
   const handleModuleChange = (moduleId: string) => {
     setActiveModule(moduleId);
+
+    // Handle tab transitions for specific modules
+    if (moduleId === 'guest-folios') {
+      onTabChange?.('folios');
+      return;
+    }
+    if (moduleId === 'reports') {
+      onTabChange?.('reports');
+      return;
+    }
+    if (moduleId === 'check-in') {
+      setCheckInOutMode('walk-in');
+      setCheckInOutOpen(true);
+      return;
+    }
+    if (moduleId === 'reservation') {
+      onTabChange?.('rooms'); // Or stay and maybe open new res dialog if we had one
+      return;
+    }
+
     if (moduleId !== 'room-status' && moduleId !== 'availability-grid') {
       setActionType(moduleId);
       setActionDialogOpen(true);
@@ -205,7 +256,7 @@ export const PMSRoomStatusView = () => {
               variant="outline"
               size="icon"
               className="h-9 w-9 bg-secondary/50 border-border text-muted-foreground hover:text-foreground"
-              onClick={() => refetchRooms()}
+              onClick={handleRefresh}
             >
               <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             </Button>

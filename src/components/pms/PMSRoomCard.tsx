@@ -17,7 +17,9 @@ import {
   LogOut,
   LogIn,
   Wrench,
-  Trash2
+  Trash2,
+  PlusCircle,
+  CreditCard
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
@@ -198,6 +200,12 @@ export const PMSRoomCard = ({ room, currentGuest, arrivalToday, onAction }: PMSR
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onAction?.('folio', room)} className="gap-2">
                     <Receipt className="h-4 w-4" /> View Folio
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAction?.('add-charge', room)} className="gap-2">
+                    <PlusCircle className="h-4 w-4 text-cyan-400" /> Add Quick Charge
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAction?.('quick-payment', room)} className="gap-2">
+                    <CreditCard className="h-4 w-4 text-green-400" /> Quick Payment
                   </DropdownMenuItem>
                 </>
               )}

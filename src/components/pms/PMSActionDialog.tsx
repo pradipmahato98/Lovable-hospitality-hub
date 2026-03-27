@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Receipt, DollarSign, ArrowRightLeft, Tag } from "lucide-react";
+import { Receipt, DollarSign, ArrowRightLeft, Tag, Zap, CreditCard, PlusCircle } from "lucide-react";
 import { useGuestFolios } from "@/hooks/useGuestFolios";
 import { useReservations } from "@/hooks/useReservations";
 import { useRooms } from "@/hooks/useRooms";
@@ -72,6 +72,30 @@ export const PMSActionDialog = ({ open, onOpenChange, type, room }: PMSActionDia
             item_type: 'payment',
             source: 'advance_deposit',
             description: `Advance Deposit (${method.toUpperCase()})`,
+            amount: -Math.abs(parseFloat(amount)),
+            reason: notes
+          });
+          break;
+
+        case 'quick-charge':
+          if (!activeFolio) throw new Error("No active folio found for this room.");
+          await addFolioItem.mutateAsync({
+            folio_id: activeFolio.id,
+            item_type: 'charge',
+            source: 'service',
+            description: notes || 'Quick Service Charge',
+            amount: Math.abs(parseFloat(amount)),
+            reason: notes
+          });
+          break;
+
+        case 'quick-payment':
+          if (!activeFolio) throw new Error("No active folio found for this room.");
+          await addFolioItem.mutateAsync({
+            folio_id: activeFolio.id,
+            item_type: 'payment',
+            source: 'payment',
+            description: `Quick Payment (${method.toUpperCase()})`,
             amount: -Math.abs(parseFloat(amount)),
             reason: notes
           });
@@ -134,6 +158,8 @@ export const PMSActionDialog = ({ open, onOpenChange, type, room }: PMSActionDia
   const getTitle = () => {
     switch(type) {
       case 'advance-receipt': return 'Advance Receipt / Deposit';
+      case 'quick-charge': return 'Add Quick Charge';
+      case 'quick-payment': return 'Process Quick Payment';
       case 'rate-posting': return 'Manual Room Rate Posting';
       case 'room-move': return 'Room / Pax Change (Move)';
       case 'change-rate': return 'Adjust Room Rate';
@@ -144,6 +170,8 @@ export const PMSActionDialog = ({ open, onOpenChange, type, room }: PMSActionDia
   const getIcon = () => {
     switch(type) {
       case 'advance-receipt': return <Receipt className="h-5 w-5 text-cyan-400" />;
+      case 'quick-charge': return <PlusCircle className="h-5 w-5 text-indigo-400" />;
+      case 'quick-payment': return <CreditCard className="h-5 w-5 text-emerald-400" />;
       case 'rate-posting': return <DollarSign className="h-5 w-5 text-green-400" />;
       case 'room-move': return <ArrowRightLeft className="h-5 w-5 text-amber-400" />;
       case 'change-rate': return <Tag className="h-5 w-5 text-fuchsia-400" />;
@@ -165,10 +193,12 @@ export const PMSActionDialog = ({ open, onOpenChange, type, room }: PMSActionDia
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {type === 'advance-receipt' && (
+          {(type === 'advance-receipt' || type === 'quick-payment') && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Deposit Amount</Label>
+                <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {type === 'advance-receipt' ? 'Deposit Amount' : 'Payment Amount'}
+                </Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -195,6 +225,48 @@ export const PMSActionDialog = ({ open, onOpenChange, type, room }: PMSActionDia
                     <SelectItem value="transfer">Bank Transfer</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Reference/Notes</Label>
+                <Input
+                  id="notes"
+                  className="bg-secondary/50 border-border"
+                  placeholder="e.g. Transaction ID"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {type === 'quick-charge' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Charge Amount</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    className="bg-secondary/50 border-border pl-9"
+                    placeholder="0.00"
+                    required
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description / Service</Label>
+                <Input
+                  id="notes"
+                  className="bg-secondary/50 border-border"
+                  placeholder="e.g. Extra Bed, Mini Bar"
+                  required
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
             </>
           )}
