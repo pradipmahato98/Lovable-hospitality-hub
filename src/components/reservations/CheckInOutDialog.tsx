@@ -211,11 +211,6 @@ export function CheckInOutDialog({
       .update({ status: "occupied" })
       .eq("id", formData.roomId);
 
-    // Update guest visit count
-    await supabase
-      .from("guests")
-      .update({ total_visits: 1 })
-      .eq("id", guest.id);
 
     setIsLoading(false);
     toast({
@@ -265,9 +260,17 @@ export function CheckInOutDialog({
         });
       }
 
+      // Update room status to occupied
+      if (resData.room_id) {
+        await supabase
+          .from("rooms")
+          .update({ status: "occupied" })
+          .eq("id", resData.room_id);
+      }
+
       toast({
         title: "Check-in successful",
-        description: "Guest has been checked in and folio created.",
+        description: "Guest has been checked in and room status updated to occupied.",
       });
       onSuccess?.();
     }
@@ -304,25 +307,52 @@ export function CheckInOutDialog({
     } else {
       // Update room status to cleaning
       if (reservation?.room_id) {
+        // Update room status
         await supabase
           .from("rooms")
           .update({ status: "cleaning" })
           .eq("id", reservation.room_id);
+
+        // Auto-create a housekeeping task for checkout
+        const today = new Date().toISOString().split("T")[0];
+        const { data: existingHk } = await supabase
+          .from("housekeeping_tasks")
+          .select("id")
+          .eq("room_id", reservation.room_id)
+          .eq("scheduled_date", today)
+          .maybeSingle();
+
+        if (!existingHk) {
+          await (supabase as any).from("housekeeping_tasks").insert({
+            room_id: reservation.room_id,
+            task_type: "checkout",
+            status: "pending",
+            scheduled_date: today,
+            priority: "high",
+            description: "Guest checkout - urgent cleaning required"
+          });
+        }
       }
 
-      // Update guest total spending
-      if (reservation?.guest_id && reservation?.total_amount) {
+      // Update guest total spending and visit count
+      if (reservation?.guest_id) {
         const { data: guest } = await supabase
           .from("guests")
-          .select("total_spending")
+          .select("total_spending, total_visits")
           .eq("id", reservation.guest_id)
           .single();
 
+        const updates: any = {
+          total_visits: (guest?.total_visits || 0) + 1
+        };
+
+        if (reservation.total_amount) {
+          updates.total_spending = (guest?.total_spending || 0) + reservation.total_amount;
+        }
+
         await supabase
           .from("guests")
-          .update({
-            total_spending: (guest?.total_spending || 0) + reservation.total_amount,
-          })
+          .update(updates)
           .eq("id", reservation.guest_id);
       }
 

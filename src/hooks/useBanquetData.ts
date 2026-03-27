@@ -95,6 +95,44 @@
    });
  }
  
+ // ============= Cross-Module Billing =============
+ export function usePostBanquetToFolio() {
+   const queryClient = useQueryClient();
+
+   return useMutation({
+     mutationFn: async ({ eventId, folioId, amount, description }: { eventId: string, folioId: string, amount: number, description: string }) => {
+       const { data, error } = await db
+         .from("folio_items")
+         .insert([{
+           folio_id: folioId,
+           item_type: 'charge',
+           source: 'banquet',
+           description: description,
+           amount: Math.abs(amount),
+           reference_id: eventId
+         }])
+         .select()
+         .single();
+
+       if (error) throw error;
+
+       // Also update event status to 'completed' or similar if needed
+       await db.from("banquet_events").update({ notes: `Billed to Folio ID: ${folioId}` }).eq("id", eventId);
+
+       return data;
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["guest_folios"] });
+       queryClient.invalidateQueries({ queryKey: ["folio_items"] });
+       queryClient.invalidateQueries({ queryKey: ["banquet-events"] });
+       toast.success("Banquet charges posted to guest folio");
+     },
+     onError: (error: any) => {
+       toast.error("Failed to post banquet charges: " + error.message);
+     },
+   });
+ }
+
  export function useUpdateCateringOrder() {
    const queryClient = useQueryClient();
  

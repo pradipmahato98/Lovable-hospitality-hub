@@ -127,9 +127,19 @@ export function RoomsTab() {
         });
       }
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
+      // Sync with rooms table if status is clean or inspected
+      if (variables.status === "clean" || variables.status === "inspected") {
+        await supabase.from("rooms").update({ status: "available" }).eq("id", variables.roomId);
+      } else if (variables.status === "dirty" || variables.status === "in_progress") {
+        await supabase.from("rooms").update({ status: "cleaning" }).eq("id", variables.roomId);
+      } else if (variables.status === "out_of_order") {
+        await supabase.from("rooms").update({ status: "maintenance" }).eq("id", variables.roomId);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["housekeeping-rooms-status"] });
-      toast.success("Room status updated");
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast.success("Room status updated and synced with Front Desk");
     },
     onError: (err: any) => toast.error(err.message),
   });
