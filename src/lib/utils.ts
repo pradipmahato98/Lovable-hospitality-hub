@@ -92,3 +92,49 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/**
+ * Generates a cryptographically secure random hexadecimal string.
+ * @param bytes - The number of bytes of entropy to use.
+ * @returns A hex string of length bytes * 2.
+ */
+export function generateSecureHex(bytes: number = 16): string {
+  const array = new Uint8Array(bytes);
+  window.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Generates a cryptographically secure random number between min and max (inclusive).
+ * Uses rejection sampling to eliminate modulo bias.
+ * @param min - The minimum value (inclusive).
+ * @param max - The maximum value (inclusive).
+ * @returns A random number between min and max.
+ */
+export function generateSecureRandomNumber(min: number, max: number): number {
+  if (min > max) {
+    const temp = min;
+    min = max;
+    max = temp;
+  }
+
+  const range = max - min + 1;
+  if (range <= 0) return min;
+
+  // Calculate the maximum value we can accept to avoid modulo bias
+  // 2^32 is the range of a Uint32
+  const maxUint32 = 0xffffffff;
+  const limit = maxUint32 - (maxUint32 % range);
+
+  const array = new Uint32Array(1);
+  let randomValue: number;
+
+  do {
+    window.crypto.getRandomValues(array);
+    randomValue = array[0];
+  } while (randomValue >= limit);
+
+  return min + (randomValue % range);
+}
