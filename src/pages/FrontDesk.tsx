@@ -158,19 +158,19 @@ const FrontDesk = () => {
     <MainLayout fixedHeight title="Front Desk" subtitle="Manage room inventory, check-ins, and billing">
       <ErrorBoundary>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full overflow-hidden space-y-6">
-          <div className="px-4 sm:px-6">
-          <TabsList>
-            <TabsTrigger value="rooms" className="gap-2"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
-            <TabsTrigger value="inhouse" className="gap-2"><Users className="h-4 w-4" />In-house</TabsTrigger>
-            <TabsTrigger value="billing" className="gap-2"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
-            <TabsTrigger value="folios" className="gap-2"><FileText className="h-4 w-4" />Guest Folios</TabsTrigger>
-            <TabsTrigger value="queue" className="gap-2"><UserPlus className="h-4 w-4" />Queue</TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2"><MessageSquare className="h-4 w-4" />Messages</TabsTrigger>
-            <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="h-4 w-4" />Upgrades</TabsTrigger>
-            <TabsTrigger value="wakeup" className="gap-2"><AlarmClock className="h-4 w-4" />Wake-Up</TabsTrigger>
-            <TabsTrigger value="group" className="gap-2"><LogIn className="h-4 w-4" />Group</TabsTrigger>
-            <TabsTrigger value="keycards" className="gap-2"><Key className="h-4 w-4" />Key Cards</TabsTrigger>
-            <TabsTrigger value="reports" className="gap-2"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
+          <div className="px-4 sm:px-6 py-2 bg-secondary/20 border-b border-border/50">
+          <TabsList className="bg-transparent border-none p-0 gap-1">
+            <TabsTrigger value="rooms" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Bed className="h-4 w-4" />Rooms</TabsTrigger>
+            <TabsTrigger value="inhouse" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="h-4 w-4" />In-house</TabsTrigger>
+            <TabsTrigger value="folios" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="h-4 w-4" />Guest Folios</TabsTrigger>
+            <TabsTrigger value="billing" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Receipt className="h-4 w-4" />Billing</TabsTrigger>
+            <TabsTrigger value="queue" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><UserPlus className="h-4 w-4" />Queue</TabsTrigger>
+            <TabsTrigger value="messages" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><MessageSquare className="h-4 w-4" />Messages</TabsTrigger>
+            <TabsTrigger value="upgrades" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><ArrowUpCircle className="h-4 w-4" />Upgrades</TabsTrigger>
+            <TabsTrigger value="wakeup" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><AlarmClock className="h-4 w-4" />Wake-Up</TabsTrigger>
+            <TabsTrigger value="group" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><LogIn className="h-4 w-4" />Group</TabsTrigger>
+            <TabsTrigger value="keycards" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Key className="h-4 w-4" />Key Cards</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"><TrendingUp className="h-4 w-4" />Reports</TabsTrigger>
           </TabsList>
           </div>
 

@@ -198,6 +198,9 @@ export const GuestFolioManager = () => {
     source: "manual"
   });
 
+  // Group Concept
+  const [showGroupOnly, setShowGroupOnly] = useState(false);
+
   const { data: items = [] } = useFolioItems(selectedFolio?.id || "");
   const { data: routingRules = [] } = useRoutingRules(selectedFolio?.id || "");
 
@@ -416,12 +419,32 @@ export const GuestFolioManager = () => {
   const filteredFolios = folios?.filter(folio => {
     const searchLower = searchQuery.toLowerCase();
     const guestName = `${folio.guests?.first_name || ''} ${folio.guests?.last_name || ''}`.toLowerCase();
-    return (
+
+    const matchesSearch = (
       folio.folio_number.toLowerCase().includes(searchLower) ||
       guestName.includes(searchLower) ||
       (folio.rooms?.room_number?.toLowerCase().includes(searchLower) ?? false)
     );
+
+    if (showGroupOnly) {
+      // Logic for group: same guest or same corporate reference
+      return matchesSearch && folio.guest_id === selectedFolio?.guest_id;
+    }
+
+    return matchesSearch;
   });
+
+  const groupTotals = useMemo(() => {
+    if (!selectedFolio || !folios) return null;
+    const groupFolios = folios.filter(f => f.guest_id === selectedFolio.guest_id);
+    if (groupFolios.length <= 1) return null;
+
+    return {
+      count: groupFolios.length,
+      balance: groupFolios.reduce((sum, f) => sum + f.balance, 0),
+      totalCharges: groupFolios.reduce((sum, f) => sum + f.total_charges, 0)
+    };
+  }, [selectedFolio, folios]);
 
   if (isLoading) return <div>Loading folios...</div>;
 
@@ -440,20 +463,32 @@ export const GuestFolioManager = () => {
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search folios..."
-                  className="pl-8"
+                  className="pl-8 text-xs h-9 bg-secondary/50 border-border"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => setIsBulkPostOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-                Bulk Post Charges
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant={showGroupOnly ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 gap-1 text-[10px] h-8 font-bold"
+                  onClick={() => setShowGroupOnly(!showGroupOnly)}
+                  disabled={!selectedFolio}
+                >
+                  <Users className="h-3 w-3" />
+                  {showGroupOnly ? "VIEW ALL" : "SHOW GROUP"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 gap-1 text-[10px] h-8 font-bold"
+                  onClick={() => setIsBulkPostOpen(true)}
+                >
+                  <Plus className="h-3 w-3" />
+                  BULK POST
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -468,7 +503,18 @@ export const GuestFolioManager = () => {
                   onClick={() => setSelectedFolio(folio)}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-mono text-sm font-bold text-primary">{folio.folio_number}</span>
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[10px] font-bold text-primary">{folio.folio_number}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/reservations?tab=list&code=${folio.reservations?.reservation_code}`);
+                        }}
+                        className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 text-left uppercase tracking-tighter"
+                      >
+                        Ref: {folio.reservations?.reservation_code || 'N/A'}
+                      </button>
+                    </div>
                     <Badge variant={folio.status === 'open' ? 'outline' : 'default'} className={folio.status === 'open' ? 'border-success text-success' : ''}>
                       {folio.status}
                     </Badge>
@@ -510,10 +556,19 @@ export const GuestFolioManager = () => {
         {selectedFolio ? (
           <div className="space-y-6 animate-fade-in">
             <Card variant="elevated">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl font-display">{selectedFolio.folio_number}</CardTitle>
-                  <p className="text-muted-foreground">Guest: {selectedFolio.guests?.first_name} {selectedFolio.guests?.last_name}</p>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-2xl font-display">{selectedFolio.folio_number}</CardTitle>
+                    {groupTotals && (
+                      <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-[10px] font-black tracking-widest px-2 py-0.5">
+                        GROUP MEMBER
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                    Guest: <span className="text-foreground">{selectedFolio.guests?.first_name} {selectedFolio.guests?.last_name}</span>
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -528,21 +583,39 @@ export const GuestFolioManager = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="p-4 bg-secondary/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Charges</p>
-                    <p className="text-xl font-bold font-display">{formatCurrency(selectedFolio.total_charges)}</p>
+                  <div className="p-4 bg-secondary/30 rounded-lg border border-border/50">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Charges</p>
+                    <p className="text-xl font-black">{formatCurrency(selectedFolio.total_charges)}</p>
                   </div>
-                  <div className="p-4 bg-secondary/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Payments</p>
-                    <p className="text-xl font-bold font-display text-success">{formatCurrency(selectedFolio.total_payments)}</p>
+                  <div className="p-4 bg-secondary/30 rounded-lg border border-border/50">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Payments</p>
+                    <p className="text-xl font-black text-emerald-400">{formatCurrency(selectedFolio.total_payments)}</p>
                   </div>
-                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Outstanding Balance</p>
-                    <p className={cn("text-xl font-bold font-display", selectedFolio.balance > 0 ? "text-destructive" : "text-success")}>
+                  <div className="p-4 bg-primary/10 border border-cyan-500/20 rounded-lg shadow-[inset_0_0_15px_rgba(34,211,238,0.05)]">
+                    <p className="text-[10px] font-bold text-cyan-500/70 uppercase tracking-widest mb-1">Outstanding Balance</p>
+                    <p className={cn("text-xl font-black", selectedFolio.balance > 0 ? "text-red-500" : "text-emerald-400")}>
                       {formatCurrency(selectedFolio.balance)}
                     </p>
                   </div>
                 </div>
+
+                {groupTotals && (
+                  <div className="mb-6 p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Group Master Summary</p>
+                        <p className="text-xs text-zinc-400 font-medium">Consolidated view of {groupTotals.count} active folios for this guest</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Group Balance</p>
+                      <p className="text-xl font-black text-indigo-400">{formatCurrency(groupTotals.balance)}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center mb-4">
                   <Tabs defaultValue="transactions" className="w-full">

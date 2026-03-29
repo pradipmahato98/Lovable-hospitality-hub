@@ -27,15 +27,14 @@ interface PMSOperationsSidebarProps {
 const operations = [
   { id: "room-status", label: "ROOM STATUS", icon: LayoutDashboard },
   { id: "availability-grid", label: "AVAILABILITY GRID", icon: Grid },
-  { id: "check-in", label: "CHECK-IN", icon: LogIn },
-  { id: "check-out", label: "CHECK-OUT", icon: LogOut },
-  { id: "reservation", label: "RESERVATION/BOOKING", icon: CalendarDays },
+  { id: "reservation", label: "RESERVATIONS", icon: CalendarDays },
+  { id: "spacer1", isSpacer: true },
   { id: "advance-receipt", label: "ADVANCE RECEIPT", icon: Receipt },
-  { id: "additional-rate", label: "ADDITIONAL RATE", icon: PlusCircle },
-  { id: "rate-posting", label: "ROOM RATE POSTING", icon: DollarSign },
+  { id: "rate-posting", label: "MANUAL POSTING", icon: DollarSign },
   { id: "change-rate", label: "CHANGE RATE", icon: Tag },
-  { id: "room-move", label: "ROOM/PAX CHANGE", icon: ArrowRightLeft },
   { id: "adjustment", label: "ADJUSTMENT", icon: TrendingUp },
+  { id: "spacer2", isSpacer: true },
+  { id: "room-move", label: "ROOM MOVE", icon: ArrowRightLeft },
   { id: "guest-folios", label: "GUEST FOLIOS", icon: FileText },
   { id: "reports", label: "REPORTS", icon: BarChart3 },
 ];
@@ -52,22 +51,25 @@ export const PMSOperationsSidebar = ({ activeModule, onModuleChange }: PMSOperat
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {operations.map((op) => {
+            if (op.isSpacer) {
+              return <div key={op.id} className="h-px bg-zinc-800/50 mx-4 my-2" />;
+            }
             const isActive = activeModule === op.id;
-            const Icon = op.icon;
+            const Icon = op.icon as any;
             return (
               <Button
                 key={op.id}
                 variant="ghost"
                 onClick={() => onModuleChange(op.id)}
                 className={cn(
-                  "w-full justify-start gap-3 h-11 px-3 text-[11px] font-bold tracking-wider transition-all duration-200",
+                  "w-full justify-start gap-3 h-10 px-3 text-[10px] font-black tracking-widest transition-all duration-200",
                   "hover:bg-accent hover:text-accent-foreground",
                   isActive
                     ? "bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-500 rounded-none shadow-[inset_4px_0_10px_-4px_rgba(34,211,238,0.2)]"
                     : "text-muted-foreground border-l-2 border-transparent"
                 )}
               >
-                <Icon className={cn("h-4 w-4", isActive ? "text-cyan-400" : "text-muted-foreground")} />
+                <Icon className={cn("h-3.5 w-3.5", isActive ? "text-cyan-400" : "text-zinc-500")} />
                 {op.label}
               </Button>
             );

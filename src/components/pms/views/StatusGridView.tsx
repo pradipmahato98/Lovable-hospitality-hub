@@ -107,7 +107,8 @@ export const StatusGridView = ({
                   currentGuest={occupancy ? {
                     name: occupancy.guestName,
                     checkoutDate: occupancy.checkoutDate,
-                    keyIssued: occupancy.keyIssued
+                    keyIssued: occupancy.keyIssued,
+                    balance: occupancy.balance
                   } : undefined}
                   arrivalToday={occupancy?.arrivalToday}
                   onAction={handleAction}
