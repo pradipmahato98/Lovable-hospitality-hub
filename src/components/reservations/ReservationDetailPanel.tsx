@@ -2,11 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { X, User, Bed, Calendar, CreditCard, Phone, Mail, FileText, Pencil, Printer, Trash2, LogIn } from "lucide-react";
+import { X, User, Bed, Calendar, CreditCard, Phone, Mail, FileText, Pencil, Printer, Trash2, LogIn, Receipt, PlusCircle, AlertCircle, Clock } from "lucide-react";
 import { Reservation, useReservations } from "@/hooks/useReservations";
-import { formatAD, formatCurrency } from "@/lib/utils";
+import { formatAD, formatCurrency, cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { differenceInDays, parseISO } from "date-fns";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
+import { useState } from "react";
+import { PMSActionDialog } from "../pms/PMSActionDialog";
 
 const statusColors: Record<string, string> = {
   confirmed: "bg-success/20 text-success border-success/30",
@@ -35,7 +38,13 @@ interface Props {
 export function ReservationDetailPanel({ reservation, onClose, onEdit, onCheckIn, onCancel }: Props) {
   const navigate = useNavigate();
   const { cancelReservation } = useReservations();
-  const balance = reservation.total_amount - (reservation.amount_paid || 0);
+  const { folios, useFolioItems } = useGuestFolios();
+  const [isQuickChargeOpen, setIsQuickChargeOpen] = useState(false);
+
+  // Find active folio
+  const activeFolio = folios?.find(f => f.reservation_id === reservation.id);
+  const { data: folioItems = [] } = useFolioItems(activeFolio?.id || "");
+
   const nights = differenceInDays(parseISO(reservation.check_out_date), parseISO(reservation.check_in_date));
 
   const handleCancel = async () => {
@@ -144,33 +153,85 @@ export function ReservationDetailPanel({ reservation, onClose, onEdit, onCheckIn
 
         <Separator />
 
-        {/* Third Section: Advance Payment */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-            <span className="font-semibold">Advance Payment</span>
+        {/* Third Section: Live Financial Snapshot */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <span className="font-bold uppercase tracking-wider text-[10px]">Financial Snapshot</span>
+            </div>
+            {activeFolio && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[10px] gap-1 text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10 font-bold"
+                onClick={() => setIsQuickChargeOpen(true)}
+              >
+                <PlusCircle className="h-3 w-3" /> QUICK CHARGE
+              </Button>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <span className="text-muted-foreground">Total:</span>
-            <span className="text-right font-semibold">{formatCurrency(reservation.total_amount)}</span>
-            <span className="text-muted-foreground">Paid:</span>
-            <span className="text-right font-semibold text-success">{formatCurrency(reservation.amount_paid || 0)}</span>
-            <span className="text-muted-foreground">Balance:</span>
-            <span className={`text-right font-semibold ${balance > 0 ? "text-destructive" : "text-success"}`}>
-              {formatCurrency(balance)}
-            </span>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-secondary/30 rounded-lg border border-border/50">
+              <p className="text-[9px] text-muted-foreground font-bold uppercase mb-1">Room Total</p>
+              <p className="text-sm font-black">{formatCurrency(reservation.total_amount)}</p>
+            </div>
+            <div className="p-3 bg-secondary/30 rounded-lg border border-border/50">
+              <p className="text-[9px] text-muted-foreground font-bold uppercase mb-1">Folio Balance</p>
+              <p className={cn(
+                "text-sm font-black",
+                (activeFolio?.balance || 0) > 0 ? "text-destructive" : "text-emerald-400"
+              )}>
+                {activeFolio ? formatCurrency(activeFolio.balance) : "No Folio"}
+              </p>
+            </div>
           </div>
+
+          {folioItems.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[9px] text-muted-foreground font-bold uppercase flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Recent Transactions
+              </p>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
+                {folioItems.slice(-3).reverse().map((item: any) => (
+                  <div key={item.id} className="flex justify-between items-center text-[11px] p-2 bg-secondary/20 rounded border border-border/30">
+                    <span className="truncate max-w-[140px] text-zinc-300">{item.description}</span>
+                    <span className={cn("font-bold", item.amount > 0 ? "text-amber-400" : "text-emerald-400")}>
+                      {formatCurrency(Math.abs(item.amount))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!activeFolio && reservation.status === 'checked-in' && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <p className="text-[10px] text-amber-500 font-bold uppercase">Attention: Missing Folio</p>
+            </div>
+          )}
         </div>
 
         {reservation.special_requests && (
           <>
             <Separator />
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1 font-semibold text-primary/80 uppercase tracking-wider">Special Requests</p>
-              <p className="text-sm bg-secondary/30 p-2 rounded border border-border/50">{reservation.special_requests}</p>
+              <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">Special Requests</p>
+              <p className="text-xs bg-secondary/30 p-2 rounded border border-border/50 italic text-zinc-400">
+                {reservation.special_requests}
+              </p>
             </div>
           </>
         )}
+
+        <PMSActionDialog
+          open={isQuickChargeOpen}
+          onOpenChange={setIsQuickChargeOpen}
+          type="quick-charge"
+          room={reservation.room ? { ...reservation.room, id: reservation.room_id } : null}
+        />
       </CardContent>
     </Card>
   );

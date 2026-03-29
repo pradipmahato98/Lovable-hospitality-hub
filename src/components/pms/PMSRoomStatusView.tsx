@@ -14,6 +14,7 @@ import { StatusGridView } from "./views/StatusGridView";
 import { AvailabilityGridView } from "./views/AvailabilityGridView";
 import { ReservationManagerView } from "./views/ReservationManagerView";
 import { FinancialOperationsView } from "./views/FinancialOperationsView";
+import { useGuestFolios } from "@/hooks/useGuestFolios";
 
 // Placeholder views for next steps
 const PlaceholderView = ({ title }: { title: string }) => (
@@ -37,6 +38,7 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: rooms = [], isLoading: roomsLoading, refetch: refetchRooms } = useRooms();
   const { reservations = [], isLoading: resLoading, refetch: refetchRes } = useReservations();
+  const { folios } = useGuestFolios();
 
   // Enable Real-time synchronization
   usePMSRealtime({
@@ -66,15 +68,17 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
   // Map reservations to rooms for occupied/arrival status
   const roomOccupancy = useMemo(() => {
     const today = format(new Date(), "yyyy-MM-dd");
-    const map: Record<string, { guestName: string; checkoutDate: string; keyIssued: boolean; arrivalToday: boolean }> = {};
+    const map: Record<string, { guestName: string; checkoutDate: string; keyIssued: boolean; arrivalToday: boolean; balance?: number }> = {};
 
     reservations.forEach(res => {
       if (res.status === 'checked-in' && res.room_id) {
+        const folio = (folios || []).find((f: any) => f.reservation_id === res.id);
         map[res.room_id] = {
           guestName: `${res.guest?.first_name} ${res.guest?.last_name}`,
           checkoutDate: res.check_out_date,
           keyIssued: true,
-          arrivalToday: false
+          arrivalToday: false,
+          balance: folio?.balance
         };
       } else if (res.status === 'confirmed' && res.check_in_date === today && res.room_id) {
         if (!map[res.room_id]) {
@@ -88,7 +92,7 @@ export const PMSRoomStatusView = ({ onTabChange }: PMSRoomStatusViewProps) => {
       }
     });
     return map;
-  }, [reservations]);
+  }, [reservations, folios]);
 
   const handleRefresh = async () => {
     try {

@@ -116,6 +116,8 @@ export default function Banquet() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "events";
   const [searchQuery, setSearchQuery] = useState("");
+  const { folios } = useGuestFolios();
+  const postToFolio = usePostBanquetToFolio();
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {

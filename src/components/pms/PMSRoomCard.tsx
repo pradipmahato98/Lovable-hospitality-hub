@@ -44,6 +44,7 @@ interface PMSRoomCardProps {
     name: string;
     checkoutDate: string;
     keyIssued?: boolean;
+    balance?: number;
   };
   arrivalToday?: boolean;
   onAction?: (action: string, room: any) => void;
@@ -127,15 +128,23 @@ export const PMSRoomCard = ({ room, currentGuest, arrivalToday, onAction }: PMSR
         <div className="flex-1">
           {room.status.toLowerCase() === 'occupied' && currentGuest && (
             <div className="space-y-1 animate-in fade-in slide-in-from-bottom-2">
-              <p className={cn("text-xs font-semibold", config.color)}>Occupied</p>
-              <p className="text-sm font-medium">Guest: {currentGuest.name}</p>
-              <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                 <span>Checkout: {currentGuest.checkoutDate}</span>
+              <div className="flex items-center justify-between">
+                <p className={cn("text-[10px] font-black uppercase tracking-widest", config.color)}>Occupied</p>
+                {(currentGuest.balance || 0) > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter">Due: {formatCurrency(currentGuest.balance)}</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm font-bold truncate">{currentGuest.name}</p>
+              <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-medium">
+                 <span>Out: {currentGuest.checkoutDate}</span>
               </div>
               {currentGuest.keyIssued && (
                 <div className="flex items-center gap-1 mt-1">
                   <Key className="h-3 w-3 text-cyan-400" />
-                  <span className="text-[10px] text-cyan-400/80">Key Issued</span>
+                  <span className="text-[9px] text-cyan-400/80 font-black uppercase tracking-tighter">Key Active</span>
                 </div>
               )}
             </div>
