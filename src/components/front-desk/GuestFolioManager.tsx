@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useGuestFolios, GuestFolio, FolioItem } from "@/hooks/useGuestFolios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,7 +78,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { cn, formatAD, formatCurrency } from "@/lib/utils";
