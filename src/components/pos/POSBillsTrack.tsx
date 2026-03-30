@@ -26,6 +26,7 @@ import {
   GitMerge,
   Clock,
   User,
+  Receipt,
 } from "lucide-react";
 import { usePOSTransactions, POSTransaction, useVoidTransaction } from "@/hooks/usePOS";
 import { format, parseISO } from "date-fns";
@@ -58,13 +59,19 @@ export function POSBillsTrack() {
   };
 
   const handleReprint = (bill: POSTransaction) => {
-    toast.info(`Reprinting bill ${bill.transaction_number}...`);
-    // Print logic here
+    toast.info(`Generating print preview for bill ${bill.transaction_number}...`);
+    setSelectedBill(bill);
+    // In a real app, this would trigger a window.print() or similar on the dialog content
   };
 
   const handleVoid = (bill: POSTransaction) => {
-    if (confirm("Are you sure you want to void this bill?")) {
-      voidTransaction.mutate({ transactionId: bill.id, reason: "Manual void from track" });
+    if (bill.status === "voided") {
+      toast.error("This bill is already voided");
+      return;
+    }
+
+    if (confirm(`Are you sure you want to VOID bill ${bill.transaction_number}? This action is permanent.`)) {
+      voidTransaction.mutate({ transactionId: bill.id, reason: "Manual void from Bills Track" });
     }
   };
 
@@ -73,96 +80,163 @@ export function POSBillsTrack() {
       toast.error("Please select at least two bills to merge");
       return;
     }
-    toast.success(`Merging ${selectedBills.length} bills...`);
-    // Merge logic here
+
+    const billsToMerge = transactions.filter(t => selectedBills.includes(t.id));
+    const tables = new Set(billsToMerge.map(b => b.table_number));
+
+    if (tables.size > 1) {
+      if (!confirm("These bills belong to different tables. Are you sure you want to merge them?")) {
+        return;
+      }
+    }
+
+    toast.success(`Merging ${selectedBills.length} bills into a consolidated statement...`);
+    // Consolidation logic would go here
+    setSelectedBills([]);
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case "voided":
+        return <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20">Voided</Badge>;
+      case "refunded":
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">Refunded</Badge>;
+      default:
+        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Paid</Badge>;
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/40 p-4 rounded-2xl border border-slate-800">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search bills..."
+            placeholder="Search by bill #, table, or guest..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-slate-950/50 border-slate-800 focus:ring-blue-500/20"
           />
         </div>
-        <div className="flex gap-2">
-          {selectedBills.length > 1 && (
-            <Button variant="blue" className="gap-2" onClick={handleMerge}>
-              <GitMerge className="h-4 w-4" />
-              Merge Selected ({selectedBills.length})
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {selectedBills.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedBills([])}
+              className="text-slate-400 border-slate-800 hover:bg-slate-800"
+            >
+              Clear Selection
             </Button>
           )}
+          <Button
+            variant="blue"
+            className={`gap-2 transition-all duration-300 ${selectedBills.length < 2 ? "opacity-50 grayscale" : "shadow-lg shadow-blue-500/20"}`}
+            onClick={handleMerge}
+            disabled={selectedBills.length < 2}
+          >
+            <GitMerge className="h-4 w-4" />
+            Merge Bills ({selectedBills.length})
+          </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/20 overflow-hidden shadow-xl">
+        <Table>
+          <TableHeader className="bg-slate-900/50">
+            <TableRow className="border-slate-800 hover:bg-transparent">
+              <TableHead className="w-12 px-6"></TableHead>
+              <TableHead className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Bill Details</TableHead>
+              <TableHead className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Table/Guest</TableHead>
+              <TableHead className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Status</TableHead>
+              <TableHead className="text-right text-slate-400 font-bold uppercase text-[10px] tracking-wider">Amount</TableHead>
+              <TableHead className="text-right text-slate-400 font-bold uppercase text-[10px] tracking-wider px-6">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredBills.length === 0 ? (
               <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Bill #</TableHead>
-                <TableHead>Table</TableHead>
-                <TableHead>Staff/Time</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableCell colSpan={6} className="text-center py-20">
+                  <div className="flex flex-col items-center gap-3 text-slate-500">
+                    <Receipt className="h-12 w-12 opacity-20" />
+                    <p className="text-lg font-medium">No records found matching your search</p>
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBills.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No bills found.
+            ) : (
+              filteredBills.map((bill) => (
+                <TableRow
+                  key={bill.id}
+                  className={`border-slate-800 transition-colors hover:bg-slate-800/30 ${selectedBills.includes(bill.id) ? "bg-blue-500/5" : ""}`}
+                >
+                  <TableCell className="px-6">
+                    <Checkbox
+                      checked={selectedBills.includes(bill.id)}
+                      onCheckedChange={() => toggleBillSelection(bill.id)}
+                      className="border-slate-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-mono text-sm text-blue-400 font-bold">{bill.transaction_number}</span>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
+                        <Clock className="h-3 w-3" />
+                        {format(parseISO(bill.created_at), "HH:mm • dd MMM, yyyy")}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-slate-950 border-slate-800 text-[10px] px-1.5 h-5">T{bill.table_number}</Badge>
+                        <span className="text-sm font-medium text-slate-200">{bill.customer_name || "Walk-in Guest"}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(bill.status)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="text-lg font-bold text-white font-mono">{formatCurrency(bill.total)}</span>
+                  </TableCell>
+                  <TableCell className="text-right px-6">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all"
+                        onClick={() => setSelectedBill(bill)}
+                        title="View Bill Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                        onClick={() => handleReprint(bill)}
+                        title="Reprint Bill"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                        onClick={() => handleVoid(bill)}
+                        disabled={bill.status === "voided"}
+                        title="Void Transaction"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filteredBills.map((bill) => (
-                  <TableRow key={bill.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedBills.includes(bill.id)}
-                        onCheckedChange={() => toggleBillSelection(bill.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">{bill.transaction_number}</TableCell>
-                    <TableCell><Badge variant="outline">T{bill.table_number}</Badge></TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1 text-xs font-medium">
-                          <User className="h-3 w-3" />
-                          {bill.customer_name || "Staff Admin"}
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {format(parseISO(bill.created_at), "HH:mm, dd MMM")}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(bill.total)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedBill(bill)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReprint(bill)}>
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleVoid(bill)}>
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Bill View Dialog */}
       <Dialog open={!!selectedBill} onOpenChange={() => setSelectedBill(null)}>

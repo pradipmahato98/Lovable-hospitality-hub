@@ -23,8 +23,7 @@ export const POSHeader: React.FC = () => {
     { label: "Terminal", path: "/pos/terminal", icon: ShoppingCart },
     { label: "Bills Track", path: "/pos/bills", icon: Receipt },
     { label: "Kitchen", path: "/pos/kitchen", icon: ChefHat },
-    { label: "History", path: "/pos/history", icon: History },
-    { label: "Reports", path: "/pos/reports", icon: BarChart3 },
+    { label: "History", path: "/pos/history", icon: BarChart3 },
   ];
 
   const isActive = (path: string) => location.pathname === path;

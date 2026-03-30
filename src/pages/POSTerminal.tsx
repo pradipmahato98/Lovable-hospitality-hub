@@ -370,12 +370,19 @@ const POSTerminal = () => {
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4 px-4 sm:px-6 mt-4">
-          <TabsList>
-            <TabsTrigger value="tables" className="gap-2">
+          <TabsList className="bg-slate-900/50 border border-slate-800 p-1">
+            <TabsTrigger
+              value="tables"
+              className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all duration-300"
+            >
               <Grid3X3 className="h-4 w-4" />
               Tables
             </TabsTrigger>
-            <TabsTrigger value="order" className="gap-2">
+            <TabsTrigger
+              value="order"
+              disabled={!selectedTable}
+              className="gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all duration-300 disabled:opacity-30"
+            >
               <ClipboardList className="h-4 w-4" />
               Order
             </TabsTrigger>
@@ -538,71 +545,79 @@ const POSTerminal = () => {
             )}
 
             <div className="grid grid-cols-2 gap-3 mt-4">
-               <Button
-                  variant="outline"
-                  className="bg-transparent border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-all py-6 rounded-xl"
-                  onClick={() => {
-                    setCart([]);
-                    setSelectedTable(null);
-                    setIsPlaced(false);
-                    setPlacedCount(0);
-                    handleTabChange("tables");
-                  }}
-               >
-                  Cancel
-               </Button>
                {(() => {
                   const hasItems = cart.length > 0;
                   const currentTotalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
 
+                  // Logic 1: No items in cart - blocked buttons
                   if (!hasItems) {
                     return (
-                      <Button
-                        variant="blue"
-                        className="opacity-30 cursor-not-allowed py-6 rounded-xl font-bold"
-                        disabled
-                      >
-                         <Check className="h-4 w-4 mr-2" />
-                         Place Order
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          disabled
+                          className="bg-transparent border-slate-800 text-slate-400 opacity-50 cursor-not-allowed py-6 rounded-xl"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="blue"
+                          disabled
+                          className="opacity-30 cursor-not-allowed py-6 rounded-xl font-bold"
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Place Order
+                        </Button>
+                      </>
                     );
                   }
 
-                  if (!isPlaced) {
-                    return (
-                      <Button
-                        variant="blue"
-                        className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
-                        onClick={handlePlaceOrder}
-                      >
-                         <Check className="h-4 w-4 mr-2" />
-                         Place Order
-                      </Button>
-                    );
-                  }
-
-                  if (isModified) {
-                    return (
-                      <Button
-                        variant="blue"
-                        className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
-                        onClick={handlePlaceOrder}
-                      >
-                         <ArrowRightLeft className="h-4 w-4 mr-2" />
-                         Update Order
-                      </Button>
-                    );
-                  }
-
+                  // Logic 2 & 3: Ordering state or modified state
                   return (
-                    <Button
-                      variant="blue"
-                      className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
-                      onClick={handleOpenCheckout}
-                    >
-                       <Receipt className="h-4 w-4 mr-2" />
-                       Proceed to Bill
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        className="bg-transparent border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-all py-6 rounded-xl"
+                        onClick={() => {
+                          setCart([]);
+                          setSelectedTable(null);
+                          setIsPlaced(false);
+                          setPlacedCount(0);
+                          handleTabChange("tables");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+
+                      {(!isPlaced) ? (
+                        <Button
+                          variant="blue"
+                          className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold animate-in fade-in zoom-in duration-300"
+                          onClick={handlePlaceOrder}
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Place Order
+                        </Button>
+                      ) : isModified ? (
+                        <Button
+                          variant="blue"
+                          className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold animate-in fade-in zoom-in duration-300"
+                          onClick={handlePlaceOrder}
+                        >
+                          <ArrowRightLeft className="h-4 w-4 mr-2" />
+                          Update Order
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="blue"
+                          className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold animate-in fade-in zoom-in duration-300"
+                          onClick={handleOpenCheckout}
+                        >
+                          <Receipt className="h-4 w-4 mr-2" />
+                          Proceed to Bill
+                        </Button>
+                      )}
+                    </>
                   );
                })()}
             </div>
