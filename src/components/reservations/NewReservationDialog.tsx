@@ -60,7 +60,7 @@ export function NewReservationDialog({
     adults: 1,
     children: 0,
     specialRequests: "",
-    source: "direct" as "direct" | "booking.com" | "expedia" | "airbnb" | "phone" | "email" | "walk-in",
+    source: "direct" as "direct" | "booking.com" | "expedia" | "airbnb" | "phone" | "email",
   });
 
   // New guest form state
@@ -508,7 +508,7 @@ export function NewReservationDialog({
                 <Label htmlFor="source">Booking Source</Label>
                 <Select
                   value={formData.source}
-                  onValueChange={(value: "direct" | "booking.com" | "expedia" | "airbnb" | "phone" | "email" | "walk-in") =>
+                  onValueChange={(value: "direct" | "booking.com" | "expedia" | "airbnb" | "phone" | "email") =>
                     setFormData({ ...formData, source: value })
                   }
                 >
@@ -522,7 +522,6 @@ export function NewReservationDialog({
                     <SelectItem value="airbnb">Airbnb</SelectItem>
                     <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="walk-in">Walk-in</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

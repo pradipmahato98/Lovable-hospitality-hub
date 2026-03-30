@@ -62,6 +62,7 @@ import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { POSCombinedHistory } from "@/components/pos";
 
 const paymentMethodIcons: Record<string, React.ReactNode> = {
   cash: <Banknote className="h-4 w-4" />,
@@ -341,6 +342,7 @@ export default function POSHistory() {
       <div className="flex flex-col h-full overflow-hidden">
       <POSHeader />
       <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide p-4 sm:p-6 space-y-6">
+        <POSCombinedHistory />
         {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card variant="elevated" className="bg-gradient-to-br from-primary/10 to-primary/5">
