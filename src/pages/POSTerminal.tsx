@@ -39,6 +39,8 @@ import {
   ClipboardList,
   Clock,
   AlertTriangle,
+  Check,
+  ArrowRightLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -82,10 +84,13 @@ const POSTerminal = () => {
       return prev;
     });
   };
+  const [selectedTable, setSelectedTable] = useState<any>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [isPlaced, setIsPlaced] = useState(false);
+  const [placedCount, setPlacedCount] = useState(0);
   const [discountType, setDiscountType] = useState<"percent" | "fixed">("percent");
   const [discountValue, setDiscountValue] = useState("");
   const [tipPercent, setTipPercent] = useState<number>(0);
@@ -145,6 +150,8 @@ const POSTerminal = () => {
       return [...prev, { ...item, quantity: 1 }];
     });
   };
+
+  const isModified = cart.reduce((sum, i) => sum + i.quantity, 0) !== placedCount;
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
@@ -307,18 +314,6 @@ const POSTerminal = () => {
               <ClipboardList className="h-4 w-4" />
               Order
             </TabsTrigger>
-            <TabsTrigger value="bills-track" className="gap-2">
-              <Receipt className="h-4 w-4" />
-              Bills Track
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <HistoryIcon className="h-4 w-4" />
-              History
-            </TabsTrigger>
-            <TabsTrigger value="clock" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Clock In/Out
-            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -329,14 +324,12 @@ const POSTerminal = () => {
             onCheckout={(total, items) => {
               toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
             }}
-            onTableSelect={() => handleTabChange("order")}
+            onTableSelect={(table) => {
+              setSelectedTable(table);
+              handleTabChange("order");
+            }}
           />
         </TabsContent>
-
-         {/* Clock In/Out Tab */}
-         <TabsContent value="clock" className="p-4 sm:p-6">
-           <StaffClockPanel />
-         </TabsContent>
 
         {/* Order Tab - Menu Items & Cart */}
         <TabsContent value="order" className="p-4 sm:p-6">
@@ -376,60 +369,69 @@ const POSTerminal = () => {
           </div>
 
           {/* Items Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {filteredItems.map((item: any) => {
               const Icon = item.icon || Coffee;
               return (
-                <Card
+                <div
                   key={item.id}
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  className="group cursor-pointer bg-[#0a0e14] border border-slate-800 rounded-2xl p-6 text-center hover:border-blue-500/50 transition-all active:scale-95 shadow-lg"
                   onClick={() => addToCart(item)}
                 >
-                  <CardContent className="p-4 text-center">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <p className="font-medium text-sm truncate">{item.name}</p>
-                    <p className="text-primary font-semibold">{formatCurrency(item.price)}</p>
-                  </CardContent>
-                </Card>
+                  <div className="h-16 w-16 rounded-full bg-[#161b22] border border-slate-800 flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-colors">
+                    <Icon className="h-8 w-8 text-blue-500" />
+                  </div>
+                  <p className="font-bold text-white mb-1 truncate">{item.name}</p>
+                  <p className="text-blue-500 font-mono font-bold text-sm">NPR {item.price}</p>
+                </div>
               );
             })}
           </div>
         </div>
 
         {/* Cart */}
-        <Card variant="elevated" className="h-fit sticky top-20">
+        <Card variant="elevated" className="h-fit sticky top-20 bg-[#0a0e14] border-[#1e293b]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Current Order
-            </CardTitle>
-            <CardDescription>
-              {cart.length} item{cart.length !== 1 ? 's' : ''} in cart
-            </CardDescription>
+            <div className="flex items-center justify-between">
+               <CardTitle className="flex items-center gap-2 text-white">
+                  <ShoppingCart className="h-5 w-5 text-blue-500" />
+                  {selectedTable ? `Table ${selectedTable.number}` : "Current Order"}
+               </CardTitle>
+               <Badge variant="outline" className="text-[10px] text-muted-foreground border-slate-800">
+                  {cart.length} item{cart.length !== 1 ? 's' : ''}
+               </Badge>
+            </div>
+            {cart.length > 0 && (
+               <CardDescription className="text-slate-400">
+                  {cart.length} item{cart.length !== 1 ? 's' : ''} in cart
+               </CardDescription>
+            )}
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {cart.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Cart is empty</p>
+              <div className="text-center py-12 space-y-3">
+                 <p className="text-slate-400 text-lg font-medium">No items yet</p>
+              </div>
             ) : (
               <>
-                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                   {cart.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50">
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-[#161b22] border border-slate-800/50 group hover:border-blue-500/30 transition-colors">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
+                        <p className="font-medium text-sm text-white truncate">{item.name}</p>
+                        <p className="text-[10px] text-slate-500 font-mono">NPR {item.price} each</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, -1)}>
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-6 text-center font-medium">{item.quantity}</span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, 1)}>
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeFromCart(item.id)}>
+                        <div className="flex items-center bg-[#0a0e14] rounded-lg border border-slate-800 p-0.5">
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white" onClick={() => updateQuantity(item.id, -1)}>
+                             <Minus className="h-3 w-3" />
+                           </Button>
+                           <span className="w-8 text-center text-xs font-bold text-white">{item.quantity}</span>
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white" onClick={() => updateQuantity(item.id, 1)}>
+                             <Plus className="h-3 w-3" />
+                           </Button>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400/50 hover:text-red-400 hover:bg-red-400/10" onClick={() => removeFromCart(item.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -437,360 +439,104 @@ const POSTerminal = () => {
                   ))}
                 </div>
 
-                <div className="border-t border-border pt-4 space-y-2">
+                <div className="border-t border-slate-800 pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span className="text-slate-400">Subtotal</span>
+                    <span className="text-white font-mono">NPR {subtotal}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Tax (10%)</span>
-                    <span>{formatCurrency(subtotal * 0.1)}</span>
+                    <span className="text-slate-400">Tax (10%)</span>
+                    <span className="text-white font-mono">NPR {subtotal * 0.1}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-semibold border-t border-border pt-2">
-                    <span>Total</span>
-                    <span className="text-primary">{formatCurrency(subtotal * 1.1)}</span>
+                  <div className="flex justify-between text-xl font-bold border-t border-slate-800 pt-3">
+                    <span className="text-white">Total</span>
+                    <span className="text-blue-500 font-mono">NPR {subtotal * 1.1}</span>
                   </div>
                 </div>
-
-                <Button variant="blue" className="w-full gap-2" onClick={handleOpenCheckout}>
-                  <Receipt className="h-4 w-4" />
-                  Checkout
-                </Button>
               </>
             )}
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+               <Button
+                  variant="outline"
+                  className="bg-transparent border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-all py-6 rounded-xl"
+                  onClick={() => {
+                    setCart([]);
+                    setSelectedTable(null);
+                    setIsPlaced(false);
+                    setPlacedCount(0);
+                    handleTabChange("tables");
+                  }}
+               >
+                  Cancel
+               </Button>
+               {(() => {
+                  const hasItems = cart.length > 0;
+                  const currentTotalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
+
+                  if (!hasItems) {
+                    return (
+                      <Button
+                        variant="blue"
+                        className="opacity-30 cursor-not-allowed py-6 rounded-xl font-bold"
+                        disabled
+                      >
+                         <Check className="h-4 w-4 mr-2" />
+                         Place Order
+                      </Button>
+                    );
+                  }
+
+                  if (!isPlaced) {
+                    return (
+                      <Button
+                        variant="blue"
+                        className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
+                        onClick={() => {
+                           setIsPlaced(true);
+                           setPlacedCount(currentTotalItems);
+                           toast.success("Order placed successfully");
+                        }}
+                      >
+                         <Check className="h-4 w-4 mr-2" />
+                         Place Order
+                      </Button>
+                    );
+                  }
+
+                  if (isModified) {
+                    return (
+                      <Button
+                        variant="blue"
+                        className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
+                        onClick={() => {
+                           setPlacedCount(currentTotalItems);
+                           toast.success("Order updated");
+                        }}
+                      >
+                         <ArrowRightLeft className="h-4 w-4 mr-2" />
+                         Update Order
+                      </Button>
+                    );
+                  }
+
+                  return (
+                    <Button
+                      variant="blue"
+                      className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
+                      onClick={handleOpenCheckout}
+                    >
+                       <Receipt className="h-4 w-4 mr-2" />
+                       Proceed to Bill
+                    </Button>
+                  );
+               })()}
+            </div>
           </CardContent>
         </Card>
           </div>
         </TabsContent>
 
-        {/* Bills Track Tab */}
-        <TabsContent value="bills-track" className="p-4 sm:p-6">
-          <POSBillsTrack />
-        </TabsContent>
-
-        {/* History Tab */}
-        <TabsContent value="history" className="p-4 sm:p-6">
-          <POSCombinedHistory />
-        </TabsContent>
-
-        {/* Billing Tab - Checkout (Legacy/Walk-in) */}
-        <TabsContent value="billing" className="p-4 sm:p-6">
-          <Card variant="elevated" className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Complete Payment
-              </CardTitle>
-              <CardDescription>Review order and select payment method</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {cart.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No items in cart</p>
-                  <Button variant="outline" className="mt-4" onClick={() => handleTabChange("order")}>
-                    Go to Order
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* Order Summary */}
-                  <div className="p-4 rounded-lg bg-secondary/50 space-y-3">
-                    <h4 className="font-medium">Order Summary</h4>
-                    {cart.map(item => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span>{item.name} x{item.quantity}</span>
-                        <span>${(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-border pt-2 mt-2 space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal</span>
-                        <span>${subtotal.toFixed(2)}</span>
-                      </div>
-                      {discountAmount > 0 && (
-                        <div className="flex justify-between text-sm text-success">
-                          <span>Discount</span>
-                          <span>-${discountAmount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm">
-                        <span>Tax (10%)</span>
-                        <span>${tax.toFixed(2)}</span>
-                      </div>
-                      {tipAmount > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>Tip ({tipPercent}%)</span>
-                          <span>${tipAmount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {settlePreviousDue && (
-                        <div className="flex justify-between text-sm text-blue-600 font-bold">
-                          <span>Due Settlement</span>
-                          <span>+${parseFloat(dueSettlementAmount).toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-semibold text-lg border-t border-border pt-2">
-                        <span>Total</span>
-                        <span className="text-primary">${total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Discount */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Percent className="h-4 w-4" />
-                      Discount
-                    </Label>
-                    <div className="flex gap-2">
-                      <Select value={discountType} onValueChange={(v: "percent" | "fixed") => setDiscountType(v)}>
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percent">%</SelectItem>
-                          <SelectItem value="fixed">$</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        placeholder={discountType === "percent" ? "0" : "0.00"}
-                        value={discountValue}
-                        onChange={(e) => setDiscountValue(e.target.value)}
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Tips */}
-                  <div className="space-y-2">
-                    <Label>Tip</Label>
-                    <div className="flex gap-2">
-                      {[0, 10, 15, 20].map((p) => (
-                        <Button
-                          key={p}
-                          variant={tipPercent === p ? "secondary" : "outline"}
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setTipPercent(p)}
-                        >
-                          {p === 0 ? "None" : `${p}%`}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Split Payment Toggle */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={splitPayment ? "secondary" : "outline"}
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setSplitPayment(!splitPayment)}
-                    >
-                      <Split className="h-4 w-4" />
-                      Split Payment
-                    </Button>
-                  </div>
-
-                  {/* Payment Method */}
-                  {!splitPayment ? (
-                    <div className="space-y-2">
-                      <Label>Payment Method</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant={paymentMethod === "cash" ? "secondary" : "outline"}
-                          className="gap-2"
-                          onClick={() => setPaymentMethod("cash")}
-                        >
-                          <Banknote className="h-4 w-4" />
-                          Cash
-                        </Button>
-                        <Button
-                          variant={paymentMethod === "card" ? "secondary" : "outline"}
-                          className="gap-2"
-                          onClick={() => setPaymentMethod("card")}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          Card
-                        </Button>
-                        <Button
-                          variant={paymentMethod === "wallet" ? "secondary" : "outline"}
-                          className="gap-2"
-                          onClick={() => {
-                            setPaymentMethod("wallet");
-                            if (availableGateways.length === 1) setSelectedGateway(availableGateways[0].id);
-                          }}
-                        >
-                          <Wallet className="h-4 w-4" />
-                          Digital Wallet
-                        </Button>
-                        <Button
-                          variant={paymentMethod === "room" ? "secondary" : "outline"}
-                          className="gap-2"
-                          onClick={() => setPaymentMethod("room")}
-                        >
-                          <Building2 className="h-4 w-4" />
-                          Room Charge
-                        </Button>
-                      </div>
-
-                      {paymentMethod === "wallet" && availableGateways.length > 0 && (
-                        <div className="space-y-2 mt-2">
-                          <Label className="text-xs">Select Provider</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {availableGateways.map((gateway) => (
-                              <Button
-                                key={gateway.id}
-                                variant={selectedGateway === gateway.id ? "secondary" : "outline"}
-                                size="sm"
-                                onClick={() => setSelectedGateway(gateway.id)}
-                                className="h-8 text-xs"
-                              >
-                                {gateway.name}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {paymentMethod === "room" && (
-                        <div className="space-y-2">
-                          <Select value={roomChargeRoom} onValueChange={setRoomChargeRoom}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select occupied room" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {rooms.length === 0 ? (
-                                <SelectItem value="none" disabled>
-                                  No occupied rooms
-                                </SelectItem>
-                              ) : (
-                                rooms.map((room: any) => (
-                                  <SelectItem key={room.id} value={room.room_number}>
-                                    Room {room.room_number} ({room.room_type})
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-
-                          {roomChargeRoom && (() => {
-                            const room: any = rooms.find((r: any) => r.room_number === roomChargeRoom);
-                            const guestId = room?.reservations?.[0]?.guest_id;
-                            if (guestId) {
-                              const previousDue = allInvoices
-                                .filter(inv => inv.guest_id === guestId && inv.status !== 'paid')
-                                .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
-
-                              if (previousDue > 0) {
-                                return (
-                                  <div className="space-y-2">
-                                    <div className="p-2 bg-destructive/10 border border-destructive/20 rounded flex justify-between items-center animate-pulse">
-                                      <div className="flex items-center gap-2">
-                                         <AlertTriangle className="h-3 w-3 text-destructive" />
-                                         <span className="text-[10px] font-bold text-destructive uppercase">Previous Due Detected</span>
-                                      </div>
-                                      <span className="text-xs font-mono font-bold text-destructive">{formatCurrency(previousDue)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 p-1">
-                                       <Checkbox
-                                          id="settleDue"
-                                          checked={settlePreviousDue}
-                                          onCheckedChange={(c) => {
-                                             setSettlePreviousDue(!!c);
-                                             if (c) setDueSettlementAmount(previousDue.toString());
-                                             else setDueSettlementAmount("0");
-                                          }}
-                                       />
-                                       <Label htmlFor="settleDue" className="text-xs cursor-pointer">Settle outstanding balance now</Label>
-                                    </div>
-                                    {settlePreviousDue && (
-                                       <div className="flex gap-2 items-center pl-6">
-                                          <Label className="text-[10px] whitespace-nowrap">Amount to Settle:</Label>
-                                          <Input
-                                             type="number"
-                                             className="h-7 text-xs w-24"
-                                             value={dueSettlementAmount}
-                                             onChange={(e) => setDueSettlementAmount(e.target.value)}
-                                          />
-                                       </div>
-                                    )}
-                                  </div>
-                                );
-                              }
-                            }
-                            return null;
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <Label>Split Amounts</Label>
-                      {splitAmounts.map((split, index) => (
-                        <div key={index} className="flex gap-2 items-center">
-                          <Select
-                            value={split.method}
-                            onValueChange={(v) => {
-                              const updated = [...splitAmounts];
-                              updated[index].method = v;
-                              setSplitAmounts(updated);
-                            }}
-                          >
-                            <SelectTrigger className="w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="card">Card</SelectItem>
-                              <SelectItem value="wallet">Wallet</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            type="number"
-                            placeholder="0.00"
-                            value={split.amount}
-                            onChange={(e) => {
-                              const updated = [...splitAmounts];
-                              updated[index].amount = e.target.value;
-                              setSplitAmounts(updated);
-                            }}
-                            className="flex-1"
-                          />
-                          {splitAmounts.length > 2 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setSplitAmounts(splitAmounts.filter((_, i) => i !== index))}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setSplitAmounts([...splitAmounts, { method: "cash", amount: "" }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Split
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button variant="blue" className="w-full" onClick={handleCheckout}>
-                    Complete Payment - ${total.toFixed(2)}
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
         </div>
       </Tabs>
       </div>
