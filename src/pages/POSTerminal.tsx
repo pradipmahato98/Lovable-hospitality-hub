@@ -33,6 +33,8 @@ import {
   Wallet,
   Building2,
   X,
+  History as HistoryIcon,
+  BarChart3,
   Grid3X3,
   ClipboardList,
   Clock,
@@ -42,7 +44,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMenuItems, useMenuCategories } from "@/hooks/useMenuItems";
-import { POSTableSystem, StaffClockPanel, POSHeader } from "@/components/pos";
+import { POSTableSystem, StaffClockPanel, POSHeader, POSCombinedHistory, POSBillsTrack } from "@/components/pos";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSearchParams } from "react-router-dom";
@@ -305,9 +307,13 @@ const POSTerminal = () => {
               <ClipboardList className="h-4 w-4" />
               Order
             </TabsTrigger>
-            <TabsTrigger value="billing" className="gap-2">
+            <TabsTrigger value="bills-track" className="gap-2">
               <Receipt className="h-4 w-4" />
-              Billing
+              Bills Track
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <HistoryIcon className="h-4 w-4" />
+              History
             </TabsTrigger>
             <TabsTrigger value="clock" className="gap-2">
               <Clock className="h-4 w-4" />
@@ -319,9 +325,12 @@ const POSTerminal = () => {
       <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
         {/* Tables Tab - Table Selection System */}
         <TabsContent value="tables" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
-          <POSTableSystem onCheckout={(total, items) => {
-            toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
-          }} />
+          <POSTableSystem
+            onCheckout={(total, items) => {
+              toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
+            }}
+            onTableSelect={() => handleTabChange("order")}
+          />
         </TabsContent>
 
          {/* Clock In/Out Tab */}
@@ -454,7 +463,17 @@ const POSTerminal = () => {
           </div>
         </TabsContent>
 
-        {/* Billing Tab - Checkout */}
+        {/* Bills Track Tab */}
+        <TabsContent value="bills-track" className="p-4 sm:p-6">
+          <POSBillsTrack />
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="p-4 sm:p-6">
+          <POSCombinedHistory />
+        </TabsContent>
+
+        {/* Billing Tab - Checkout (Legacy/Walk-in) */}
         <TabsContent value="billing" className="p-4 sm:p-6">
           <Card variant="elevated" className="max-w-2xl mx-auto">
             <CardHeader>

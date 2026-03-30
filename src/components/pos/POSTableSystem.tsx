@@ -97,9 +97,10 @@ const orderStatusColors = {
 
 interface POSTableSystemProps {
   onCheckout: (total: number, items: OrderItem[]) => void;
+  onTableSelect?: (table: TableInfo) => void;
 }
 
-export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
+export function POSTableSystem({ onCheckout, onTableSelect }: POSTableSystemProps) {
   const { data: dbMenuItems = [] } = useMenuItems();
   const menuItems = dbMenuItems.map(item => ({
     id: item.id,
@@ -179,6 +180,9 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
 
   const handleSelectTable = (table: TableInfo) => {
     setSelectedTable(table);
+    if (onTableSelect && table.status !== "available") {
+      onTableSelect(table);
+    }
     if (table.status === "available") {
       setActiveTab("tables");
     } else {
@@ -221,6 +225,9 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
       };
       setSelectedTable(updatedTable);
       toast.success(`Table ${selectedTable.number} opened with ${guestCount} guests`);
+      if (onTableSelect) {
+        onTableSelect(updatedTable as any);
+      }
       setActiveTab("order");
     } catch (error) {
       console.error("Error opening table:", error);
@@ -1202,25 +1209,82 @@ export function POSTableSystem({ onCheckout }: POSTableSystemProps) {
                     </div>
                   )}
 
-                  <div className="border-t border-border pt-4 mt-4 space-y-2">
+                  <div className="border-t border-border pt-4 mt-4 space-y-4">
                     <div className="flex justify-between text-lg font-semibold">
                       <span>Total</span>
                       <span className="text-primary">${getTableTotal(selectedTable).toFixed(2)}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Left Button: Cancel/Close Table */}
                       <Button
                         variant="outline"
-                        className="gap-2"
-                        onClick={handleSendToKitchen}
-                        disabled={selectedTable.orders.filter((o) => o.status === "pending").length === 0 || updateTable.isPending}
+                        className="gap-2 border-destructive/20 hover:bg-destructive/10 text-destructive"
+                        onClick={handleCloseTable}
+                        disabled={updateTable.isPending}
                       >
-                        <Check className="h-4 w-4" />
-                        Place Order
+                        <X className="h-4 w-4" />
+                        Cancel
                       </Button>
-                      <Button variant="default" className="gap-2" onClick={handleProceedToBilling} disabled={updateTable.isPending}>
-                        <Receipt className="h-4 w-4" />
-                        Proceed to Bill
-                      </Button>
+
+                      {/* Right Button: Dynamic Order/Bill Button */}
+                      {(() => {
+                        const hasPending = selectedTable.orders.some(o => o.status === "pending");
+                        const hasPlaced = selectedTable.orders.some(o => o.status !== "pending" && o.status !== "cancelled");
+
+                        if (selectedTable.orders.length === 0) {
+                          return (
+                            <Button
+                              variant="blue"
+                              className="gap-2 opacity-50 cursor-not-allowed"
+                              disabled
+                            >
+                              <Check className="h-4 w-4" />
+                              Place Order
+                            </Button>
+                          );
+                        }
+
+                        if (hasPending && !hasPlaced) {
+                          return (
+                            <Button
+                              variant="blue"
+                              className="gap-2 shadow-lg shadow-blue-500/20"
+                              onClick={handleSendToKitchen}
+                              disabled={updateTable.isPending}
+                            >
+                              <Check className="h-4 w-4" />
+                              Place Order
+                            </Button>
+                          );
+                        }
+
+                        if (hasPending && hasPlaced) {
+                          return (
+                            <Button
+                              variant="blue"
+                              className="gap-2 shadow-lg shadow-blue-500/20"
+                              onClick={handleSendToKitchen}
+                              disabled={updateTable.isPending}
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                              Update Order
+                            </Button>
+                          );
+                        }
+
+                        return (
+                          <Button
+                            variant="blue"
+                            className="gap-2 shadow-lg shadow-blue-500/20"
+                            onClick={handleProceedToBilling}
+                            disabled={updateTable.isPending}
+                          >
+                            <Receipt className="h-4 w-4" />
+                            Proceed to Bill
+                          </Button>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardContent>
