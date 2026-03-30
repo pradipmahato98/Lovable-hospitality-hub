@@ -8,7 +8,8 @@ import {
   History,
   BarChart3,
   ArrowLeft,
-  Clock
+  Clock,
+  Receipt
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

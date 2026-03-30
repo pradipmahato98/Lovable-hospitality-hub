@@ -62,7 +62,7 @@ import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { POSCombinedHistory } from "@/components/pos";
+import { POSCombinedHistory } from "@/components/pos/POSCombinedHistory";
 
 const paymentMethodIcons: Record<string, React.ReactNode> = {
   cash: <Banknote className="h-4 w-4" />,
