@@ -47,6 +47,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMenuItems, useMenuCategories } from "@/hooks/useMenuItems";
 import { POSTableSystem, StaffClockPanel, POSHeader, POSCombinedHistory, POSBillsTrack } from "@/components/pos";
+import {
+  useUpdatePOSTable,
+  usePOSTables,
+  ensureActivePOSOrderForTable,
+  upsertPOSOrderItemsForOrder,
+  OrderItem
+} from "@/hooks/usePOS";
 import { usePaymentGateways, processPayment } from "@/hooks/usePaymentGateways";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { useSearchParams } from "react-router-dom";
@@ -73,6 +80,7 @@ const categoryIcons: Record<string, any> = {
 const POSTerminal = () => {
   const navigate = useNavigate();
   useAdminRealtime();
+  const updateTable = useUpdatePOSTable();
   const { data: dbMenuItems = [] } = useMenuItems();
   const { data: dbCategories = [] } = useMenuCategories();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -151,6 +159,42 @@ const POSTerminal = () => {
     });
   };
 
+  const handlePlaceOrder = async () => {
+    if (!selectedTable || cart.length === 0) return;
+
+    try {
+      const orderItems: OrderItem[] = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        category: item.category,
+        status: "pending"
+      }));
+
+      await updateTable.mutateAsync({
+        id: selectedTable.id,
+        updates: {
+          current_order: orderItems as any,
+          status: "occupied"
+        }
+      });
+
+      const orderId = await ensureActivePOSOrderForTable({
+        tableId: selectedTable.id,
+        tableNumber: selectedTable.number,
+      });
+
+      await upsertPOSOrderItemsForOrder(orderId, orderItems, "pending");
+
+      setIsPlaced(true);
+      setPlacedCount(cart.reduce((sum, i) => sum + i.quantity, 0));
+      toast.success("Order placed successfully");
+    } catch (error: any) {
+      toast.error("Failed to place order: " + error.message);
+    }
+  };
+
   const isModified = cart.reduce((sum, i) => sum + i.quantity, 0) !== placedCount;
 
   const updateQuantity = (id: string, delta: number) => {
@@ -219,8 +263,8 @@ const POSTerminal = () => {
         .from("pos_transactions")
         .insert({
           transaction_number: `POS-${Date.now()}`,
-          table_number: "Counter", // Placeholder for walk-in
-          customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : "Walk-in Guest",
+          table_number: selectedTable?.number || "Counter",
+          customer_name: paymentMethod === "room" ? `Guest in Room ${roomChargeRoom}` : (selectedTable ? `Table ${selectedTable.number}` : "Walk-in Guest"),
           subtotal: subtotal,
           discount_amount: discountAmount,
           tax_amount: tax,
@@ -279,9 +323,26 @@ const POSTerminal = () => {
 
       const methodLabel = selectedGateway ? gatewaysData?.gateways.find(g => g.id === selectedGateway)?.name :
                     paymentMethod === "room" ? `Room ${roomChargeRoom}` : paymentMethod;
-      toast.success(`Payment of ${formatCurrency(total)} processed via ${methodLabel}`);
+
+      // If it was a table, clear the table
+      if (selectedTable) {
+        await updateTable.mutateAsync({
+          id: selectedTable.id,
+          updates: {
+            status: "available",
+            guests: null,
+            server_name: null,
+            start_time: null,
+            current_order: []
+          }
+        });
+      }
+
+      toast.success(`Payment of NPR ${total.toFixed(2)} processed via ${methodLabel}`);
 
       setCart([]);
+      setIsPlaced(false);
+      setPlacedCount(0);
       setCheckoutOpen(false);
       setDiscountValue("");
       setTipPercent(0);
@@ -322,10 +383,26 @@ const POSTerminal = () => {
         <TabsContent value="tables" className="mt-0 focus-visible:outline-none p-4 sm:p-6">
           <POSTableSystem
             onCheckout={(total, items) => {
-              toast.success(`Checkout completed: ${formatCurrency(total)} for ${items.length} items`);
+              toast.success(`Checkout completed: NPR ${total.toFixed(2)} for ${items.length} items`);
             }}
             onTableSelect={(table) => {
               setSelectedTable(table);
+              // Load table items into cart
+              if (table.orders && table.orders.length > 0) {
+                setCart(table.orders.map((o: any) => ({
+                  id: o.id,
+                  name: o.name,
+                  price: o.price,
+                  quantity: o.quantity,
+                  category: o.category
+                })));
+                setIsPlaced(true);
+                setPlacedCount(table.orders.reduce((sum: number, i: any) => sum + i.quantity, 0));
+              } else {
+                setCart([]);
+                setIsPlaced(false);
+                setPlacedCount(0);
+              }
               handleTabChange("order");
             }}
           />
@@ -492,11 +569,7 @@ const POSTerminal = () => {
                       <Button
                         variant="blue"
                         className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
-                        onClick={() => {
-                           setIsPlaced(true);
-                           setPlacedCount(currentTotalItems);
-                           toast.success("Order placed successfully");
-                        }}
+                        onClick={handlePlaceOrder}
                       >
                          <Check className="h-4 w-4 mr-2" />
                          Place Order
@@ -509,10 +582,7 @@ const POSTerminal = () => {
                       <Button
                         variant="blue"
                         className="shadow-lg shadow-blue-500/20 py-6 rounded-xl font-bold"
-                        onClick={() => {
-                           setPlacedCount(currentTotalItems);
-                           toast.success("Order updated");
-                        }}
+                        onClick={handlePlaceOrder}
                       >
                          <ArrowRightLeft className="h-4 w-4 mr-2" />
                          Update Order
