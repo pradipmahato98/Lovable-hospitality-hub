@@ -46,7 +46,11 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMenuItems, useMenuCategories } from "@/hooks/useMenuItems";
-import { POSTableSystem, StaffClockPanel, POSHeader, POSCombinedHistory, POSBillsTrack } from "@/components/pos";
+import { POSTableSystem } from "@/components/pos/POSTableSystem";
+import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
+import { POSHeader } from "@/components/pos/POSHeader";
+import { POSCombinedHistory } from "@/components/pos/POSCombinedHistory";
+import { POSBillsTrack } from "@/components/pos/POSBillsTrack";
 import {
   useUpdatePOSTable,
   usePOSTables,

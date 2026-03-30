@@ -1,6 +1,7 @@
 import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { POSBillsTrack, POSHeader } from "@/components/pos";
+import { POSBillsTrack } from "@/components/pos/POSBillsTrack";
+import { POSHeader } from "@/components/pos/POSHeader";
 
 const POSBills = () => {
   return (

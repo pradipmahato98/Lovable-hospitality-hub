@@ -1,6 +1,7 @@
 import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { POSDashboard, POSHeader } from "@/components/pos";
+import { POSDashboard } from "@/components/pos/POSDashboard";
+import { POSHeader } from "@/components/pos/POSHeader";
 
 const POS = () => {
   return (

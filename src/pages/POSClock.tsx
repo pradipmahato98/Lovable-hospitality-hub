@@ -1,6 +1,7 @@
 import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { StaffClockPanel, POSHeader } from "@/components/pos";
+import { StaffClockPanel } from "@/components/pos/StaffClockPanel";
+import { POSHeader } from "@/components/pos/POSHeader";
 
 const POSClock = () => {
   return (
