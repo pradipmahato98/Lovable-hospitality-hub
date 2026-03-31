@@ -384,7 +384,6 @@ export function POSCombinedHistory() {
                 </TableBody>
               </Table>
             </div>
-          </div>
         </CardContent>
       </Card>
 
