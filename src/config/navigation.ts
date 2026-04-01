@@ -111,7 +111,6 @@ export const navItems: NavItemConfig[] = [
     path: "/pos",
     subItems: [
       { label: "Dashboard", path: "/pos" },
-      { label: "Terminal", path: "/pos/terminal" },
       { label: "History", path: "/pos/history" },
       { label: "Reports", path: "/pos/reports" },
     ]
