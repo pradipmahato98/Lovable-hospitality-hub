@@ -75,6 +75,9 @@ export function POSBillsTrack() {
     }
   };
 
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [mergedContent, setMergedContent] = useState<any>(null);
+
   const handleMerge = () => {
     if (selectedBills.length < 2) {
       toast.error("Please select at least two bills to merge");
@@ -85,14 +88,31 @@ export function POSBillsTrack() {
     const tables = new Set(billsToMerge.map(b => b.table_number));
 
     if (tables.size > 1) {
-      if (!confirm("These bills belong to different tables. Are you sure you want to merge them?")) {
-        return;
-      }
+      toast.warning("Merging bills from multiple tables (T" + Array.from(tables).join(", T") + ")");
     }
 
-    toast.success(`Merging ${selectedBills.length} bills into a consolidated statement...`);
-    // Consolidation logic would go here
-    setSelectedBills([]);
+    // Calculate consolidated totals
+    const consolidated = {
+      bills: billsToMerge.map(b => b.transaction_number),
+      tables: Array.from(tables),
+      items: billsToMerge.flatMap(b => b.items).reduce((acc: any[], item) => {
+        const existing = acc.find(i => i.item_name === item.item_name);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          acc.push({ ...item });
+        }
+        return acc;
+      }, []),
+      subtotal: billsToMerge.reduce((sum, b) => sum + b.subtotal, 0),
+      tax: billsToMerge.reduce((sum, b) => sum + b.tax_amount, 0),
+      total: billsToMerge.reduce((sum, b) => sum + b.total, 0),
+      timestamp: new Date().toISOString()
+    };
+
+    setMergedContent(consolidated);
+    setMergeDialogOpen(true);
+    toast.success(`Consolidated statement generated for ${selectedBills.length} bills`);
   };
 
   const getStatusBadge = (status?: string) => {
@@ -238,9 +258,65 @@ export function POSBillsTrack() {
         </Table>
       </div>
 
+      {/* Merge/Consolidation Dialog */}
+      <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
+        <DialogContent className="max-w-md bg-slate-900 border-slate-800 rounded-3xl p-0 overflow-hidden shadow-2xl">
+          <DialogHeader className="p-8 pb-4 bg-slate-950/50">
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-3">
+               <GitMerge className="h-5 w-5 text-blue-500" />
+               Consolidated Statement
+            </DialogTitle>
+          </DialogHeader>
+          {mergedContent && (
+            <div className="p-8 pt-4 space-y-6">
+               <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl">
+                  <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">Merged IDs</p>
+                  <p className="text-[10px] text-slate-400 mt-1 truncate">{mergedContent.bills.join(", ")}</p>
+               </div>
+
+               <div className="space-y-3">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Consolidated Items</p>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                  {mergedContent.items.map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-sm bg-slate-800/20 p-3 rounded-xl">
+                      <span className="text-slate-200 font-medium">{item.quantity}x {item.item_name}</span>
+                      <span className="text-white font-mono">{formatCurrency(item.item_price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-slate-800">
+                 <div className="flex justify-between text-xs font-medium">
+                    <span className="text-slate-500">Combined Subtotal</span>
+                    <span className="text-slate-300">{formatCurrency(mergedContent.subtotal)}</span>
+                 </div>
+                 <div className="flex justify-between font-bold text-xl pt-3 border-t border-dashed border-slate-700">
+                    <span className="text-white">Grand Total</span>
+                    <span className="text-blue-500 font-mono">{formatCurrency(mergedContent.total)}</span>
+                 </div>
+              </div>
+
+              <div className="flex gap-3">
+                 <Button variant="outline" className="flex-1 rounded-2xl h-12 border-slate-800" onClick={() => setMergeDialogOpen(false)}>
+                    Close
+                 </Button>
+                 <Button className="flex-1 h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/20" onClick={() => {
+                    toast.success("Printing consolidated statement...");
+                    setMergeDialogOpen(false);
+                    setSelectedBills([]);
+                 }}>
+                    Print All
+                 </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Bill View Dialog */}
       <Dialog open={!!selectedBill} onOpenChange={() => setSelectedBill(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-slate-900 border-slate-800 rounded-3xl p-0 overflow-hidden shadow-2xl">
           <DialogHeader>
             <DialogTitle>Bill Review</DialogTitle>
           </DialogHeader>
