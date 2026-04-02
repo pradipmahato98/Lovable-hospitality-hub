@@ -69,7 +69,11 @@ const POSTerminal = () => {
                   <BillingSettlement
                     orderId={selectedOrderId}
                     tableId={selectedTableId!}
-                    onComplete={() => setActiveTab("tables")}
+                    onComplete={() => {
+                      setActiveTab("tables");
+                      setSelectedOrderId(null);
+                      setSelectedTableId(null);
+                    }}
                   />
                 )}
               </TabsContent>
