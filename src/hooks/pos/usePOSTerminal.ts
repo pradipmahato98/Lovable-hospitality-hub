@@ -106,8 +106,16 @@ export function usePOSTerminal() {
         .in("status", ["open", "billing"]);
 
       const realOrders = data || [];
-      // Combine real orders with demo session orders
-      return [...realOrders, ...demoOrders];
+      // Combine real orders with active demo session orders (only open/billing)
+      const activeDemoOrders = demoOrders.filter(o => o.status === "open" || o.status === "billing");
+
+      // Ensure each order has an items array to prevent crashes
+      const allOrders = [...realOrders, ...activeDemoOrders].map(order => ({
+        ...order,
+        pos_order_items: order.pos_order_items || []
+      }));
+
+      return allOrders;
     },
   });
 
@@ -251,6 +259,7 @@ export function usePOSTerminal() {
           order.pos_order_items.push(newItem);
           return newItem;
         }
+        throw new Error("Demo order not found");
       }
 
       const { data, error } = await supabase
