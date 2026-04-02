@@ -100,6 +100,14 @@ export const TableManagement: React.FC<TableManagementProps> = ({ onSelectTable 
     return `${diff}m`;
   };
 
+  const stats = useMemo(() => {
+    const total = tables.length;
+    const occupied = tables.filter(t => t.status === 'occupied').length;
+    const available = tables.filter(t => t.status === 'available').length;
+    const totalCovers = tables.reduce((acc, t) => acc + (t.guests || 0), 0);
+    return { total, occupied, available, totalCovers };
+  }, [tables]);
+
   return (
     <div className="flex flex-col h-full gap-6">
       {/* Header Controls */}
@@ -144,8 +152,8 @@ export const TableManagement: React.FC<TableManagementProps> = ({ onSelectTable 
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Main Dining Hall</CardTitle>
               <div className="flex gap-2">
-                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">4 Available</Badge>
-                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">8 Occupied</Badge>
+                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{stats.available} Available</Badge>
+                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{stats.occupied} Occupied</Badge>
               </div>
             </div>
           </CardHeader>
@@ -295,10 +303,10 @@ export const TableManagement: React.FC<TableManagementProps> = ({ onSelectTable 
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
                   <span className="text-xs text-muted-foreground">Total Covers</span>
-                  <span className="text-xl font-bold">24</span>
+                  <span className="text-xl font-bold">{stats.totalCovers}</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-1.5">
-                  <div className="bg-primary h-full rounded-full w-[65%]" />
+                  <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${(stats.occupied / stats.total) * 100}%` }} />
                 </div>
                 <div className="flex justify-between items-end">
                   <span className="text-xs text-muted-foreground">Avg. Turnover</span>

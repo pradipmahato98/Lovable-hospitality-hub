@@ -44,14 +44,14 @@ interface OrderManagementProps {
 }
 
 export const OrderManagement: React.FC<OrderManagementProps> = ({ orderId, tableId, onBilling }) => {
-  const { activeOrders, menuItems, addOrderItem, fireOrder, getKitchenLoad, getWinePairing } = usePOSTerminal();
+  const { activeOrders, menuItems, addOrderItem, fireOrder, getKitchenLoad, getWinePairing, isLoading } = usePOSTerminal();
   const { data: categories = [] } = useMenuCategories();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeat, setSelectedSeat] = useState(1);
 
-  const order = activeOrders.find(o => o.id === orderId);
+  const order = useMemo(() => activeOrders.find(o => o.id === orderId), [activeOrders, orderId]);
   const kitchenLoad = getKitchenLoad();
 
   const filteredItems = useMemo(() => {
@@ -81,6 +81,15 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ orderId, table
       seatNumber: selectedSeat
     });
   };
+
+  if (isLoading && !order) {
+    return (
+      <div className="h-full flex items-center justify-center flex-col gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground animate-pulse">Syncing table data...</p>
+      </div>
+    );
+  }
 
   if (!order) return <div className="h-full flex items-center justify-center">Select a table to start ordering</div>;
 
