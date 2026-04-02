@@ -113,6 +113,8 @@ export const BillingSettlement: React.FC<BillingSettlementProps> = ({ orderId, t
       return;
     }
 
+    const isFinal = splitMode === "full"; // Simplified for this logic
+
     await settleBill.mutateAsync({
       orderId,
       tableId,
@@ -120,11 +122,17 @@ export const BillingSettlement: React.FC<BillingSettlementProps> = ({ orderId, t
       subtotal: totals.subtotal,
       tax: totals.tax,
       serviceCharge: totals.tip,
-      total: totals.total,
+      amountPaid: totals.total,
+      isFinalPayment: isFinal,
       signatureUrl: signatureData || undefined,
       roomNumber: order?.reservation?.rooms?.room_number
     });
-    onComplete();
+
+    if (isFinal) {
+      onComplete();
+    } else {
+      toast.success("Partial payment accepted. Balance updated.");
+    }
   };
 
   if (!order) return null;

@@ -159,6 +159,20 @@ export function usePOSTerminal() {
       guestId?: string;
       reservationId?: string;
     }) => {
+      // Demo mode bypass
+      if (params.tableId.startsWith('demo-')) {
+        return {
+          id: `demo-order-${Date.now()}`,
+          table_id: params.tableId,
+          status: "open",
+          guests: params.guests,
+          server_name: params.serverName,
+          start_time: new Date().toISOString(),
+          guest_id: params.guestId,
+          reservation_id: params.reservationId
+        };
+      }
+
       // 1. Update Table Status
       const { error: tableError } = await supabase
         .from("pos_tables")
@@ -266,7 +280,8 @@ export function usePOSTerminal() {
       subtotal: number;
       tax: number;
       serviceCharge: number;
-      total: number;
+      amountPaid: number;
+      isFinalPayment: boolean;
       signatureUrl?: string;
       roomNumber?: string;
     }) => {
@@ -281,7 +296,7 @@ export function usePOSTerminal() {
         subtotal: params.subtotal,
         tax_amount: params.tax,
         tip_amount: params.serviceCharge,
-        total: params.total,
+        total: params.amountPaid,
         payment_method: params.paymentMethod,
         room_number: params.roomNumber,
         signature_url: params.signatureUrl,
@@ -290,16 +305,25 @@ export function usePOSTerminal() {
       });
       if (txnError) throw txnError;
 
-      // 2. Close Order
-      await supabase.from("pos_orders").update({ status: "paid", total: params.total }).eq("id", params.orderId);
+      // 2. Update Order Balances
+      if (params.isFinalPayment) {
+        await supabase.from("pos_orders").update({ status: "paid", total_paid: (order?.total_paid || 0) + params.amountPaid }).eq("id", params.orderId);
 
-      // 3. Reset Table
-      await supabase.from("pos_tables").update({
-        status: "available",
-        guests: null,
-        server_name: null,
-        start_time: null,
-      }).eq("id", params.tableId);
+        // 3. Reset Table
+        await supabase.from("pos_tables").update({
+          status: "available",
+          guests: null,
+          server_name: null,
+          start_time: null,
+        }).eq("id", params.tableId);
+      } else {
+        await supabase.from("pos_orders")
+          .update({
+            total_paid: (order?.total_paid || 0) + params.amountPaid,
+            status: "billing" // Keep open but mark as in-progress
+          })
+          .eq("id", params.orderId);
+      }
 
       return { transactionNumber: txnNum };
     },
@@ -340,6 +364,56 @@ export function usePOSTerminal() {
       queryClient.invalidateQueries({ queryKey: ["pos-active-orders"] });
       toast.success("Item voided and logged");
     },
+  });
+
+  const transferTable = useMutation({
+    mutationFn: async (params: { fromTableId: string; toTableId: string; orderId: string }) => {
+       // 1. Move Order
+       const { data: toTable } = await supabase.from("pos_tables").select("table_number").eq("id", params.toTableId).single();
+       await supabase.from("pos_orders").update({
+         table_id: params.toTableId,
+         table_number: toTable?.table_number || "0"
+       }).eq("id", params.orderId);
+
+       // 2. Update Table Statuses
+       const { data: fromTable } = await supabase.from("pos_tables").select("*").eq("id", params.fromTableId).single();
+       await supabase.from("pos_tables").update({
+          status: "occupied",
+          guests: fromTable?.guests,
+          server_name: fromTable?.server_name,
+          start_time: fromTable?.start_time,
+       }).eq("id", params.toTableId);
+
+       await supabase.from("pos_tables").update({
+          status: "available",
+          guests: null,
+          server_name: null,
+          start_time: null,
+       }).eq("id", params.fromTableId);
+    },
+    onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["pos-tables"] });
+       queryClient.invalidateQueries({ queryKey: ["pos-active-orders"] });
+       toast.success("Table transferred successfully");
+    }
+  });
+
+  const mergeTables = useMutation({
+    mutationFn: async (params: { sourceOrderId: string; targetOrderId: string; sourceTableId: string }) => {
+       // 1. Move Items
+       await supabase.from("pos_order_items").update({ order_id: params.targetOrderId }).eq("order_id", params.sourceOrderId);
+
+       // 2. Close source order
+       await supabase.from("pos_orders").update({ status: "cancelled" }).eq("id", params.sourceOrderId);
+
+       // 3. Reset source table
+       await supabase.from("pos_tables").update({ status: "available", guests: null, server_name: null, start_time: null }).eq("id", params.sourceTableId);
+    },
+    onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["pos-tables"] });
+       queryClient.invalidateQueries({ queryKey: ["pos-active-orders"] });
+       toast.success("Tables merged successfully");
+    }
   });
 
   // --- Logic Helpers ---
@@ -425,5 +499,7 @@ export function usePOSTerminal() {
     getWinePairing,
     calculateGratuity,
     voidItem,
+    transferTable,
+    mergeTables,
   };
 }
