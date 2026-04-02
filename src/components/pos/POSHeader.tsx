@@ -20,6 +20,7 @@ export const POSHeader: React.FC = () => {
   const navItems = [
     { label: "Clock In/Out", path: "/pos/clock", icon: Clock },
     { label: "Dashboard", path: "/pos", icon: LayoutDashboard },
+    { label: "Terminal", path: "/pos/terminal", icon: ShoppingCart },
     { label: "Bills Track", path: "/pos/bills", icon: Receipt },
     { label: "Kitchen", path: "/pos/kitchen", icon: ChefHat },
     { label: "History", path: "/pos/history", icon: BarChart3 },

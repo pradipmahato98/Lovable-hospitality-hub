@@ -35,6 +35,7 @@ const UserManagement = lazy(() => import("./pages/UserManagement"));
 const DevPanel = lazy(() => import("./pages/DevPanel"));
 const AdminConsole = lazy(() => import("./pages/AdminConsole"));
 const POS = lazy(() => import("./pages/POS"));
+const POSTerminal = lazy(() => import("./pages/POSTerminal"));
 const POSClock = lazy(() => import("./pages/POSClock"));
 const POSBills = lazy(() => import("./pages/POSBills"));
 const POSHistory = lazy(() => import("./pages/POSHistory"));
@@ -102,6 +103,7 @@ const App = () => (
                   <Route path="/housekeeping" element={<ProtectedRoute><Housekeeping /></ProtectedRoute>} />
                   <Route path="/engineering" element={<ProtectedRoute><Engineering /></ProtectedRoute>} />
                   <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+                  <Route path="/pos/terminal" element={<ProtectedRoute><POSTerminal /></ProtectedRoute>} />
                   <Route path="/pos/clock" element={<ProtectedRoute><POSClock /></ProtectedRoute>} />
                   <Route path="/pos/bills" element={<ProtectedRoute><POSBills /></ProtectedRoute>} />
                   <Route path="/pos/history" element={<ProtectedRoute><POSHistory /></ProtectedRoute>} />
