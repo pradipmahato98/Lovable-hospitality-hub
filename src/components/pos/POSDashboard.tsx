@@ -42,8 +42,8 @@ export function POSDashboard() {
     return [
       { label: "Today's Sales", value: `$${todaySales.toFixed(2)}`, icon: DollarSign, color: "text-success" },
       { label: "Total Transactions", value: transactions.length, icon: TrendingUp, color: "text-primary" },
-      { label: "Active Tables", value: "4/12", icon: BarChart3, color: "text-amber-500" },
-      { label: "Staff on Shift", value: "6", icon: Clock, color: "text-blue-500" },
+      { label: "System Status", value: "LIVE", icon: BarChart3, color: "text-amber-500" },
+      { label: "Staff on Shift", value: "4", icon: Clock, color: "text-blue-500" },
     ];
   }, [transactions]);
 

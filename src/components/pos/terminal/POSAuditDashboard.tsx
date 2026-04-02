@@ -36,7 +36,7 @@ export const POSAuditDashboard = () => {
 
   const metrics = useMemo(() => {
     const revenue = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
-    const covers = activeOrders.reduce((sum, o) => sum + (o.total_covers || 0), 0) + (transactions.length * 2); // Mocked mix
+    const covers = activeOrders.reduce((sum, o) => sum + (o.total_covers || 0), 0);
     return {
       revenue,
       covers,
