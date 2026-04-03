@@ -160,78 +160,85 @@ export const TableManagement: React.FC<TableManagementProps> = ({ onSelectTable 
           <CardContent className="flex-1 p-0 bg-muted/10 relative overflow-hidden">
             {viewMode === "2d" ? (
               <ScrollArea className="h-full p-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {tables.map((table) => {
-                    const activeOrder = activeOrders.find(o => o.table_id === table.id);
-                    return (
-                      <div
-                        key={table.id}
-                        onClick={() => {
-                          if (table.status === 'occupied' && activeOrder) {
-                            onSelectTable(activeOrder.id, table.id);
-                          } else {
-                            setSelectedTable(table);
-                            setIsOpenTableDialogOpen(true);
-                          }
-                        }}
-                        className={cn(
-                          "relative group aspect-square p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-lg",
-                          table.status === 'available' ? "bg-background border-dashed border-muted-foreground/30 hover:border-primary" : "bg-background border-primary shadow-sm"
-                        )}
-                      >
-                        <div className="flex flex-col h-full justify-between">
-                          <div className="flex justify-between items-start">
-                            <div className="flex flex-col">
-                              <span className="text-2xl font-bold text-muted-foreground group-hover:text-primary">#{table.table_number}</span>
-                              <Badge className={cn("capitalize text-[9px] h-4 mt-1", getStatusColor(table.status))}>
-                                {table.status}
-                              </Badge>
+                {tables.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground italic py-20">
+                    <LayoutGrid className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No tables configured in the system.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {tables.map((table) => {
+                      const activeOrder = activeOrders.find(o => o.table_id === table.id);
+                      return (
+                        <div
+                          key={table.id}
+                          onClick={() => {
+                            if (table.status === 'occupied' && activeOrder) {
+                              onSelectTable(activeOrder.id, table.id);
+                            } else {
+                              setSelectedTable(table);
+                              setIsOpenTableDialogOpen(true);
+                            }
+                          }}
+                          className={cn(
+                            "relative group aspect-square p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-lg",
+                            table.status === 'available' ? "bg-background border-dashed border-muted-foreground/30 hover:border-primary" : "bg-background border-primary shadow-sm"
+                          )}
+                        >
+                          <div className="flex flex-col h-full justify-between">
+                            <div className="flex justify-between items-start">
+                              <div className="flex flex-col">
+                                <span className="text-2xl font-bold text-muted-foreground group-hover:text-primary">#{table.table_number}</span>
+                                <Badge className={cn("capitalize text-[9px] h-4 mt-1", getStatusColor(table.status))}>
+                                  {table.status}
+                                </Badge>
+                              </div>
+
+                              {table.status === 'occupied' && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* Logic for modal would go here */ }}>
+                                      <ArrowRightLeft className="h-4 w-4 mr-2" /> Transfer Table
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* Logic for modal would go here */ }}>
+                                      <Merge className="h-4 w-4 mr-2" /> Merge Tables
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
 
-                            {table.status === 'occupied' && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* Logic for modal would go here */ }}>
-                                    <ArrowRightLeft className="h-4 w-4 mr-2" /> Transfer Table
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* Logic for modal would go here */ }}>
-                                    <Merge className="h-4 w-4 mr-2" /> Merge Tables
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                            {table.status === 'occupied' && activeOrder && (
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold truncate">
+                                  {activeOrder.guest?.first_name} {activeOrder.guest?.last_name || "Guest"}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Users className="h-3 w-3" />
+                                  {table.guests} Guests
+                                  <Timer className="h-3 w-3 ml-2" />
+                                  {getTimer(table.start_time)}
+                                </div>
+                              </div>
                             )}
-                          </div>
 
-                          {table.status === 'occupied' && activeOrder && (
-                            <div className="space-y-1">
-                              <p className="text-sm font-semibold truncate">
-                                {activeOrder.guest?.first_name} {activeOrder.guest?.last_name || "Guest"}
-                              </p>
+                            {table.status === 'available' && (
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Users className="h-3 w-3" />
-                                {table.guests} Guests
-                                <Timer className="h-3 w-3 ml-2" />
-                                {getTimer(table.start_time)}
+                                Cap: {table.capacity}
                               </div>
-                            </div>
-                          )}
-
-                          {table.status === 'available' && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Users className="h-3 w-3" />
-                              Cap: {table.capacity}
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </ScrollArea>
             ) : (
               <div className="h-full flex items-center justify-center p-6">
@@ -241,8 +248,8 @@ export const TableManagement: React.FC<TableManagementProps> = ({ onSelectTable 
                       number: t.table_number,
                       status: t.status as any,
                       capacity: t.capacity,
-                      x: 100, // Dummy coordinates for demo
-                      y: 100
+                      x: t.x_coordinate || 100,
+                      y: t.y_coordinate || 100
                     }))}
                  />
               </div>
@@ -306,11 +313,11 @@ export const TableManagement: React.FC<TableManagementProps> = ({ onSelectTable 
                   <span className="text-xl font-bold">{stats.totalCovers}</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-1.5">
-                  <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${(stats.occupied / stats.total) * 100}%` }} />
+                  <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${stats.total > 0 ? (stats.occupied / stats.total) * 100 : 0}%` }} />
                 </div>
                 <div className="flex justify-between items-end">
                   <span className="text-xs text-muted-foreground">Avg. Turnover</span>
-                  <span className="text-sm font-medium font-mono">42m</span>
+                  <span className="text-sm font-medium font-mono">-</span>
                 </div>
               </div>
             </CardContent>

@@ -14,9 +14,6 @@ export interface WaitlistEntry {
   created_at: string;
 }
 
-// Module-level state for demo persistence
-let demoOrders: any[] = [];
-
 export function usePOSTerminal() {
   const queryClient = useQueryClient();
 
@@ -31,18 +28,10 @@ export function usePOSTerminal() {
           inventory:inventory_item_id (current_stock)
         `);
 
-      // Fallback for demo
-      if (!data || data.length === 0) {
-        return [
-          { id: "m1", item_name: "Ribeye Steak", item_price: 45.00, category: "Mains", current_stock: 12 },
-          { id: "m2", item_name: "Salmon", item_price: 32.00, category: "Mains", current_stock: 8 },
-          { id: "m3", item_name: "House Salad", item_price: 14.00, category: "Mains", current_stock: 0 },
-          { id: "m4", item_name: "Red Wine", item_price: 12.00, category: "Drinks", current_stock: 24 },
-          { id: "m5", item_name: "Chardonnay", item_price: 10.00, category: "Drinks", current_stock: 18 }
-        ];
-      }
-
       if (error) throw error;
+
+      if (!data) return [];
+
       return data.map(item => ({
         ...item,
         current_stock: (item.inventory as any)?.current_stock ?? 999
@@ -59,35 +48,8 @@ export function usePOSTerminal() {
         .select("*")
         .order("table_number", { ascending: true });
 
-      let tableList = data || [];
-
-      // Fallback for demo/dev if table is empty
-      if (tableList.length === 0) {
-        tableList = Array.from({ length: 12 }, (_, i) => ({
-          id: `demo-t-${i+1}`,
-          table_number: `${i+1}`,
-          capacity: i % 2 === 0 ? 4 : 2,
-          status: 'available',
-          start_time: null,
-          guests: null,
-          server_name: null
-        }));
-      }
-
-      // Merge with demo occupancy status
-      return tableList.map(table => {
-        const activeDemoOrder = demoOrders.find(o => o.table_id === table.id && o.status !== "paid" && o.status !== "cancelled");
-        if (activeDemoOrder) {
-          return {
-            ...table,
-            status: "occupied",
-            guests: activeDemoOrder.guests,
-            server_name: activeDemoOrder.server_name,
-            start_time: activeDemoOrder.start_time,
-          };
-        }
-        return table;
-      });
+      if (error) throw error;
+      return data || [];
     },
   });
 
@@ -105,17 +67,15 @@ export function usePOSTerminal() {
         `)
         .in("status", ["open", "billing"]);
 
+      if (error) throw error;
+
       const realOrders = data || [];
-      // Combine real orders with active demo session orders (only open/billing)
-      const activeDemoOrders = demoOrders.filter(o => o.status === "open" || o.status === "billing");
 
       // Ensure each order has an items array to prevent crashes
-      const allOrders = [...realOrders, ...activeDemoOrders].map(order => ({
+      return realOrders.map(order => ({
         ...order,
         pos_order_items: order.pos_order_items || []
       }));
-
-      return allOrders;
     },
   });
 
@@ -166,25 +126,6 @@ export function usePOSTerminal() {
       guestId?: string;
       reservationId?: string;
     }) => {
-      // Demo mode bypass
-      if (params.tableId.startsWith('demo-')) {
-        const newOrder = {
-          id: `demo-order-${Date.now()}`,
-          table_id: params.tableId,
-          table_number: params.tableId.split('-').pop(),
-          status: "open",
-          guests: params.guests,
-          total_covers: params.guests,
-          server_name: params.serverName,
-          start_time: new Date().toISOString(),
-          guest_id: params.guestId,
-          reservation_id: params.reservationId,
-          pos_order_items: []
-        };
-        demoOrders.push(newOrder);
-        return newOrder;
-      }
-
       // 1. Update Table Status
       const { error: tableError } = await supabase
         .from("pos_tables")
@@ -240,28 +181,6 @@ export function usePOSTerminal() {
       modifiers?: any[];
       notes?: string;
     }) => {
-      if (params.orderId.startsWith('demo-')) {
-        const order = demoOrders.find(o => o.id === params.orderId);
-        if (order) {
-          const newItem = {
-            id: `demo-item-${Date.now()}`,
-            order_id: params.orderId,
-            item_name: params.itemName,
-            item_price: params.itemPrice,
-            category: params.category,
-            quantity: params.quantity,
-            seat_number: params.seatNumber,
-            modifiers: params.modifiers || [],
-            notes: params.notes,
-            status: "pending",
-            created_at: new Date().toISOString()
-          };
-          order.pos_order_items.push(newItem);
-          return newItem;
-        }
-        throw new Error("Demo order not found");
-      }
-
       const { data, error } = await supabase
         .from("pos_order_items")
         .insert({
@@ -299,20 +218,6 @@ export function usePOSTerminal() {
 
   const fireOrder = useMutation({
     mutationFn: async (params: { orderId: string; itemIds?: string[]; fireAt?: string; hold?: boolean }) => {
-      if (params.orderId.startsWith('demo-')) {
-        const order = demoOrders.find(o => o.id === params.orderId);
-        if (order) {
-          order.pos_order_items.forEach((item: any) => {
-            if ((!params.itemIds || params.itemIds.includes(item.id)) && item.status === "pending") {
-              item.status = params.hold ? "pending" : (params.fireAt ? "pending" : "preparing");
-              item.fire_at = params.fireAt || null;
-              item.hold_flag = params.hold || false;
-            }
-          });
-        }
-        return;
-      }
-
       const query = supabase.from("pos_order_items").update({
         status: params.hold ? "pending" : (params.fireAt ? "pending" : "preparing"),
         fire_at: params.fireAt || null,
@@ -348,22 +253,6 @@ export function usePOSTerminal() {
       roomNumber?: string;
     }) => {
       const txnNum = `TXN-${Date.now()}`;
-
-      if (params.orderId.startsWith('demo-')) {
-        const orderIndex = demoOrders.findIndex(o => o.id === params.orderId);
-        if (orderIndex !== -1) {
-          const order = demoOrders[orderIndex];
-          order.total_paid = (order.total_paid || 0) + params.amountPaid;
-
-          if (params.isFinalPayment) {
-            order.status = "paid";
-            // We keep it in demoOrders for a bit but it won't show as active
-          } else {
-            order.status = "billing";
-          }
-        }
-        return { transactionNumber: txnNum };
-      }
 
       // 1. Create Transaction
       const { data: order } = await supabase.from("pos_orders").select("*").eq("id", params.orderId).single();
@@ -427,18 +316,6 @@ export function usePOSTerminal() {
 
   const voidItem = useMutation({
     mutationFn: async (params: { itemId: string; reason: string }) => {
-      if (params.itemId.startsWith('demo-')) {
-        demoOrders.forEach(order => {
-          const item = order.pos_order_items.find((i: any) => i.id === params.itemId);
-          if (item) {
-            item.status = "cancelled";
-            item.void_reason = params.reason;
-            item.voided_at = new Date().toISOString();
-          }
-        });
-        return;
-      }
-
       const { data: userRes } = await supabase.auth.getUser();
       const { error } = await supabase
         .from("pos_order_items")
@@ -511,14 +388,6 @@ export function usePOSTerminal() {
 
   const toggleTaxExempt = useMutation({
     mutationFn: async (params: { orderId: string; isTaxExempt: boolean }) => {
-      if (params.orderId.startsWith('demo-')) {
-        const order = demoOrders.find(o => o.id === params.orderId);
-        if (order) {
-          order.is_tax_exempt = params.isTaxExempt;
-        }
-        return;
-      }
-
       const { error } = await supabase
         .from("pos_orders")
         .update({ is_tax_exempt: params.isTaxExempt })

@@ -10,26 +10,33 @@ export interface MenuCategory {
 
 export interface MenuItem {
   id: string;
-  category_id: string | null;
-  name: string;
-  price: number;
+  category: string;
+  item_name: string;
+  item_price: number;
   description: string | null;
-  is_available: boolean;
-  display_order: number;
-  category?: MenuCategory;
+  is_active: boolean;
 }
 
 export const useMenuCategories = () => {
   return useQuery({
     queryKey: ["pos-menu-categories"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("pos_menu_categories")
-        .select("*")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-      if (error) throw error;
-      return data as MenuCategory[];
+      // If pos_menu_categories doesn't exist or is empty, we derive categories from pos_menu_items
+      const { data: items, error: itemsError } = await supabase
+        .from("pos_menu_items")
+        .select("category")
+        .eq("is_active", true);
+
+      if (itemsError) throw itemsError;
+
+      const categories = Array.from(new Set(items?.map(i => i.category) || [])).map((name, index) => ({
+        id: name,
+        name: name,
+        display_order: index,
+        is_active: true
+      }));
+
+      return categories as MenuCategory[];
     },
   });
 };
@@ -38,13 +45,14 @@ export const useMenuItems = () => {
   return useQuery({
     queryKey: ["pos-menu-items"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("pos_menu_items")
-        .select("*, category:pos_menu_categories(id, name)")
-        .eq("is_available", true)
-        .order("display_order", { ascending: true });
+        .select("*")
+        .eq("is_active", true)
+        .order("item_name", { ascending: true });
+
       if (error) throw error;
-      return data as (MenuItem & { category: { id: string; name: string } | null })[];
+      return data as MenuItem[];
     },
   });
 };
