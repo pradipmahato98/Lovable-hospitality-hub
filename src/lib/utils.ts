@@ -92,3 +92,47 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/**
+ * Generates a cryptographically secure random hexadecimal string.
+ * @param bytes The number of random bytes to generate.
+ * @returns A hexadecimal string representation of the random bytes.
+ */
+export function generateSecureHex(bytes: number): string {
+  const array = new Uint8Array(bytes);
+  window.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Generates a cryptographically secure random integer between min (inclusive) and max (inclusive).
+ * Uses rejection sampling to eliminate modulo bias.
+ * @param min The minimum value (inclusive).
+ * @param max The maximum value (inclusive).
+ * @returns A random integer within the specified range.
+ */
+export function generateSecureRandomNumber(min: number, max: number): number {
+  if (min > max) {
+    throw new Error("Min must be less than or equal to max");
+  }
+
+  const range = max - min + 1;
+  if (range <= 1) return min;
+
+  // Using 32-bit unsigned integers for the calculation
+  const maxUint32 = 0xffffffff;
+  // Calculate the limit for rejection sampling
+  const limit = maxUint32 - (maxUint32 % range);
+
+  const buffer = new Uint32Array(1);
+  let randomValue;
+
+  do {
+    window.crypto.getRandomValues(buffer);
+    randomValue = buffer[0];
+  } while (randomValue >= limit);
+
+  return min + (randomValue % range);
+}

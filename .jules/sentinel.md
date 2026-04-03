@@ -8,6 +8,11 @@
 **Learning:** Default validation schemas in frontend frameworks often use low minimums for "developer convenience," which can easily leak into production.
 **Prevention:** Enforce a minimum of 10 characters for all new user accounts (Sign Up) to prevent account weakness without breaking existing sessions (Sign In), and provide a visual strength indicator.
 
+## 2026-02-10 - Insecure PRNG for Sensitive Identifiers
+**Vulnerability:** Use of `Math.random()` for generating API keys, transaction numbers, and reservation codes. `Math.random()` is not cryptographically secure and its output can be predictable.
+**Learning:** Developers often default to `Math.random()` for quick ID generation without considering the security implications for identifiers that need to be unguessable.
+**Prevention:** Always use `window.crypto.getRandomValues()` for security-sensitive random data. Implement a robust utility with rejection sampling to eliminate modulo bias for integer ranges.
+
 ## 2026-02-10 - Security Monitoring Visibility
 **Enhancement:** Added a "Security Breach" tab to the admin console to provide visibility into security-related audit logs and system health.
 **Learning:** Security monitoring should be integrated into administrative tools to enable proactive threat detection. Using existing audit logs for security insights reduces "security theater" and provides real value.
