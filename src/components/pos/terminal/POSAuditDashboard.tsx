@@ -41,7 +41,7 @@ export const POSAuditDashboard = () => {
       revenue,
       covers,
       avgCheck: covers > 0 ? revenue / covers : 0,
-      laborCost: revenue * 0.15, // Simplified 15% demo labor
+      laborCost: 0, // Should come from HR/Payroll integration
     };
   }, [transactions, activeOrders]);
 
@@ -57,6 +57,9 @@ export const POSAuditDashboard = () => {
     return Object.values(items).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
   }, [transactions]);
 
+  // This should ideally be fetched from a real audit/voids table
+  const voids: any[] = [];
+
   return (
     <div className="space-y-6">
       {/* 1-Page Flash Summary */}
@@ -65,7 +68,7 @@ export const POSAuditDashboard = () => {
           { label: "Total Sales", value: formatCurrency(metrics.revenue), icon: DollarSign, color: "text-blue-500" },
           { label: "Covers", value: metrics.covers, icon: Users, color: "text-emerald-500" },
           { label: "Avg Check", value: formatCurrency(metrics.avgCheck), icon: ShoppingCart, color: "text-amber-500" },
-          { label: "Labor Cost %", value: "15%", icon: TrendingUp, color: "text-purple-500" },
+          { label: "Labor Cost %", value: "0%", icon: TrendingUp, color: "text-purple-500" },
         ].map((stat, i) => (
           <Card key={i} className="border-none shadow-sm bg-muted/50">
             <CardContent className="p-6 flex items-center justify-between">
@@ -90,21 +93,27 @@ export const POSAuditDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pMix} layout="vertical" margin={{ left: 40 }}>
-                   <XAxis type="number" hide />
-                   <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} fontSize={10} />
-                   <Tooltip
-                     cursor={{ fill: 'transparent' }}
-                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                   />
-                   <Bar dataKey="revenue" radius={[0, 4, 4, 0]} barSize={20}>
-                      {pMix.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                   </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {pMix.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground italic text-xs">
+                  No sales data for today's P-Mix
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pMix} layout="vertical" margin={{ left: 40 }}>
+                     <XAxis type="number" hide />
+                     <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} fontSize={10} />
+                     <Tooltip
+                       cursor={{ fill: 'transparent' }}
+                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                     />
+                     <Bar dataKey="revenue" radius={[0, 4, 4, 0]} barSize={20}>
+                        {pMix.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                     </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -127,16 +136,21 @@ export const POSAuditDashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[
-                  { item: "Ribeye Steak", reason: "Wrong Item", value: 45.00, user: "Manager" },
-                  { item: "Red Wine", reason: "Quality Issue", value: 12.00, user: "Server" },
-                ].map((v, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-xs font-medium">{v.item}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[9px]">{v.reason}</Badge></TableCell>
-                    <TableCell className="text-right text-xs font-bold text-destructive">-${v.value.toFixed(2)}</TableCell>
+                {voids.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground italic py-8">
+                      No voids logged today
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  voids.map((v, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-xs font-medium">{v.item}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[9px]">{v.reason}</Badge></TableCell>
+                      <TableCell className="text-right text-xs font-bold text-destructive">-${v.value.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -147,21 +161,21 @@ export const POSAuditDashboard = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
            <CardTitle className="text-sm font-bold">Daily Cashier Report (Shift End)</CardTitle>
-           <Badge className="bg-emerald-500">SYSTEM BALANCED</Badge>
+           <Badge className="bg-emerald-500">SYSTEM READY</Badge>
         </CardHeader>
         <CardContent>
            <div className="grid grid-cols-3 gap-8 p-4 rounded-xl bg-muted/20 border">
               <div>
                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Expected Cash</p>
-                 <p className="text-lg font-black">{formatCurrency(metrics.revenue * 0.4)}</p>
+                 <p className="text-lg font-black">{formatCurrency(metrics.revenue * 0)}</p>
               </div>
               <div>
                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Actual Cash</p>
-                 <p className="text-lg font-black">{formatCurrency(metrics.revenue * 0.4)}</p>
+                 <p className="text-lg font-black">{formatCurrency(0)}</p>
               </div>
               <div>
                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Over/Short</p>
-                 <p className="text-lg font-black text-emerald-500">$0.00</p>
+                 <p className="text-lg font-black">$0.00</p>
               </div>
            </div>
         </CardContent>

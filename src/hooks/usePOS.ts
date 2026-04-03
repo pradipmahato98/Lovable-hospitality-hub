@@ -77,18 +77,6 @@ export interface POSTransaction {
   refund_reason?: string | null;
 }
 
-// Default tables for fallback
-const defaultTables: POSTable[] = [
-  { id: "t1", table_number: "1", capacity: 4, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t2", table_number: "2", capacity: 2, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t3", table_number: "3", capacity: 6, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t4", table_number: "4", capacity: 4, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t5", table_number: "5", capacity: 8, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t6", table_number: "6", capacity: 2, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t7", table_number: "7", capacity: 4, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-  { id: "t8", table_number: "8", capacity: 4, status: "available", guests: null, server_name: null, start_time: null, merged_with: null },
-];
-
 // ============= POS Tables Hooks =============
 export function usePOSTables() {
   const queryClient = useQueryClient();
@@ -106,12 +94,11 @@ export function usePOSTables() {
 
       if (error) {
         console.error("Error fetching POS tables:", error);
-        // Fallback to default tables if not authenticated or table doesn't exist
-        return defaultTables;
+        return [];
       }
 
-      if (!data || data.length === 0) {
-        return defaultTables;
+      if (!data) {
+        return [];
       }
 
       // Transform database format to app format
@@ -158,7 +145,7 @@ export function usePOSTables() {
   }, [queryClient]);
 
   return {
-    data: query.data || defaultTables,
+    data: query.data || [],
     isLoading: query.isLoading,
     refetch: query.refetch,
     realtimeStatus,

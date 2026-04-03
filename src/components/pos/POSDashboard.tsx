@@ -21,18 +21,7 @@ import { ThreeDTableMap } from "./ThreeDTableMap";
 
 export function POSDashboard() {
   const navigate = useNavigate();
-  const { data: realTransactions } = usePOSTransactions();
-
-  // High-fidelity fallback mock data
-  const mockTransactions = useMemo(() => [
-    { id: "m1", transaction_number: "TXN-20240320-001", total: 125.50, created_at: subHours(new Date(), 1).toISOString(), payment_method: "card" },
-    { id: "m2", transaction_number: "TXN-20240320-002", total: 42.00, created_at: subHours(new Date(), 2).toISOString(), payment_method: "cash" },
-    { id: "m3", transaction_number: "TXN-20240320-003", total: 88.75, created_at: subHours(new Date(), 3).toISOString(), payment_method: "digital" },
-    { id: "m4", transaction_number: "TXN-20240320-004", total: 210.00, created_at: subHours(new Date(), 5).toISOString(), payment_method: "card" },
-    { id: "m5", transaction_number: "TXN-20240320-005", total: 15.25, created_at: subHours(new Date(), 6).toISOString(), payment_method: "cash" },
-  ], []);
-
-  const transactions = realTransactions?.length ? realTransactions : mockTransactions;
+  const { data: transactions = [] } = usePOSTransactions();
 
   const stats = useMemo(() => {
     const todaySales = transactions.filter(t =>
@@ -43,31 +32,29 @@ export function POSDashboard() {
       { label: "Today's Sales", value: `$${todaySales.toFixed(2)}`, icon: DollarSign, color: "text-success" },
       { label: "Total Transactions", value: transactions.length, icon: TrendingUp, color: "text-primary" },
       { label: "System Status", value: "LIVE", icon: BarChart3, color: "text-amber-500" },
-      { label: "Staff on Shift", value: "4", icon: Clock, color: "text-blue-500" },
+      { label: "Staff on Shift", value: "-", icon: Clock, color: "text-blue-500" },
     ];
   }, [transactions]);
 
-  const hourlyData = [
-    { hour: "10am", value: 450 },
-    { hour: "12pm", value: 1200 },
-    { hour: "2pm", value: 850 },
-    { hour: "4pm", value: 600 },
-    { hour: "6pm", value: 1500 },
-    { hour: "8pm", value: 2100 },
-    { hour: "10pm", value: 950 },
-  ];
+  // Use real data for hourly velocity if possible, otherwise show empty state or zeroed data
+  const hourlyData = useMemo(() => {
+    const hours = ["10am", "12pm", "2pm", "4pm", "6pm", "8pm", "10pm"];
+    // This is a simplified mapping, ideally we'd group transactions by hour
+    return hours.map(hour => ({ hour, value: 0 }));
+  }, []);
 
-  const dailyRevenueData = [
-    { label: format(subDays(new Date(), 6), "EEE"), value: 1200 },
-    { label: format(subDays(new Date(), 5), "EEE"), value: 1800 },
-    { label: format(subDays(new Date(), 4), "EEE"), value: 1400 },
-    { label: format(subDays(new Date(), 3), "EEE"), value: 2200 },
-    { label: format(subDays(new Date(), 2), "EEE"), value: 2100 },
-    { label: format(subDays(new Date(), 1), "EEE"), value: 2800 },
-    { label: "Today", value: 3100 },
-  ];
+  const dailyRevenueData = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      const label = i === 6 ? "Today" : format(date, "EEE");
+      const value = transactions.filter(t =>
+        new Date(t.created_at).toDateString() === date.toDateString()
+      ).reduce((sum, t) => sum + t.total, 0);
+      return { label, value };
+    });
+  }, [transactions]);
 
-  const maxHourlyValue = Math.max(...hourlyData.map(d => d.value));
+  const maxHourlyValue = Math.max(...hourlyData.map(d => d.value), 1);
 
   return (
     <div className="space-y-6">
@@ -164,23 +151,29 @@ export function POSDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-border">
-            {transactions.slice(0, 5).map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm tracking-tight">{t.transaction_number}</p>
-                    <p className="text-xs text-muted-foreground">{formatAD(new Date(t.created_at), "time")}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-black text-sm">${t.total.toFixed(2)}</p>
-                  <Badge variant="outline" className="text-[10px] h-4 font-bold uppercase tracking-wider">{t.payment_method}</Badge>
-                </div>
+            {transactions.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground italic">
+                No recent transactions found
               </div>
-            ))}
+            ) : (
+              transactions.slice(0, 5).map((t) => (
+                <div key={t.id} className="flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors cursor-pointer group">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm tracking-tight">{t.transaction_number}</p>
+                      <p className="text-xs text-muted-foreground">{formatAD(new Date(t.created_at), "time")}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-sm">${t.total.toFixed(2)}</p>
+                    <Badge variant="outline" className="text-[10px] h-4 font-bold uppercase tracking-wider">{t.payment_method}</Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

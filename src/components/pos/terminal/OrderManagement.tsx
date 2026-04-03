@@ -66,7 +66,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ orderId, table
   const totals = useMemo(() => {
     if (!order?.pos_order_items) return { subtotal: 0, tax: 0, total: 0 };
     const subtotal = order.pos_order_items.reduce((acc: number, i: any) => acc + (i.item_price * i.quantity), 0);
-    const tax = subtotal * 0.1; // 10% demo
+    const tax = subtotal * 0.1; // 10%
     return { subtotal, tax, total: subtotal + tax };
   }, [order?.pos_order_items]);
 
@@ -151,14 +151,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ orderId, table
           <CardContent>
             <ScrollArea className="h-full pr-2">
               <div className="space-y-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium">Favorite Drinks</p>
-                  <p className="text-[10px] text-muted-foreground">Negroni, Sparkling Water</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium">Last Visit Order</p>
-                  <p className="text-[10px] text-muted-foreground italic">"Rare steak with no garlic"</p>
-                </div>
+                <p className="text-xs text-muted-foreground italic">No recent history available</p>
               </div>
             </ScrollArea>
           </CardContent>
@@ -267,6 +260,11 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ orderId, table
                   </div>
                 );
               })}
+              {!isLoading && filteredItems.length === 0 && (
+                <div className="col-span-full py-12 text-center text-muted-foreground">
+                  No menu items found.
+                </div>
+              )}
             </div>
           </ScrollArea>
         </CardContent>
