@@ -1,3 +1,4 @@
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, Shield, UserCog, User as UserIcon, AlertCircle } from "lucide-react";
 import { AppRole, roleConfig } from "@/hooks/useUsersWithRoles";

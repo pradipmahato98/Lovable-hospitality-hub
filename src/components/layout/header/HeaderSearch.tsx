@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Search, X, User, Users, Home, ClipboardList, ArrowRight, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useMemo, useEffect } from "react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
