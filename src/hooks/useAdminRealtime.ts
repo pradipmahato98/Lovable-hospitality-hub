@@ -1,14 +1,13 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { generateSecureHex } from "@/lib/utils";
 
 export function useAdminRealtime() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     // Unique channel name for each component instance to avoid conflicts
-    const channelId = `admin-changes-${generateSecureHex(4)}`;
+    const channelId = `admin-changes-${Math.random().toString(36).substr(2, 9)}`;
     const channel = supabase
       .channel(channelId)
       .on(
