@@ -92,3 +92,42 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/** Generate a cryptographically secure random hexadecimal string */
+export function generateSecureHex(bytes: number = 16): string {
+  const array = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Generate a cryptographically secure random number between min and max (inclusive)
+ * Uses rejection sampling to eliminate modulo bias.
+ */
+export function generateSecureRandomNumber(min: number, max: number): number {
+  if (min > max) [min, max] = [max, min];
+  const range = max - min + 1;
+  if (range <= 0) return min;
+
+  // Handle range of 2^32 or larger to avoid infinite loop in rejection sampling
+  if (range >= 0x100000000) {
+    const array = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(array);
+    return array[0];
+  }
+
+  // Use 32-bit random values
+  const maxUint32 = 0xffffffff;
+  const maxSafe = maxUint32 - (maxUint32 % range);
+  const array = new Uint32Array(1);
+
+  let random;
+  do {
+    globalThis.crypto.getRandomValues(array);
+    random = array[0];
+  } while (random >= maxSafe);
+
+  return min + (random % range);
+}
