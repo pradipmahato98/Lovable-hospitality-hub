@@ -92,3 +92,16 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/**
+ * Generates a cryptographically secure random hexadecimal string.
+ * Uses globalThis.crypto.getRandomValues() for cross-environment compatibility.
+ * @param bytes The number of random bytes to generate. Resulting string length is bytes * 2.
+ */
+export function generateSecureHex(bytes: number = 16): string {
+  const array = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
