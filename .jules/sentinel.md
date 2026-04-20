@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure PRNG for Sensitive Identifiers
+**Vulnerability:** Use of `Math.random().toString(36)` for generating administrative API keys in `AdminConsole.tsx`. `Math.random()` is not cryptographically secure and its output can be predictable.
+**Learning:** Even in frontend-heavy applications, sensitive identifiers like API keys or session tokens must be generated using cryptographically secure methods. Standard PRNGs are insufficient for any value that must remain unguessable.
+**Prevention:** Always use `globalThis.crypto.getRandomValues()` (or `crypto.randomUUID()`) for generating secrets, keys, or sensitive unique identifiers. Centralize this in a secure utility like `generateSecureHex`.
