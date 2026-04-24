@@ -92,3 +92,16 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/**
+ * Generate a cryptographically secure random hexadecimal string.
+ * @param bytes The number of bytes of entropy to use.
+ * @returns A hexadecimal string (length will be 2 * bytes).
+ */
+export function generateSecureHex(bytes: number): string {
+  const array = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
