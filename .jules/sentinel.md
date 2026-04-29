@@ -17,3 +17,13 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure PRNG for Sensitive Identifiers
+**Vulnerability:** Use of `Math.random()` for generating API keys, reservation codes, and transaction numbers.
+**Learning:** `Math.random()` is not cryptographically secure and can be predictable, which is dangerous for secrets and identifiers that need to be unique and unguessable.
+**Prevention:** Always use `globalThis.crypto.getRandomValues()` for security-sensitive random data.
+
+## 2026-02-11 - CSS Injection via dangerouslySetInnerHTML
+**Vulnerability:** Dynamic CSS injection in `ChartStyle` using `dangerouslySetInnerHTML` without input validation.
+**Learning:** Passing untrusted data (like chart keys or colors) directly into a `<style>` tag can allow attackers to break out of CSS rules and inject malicious styles.
+**Prevention:** Strictly validate any data injected into `<style>` blocks using regex to ensure it matches expected formats (e.g., alphanumeric keys, valid hex/rgb colors) and contains no control characters like `;` or `{}`.

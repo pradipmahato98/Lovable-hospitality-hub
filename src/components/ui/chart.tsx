@@ -65,22 +65,35 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // Validate ID to prevent CSS injection
+  if (!/^[a-zA-Z0-9-]+$/.test(id)) {
+    return null;
+  }
+
   return (
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join("\n")}
-}
-`,
-          )
+          .map(([theme, prefix]) => {
+            const styles = colorConfig
+              .map(([key, itemConfig]) => {
+                const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+
+                // Validate key and color to prevent CSS injection
+                if (!color || !/^[a-zA-Z0-9_-]+$/.test(key)) return null;
+
+                // Basic color validation: hex, rgb, rgba, or simple color names
+                // This prevents injecting additional CSS rules/properties
+                if (!/^(#[0-9a-fA-F]{3,8}|(rgb|hsl)a?\([^;{}]*\)|[a-zA-Z]+)$/.test(color)) return null;
+
+                return `  --color-${key}: ${color};`;
+              })
+              .filter(Boolean)
+              .join("\n");
+
+            return styles ? `${prefix} [data-chart=${id}] {\n${styles}\n}` : "";
+          })
+          .filter(Boolean)
           .join("\n"),
       }}
     />

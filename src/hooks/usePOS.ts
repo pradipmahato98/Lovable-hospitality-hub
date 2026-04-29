@@ -303,10 +303,11 @@ export function useCreatePOSTransaction() {
     mutationFn: async (
       transaction: Omit<POSTransaction, "id" | "transaction_number" | "created_at">
     ) => {
+      const randomValue = globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
       const transactionNumber = `TXN-${new Date()
         .toISOString()
         .slice(0, 10)
-        .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
+        .replace(/-/g, "")}-${(randomValue % 10000)
         .toString()
         .padStart(4, "0")}`;
 
@@ -365,10 +366,11 @@ export function useCreatePOSTransaction() {
 export async function saveTransaction(
   transaction: Omit<POSTransaction, "id" | "transaction_number" | "created_at">
 ) {
+  const randomValue = globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
   const transactionNumber = `TXN-${new Date()
     .toISOString()
     .slice(0, 10)
-    .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)
+    .replace(/-/g, "")}-${(randomValue % 10000)
     .toString()
     .padStart(4, "0")}`;
 

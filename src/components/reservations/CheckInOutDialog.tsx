@@ -164,7 +164,8 @@ export function CheckInOutDialog({
     }
 
     // Generate reservation code
-    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const randomValRes = globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
+    const reservationCode = 'RES-' + (randomValRes % 1000000).toString().padStart(6, '0');
     
     // Create reservation with checked-in status
     const { data: reservation, error: resError } = await supabase
@@ -251,12 +252,13 @@ export function CheckInOutDialog({
         .maybeSingle();
 
       if (!existingFolio) {
+        const randomValFol = globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
         await createFolio.mutateAsync({
           reservation_id: reservationId,
           guest_id: resData.guest_id,
           room_id: resData.room_id,
           status: "open",
-          folio_number: `FOL-${resData.reservation_code.split('-')[1] || Math.floor(Math.random()*1000)}`
+          folio_number: `FOL-${resData.reservation_code.split('-')[1] || (randomValFol % 1000).toString().padStart(3, '0')}`
         });
       }
 
