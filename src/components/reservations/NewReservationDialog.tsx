@@ -187,7 +187,10 @@ export function NewReservationDialog({
     setIsLoading(true);
 
     // Generate reservation code
-    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const randomArray = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(randomArray);
+    const randomSuffix = (randomArray[0] % 1000000).toString().padStart(6, '0');
+    const reservationCode = 'RES-' + randomSuffix;
 
     const { error } = await supabase.from("reservations").insert({
       guest_id: formData.guestId,
