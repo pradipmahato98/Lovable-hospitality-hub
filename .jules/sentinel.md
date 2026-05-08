@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-05-08 - Inconsistent Password Policy Enforcement
+**Vulnerability:** While the sign-up flow enforced a 10-character password limit, the "Change Password" feature in the staff security tab still allowed 8 characters.
+**Learning:** Security policies implemented in primary entry points (like Auth.tsx) are frequently missed in secondary management interfaces (like SecurityTab.tsx), leading to inconsistent security postures across the application.
+**Prevention:** Centralize security validation logic (e.g., password schemas) into shared utilities or hooks instead of re-implementing checks in multiple components, ensuring a single source of truth for security constraints.

@@ -23,7 +23,7 @@ export const SecurityTab = () => {
 
   const calculateStrength = (pass: string) => {
     let score = 0;
-    if (pass.length > 8) score += 25;
+    if (pass.length >= 10) score += 25;
     if (/[A-Z]/.test(pass)) score += 25;
     if (/[0-9]/.test(pass)) score += 25;
     if (/[^A-Za-z0-9]/.test(pass)) score += 25;
@@ -129,8 +129,8 @@ export const SecurityTab = () => {
                 <Progress value={strength} className="h-1" indicatorClassName={strengthColor} />
                 <ul className="text-[10px] space-y-1 mt-2 text-muted-foreground">
                   <li className="flex items-center gap-1">
-                    {passwords.new.length > 8 ? <Check size={10} className="text-success" /> : <X size={10} />}
-                    At least 8 characters
+                    {passwords.new.length >= 10 ? <Check size={10} className="text-success" /> : <X size={10} />}
+                    At least 10 characters
                   </li>
                   <li className="flex items-center gap-1">
                     {/[A-Z]/.test(passwords.new) ? <Check size={10} className="text-success" /> : <X size={10} />}
