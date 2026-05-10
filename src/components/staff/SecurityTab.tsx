@@ -23,16 +23,18 @@ export const SecurityTab = () => {
 
   const calculateStrength = (pass: string) => {
     let score = 0;
-    if (pass.length > 8) score += 25;
-    if (/[A-Z]/.test(pass)) score += 25;
-    if (/[0-9]/.test(pass)) score += 25;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 25;
+    if (!pass) return 0;
+    if (pass.length >= 10) score += 20;
+    if (pass.length > 12) score += 20;
+    if (/[A-Z]/.test(pass)) score += 20;
+    if (/[0-9]/.test(pass)) score += 20;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 20;
     return score;
   };
 
   const strength = calculateStrength(passwords.new);
-  const strengthColor = strength <= 25 ? "bg-destructive" : strength <= 50 ? "bg-amber-500" : strength <= 75 ? "bg-blue-500" : "bg-success";
-  const strengthText = strength <= 25 ? "Weak" : strength <= 50 ? "Fair" : strength <= 75 ? "Good" : "Strong";
+  const strengthColor = strength <= 40 ? "bg-destructive" : strength <= 80 ? "bg-amber-500" : "bg-success";
+  const strengthText = strength <= 40 ? "Weak" : strength <= 80 ? "Fair" : "Strong";
 
   const handleUpdatePassword = async () => {
     if (!passwords.new || !passwords.confirm) {
@@ -45,8 +47,13 @@ export const SecurityTab = () => {
       return;
     }
 
-    if (strength < 50) {
-      toast.error("Password is too weak");
+    if (passwords.new.length < 10) {
+      toast.error("Password must be at least 10 characters");
+      return;
+    }
+
+    if (strength < 60) {
+      toast.error("Password is too weak. Please include a mix of uppercase, numbers, and symbols.");
       return;
     }
 
@@ -129,8 +136,8 @@ export const SecurityTab = () => {
                 <Progress value={strength} className="h-1" indicatorClassName={strengthColor} />
                 <ul className="text-[10px] space-y-1 mt-2 text-muted-foreground">
                   <li className="flex items-center gap-1">
-                    {passwords.new.length > 8 ? <Check size={10} className="text-success" /> : <X size={10} />}
-                    At least 8 characters
+                    {passwords.new.length >= 10 ? <Check size={10} className="text-success" /> : <X size={10} />}
+                    At least 10 characters
                   </li>
                   <li className="flex items-center gap-1">
                     {/[A-Z]/.test(passwords.new) ? <Check size={10} className="text-success" /> : <X size={10} />}

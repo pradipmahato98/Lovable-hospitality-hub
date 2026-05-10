@@ -38,6 +38,7 @@ import { format } from "date-fns";
 import { SecurityBreachPanel } from "@/components/dev/SecurityBreachPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useUpdateSettings, useSettings, useAPIKeysSettings, useUpdateAPIKeysSettings, APIKey } from "@/hooks/useSettings";
+import { generateSecureHex } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -246,7 +247,7 @@ const AdminConsole = () => {
   const handleAddAPIKey = () => {
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: `sk_${generateSecureHex(12)}`,
       is_secret: true,
       description: "Auto-generated system key"
     };
