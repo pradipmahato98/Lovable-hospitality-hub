@@ -92,3 +92,28 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/**
+ * Generate a cryptographically secure random hexadecimal string
+ * @param bytes Number of random bytes to generate
+ * @returns Hexadecimal string (length will be bytes * 2)
+ */
+export function generateSecureHex(bytes: number): string {
+  const array = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Generate a cryptographically secure random number between min and max (inclusive)
+ * @param min Minimum value
+ * @param max Maximum value
+ */
+export function generateSecureNumber(min: number, max: number): number {
+  const range = max - min + 1;
+  const array = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(array);
+  return min + (array[0] % range);
+}
