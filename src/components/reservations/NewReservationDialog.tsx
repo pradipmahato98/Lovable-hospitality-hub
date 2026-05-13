@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
-import { cn, formatAD, formatCurrency } from "@/lib/utils";
+import { cn, formatAD, formatCurrency, generateSecureNumber } from "@/lib/utils";
 import { CalendarIcon, Loader2, CalendarPlus, Search, UserPlus, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -187,7 +187,7 @@ export function NewReservationDialog({
     setIsLoading(true);
 
     // Generate reservation code
-    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const reservationCode = 'RES-' + generateSecureNumber(100000, 999999);
 
     const { error } = await supabase.from("reservations").insert({
       guest_id: formData.guestId,
