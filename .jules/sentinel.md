@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure PRNG for Sensitive Identifiers
+**Vulnerability:** Use of `Math.random()` for generating API keys, reservation codes, and folio numbers. `Math.random()` is not cryptographically secure and can be predictable.
+**Learning:** Standard library random functions are often used for convenience, but they are unsuitable for any value that requires uniqueness or security (like keys or externally-facing IDs). Vitest/JSDOM environments often lack a native `globalThis.crypto` implementation, requiring a mock for unit testing cryptographic utilities.
+**Prevention:** Always use `globalThis.crypto.getRandomValues()` for sensitive identifiers. Centralize these in security utilities and provide a robust test setup to ensure they are used correctly across the codebase.

@@ -72,7 +72,7 @@ import { GeneralAuditLogTable } from "@/components/users/GeneralAuditLogTable";
 import { TableSkeleton } from "@/components/skeletons";
 import { DesignSystemTab } from "@/components/admin/design-system/DesignSystemTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, generateSecureHex } from "@/lib/utils";
 import { useRooms } from "@/hooks/useRooms";
 import { useReservations } from "@/hooks/useReservations";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -246,7 +246,8 @@ const AdminConsole = () => {
   const handleAddAPIKey = () => {
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      // Generate a cryptographically secure hex string (24 chars from 12 bytes)
+      key: `sk_${generateSecureHex(12)}`,
       is_secret: true,
       description: "Auto-generated system key"
     };
