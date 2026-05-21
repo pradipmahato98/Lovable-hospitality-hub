@@ -15,6 +15,32 @@ export const AD_DATETIME_FORMAT = "dd/MM/yyyy HH:mm";
 /** Standard AD datetime with seconds: dd/MM/yyyy HH:mm:ss */
 export const AD_DATETIME_SEC_FORMAT = "dd/MM/yyyy HH:mm:ss";
 
+/**
+ * Generates a cryptographically secure random hex string.
+ * @param bytes Number of bytes to generate.
+ * @returns Hex string (length will be 2 * bytes).
+ */
+export function generateSecureHex(bytes: number): string {
+  const array = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Generates a cryptographically secure random number in range [min, max].
+ * @param min Minimum value (inclusive).
+ * @param max Maximum value (inclusive).
+ * @returns Secure random number.
+ */
+export function generateSecureNumber(min: number, max: number): number {
+  const range = max - min + 1;
+  const array = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(array);
+  return min + (array[0] % range);
+}
+
 /** Format a number as currency (NPR by default) */
 export function formatCurrency(
   amount: number | null | undefined,
