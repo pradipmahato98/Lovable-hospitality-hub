@@ -27,6 +27,7 @@ import {
 } from "@/hooks/useFinance";
 import { toast } from "sonner";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
+import { generateSecureHex } from "@/lib/utils";
 import { formatISOasBS, todayBS, bsToAD, adToBS, formatBSDate } from "@/lib/nepaliDate";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,7 +62,7 @@ interface EntryLine {
 }
 
 function generateId() {
-  return crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+  return crypto.randomUUID?.() || generateSecureHex(16);
 }
 
 function emptyLine(): EntryLine {
