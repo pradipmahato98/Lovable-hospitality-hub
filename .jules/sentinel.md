@@ -13,6 +13,11 @@
 **Learning:** Security monitoring should be integrated into administrative tools to enable proactive threat detection. Using existing audit logs for security insights reduces "security theater" and provides real value.
 **Prevention:** Always provide administrators with clear indicators of system integrity and recent suspicious activities.
 
+## 2026-05-29 - Insecure PRNG for Sensitive Identifiers
+**Vulnerability:** The system utilized `Math.random().toString(36)` to generate sensitive API keys in `AdminConsole.tsx`, which is not cryptographically secure and could lead to identifier predictability.
+**Learning:** Standard JavaScript `Math.random()` is unsuitable for any identifier requiring non-predictability or cryptographic strength (keys, tokens, secure IDs).
+**Prevention:** Always utilize the Web Crypto API (`globalThis.crypto.getRandomValues()`) for generating secrets. Centralize these operations in a verified utility to ensure consistent security standards.
+
 ## 2026-02-10 - Dynamic Dashboard Data
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
