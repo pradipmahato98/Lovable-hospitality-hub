@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure PRNG for Sensitive Identifiers
+**Vulnerability:** Critical identifiers like API keys, reservation codes, and transaction IDs were generated using `Math.random()`, which is not cryptographically secure and is predictable.
+**Learning:** Developers often reach for `Math.random()` for uniqueness, forgetting that identifiers used for security (API keys) or sensitive lookups (reservation codes) require cryptographic strength to prevent enumeration or brute-force attacks.
+**Prevention:** Always use `globalThis.crypto.getRandomValues()` for sensitive ID generation. Centralize these into reusable utilities like `generateSecureHex` or `generateSecureNumber` to encourage consistent security across the codebase.
