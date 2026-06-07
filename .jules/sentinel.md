@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-06-02 - Insecure Identifier Generation
+**Vulnerability:** The application used `Math.random()` to generate sensitive identifiers such as API keys and inventory SKUs, which is predictable and not cryptographically secure.
+**Learning:** Default random number generators in JavaScript are not suitable for security-sensitive purposes. Predictability in ID generation can lead to security bypasses or data collision.
+**Prevention:** Always use `globalThis.crypto.getRandomValues()` for generating random values used in security-critical contexts like API keys, session tokens, or unique business identifiers.
