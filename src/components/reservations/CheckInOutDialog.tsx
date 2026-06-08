@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays } from "date-fns";
+import { generateSecureNumber } from "@/lib/utils";
 import { cn, formatAD, formatCurrency } from "@/lib/utils";
 import { CalendarIcon, Loader2, UserPlus, LogIn, LogOut, Wallet, AlertTriangle } from "lucide-react";
 import { useCheckInSettings } from "@/hooks/useSettings";
@@ -164,7 +165,7 @@ export function CheckInOutDialog({
     }
 
     // Generate reservation code
-    const reservationCode = 'RES-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const reservationCode = 'RES-' + generateSecureNumber(100000, 999999).toString();
     
     // Create reservation with checked-in status
     const { data: reservation, error: resError } = await supabase
@@ -256,7 +257,7 @@ export function CheckInOutDialog({
           guest_id: resData.guest_id,
           room_id: resData.room_id,
           status: "open",
-          folio_number: `FOL-${resData.reservation_code.split('-')[1] || Math.floor(Math.random()*1000)}`
+          folio_number: `FOL-${resData.reservation_code.split('-')[1] || generateSecureNumber(0, 1000)}`
         });
       }
 
