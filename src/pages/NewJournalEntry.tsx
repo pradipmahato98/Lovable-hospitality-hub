@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLocalizationSettings } from "@/hooks/useSettings";
+import { generateSecureHex } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type VoucherType = "journal" | "receipt" | "payment" | "contra";
@@ -61,7 +62,7 @@ interface EntryLine {
 }
 
 function generateId() {
-  return crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+  return crypto.randomUUID?.() || generateSecureHex(16);
 }
 
 function emptyLine(): EntryLine {
