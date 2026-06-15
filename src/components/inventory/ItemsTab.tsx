@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Package, AlertTriangle, TrendingDown, ArrowUpDown, Loader2, Edit, Trash2, DollarSign, Image as ImageIcon, MapPin, Warehouse, CheckCircle, XCircle, RefreshCw, Barcode, ScanLine, Percent, Timer, Activity, Settings, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useInventoryItems, useInventoryCategories, useSuppliers, useInventoryStats, useInventoryUoMs, useInventoryStores, InventoryItem } from "@/hooks/inventory";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, generateSecureHex, generateSecureNumber } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -77,7 +77,7 @@ export function ItemsTab() {
      }
      const cat = categories.find(c => c.id === form.category_id);
      const prefix = cat?.sku_prefix || cat?.name?.substring(0, 3).toUpperCase() || "ITEM";
-     const random = Math.floor(1000 + Math.random() * 9000);
+     const random = generateSecureNumber(1000, 9999);
      setForm({ ...form, sku: `${prefix}-${random}` });
      toast.success("SKU Generated");
   };
@@ -137,7 +137,7 @@ export function ItemsTab() {
     setIsUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `${generateSecureHex(8)}.${fileExt}`;
       const filePath = `inventory/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
