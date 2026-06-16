@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { User, Mail, Phone, MapPin, Loader2, Camera, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureHex } from "@/lib/utils";
 import { trackActivity } from "@/utils/auditLogger";
 
 export const PersonalDetailsTab = () => {
@@ -51,7 +52,7 @@ export const PersonalDetailsTab = () => {
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${profile?.id}-${Math.random()}.${fileExt}`;
+      const fileName = `${profile?.id}-${generateSecureHex(4)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureNumber } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -251,9 +252,7 @@ export function useCreateJournalEntry() {
       reference?: string | null;
       lines: { account_id: string; debit: number; credit: number; description?: string | null }[];
     }) => {
-      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
-        Math.random() * 10000
-      )
+      const entryNumber = `JE-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${generateSecureNumber(0, 9999)
         .toString()
         .padStart(4, "0")}`;
 
