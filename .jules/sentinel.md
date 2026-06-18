@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure Identifier Generation
+**Vulnerability:** Widespread use of `Math.random()` for generating sensitive identifiers including API keys, POS transaction numbers, and inventory SKUs. `Math.random()` is not cryptographically secure and can lead to predictable IDs.
+**Learning:** React/Vite templates and rapid prototyping often lead to the use of insecure PRNGs for "unique" IDs that eventually become security-sensitive.
+**Prevention:** Always use `globalThis.crypto.getRandomValues()` or `crypto.randomUUID()` for any identifier that needs to be unpredictable or unique across the system. Standardized secure utilities should be provided in a central `utils` file.
