@@ -92,3 +92,27 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/**
+ * Generates a cryptographically secure random hex string.
+ * @param length The length of the random data in bytes.
+ */
+export function generateSecureHex(length: number = 16): string {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Generates a cryptographically secure random number between min and max (inclusive).
+ * Note: Uses modulo which has a very slight bias for large ranges not power of 2,
+ * but sufficient for common ERP use cases like 6-digit codes.
+ */
+export function generateSecureNumber(min: number, max: number): number {
+  const range = max - min + 1;
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return min + (array[0] % range);
+}
