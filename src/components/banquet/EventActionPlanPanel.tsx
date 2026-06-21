@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { generateSecureHex } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -83,7 +84,7 @@ export function EventActionPlanPanel({ events }: EventActionPlanPanelProps) {
       if (!newEventTasks[event.id]) {
         newEventTasks[event.id] = defaultTasks.map(t => ({
           ...t,
-          id: Math.random().toString(36).substr(2, 9),
+          id: generateSecureHex(9),
           dueDate: new Date(new Date(event.event_date).getTime() - (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
         }));
         changed = true;
