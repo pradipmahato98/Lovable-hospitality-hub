@@ -36,6 +36,64 @@ export function sanitizeHTML(input: string): string {
   return withoutJSProtocol.trim();
 }
 
+/**
+ * Partially sanitizes HTML for use in document templates.
+ * Allows safe structural tags but strips scripts, iframes, and event handlers.
+ * Uses DOMParser for robust sanitization in browser environments.
+ *
+ * @example
+ * sanitizeTemplateHTML('<b>Hello</b><script>alert(1)</script>') // '<b>Hello</b>'
+ */
+export function sanitizeTemplateHTML(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+
+  // Fallback for non-browser environments (minimal protection)
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return input.replace(/<(script|iframe|object|embed|frameset|base)[^>]*>([\s\S]*?)<\/\1>/gi, '')
+                .replace(/<(script|iframe|object|embed|frameset|base)[^>]*>/gi, '')
+                .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+                .trim();
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(input, 'text/html');
+
+    // 1. Remove dangerous tags
+    const dangerousTags = ['script', 'iframe', 'object', 'embed', 'frameset', 'base', 'link', 'meta'];
+    dangerousTags.forEach(tag => {
+      doc.querySelectorAll(tag).forEach(el => el.remove());
+    });
+
+    // 2. Clean attributes on all elements
+    const allElements = doc.querySelectorAll('*');
+    allElements.forEach(el => {
+      const attrs = Array.from(el.attributes);
+      attrs.forEach(attr => {
+        const name = attr.name.toLowerCase();
+        const value = attr.value.toLowerCase();
+
+        // Strip event handlers (on*)
+        if (name.startsWith('on')) {
+          el.removeAttribute(attr.name);
+        }
+
+        // Strip dangerous URI schemes
+        if (['href', 'src', 'action', 'background', 'formaction'].includes(name)) {
+          if (value.includes('javascript:') || value.includes('data:') || value.includes('vbscript:')) {
+            el.setAttribute(attr.name, '#');
+          }
+        }
+      });
+    });
+
+    return doc.body.innerHTML.trim();
+  } catch (e) {
+    console.error('[Security] DOMParser sanitization failed:', e);
+    return ''; // Fail secure
+  }
+}
+
 // ─── Character Escaping ─────────────────────────────────────────────────────
 
 /**
@@ -169,7 +227,7 @@ export function isSafeInput(input: string): boolean {
  */
 export function sanitizePhone(input: string): string {
   if (!input || typeof input !== 'string') return '';
-  return input.replace(/[^\d\s\-+()]/g, '').trim();
+  return input.replace(/[^\d\s-+()]/g, '').trim();
 }
 
 /**
@@ -179,7 +237,7 @@ export function sanitizeEmail(input: string): string {
   if (!input || typeof input !== 'string') return '';
   const trimmed = input.trim().toLowerCase();
   // Allow only valid email characters
-  const cleaned = trimmed.replace(/[^a-z0-9@._+\-]/g, '');
+  const cleaned = trimmed.replace(/[^a-z0-9@._+-]/g, '');
   return cleaned;
 }
 

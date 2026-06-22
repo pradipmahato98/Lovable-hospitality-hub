@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
+import { sanitizeTemplateHTML } from "@/utils/inputSanitizer";
 import { useFrontDeskSetup } from "@/hooks/useFrontDeskSetup";
 import { useRooms, useRoomsMutations } from "@/hooks/useRooms";
 import { SetupLoyalty } from "./SetupLoyalty";
@@ -1864,18 +1865,20 @@ export function FrontDeskSetup() {
                         <div 
                           className="border rounded-lg p-4 bg-white text-black h-[300px] overflow-y-auto shadow-sm select-none"
                           dangerouslySetInnerHTML={{
-                            __html: docTemplates[selectedDocTemplate]
-                              .replace("{{guest_name}}", "Jane Doe")
-                              .replace("{{room_number}}", "201")
-                              .replace("{{check_in_date}}", "2026-05-20")
-                              .replace("{{check_out_date}}", "2026-05-25")
-                              .replace("{{rate_plan}}", "Standard Flexible Rate")
-                              .replace("{{invoice_number}}", "INV-2026-0043")
-                              .replace("{{invoice_date}}", "2026-05-19")
-                              .replace("{{subtotal}}", "Rs. 15,000")
-                              .replace("{{taxes}}", "Rs. 3,450")
-                              .replace("{{total}}", "Rs. 18,450")
-                              .replace("{{confirmation_code}}", "LX-8941A")
+                            __html: sanitizeTemplateHTML(
+                              docTemplates[selectedDocTemplate]
+                                .replace("{{guest_name}}", "Jane Doe")
+                                .replace("{{room_number}}", "201")
+                                .replace("{{check_in_date}}", "2026-05-20")
+                                .replace("{{check_out_date}}", "2026-05-25")
+                                .replace("{{rate_plan}}", "Standard Flexible Rate")
+                                .replace("{{invoice_number}}", "INV-2026-0043")
+                                .replace("{{invoice_date}}", "2026-05-19")
+                                .replace("{{subtotal}}", "Rs. 15,000")
+                                .replace("{{taxes}}", "Rs. 3,450")
+                                .replace("{{total}}", "Rs. 18,450")
+                                .replace("{{confirmation_code}}", "LX-8941A")
+                            )
                           }}
                         />
                       </div>
