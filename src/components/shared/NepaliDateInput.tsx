@@ -90,7 +90,7 @@ export function NepaliDateInput({
     // Adjust start offset based on preference
     // If startDayOfWeek is 0 (Sun) and firstDayPref is 1 (Mon), offset should be 6
     // If startDayOfWeek is 1 (Mon) and firstDayPref is 1 (Mon), offset should be 0
-    let offset = (startDayOfWeek - firstDayPref + 7) % 7;
+    const offset = (startDayOfWeek - firstDayPref + 7) % 7;
 
     const days: (number | null)[] = [];
     for (let i = 0; i < offset; i++) days.push(null);

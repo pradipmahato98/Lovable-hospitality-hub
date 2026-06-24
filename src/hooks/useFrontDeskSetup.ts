@@ -387,8 +387,8 @@ export const useFrontDeskSetup = () => {
 
   const { data: dbGatewayConfig, isLoading: isLoadingGatewayConfig } = useSetting("gateway_config", {
     provider: "stripe",
-    apiKey: "pk_test_51O83hNIsW...",
-    secretKey: "sk_test_51O83hNIsW...",
+    apiKey: "",
+    secretKey: "",
     sandboxMode: true,
     webhookUrl: "https://api.luxestay.com/v1/payments/stripe/webhook",
     captureMode: "pre_auth",

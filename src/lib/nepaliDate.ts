@@ -141,7 +141,7 @@ export function adToBS(adDate: Date): NepaliDate {
     const yearData = BS_CALENDAR_DATA[bsYear];
     if (!yearData) break;
 
-    let yearDays = yearData.reduce((sum, d) => sum + d, 0);
+    const yearDays = yearData.reduce((sum, d) => sum + d, 0);
     if (totalDays < yearDays) {
       // Within this year
       for (bsMonth = 0; bsMonth < 12; bsMonth++) {
