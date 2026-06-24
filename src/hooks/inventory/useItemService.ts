@@ -10,7 +10,7 @@ export function useInventoryItems(filters?: { category?: string; lowStock?: bool
   const query = useQuery({
     queryKey: ["inventory-items", filters],
     queryFn: async () => {
-      let q = db
+      const q = db
         .from("inventory_items")
         .select(`id, name, sku, item_code, item_type, attributes, avg_cost, safety_stock, category_id, supplier_id, unit, current_stock, min_stock, max_stock, reorder_point, cost_price, selling_price, location, department, is_active, last_restocked_at, created_at, category:inventory_categories(id, name, category_name, parent_id, parent_category), supplier:suppliers(*), uom:inventory_uoms(*)`)
         .eq("is_active", true);
