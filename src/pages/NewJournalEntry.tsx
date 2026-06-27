@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { NepaliDateInput } from "@/components/shared/NepaliDateInput";
 import { formatISOasBS, todayBS, bsToAD, adToBS, formatBSDate } from "@/lib/nepaliDate";
+import { generateSecureHex } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -61,7 +62,7 @@ interface EntryLine {
 }
 
 function generateId() {
-  return crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+  return crypto.randomUUID?.() || generateSecureHex(16);
 }
 
 function emptyLine(): EntryLine {
