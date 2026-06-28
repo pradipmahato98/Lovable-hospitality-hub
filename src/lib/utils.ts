@@ -92,3 +92,34 @@ export function formatAD(
 
   return fnsFormat(d, formatString);
 }
+
+/** Generate a cryptographically secure random hexadecimal string */
+export function generateSecureHex(bytes: number): string {
+  const arr = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(arr);
+  return Array.from(arr)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Generate a cryptographically secure random number within a range [min, max] */
+export function generateSecureNumber(min: number, max: number): number {
+  const range = max - min + 1;
+  if (range <= 0) return min;
+  if (range >= 0xffffffff) {
+    throw new Error("Range is too large for 32-bit random number generation");
+  }
+
+  // Use rejection sampling to avoid modulo bias
+  const maxUint32 = 0xffffffff;
+  const limit = maxUint32 - (maxUint32 % range);
+  const buffer = new Uint32Array(1);
+
+  let random;
+  do {
+    globalThis.crypto.getRandomValues(buffer);
+    random = buffer[0];
+  } while (random >= limit);
+
+  return min + (random % range);
+}
