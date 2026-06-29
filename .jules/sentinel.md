@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-02-11 - Insecure Identifier Generation
+**Vulnerability:** Use of `Math.random()` for generating sensitive identifiers like API keys, transaction numbers, and journal entry numbers. Insecure PRNGs are predictable and unsuitable for security-sensitive contexts.
+**Learning:** Legacy codebases often rely on `Math.random()` for convenience. Implementing a robust utility with rejection sampling ensures uniform distribution and cryptographic strength using the Web Crypto API.
+**Prevention:** Always use `crypto.getRandomValues()` for identifiers that require uniqueness or secrecy. Standardize secure random utilities in `src/lib/utils.ts` to make secure generation the path of least resistance.
