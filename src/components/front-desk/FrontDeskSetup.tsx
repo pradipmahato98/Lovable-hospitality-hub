@@ -1861,22 +1861,35 @@ export function FrontDeskSetup() {
 
                       <div className="space-y-2 flex flex-col">
                         <Label className="font-semibold text-xs">Live Parsed Print Preview</Label>
-                        <div 
-                          className="border rounded-lg p-4 bg-white text-black h-[300px] overflow-y-auto shadow-sm select-none"
-                          dangerouslySetInnerHTML={{
-                            __html: docTemplates[selectedDocTemplate]
-                              .replace("{{guest_name}}", "Jane Doe")
-                              .replace("{{room_number}}", "201")
-                              .replace("{{check_in_date}}", "2026-05-20")
-                              .replace("{{check_out_date}}", "2026-05-25")
-                              .replace("{{rate_plan}}", "Standard Flexible Rate")
-                              .replace("{{invoice_number}}", "INV-2026-0043")
-                              .replace("{{invoice_date}}", "2026-05-19")
-                              .replace("{{subtotal}}", "Rs. 15,000")
-                              .replace("{{taxes}}", "Rs. 3,450")
-                              .replace("{{total}}", "Rs. 18,450")
-                              .replace("{{confirmation_code}}", "LX-8941A")
-                          }}
+                        <iframe
+                          title="Document Template Preview"
+                          className="border rounded-lg bg-white h-[300px] w-full shadow-sm"
+                          sandbox=""
+                          srcDoc={`
+                            <style>
+                              body {
+                                font-family: sans-serif;
+                                padding: 1rem;
+                                margin: 0;
+                                color: black;
+                                font-size: 14px;
+                                line-height: 1.5;
+                              }
+                            </style>
+                            ${docTemplates[selectedDocTemplate]
+                              .replace(/\{\{guest_name\}\}/g, "Jane Doe")
+                              .replace(/\{\{room_number\}\}/g, "201")
+                              .replace(/\{\{check_in_date\}\}/g, "2026-05-20")
+                              .replace(/\{\{check_out_date\}\}/g, "2026-05-25")
+                              .replace(/\{\{rate_plan\}\}/g, "Standard Flexible Rate")
+                              .replace(/\{\{invoice_number\}\}/g, "INV-2026-0043")
+                              .replace(/\{\{invoice_date\}\}/g, "2026-05-19")
+                              .replace(/\{\{subtotal\}\}/g, "Rs. 15,000")
+                              .replace(/\{\{taxes\}\}/g, "Rs. 3,450")
+                              .replace(/\{\{total\}\}/g, "Rs. 18,450")
+                              .replace(/\{\{confirmation_code\}\}/g, "LX-8941A")
+                            }
+                          `}
                         />
                       </div>
                     </div>
