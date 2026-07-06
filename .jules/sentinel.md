@@ -17,3 +17,8 @@
 **Enhancement:** Replaced static dashboard metrics with real-time data from Supabase and added a dynamic security advisory card for administrators.
 **Learning:** Hardcoded metrics in a dashboard are not just "incomplete"—they are misleading and can mask actual system issues. Integrating security alerts directly into the main dashboard ensures they aren't missed.
 **Prevention:** Use custom hooks to centralize data fetching for metrics and always include a security health check in high-level overviews.
+
+## 2026-07-06 - Stored XSS via Document Template Preview
+**Vulnerability:** Use of `dangerouslySetInnerHTML` to render user-editable document templates (invoices, registration cards) in a preview pane.
+**Learning:** Standard HTML stripping sanitization was incompatible with this feature because it relies on rendering formatted HTML. Conventional `replace()` logic also failed to update multiple instances of placeholders, leaving some unpopulated.
+**Prevention:** Use a sandboxed `<iframe>` with `sandbox=""` to isolate untrusted HTML rendering from the main application context, and use global regular expressions for reliable placeholder replacement.
