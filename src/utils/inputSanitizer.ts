@@ -79,7 +79,10 @@ export function escapeForDisplay(input: string): string {
 export function sanitizeURL(input: string): string {
   if (!input || typeof input !== 'string') return '';
   
-  const trimmed = input.trim();
+  // Strip control characters (including null bytes) to prevent filter bypasses
+  // eslint-disable-next-line no-control-regex
+  const cleanInput = input.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+  const trimmed = cleanInput.trim();
   
   // Block dangerous protocols
   const dangerousProtocols = /^(javascript|data|vbscript|file):/i;
@@ -169,7 +172,7 @@ export function isSafeInput(input: string): boolean {
  */
 export function sanitizePhone(input: string): string {
   if (!input || typeof input !== 'string') return '';
-  return input.replace(/[^\d\s\-+()]/g, '').trim();
+  return input.replace(/[^\d\s+()-]/g, '').trim();
 }
 
 /**
@@ -179,7 +182,7 @@ export function sanitizeEmail(input: string): string {
   if (!input || typeof input !== 'string') return '';
   const trimmed = input.trim().toLowerCase();
   // Allow only valid email characters
-  const cleaned = trimmed.replace(/[^a-z0-9@._+\-]/g, '');
+  const cleaned = trimmed.replace(/[^a-z0-9@._+-]/g, '');
   return cleaned;
 }
 

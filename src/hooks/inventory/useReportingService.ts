@@ -46,7 +46,7 @@ export function useInventoryStockCounts() {
     queryKey: ["inventory-stock-counts"],
     queryFn: async () => {
       try {
-        let { data, error } = await db
+        const { data, error } = await db
           .from("inventory_stock_counts")
           .select(`*, store:inventory_stores(*), items:inventory_stock_count_items(*, item:inventory_items(*))`)
           .order("created_at", { ascending: false });
