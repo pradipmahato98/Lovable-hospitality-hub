@@ -79,7 +79,10 @@ export function escapeForDisplay(input: string): string {
 export function sanitizeURL(input: string): string {
   if (!input || typeof input !== 'string') return '';
   
-  const trimmed = input.trim();
+  // Remove control characters (including null bytes and ascii/latin1 control chars) to prevent filter bypasses
+  // eslint-disable-next-line no-control-regex
+  const cleanInput = input.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+  const trimmed = cleanInput.trim();
   
   // Block dangerous protocols
   const dangerousProtocols = /^(javascript|data|vbscript|file):/i;
