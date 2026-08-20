@@ -246,9 +246,13 @@ const AdminConsole = () => {
   };
 
   const handleAddAPIKey = () => {
+    // Cryptographically secure random key generation (CSPRNG)
+    const array = new Uint8Array(24);
+    crypto.getRandomValues(array);
+    const randomHex = Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
     const newKey: APIKey = {
       name: "New API Key",
-      key: `sk_${Math.random().toString(36).substr(2, 24)}`,
+      key: `sk_${randomHex}`,
       is_secret: true,
       description: "Auto-generated system key"
     };
