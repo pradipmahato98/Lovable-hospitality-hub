@@ -169,7 +169,7 @@ export function isSafeInput(input: string): boolean {
  */
 export function sanitizePhone(input: string): string {
   if (!input || typeof input !== 'string') return '';
-  return input.replace(/[^\d\s\-+()]/g, '').trim();
+  return input.replace(/[^\d\s-+()]/g, '').trim();
 }
 
 /**
@@ -179,7 +179,7 @@ export function sanitizeEmail(input: string): string {
   if (!input || typeof input !== 'string') return '';
   const trimmed = input.trim().toLowerCase();
   // Allow only valid email characters
-  const cleaned = trimmed.replace(/[^a-z0-9@._+\-]/g, '');
+  const cleaned = trimmed.replace(/[^a-z0-9@._+-]/g, '');
   return cleaned;
 }
 
