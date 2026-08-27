@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { escapeForDisplay } from "@/utils/inputSanitizer";
 
 interface JournalManagementServiceProps {
   isReadOnly?: boolean;
@@ -190,20 +191,25 @@ export function JournalManagementService({ isReadOnly }: JournalManagementServic
 
     const rows = (entry.lines || []).map((line: any) => `
       <tr>
-        <td style="padding:6px;border:1px solid #ddd;">${line.account?.name || getAccountName(line.account_id)}</td>
+        <td style="padding:6px;border:1px solid #ddd;">${escapeForDisplay(line.account?.name || getAccountName(line.account_id))}</td>
         <td style="padding:6px;border:1px solid #ddd;text-align:right;">${(line.debit || 0).toFixed(2)}</td>
         <td style="padding:6px;border:1px solid #ddd;text-align:right;">${(line.credit || 0).toFixed(2)}</td>
       </tr>
     `).join("");
 
+    const refNo = escapeForDisplay(entry.reference || entry.entry_number || "");
+    const dateAD = escapeForDisplay(entry.date || "");
+    const dateBS = escapeForDisplay(formatISOasBS(entry.date, "short"));
+    const desc = escapeForDisplay(entry.description || "-");
+
     win.document.write(`
       <html>
-        <head><title>Voucher ${entry.reference || entry.entry_number}</title></head>
+        <head><title>Voucher ${refNo}</title></head>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>Voucher: ${entry.reference || entry.entry_number}</h2>
-          <p><strong>Date (AD):</strong> ${entry.date}</p>
-          <p><strong>मिति (BS):</strong> ${formatISOasBS(entry.date, "short")}</p>
-          <p><strong>Description:</strong> ${entry.description || "-"}</p>
+          <h2>Voucher: ${refNo}</h2>
+          <p><strong>Date (AD):</strong> ${dateAD}</p>
+          <p><strong>मिति (BS):</strong> ${dateBS}</p>
+          <p><strong>Description:</strong> ${desc}</p>
           <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
             <thead>
               <tr>
